@@ -4,7 +4,7 @@
 #       [  Site: https://github.com/Breakthrough/DVR-Scan/   ]
 #       [  Documentation: http://dvr-scan.readthedocs.org/   ]
 #
-# This file contains all code for the main `dvr_scan` module.
+# This file contains all code related to parsing command-line arguments.
 #
 # Copyright (C) 2016-2017 Brandon Castellano <http://www.bcastell.com>.
 #

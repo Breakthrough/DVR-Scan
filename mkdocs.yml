@@ -12,6 +12,18 @@ theme: readthedocs
 
 pages:
 - 'DVR-Scan':
-    - 'Introduction': 'index.md'
+    - 'Introduction & Features': 'index.md'
+    - 'Download': 'download.md'
+    - 'Version History': 'changelog.md'
+    - 'Contributing & Bug Reports': 'contributing.md'
+    - 'License & Copyright Info': 'copyright.md'
+- 'User Guide':
+    - 'Installing & Updating': 'guide/installing.md'
+    - 'Getting Started & Examples': 'guide/examples.md'
+    - 'Motion Detection Options': 'guide/detection_options.md'
+    - 'Additional Program Options': 'guide/program_options.md'
+- 'External Resources':
+    - 'Other Similar/Related Software': 'other/similar_software.md'
+    - 'Technical Resources & Articles': 'other/resources.md'
 
 markdown_extensions: [fenced_code]
