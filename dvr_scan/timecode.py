@@ -72,3 +72,60 @@ def frame_to_timecode(frames, fps, show_msec = True):
     time_msec = 1000.0 * float(frames) / fps
     return get_string(time_msec, show_msec)
 
+
+
+class FrameTimecode(object):
+
+    def __init__(self, fps, timecode):
+        if not isinstance(fps, (int, float)):
+            raise TypeError('Framerate must be of type int/float.')
+        self.framerate = float(fps)
+        self.frame_num = -1
+        if isinstance(timecode, int):
+            if timecode < 0:
+                raise ValueError('Timecode value must be positive.')
+            self.frame_num = int(timecode)
+        elif isinstance(timecode, float):
+            if timecode < 0.0:
+                raise ValueError('Timecode value must be positive.')
+            self.frame_num = int(timecode * self.framerate)
+        elif isinstance(timecode, (list, tuple)) and len(timecode) == 3:
+            if any(not isinstance(x, (int, float)) for x in timecode):
+                raise ValueError('Timecode components must be of type int/float.')
+            hrs, mins, secs = timecode
+            if not (hrs >= 0 and mins >= 0 and secs >= 0 and mins < 60
+                    and secs < 60):
+                raise ValueError('Timecode components must be positive.')
+            secs += (((hrs * 60.0) + mins) * 60.0)
+            self.frame_num = int(secs * self.framerate)
+        elif isinstance(timecode, str):
+            if timecode.endswith('s'):
+                secs = timecode[:-1]
+                if not secs.replace('.', '').isdigit():
+                    raise ValueError('All characters in timecode seconds string must be digits.')
+                secs = float(secs)
+                if secs < 0.0:
+                    raise ValueError('Timecode seconds value must be positive.')
+                self.frame_num = int(secs * self.framerate)
+            else:
+                tc_val = timecode.split(':')
+                if not (len(tc_val) == 3 and tc_val[0].isdigit() and tc_val[1].isdigit()
+                        and tc_val[2].replace('.', '').isdigit()):
+                    raise TypeError('Improperly formatted timecode string.')
+                hrs, mins = int(tc_val[0]), int(tc_val[1])
+                secs = float(tc_val[2]) if '.' in tc_val[2] else int(tc_val[2])
+                if not (hrs >= 0 and mins >= 0 and secs >= 0 and mins < 60
+                        and secs < 60):
+                    raise ValueError('Invalid timecode range.')
+                secs += (((hrs * 60.0) + mins) * 60.0)
+                self.frame_num = int(secs * self.framerate)
+        else:
+            raise TypeError('Timecode format unrecognized.')
+
+    #def get_frame_num(self):
+    #    return self.frame_num
+
+    def get_seconds(self):
+        return float(self.frame_num) / self.framerate
+
+
