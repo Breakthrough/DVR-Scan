@@ -5,7 +5,8 @@
 #       [  Documentation: http://dvr-scan.readthedocs.org/   ]
 #
 # This file contains the implementation of the ScanContext class, which
-# represents the DVR-Scan application's state, 
+# is used to provide a high level interface to the logic used by
+# DVR-Scan to implement the motion detection/scanning algorithm.
 #
 # Copyright (C) 2016-2017 Brandon Castellano <http://www.bcastell.com>.
 #
@@ -25,11 +26,31 @@
 # OTHER DEALINGS IN THE SOFTWARE.
 #
 
-import dvr_scan.timecode
+# Standard Library Imports
+from __future__ import print_function
+import sys
+import os
+import argparse
+import time
+import csv
+
+# DVR-Scan Library Imports
+from dvr_scan.timecode import FrameTimecode
+
+# Third-Party Library Imports
+import cv2
+import numpy
+
+
 
 class ScanContext(object):
 
     def __init__(self, args):
 
-        self.curr_pos = 0
+        pass
 
+        #self.curr_pos = FrameTimecode()
+
+
+    def process_video(self):
+        pass

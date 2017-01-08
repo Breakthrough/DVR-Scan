@@ -35,6 +35,7 @@ import csv
 # DVR-Scan Library Imports
 import dvr_scan.platform
 import dvr_scan.timecode
+import dvr_scan.scanner
 import dvr_scan.cli
 
 # Third-Party Library Imports
@@ -45,7 +46,7 @@ import numpy
 # Used for module identification and when printing copyright & version info.
 __version__ = 'v0.1-dev'
 
-# About & copyright message string shown for the -v / --version CLI argument.
+# About & copyright message string shown for the -v/--version CLI argument.
 ABOUT_STRING   = """-----------------------------------------------
 DVR-Scan %s
 -----------------------------------------------
@@ -61,18 +62,15 @@ THE SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, EXPRESS OR IMPLIED.
 
 """ % __version__
 
- 
-def compute_frame_score(frame):
-    pass
-
 
 def main():
     """Entry point for running main DVR-Scan program.
 
     Handles high-level interfacing of video IO and motion event detection.
     """
-
     # Parse CLI arguments.
     args = dvr_scan.cli.get_cli_parser().parse_args()
-
+    # Use arguments to create a ScanContext, and process the video.
+    sctx = dvr_scan.scanner.ScanContext(args)
+    sctx.process_video()
 
