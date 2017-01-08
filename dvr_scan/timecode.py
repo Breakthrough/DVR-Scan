@@ -26,54 +26,6 @@
 #
 
 
-def get_string(time_msec, show_msec = True):
-    """ Formats a time, in ms, into a timecode of the form HH:MM:SS.nnnn.
-
-    This is the default timecode format used by mkvmerge for splitting a video.
-
-    Args:
-        time_msec:  Integer representing milliseconds from start of video.
-        show_msec:  If False, omits the milliseconds part from the output.
-    Returns:
-        A string with a formatted timecode (HH:MM:SS.nnnn).
-    """
-    out_nn, timecode_str = int(time_msec), ''
-
-    base_msec = 1000 * 60 * 60  # 1 hour in ms
-    out_HH = int(out_nn / base_msec)
-    out_nn -= out_HH * base_msec
-
-    base_msec = 1000 * 60       # 1 minute in ms
-    out_MM = int(out_nn / base_msec)
-    out_nn -= out_MM * base_msec
-
-    base_msec = 1000            # 1 second in ms
-    out_SS = int(out_nn / base_msec)
-    out_nn -= out_SS * base_msec
-
-    if show_msec:
-        timecode_str = "%02d:%02d:%02d.%03d" % (out_HH, out_MM, out_SS, out_nn)
-    else:
-        timecode_str = "%02d:%02d:%02d" % (out_HH, out_MM, out_SS)
-
-    return timecode_str
-
-
-def frame_to_timecode(frames, fps, show_msec = True):
-    """ Converts a given frame/FPS into a timecode of the form HH:MM:SS.nnnn.
-
-    Args:
-        frames:     Integer representing the frame number to get the time of.
-        fps:        Float representing framerate of the video.
-        show_msec:  If False, omits the milliseconds part from the output.
-    Returns:
-        A string with a formatted timecode (HH:MM:SS.nnnn).
-    """
-    time_msec = 1000.0 * float(frames) / fps
-    return get_string(time_msec, show_msec)
-
-
-
 class FrameTimecode(object):
     """ Object for frame-based timecodes, using the video framerate
     to compute back and forth between frame number and second/timecode formats.
@@ -97,14 +49,17 @@ class FrameTimecode(object):
             raise TypeError('Framerate must be of type int/float.')
         self.framerate = float(fps)
         self.frame_num = -1
+        # Exact number of frames N
         if isinstance(timecode, int):
             if timecode < 0:
                 raise ValueError('Timecode frame number must be positive.')
             self.frame_num = timecode
+        # Number of seconds S
         elif isinstance(timecode, float):
             if timecode < 0.0:
                 raise ValueError('Timecode value must be positive.')
             self.frame_num = int(timecode * self.framerate)
+        # Standard timecode in list format [HH, MM, SS.nnn]
         elif isinstance(timecode, (list, tuple)) and len(timecode) == 3:
             if any(not isinstance(x, (int, float)) for x in timecode):
                 raise ValueError('Timecode components must be of type int/float.')
@@ -115,6 +70,7 @@ class FrameTimecode(object):
             secs += (((hrs * 60.0) + mins) * 60.0)
             self.frame_num = int(secs * self.framerate)
         elif isinstance(timecode, str):
+            # Number of seconds S
             if timecode.endswith('s'):
                 secs = timecode[:-1]
                 if not secs.replace('.', '').isdigit():
@@ -123,11 +79,13 @@ class FrameTimecode(object):
                 if secs < 0.0:
                     raise ValueError('Timecode seconds value must be positive.')
                 self.frame_num = int(secs * self.framerate)
+            # Exact number of frames N
             elif timecode.isdigit():
                 timecode = int(timecode)
                 if timecode < 0:
                     raise ValueError('Timecode frame number must be positive.')
                 self.frame_num = timecode
+            # Standard timecode in string format 'HH:MM:SS[.nnn]'
             else:
                 tc_val = timecode.split(':')
                 if not (len(tc_val) == 3 and tc_val[0].isdigit() and tc_val[1].isdigit()
@@ -179,5 +137,4 @@ class FrameTimecode(object):
             secs = '%02d' % int(round(secs, 0)) if use_rounding else '%02d' % int(secs)
         # Return hours, minutes, and seconds as a formatted timecode string.
         return '%02d:%02d:%s' % (hrs, mins, secs)
-
 
