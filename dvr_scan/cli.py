@@ -292,7 +292,7 @@ def get_cli_parser():
     #
 
     parser.add_argument(
-        '-c', '--codec', metavar = 'FOURCC', dest = 'fourcc_string',
+        '-c', '--codec', metavar = 'FOURCC', dest = 'fourcc_str',
         type = string_type_check(
             ['XVID', 'MP4V', 'MP42', 'H264'], False, 'FOURCC'),
         default = 'XVID',
@@ -318,6 +318,14 @@ def get_cli_parser():
                 ' large, some movement in the scene may not be detected.'))
 
     parser.add_argument(
+        '-l', '--min-event-length', metavar = 'T', dest = 'min_event_len',
+        #type = int_type_check(1, None, 'num_frames'), default = 2,
+        type = timecode_type_check('T'), default = 2,
+        help = ('Number of frames that must exceed the threshold in a row to trigger'
+                ' a new motion event, effectively setting a minimum event length.'
+                ' Can also be specified as a timecode or # of seconds.'))
+
+    parser.add_argument(
         '-tp', '--time-post-event', metavar = 'T', dest = 'time_post_event',
         type = timecode_type_check('T'), default = '2s',
         help = ('Number of frames to include after each motion event ends.'
@@ -329,14 +337,6 @@ def get_cli_parser():
         '-tb', '--time-before-event', metavar = 'T', dest = 'time_pre_event',
         type = timecode_type_check('T'), default = '1.5s',
         help = ('Number of frames to include before a motion event is detected.'
-                ' Can also be specified as a timecode or # of seconds.'))
-
-    parser.add_argument(
-        '-l', '--min-event-length', metavar = 'T', dest = 'min_event_len',
-        #type = int_type_check(1, None, 'num_frames'), default = 2,
-        type = timecode_type_check('T'), default = 2,
-        help = ('Number of frames that must exceed the threshold in a row to trigger'
-                ' a new motion event, effectively setting a minimum event length.'
                 ' Can also be specified as a timecode or # of seconds.'))
 
     #parser.add_argument(
@@ -392,11 +392,11 @@ def get_cli_parser():
                 ' and may increase probability of missing motion events.'
                 ' If required, values above 1 or 2 are not recommended.'))
 
-    parser.add_argument(
-        '-u', '--update-rate', metavar = 'interval', dest = 'update_rate',
-        type = int_type_check(0, None, 'interval'), default = 0,
-        help = ('Prints a status message at the specified interval,'
-                ' including performance and position information.'))
+    #parser.add_argument(
+    #    '-u', '--update-rate', metavar = 'interval', dest = 'update_rate',
+    #    type = int_type_check(0, None, 'interval'), default = 0,
+    #    help = ('Prints a status message at the specified interval,'
+    #            ' including performance and position information.'))
 
     #parser.add_argument(
     #    '-si', '--save-images', dest = 'save_images',

@@ -52,39 +52,51 @@ class ScanContext(object):
 
         self.initialized = False
 
-        # Load basic class properties from the user-supplied CLI arguments.
         self.suppress_output = args.quiet_mode
-
-
-        # Require the video to be loaded before processing timecodes.
-
-
-        #self.cap = cv2.VideoCapture()
-        self.cap_list = None
         self.frames_read = -1
         self.frames_processed = -1
-
-        self.video_paths = [input_file.name for input_file in args.input]
-        [input_file.close() for input_file in args.input]
+        self.cap_list = None
         self.curr_video_path = None
 
-        #print(self.video_paths)
-        
+        self.video_resolution = None
+        self.video_fps = None
+        self.video_paths = [input_file.name for input_file in args.input]
+        [input_file.close() for input_file in args.input]
+
         if self._load_input_videos():
+            # Motion detection and output related arguments
+            self.fourcc_str = args.fourcc_str
+            self.threshold = args.threshold
+            self.kernel_size = args.kernel_size
+            # Event detection window properties
+            self.min_event_len = FrameTimecode(self.video_fps, args.min_event_len)
+            self.pre_event_len = FrameTimecode(self.video_fps, args.time_pre_event)
+            self.post_event_len = FrameTimecode(self.video_fps, args.time_post_event)
+            # Start time, end time, and duration
+            self.start_time, self.end_time = None, None
+            if args.start_time is not None:
+                self.start_time = FrameTimecode(self.video_fps, args.start_time)
+            if args.duration is not None:
+                duration = FrameTimecode(self.video_fps, args.duration)
+                if isinstance(self.start_time, FrameTimecode):
+                    self.end_time = FrameTimecode(
+                        self.video_fps, self.start_time.frame_num + duration.frame_num)
+                else:
+                    self.end_time = duration
+            elif args.end_time is not None:
+                self.end_time = FrameTimecode(self.video_fps, args.end_time)
+            # Video processing related arguments
+            self.frame_skip = args.frame_skip
+            self.downscale_factor = args.downscale_factor
+
             self.initialized = True
-
-        #self.curr_pos = FrameTimecode()
-
-        #self.initialized = True
-    
-
 
     def _load_input_videos(self):
         """ Opens and checks that all input video files are valid, can
         be processed, and have the same resolution and framerate. """
         self.cap_list = []
         video_resolution = None
-        video_framerate = None
+        video_fps = None
         for video_path in self.video_paths:
             cap = cv2.VideoCapture()
             cap.open(video_path)
@@ -100,13 +112,13 @@ class ScanContext(object):
                                cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             curr_framerate = cap.get(cv2.CAP_PROP_FPS)
             video_valid = False
-            if video_resolution is None and video_framerate is None:
+            if video_resolution is None and video_fps is None:
                 video_resolution = curr_resolution
-                video_framerate = curr_framerate
+                video_fps = curr_framerate
                 if not self.suppress_output:
                     print("[DVR-Scan] Opened video %s (%d x %d at %2.3f FPS)." % (
                         video_name, video_resolution[0], video_resolution[1],
-                        video_framerate))
+                        video_fps))
                 video_valid = True
             # Check that all other videos specified have the same resolution
             # (we'll assume the framerate is the same if the resolution matches,
@@ -114,7 +126,7 @@ class ScanContext(object):
             elif curr_resolution != video_resolution:
                 if not self.suppress_output:
                     print("[DVR-Scan] Error: Can't append clip %s, video resolution"
-                        " does not match the first input file." % video_name)
+                          " does not match the first input file." % video_name)
                 return False
             else:
                 if not self.suppress_output:
@@ -122,13 +134,6 @@ class ScanContext(object):
                 video_valid = True
             if video_valid is True:
                 self.cap_list.append(cap)
-
-
-
-        # Seek to starting position - put in different function since need
-        # to compute FrameTimecode objects with the FPS.
-
-
 
         return True
 
@@ -142,6 +147,11 @@ class ScanContext(object):
         print("[DVR-Scan] Scanning %s for motion events..." % (
             "%d input videos" % len(self.video_paths) if len(self.video_paths) > 1
             else "input video"))
+        
+
+        curr_pos = FrameTimecode(self.video_fps, 0)
+        # Seek to starting position.
+
 
         pass
 
