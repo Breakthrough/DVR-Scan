@@ -28,7 +28,6 @@
 
 # Standard Library Imports
 from __future__ import print_function
-import sys
 import os
 import time
 
@@ -52,6 +51,8 @@ class ScanContext(object):
 
         self.initialized = False
 
+        self.event_list = []
+
         self.suppress_output = args.quiet_mode
         self.frames_read = -1
         self.frames_processed = -1
@@ -64,10 +65,17 @@ class ScanContext(object):
         # We close the open file handles, as only the paths are required.
         for input_file in args.input:
             input_file.close()
-
+        if not len(args.fourcc_str) == 4:
+            print("[DVR-Scan] Error: Specified codec (-c/--codec) must be exactly 4 characters.")
+            return
+        self.fourcc = cv2.VideoWriter_fourcc(*args.fourcc_str.upper())
+        self.comp_file = None
+        if args.output:
+            self.comp_file = args.output.name
+            args.output.close()
+        # Check the input video(s) and obtain the framerate/resolution.
         if self._load_input_videos():
             # Motion detection and output related arguments
-            self.fourcc_str = args.fourcc_str
             self.threshold = args.threshold
             self.kernel_size = args.kernel_size
             # Event detection window properties
@@ -151,6 +159,7 @@ class ScanContext(object):
             else:
                 self._cap.release()
                 self._cap = None
+
         if self._cap is None and len(self.video_paths) > 0:
             self._cap_path = self.video_paths[0]
             self.video_paths = self.video_paths[1:]
@@ -163,7 +172,6 @@ class ScanContext(object):
 
         return None
 
-
     def scan_motion(self):
         """ Performs motion analysis on the ScanContext's input video(s). """
         if self.initialized is not True:
@@ -173,29 +181,55 @@ class ScanContext(object):
             "%d input videos" % len(self.video_paths) if len(self.video_paths) > 1
             else "input video"))
 
+        bg_subtractor = cv2.createBackgroundSubtractorMOG2(detectShadows=False)
+        frame_buffer = []
+
+        video_writer = None
+        output_prefix = ''
+        if self.comp_file:
+            video_writer = cv2.VideoWriter(self.comp_file, self.fourcc,
+                                           self.video_fps, self.video_resolution)
+        elif len(self.video_paths[0]) > 0:
+            output_prefix = os.path.basename(self.video_paths[0])
+            dot_index = output_prefix.rfind('.')
+            if dot_index > 0:
+                output_prefix = output_prefix[:dot_index]
+
         curr_pos = FrameTimecode(self.video_fps, 0)
+        num_frames_read = 0
+        num_frames_processed = 0
+        processing_start = time.time()
 
         # Seek to starting position if required.
         if self.start_time is not None:
             while curr_pos.frame_num < self.start_time.frame_num:
                 if self._get_next_frame() is None:
                     break
+                num_frames_read += 1
+        # Motion event scanning/detection loop.
         while True:
             if self.end_time is not None and curr_pos.frame_num >= self.end_time:
                 break
             if self.frame_skip > 0:
-                for i in range(self.frame_skip):
+                for _ in range(self.frame_skip):
                     if self._get_next_frame(False) is None:
                         break
                     curr_pos.frame_num += 1
+                    num_frames_read += 1
             frame_rgb = self._get_next_frame()
             if frame_rgb is None:
                 break
 
             curr_pos.frame_num += 1
+            num_frames_read += 1
+            num_frames_processed += 1
 
-        num_frames = curr_pos.frame_num
-        if self.start_time is not None:
-            num_frames -= self.start_time.frame_num
-        print("[DVR-Scan] Read %d frames total." % num_frames)
+        if video_writer is not None:
+            video_writer.release()
+
+        processing_time = time.time() - processing_start
+        processing_rate = float(num_frames_read) / processing_time
+
+        print("[DVR-Scan] Processed %d / %d frames read in %3.1f secs (avg %3.1f FPS)." % (
+            num_frames_processed, num_frames_read, processing_time, processing_rate))
 

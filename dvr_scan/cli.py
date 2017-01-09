@@ -277,19 +277,20 @@ def get_cli_parser():
 
     parser.add_argument(
         '-i', '--input', metavar = 'VIDEO_FILE',
-        required = True, type = argparse.FileType('r'),
-        help = '[REQUIRED] Path to input video.',
-        action = 'append')
+        required = True, type = argparse.FileType('r'), action='append',
+        help = ('[REQUIRED] Path to input video. May be specified multiple'
+                ' times to join several videos with the same resolution'
+                ' and framerate. Any output filenames will be generated'
+                ' using the first filename only.'))
 
-    #parser.add_argument(
-    #    '-o', '--output-dir', metavar = 'OUTPUT_DIR',
-    #    type = argparse.FileType('w'),
-    #    help = ('File to store detected scenes, comma-separated (.csv). Scenes'
-    #            'are written in both single-line and human-readable formats. '
-    #            'File will be overwritten if already exists.'))
-    #
-    # TODO: Change above to modify output directory (default to working dir).
-    #
+    parser.add_argument(
+        '-o', '--output', metavar = 'OUTPUT_VIDEO.avi',
+        type = argparse.FileType('w'),
+        help = ('If specified, all motion events will be written to a single'
+                ' file, creating a compilation of only the frames in'
+                ' the input video containing motion. By default each'
+                ' motion event is written to a separate file. Filename'
+                ' MUST end with .avi.'))
 
     parser.add_argument(
         '-c', '--codec', metavar = 'FOURCC', dest = 'fourcc_str',
@@ -297,7 +298,8 @@ def get_cli_parser():
             ['XVID', 'MP4V', 'MP42', 'H264'], False, 'FOURCC'),
         default = 'XVID',
         help = ('The four-letter identifier of the encoder/video codec to use'
-                ' when exporting motion events as videos.'))
+                ' when exporting motion events as videos. Possible values'
+                ' are: XVID, MP4V, MP42, H264.'))
 
     parser.add_argument(
         '-t', '--threshold', metavar = 'value', dest = 'threshold',
@@ -360,7 +362,7 @@ def get_cli_parser():
     parser.add_argument(
         '-st', '--start-time', metavar = 'time', dest = 'start_time',
         type = timecode_type_check('time'), default = None,
-        help = ('Time to seek to in video before performing detection.  Can be'
+        help = ('Time to seek to in video before performing detection. Can be'
                 ' given in number of frames (12345), seconds (number followed'
                 ' by s, e.g. 123s or 123.45s), or timecode (HH:MM:SS[.nnn]).'))
 
@@ -373,7 +375,7 @@ def get_cli_parser():
     parser.add_argument(
         '-et', '--end-time', metavar = 'time', dest = 'end_time',
         type = timecode_type_check('time'), default = None,
-        help = ('Timecode to stop scene detection at (see -st for valid'
+        help = ('Timecode to stop motion detection at (see -st for valid'
                 'timecode formats).'))
 
     parser.add_argument(
