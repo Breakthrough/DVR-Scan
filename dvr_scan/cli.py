@@ -392,6 +392,12 @@ def get_cli_parser():
                 ' and may increase probability of missing motion events.'
                 ' If required, values above 1 or 2 are not recommended.'))
 
+    parser.add_argument(
+        '-u', '--update-rate', metavar = 'interval', dest = 'update_rate',
+        type = int_type_check(0, None, 'interval'), default = 0,
+        help = ('Prints a status message at the specified interval,'
+                ' including performance and position information.'))
+
     #parser.add_argument(
     #    '-si', '--save-images', dest = 'save_images',
     #    action = 'store_true', default = False,

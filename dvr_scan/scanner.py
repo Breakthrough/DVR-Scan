@@ -46,8 +46,17 @@ import numpy
 class ScanContext(object):
 
     def __init__(self, args):
+        """ Initializes the ScanContext with the supplied arguments. """
+        if not args.quiet_mode:
+            print("[DVR-Scan] Initializing scan context...")
+
         self.initialized = False
 
+        # Load basic class properties from the user-supplied CLI arguments.
+        self.suppress_output = args.quiet_mode
+
+
+        # Require the video to be loaded before processing timecodes.
 
 
         #self.cap = cv2.VideoCapture()
@@ -59,7 +68,7 @@ class ScanContext(object):
         [input_file.close() for input_file in args.input]
         self.curr_video_path = None
 
-        print(self.video_paths)
+        #print(self.video_paths)
         
         if self._load_input_videos():
             self.initialized = True
@@ -81,10 +90,11 @@ class ScanContext(object):
             cap.open(video_path)
             video_name = os.path.basename(video_path)
             if not cap.isOpened():
-                print("[DVR-Scan] Error: Couldn't load video %s." % video_name)
-                print("[DVR-Scan] Check that the given file is a valid video"
-                      " clip, and ensure all required software dependencies"
-                      " are installed and configured properly.")
+                if not self.suppress_output:
+                    print("[DVR-Scan] Error: Couldn't load video %s." % video_name)
+                    print("[DVR-Scan] Check that the given file is a valid video"
+                          " clip, and ensure all required software dependencies"
+                          " are installed and configured properly.")
                 return False
             curr_resolution = (cap.get(cv2.CAP_PROP_FRAME_WIDTH),
                                cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -93,26 +103,30 @@ class ScanContext(object):
             if video_resolution is None and video_framerate is None:
                 video_resolution = curr_resolution
                 video_framerate = curr_framerate
-                print("[DVR-Scan] Opened video %s (%d x %d at %2.3f FPS)." % (
-                    video_name, video_resolution[0], video_resolution[1],
-                    video_framerate))
+                if not self.suppress_output:
+                    print("[DVR-Scan] Opened video %s (%d x %d at %2.3f FPS)." % (
+                        video_name, video_resolution[0], video_resolution[1],
+                        video_framerate))
                 video_valid = True
+            # Check that all other videos specified have the same resolution
+            # (we'll assume the framerate is the same if the resolution matches,
+            # since the VideoCapture FPS information is not always accurate).
             elif curr_resolution != video_resolution:
-                print("[DVR-Scan] Error: Can't append clip %s, video resolution"
-                      " does not match the first input file." % video_name)
+                if not self.suppress_output:
+                    print("[DVR-Scan] Error: Can't append clip %s, video resolution"
+                        " does not match the first input file." % video_name)
                 return False
             else:
-                print("[DVR-Scan] Appended video %s." % video_name)
+                if not self.suppress_output:
+                    print("[DVR-Scan] Appended video %s." % video_name)
                 video_valid = True
             if video_valid is True:
                 self.cap_list.append(cap)
 
 
-        # Check that all other videos specified have the same resolution
-        # (we'll assume the framerate is the same if the resolution matches,
-        # since the VideoCapture FPS information is not always accurate).
 
-        # Seek to starting position.
+        # Seek to starting position - put in different function since need
+        # to compute FrameTimecode objects with the FPS.
 
 
 
@@ -121,5 +135,13 @@ class ScanContext(object):
 
     def scan_motion(self):
         """ Performs motion analysis on the ScanContext's input video(s). """
+        if self.initialized is not True:
+            print("[DVR-Scan] Error: Scan context uninitialized, no analysis performed.")
+            return
+
+        print("[DVR-Scan] Scanning %s for motion events..." % (
+            "%d input videos" % len(self.video_paths) if len(self.video_paths) > 1
+            else "input video"))
+
         pass
 

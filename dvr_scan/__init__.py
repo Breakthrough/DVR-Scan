@@ -60,14 +60,8 @@ def main():
     # Parse the user-supplied CLI arguments.
     args = dvr_scan.cli.get_cli_parser().parse_args()
     # Create and initialize a new ScanContext using the supplied arguments.
-    print("[DVR-Scan] Initializing scan context...")
     sctx = dvr_scan.scanner.ScanContext(args)
     # If the context was successfully initialized, we can process the video(s).
     if sctx.initialized is True:
-        print("[DVR-Scan] Scanning %s for motion events..." % (
-            "%d input videos" % len(sctx.video_paths) if len(sctx.video_paths) > 1
-            else "input video"))
         sctx.scan_motion()
-    else:
-        print("[DVR-Scan] Error: Couldn't initialize scan context.")
 
