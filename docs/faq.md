@@ -15,6 +15,19 @@ This usually happens because DVR-Scan is not able to find the OpenCV FFMPEG DLL,
 
 Windows users can also try downloading a binary/portable distribution, which includes DVR-Scan and all dependencies in a single .ZIP archive.  Note that the portable version can be "installed" after extracting by adding the folder containing `dvr-scan.exe` to your system's `%PATH%` environment variable, allowing you to use the `dvr-scan` command system-wide.
 
+
+----------------------------------------------------------
+
+
+### How can I join/concatenate two or more video files for processing?
+
+If you have a series of video clips from the same source, you can append subsequent video clips to the DVR-Scan input by including another `-i` flag for each file.  For example, to process three videos sequentially:
+
+    dvr-scan -i first_video.mp4 -i second_video.mp4 -i third_video.mp4
+
+The videos are processed in the same order as they appear in the command.  Note that each clip specified by `-i` must have the same resolution and framerate.
+
+
 ----------------------------------------------------------
 
 
@@ -25,8 +38,12 @@ Video files with corrupted/malformed headers can sometimes be fixed by re-muxing
 If all is successful, the output video should be roughly the same size as the original, and playback fine in most media players.  Specifically, it should also report the video's length accurately, and allow seeking throughout the video.
 
 
+----------------------------------------------------------
+
+
 ### How do I submit bug reports, feature requests, or code changes?
 
 Please submit any bug reports or feature requests to <a href="https://github.com/Breakthrough/DVR-Scan/issues" target="_blank" alt="DVR-Scan Issue Tracker @ Github">the issue tracker on Github</a>.
 
 Code changes and pull requests are accepted and welcome, provided that the changes include fixes or improvements to the codebase, rather than just cosmetic changes, and that the changes meet or exceed the quality of the application codebase and standards guiding its development. 
+
