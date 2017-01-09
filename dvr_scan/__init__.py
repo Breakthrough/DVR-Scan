@@ -26,21 +26,10 @@
 
 # Standard Library Imports
 from __future__ import print_function
-import sys
-import os
-import argparse
-import time
-import csv
 
 # DVR-Scan Library Imports
-import dvr_scan.platform
-import dvr_scan.timecode
-import dvr_scan.scanner
 import dvr_scan.cli
-
-# Third-Party Library Imports
-import cv2
-import numpy
+import dvr_scan.scanner
 
 
 # Used for module identification and when printing copyright & version info.
@@ -68,9 +57,17 @@ def main():
 
     Handles high-level interfacing of video IO and motion event detection.
     """
-    # Parse CLI arguments.
+    # Parse the user-supplied CLI arguments.
     args = dvr_scan.cli.get_cli_parser().parse_args()
-    # Use arguments to create a ScanContext, and process the video.
+    # Create and initialize a new ScanContext using the supplied arguments.
+    print("[DVR-Scan] Initializing scan context...")
     sctx = dvr_scan.scanner.ScanContext(args)
-    sctx.process_video()
+    # If the context was successfully initialized, we can process the video(s).
+    if sctx.initialized is True:
+        print("[DVR-Scan] Scanning %s for motion events..." % (
+            "%d input videos" % len(sctx.video_paths) if len(sctx.video_paths) > 1
+            else "input video"))
+        sctx.scan_motion()
+    else:
+        print("[DVR-Scan] Error: Couldn't initialize scan context.")
 
