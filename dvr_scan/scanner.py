@@ -30,9 +30,7 @@
 from __future__ import print_function
 import sys
 import os
-import argparse
 import time
-import csv
 
 # DVR-Scan Library Imports
 from dvr_scan.timecode import FrameTimecode
@@ -42,8 +40,10 @@ import cv2
 import numpy
 
 
-
 class ScanContext(object):
+    """ The ScanContext object represents the DVR-Scan program state,
+    which includes application initialization, handling the options,
+    and coordinating overall application logic (via scan_motion()). """
 
     def __init__(self, args):
         """ Initializes the ScanContext with the supplied arguments. """
@@ -55,13 +55,15 @@ class ScanContext(object):
         self.suppress_output = args.quiet_mode
         self.frames_read = -1
         self.frames_processed = -1
-        self.cap_list = None
-        self.curr_video_path = None
+        self._cap = None
+        self._cap_path = None
 
         self.video_resolution = None
         self.video_fps = None
         self.video_paths = [input_file.name for input_file in args.input]
-        [input_file.close() for input_file in args.input]
+        # We close the open file handles, as only the paths are required.
+        for input_file in args.input:
+            input_file.close()
 
         if self._load_input_videos():
             # Motion detection and output related arguments
@@ -94,9 +96,10 @@ class ScanContext(object):
     def _load_input_videos(self):
         """ Opens and checks that all input video files are valid, can
         be processed, and have the same resolution and framerate. """
-        self.cap_list = []
-        video_resolution = None
-        video_fps = None
+        self.video_resolution = None
+        self.video_fps = None
+        if not len(self.video_paths) > 0:
+            return False
         for video_path in self.video_paths:
             cap = cv2.VideoCapture()
             cap.open(video_path)
@@ -107,23 +110,23 @@ class ScanContext(object):
                     print("[DVR-Scan] Check that the given file is a valid video"
                           " clip, and ensure all required software dependencies"
                           " are installed and configured properly.")
+                cap.release()
                 return False
             curr_resolution = (cap.get(cv2.CAP_PROP_FRAME_WIDTH),
                                cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             curr_framerate = cap.get(cv2.CAP_PROP_FPS)
-            video_valid = False
-            if video_resolution is None and video_fps is None:
-                video_resolution = curr_resolution
-                video_fps = curr_framerate
+            cap.release()
+            if self.video_resolution is None and self.video_fps is None:
+                self.video_resolution = curr_resolution
+                self.video_fps = curr_framerate
                 if not self.suppress_output:
                     print("[DVR-Scan] Opened video %s (%d x %d at %2.3f FPS)." % (
-                        video_name, video_resolution[0], video_resolution[1],
-                        video_fps))
-                video_valid = True
+                        video_name, self.video_resolution[0],
+                        self.video_resolution[1], self.video_fps))
             # Check that all other videos specified have the same resolution
             # (we'll assume the framerate is the same if the resolution matches,
             # since the VideoCapture FPS information is not always accurate).
-            elif curr_resolution != video_resolution:
+            elif curr_resolution != self.video_resolution:
                 if not self.suppress_output:
                     print("[DVR-Scan] Error: Can't append clip %s, video resolution"
                           " does not match the first input file." % video_name)
@@ -131,11 +134,34 @@ class ScanContext(object):
             else:
                 if not self.suppress_output:
                     print("[DVR-Scan] Appended video %s." % video_name)
-                video_valid = True
-            if video_valid is True:
-                self.cap_list.append(cap)
-
+        # If we get to this point, all videos have the same parameters.
         return True
+
+    def _get_next_frame(self, retrieve = True):
+        """ Returns a new frame from the current series of video files,
+        or None when no more frames are available. """
+        if self._cap:
+            if retrieve:
+                (ret_val, frame) = self._cap.read()
+            else:
+                ret_val = self._cap.grab()
+                frame = True
+            if ret_val:
+                return frame
+            else:
+                self._cap.release()
+                self._cap = None
+        if self._cap is None and len(self.video_paths) > 0:
+            self._cap_path = self.video_paths[0]
+            self.video_paths = self.video_paths[1:]
+            self._cap = cv2.VideoCapture(self._cap_path)
+            if self._cap.isOpened():
+                return self._get_next_frame()
+            else:
+                print("[DVR-Scan] Error: Unable to load video for processing.")
+                self._cap = None
+
+        return None
 
 
     def scan_motion(self):
@@ -143,15 +169,33 @@ class ScanContext(object):
         if self.initialized is not True:
             print("[DVR-Scan] Error: Scan context uninitialized, no analysis performed.")
             return
-
         print("[DVR-Scan] Scanning %s for motion events..." % (
             "%d input videos" % len(self.video_paths) if len(self.video_paths) > 1
             else "input video"))
-        
 
         curr_pos = FrameTimecode(self.video_fps, 0)
-        # Seek to starting position.
 
+        # Seek to starting position if required.
+        if self.start_time is not None:
+            while curr_pos.frame_num < self.start_time.frame_num:
+                if self._get_next_frame() is None:
+                    break
+        while True:
+            if self.end_time is not None and curr_pos.frame_num >= self.end_time:
+                break
+            if self.frame_skip > 0:
+                for i in range(self.frame_skip):
+                    if self._get_next_frame(False) is None:
+                        break
+                    curr_pos.frame_num += 1
+            frame_rgb = self._get_next_frame()
+            if frame_rgb is None:
+                break
 
-        pass
+            curr_pos.frame_num += 1
+
+        num_frames = curr_pos.frame_num
+        if self.start_time is not None:
+            num_frames -= self.start_time.frame_num
+        print("[DVR-Scan] Read %d frames total." % num_frames)
 
