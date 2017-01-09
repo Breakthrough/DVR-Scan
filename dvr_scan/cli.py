@@ -278,7 +278,8 @@ def get_cli_parser():
     parser.add_argument(
         '-i', '--input', metavar = 'VIDEO_FILE',
         required = True, type = argparse.FileType('r'),
-        help = '[REQUIRED] Path to input video.')
+        help = '[REQUIRED] Path to input video.',
+        action = 'append')
 
     #parser.add_argument(
     #    '-o', '--output-dir', metavar = 'OUTPUT_DIR',
@@ -292,7 +293,6 @@ def get_cli_parser():
 
     parser.add_argument(
         '-c', '--codec', metavar = 'FOURCC', dest = 'fourcc_string',
-        #type = str,
         type = string_type_check(
             ['XVID', 'MP4V', 'MP42', 'H264'], False, 'FOURCC'),
         default = 'XVID',
@@ -301,7 +301,6 @@ def get_cli_parser():
 
     parser.add_argument(
         '-t', '--threshold', metavar = 'value', dest = 'threshold',
-        #type = int_type_check(0, 255, 'intensity'),
         type = float_type_check(0.0, None, 'value'),
         default = 0.5,
         help = ('Threshold value representing the amount of motion in a frame'
@@ -319,29 +318,38 @@ def get_cli_parser():
                 ' large, some movement in the scene may not be detected.'))
 
     parser.add_argument(
-        '-n', '--num-frames-post-event', metavar = 'num_frames', dest = 'num_frames_post_event',
-        type = int_type_check(1, None, 'num_frames'), default = 15,
+        '-tp', '--time-post-event', metavar = 'T', dest = 'time_post_event',
+        type = timecode_type_check('T'), default = '2s',
         help = ('Number of frames to include after each motion event ends.'
                 ' Any new motion events that occur in this period are'
-                ' automatically joined with the current motion event.'))
+                ' automatically joined with the current motion event.'
+                ' Can also be specified as a timecode or # of seconds.'))
 
     parser.add_argument(
-        '-f', '--num-frames-trigger-event', metavar = 'num_frames', dest = 'num_frames_trigger_event',
-        type = int_type_check(1, None, 'num_frames'), default = 2,
-        help = ('Number of frames that must exceed the threshold in a row to'
-                ' trigger a new motion event.'))
+        '-tb', '--time-before-event', metavar = 'T', dest = 'time_pre_event',
+        type = timecode_type_check('T'), default = '1.5s',
+        help = ('Number of frames to include before a motion event is detected.'
+                ' Can also be specified as a timecode or # of seconds.'))
 
     parser.add_argument(
-        '-s', '--statsfile', metavar = 'STATS_FILE', dest = 'stats_file',
-        type = argparse.FileType('w'),
-        help = 'File to store video statistics data, comma-separated value '
-               'format (.csv). Will be overwritten if exists.')
+        '-l', '--min-event-length', metavar = 'T', dest = 'min_event_len',
+        #type = int_type_check(1, None, 'num_frames'), default = 2,
+        type = timecode_type_check('T'), default = 2,
+        help = ('Number of frames that must exceed the threshold in a row to trigger'
+                ' a new motion event, effectively setting a minimum event length.'
+                ' Can also be specified as a timecode or # of seconds.'))
 
-    parser.add_argument(
-        '-l', '--list-events', dest = 'list_events',
-        action = 'store_true', default = False,
-        help = ('Output the times and lengths of any motion events that are'
-                ' found to the terminal as a human-readable table.'))
+    #parser.add_argument(
+    #    '-s', '--statsfile', metavar = 'STATS_FILE', dest = 'stats_file',
+    #    type = argparse.FileType('w'),
+    #    help = 'File to store video statistics data, comma-separated value '
+    #           'format (.csv). Will be overwritten if exists.')
+
+    #parser.add_argument(
+    #    '-e', '--list-events', dest = 'list_events',
+    #    action = 'store_true', default = False,
+    #    help = ('Output the times and lengths of any motion events that are'
+    #            ' found to the terminal as a human-readable table.'))
 
     parser.add_argument(
         '-q', '--quiet', dest = 'quiet_mode',
@@ -384,12 +392,12 @@ def get_cli_parser():
                 ' and may increase probability of missing motion events.'
                 ' If required, values above 1 or 2 are not recommended.'))
 
-    parser.add_argument(
-        '-si', '--save-images', dest = 'save_images',
-        action = 'store_true', default = False,
-        help = ('If set, the first and last frames in each detected motion'
-                ' event will be saved to disk. Images will be saved in the'
-                ' same folder as the input video, unless set otherwise.'))
+    #parser.add_argument(
+    #    '-si', '--save-images', dest = 'save_images',
+    #    action = 'store_true', default = False,
+    #    help = ('If set, the first and last frames in each detected motion'
+    #            ' event will be saved to disk. Images will be saved in the'
+    #            ' same folder as the input video, unless set otherwise.'))
 
     return parser
 

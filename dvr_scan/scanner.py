@@ -46,7 +46,13 @@ import numpy
 class ScanContext(object):
 
     def __init__(self, args):
+        self.cap = cv2.VideoCapture()
+        self.frames_read = -1
+        self.frames_processed = -1
 
+        self.video_path = args.input
+
+        print(self.video_path)
         pass
 
         #self.curr_pos = FrameTimecode()
