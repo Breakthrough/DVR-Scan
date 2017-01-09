@@ -36,7 +36,7 @@ from dvr_scan.timecode import FrameTimecode
 
 # Third-Party Library Imports
 import cv2
-import numpy
+import numpy as np
 
 
 class ScanContext(object):
@@ -68,6 +68,13 @@ class ScanContext(object):
         if not len(args.fourcc_str) == 4:
             print("[DVR-Scan] Error: Specified codec (-c/--codec) must be exactly 4 characters.")
             return
+        if args.kernel_size == -1:
+            self.kernel = None
+        elif (args.kernel_size % 2) == 0:
+            print("[DVR-Scan] Error: Kernel size must be an odd, positive integer (e.g. 3, 5, 7.")
+            return
+        else:
+            self.kernel = np.ones((args.kernel_size, args.kernel_size), np.uint8)
         self.fourcc = cv2.VideoWriter_fourcc(*args.fourcc_str.upper())
         self.comp_file = None
         if args.output:
@@ -77,7 +84,13 @@ class ScanContext(object):
         if self._load_input_videos():
             # Motion detection and output related arguments
             self.threshold = args.threshold
-            self.kernel_size = args.kernel_size
+            if self.kernel is None:
+                if self.video_resolution[0] >= 1920:
+                    self.kernel = np.ones((7, 7), np.uint8)
+                elif self.video_resolution[0] >= 1280:
+                    self.kernel = np.ones((5, 5), np.uint8)
+                else:
+                    self.kernel = np.ones((3, 3), np.uint8)
             # Event detection window properties
             self.min_event_len = FrameTimecode(self.video_fps, args.min_event_len)
             self.pre_event_len = FrameTimecode(self.video_fps, args.time_pre_event)
@@ -120,8 +133,8 @@ class ScanContext(object):
                           " are installed and configured properly.")
                 cap.release()
                 return False
-            curr_resolution = (cap.get(cv2.CAP_PROP_FRAME_WIDTH),
-                               cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            curr_resolution = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
+                               int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
             curr_framerate = cap.get(cv2.CAP_PROP_FPS)
             cap.release()
             if self.video_resolution is None and self.video_fps is None:
@@ -182,7 +195,13 @@ class ScanContext(object):
             else "input video"))
 
         bg_subtractor = cv2.createBackgroundSubtractorMOG2(detectShadows=False)
-        frame_buffer = []
+        buffered_frames = []
+        event_window = []
+        self.event_list = []
+        num_frames_post_event = 0
+        in_event = False
+        event_start = None
+        last_above_threshold = -1
 
         video_writer = None
         output_prefix = ''
@@ -196,6 +215,8 @@ class ScanContext(object):
                 output_prefix = output_prefix[:dot_index]
 
         curr_pos = FrameTimecode(self.video_fps, 0)
+        #curr_state = 'no_event'     # 'no_event', 'in_event', or 'post_even
+        in_motion_event = False
         num_frames_read = 0
         num_frames_processed = 0
         processing_start = time.time()
@@ -220,6 +241,53 @@ class ScanContext(object):
             if frame_rgb is None:
                 break
 
+            frame_gray = cv2.cvtColor(frame_rgb, cv2.COLOR_BGR2GRAY)
+            frame_mask = bg_subtractor.apply(frame_gray)
+            frame_filt = cv2.morphologyEx(frame_mask, cv2.MORPH_OPEN, self.kernel)
+            frame_score = np.sum(frame_filt) / float(frame_filt.shape[0] * frame_filt.shape[1])
+            event_window.append(frame_score)
+
+            if in_motion_event:
+                # in event or post event, write all queued frames to file,
+                # and write current frame to file.
+                # if the current frame doesn't meet the threshold, increment
+                # the current scene's post-event counter.
+                video_writer.write(frame_rgb)
+                if frame_score >= self.threshold:
+                    num_frames_post_event = 0
+                else:
+                    num_frames_post_event += 1
+                    if num_frames_post_event >= self.post_event_len.frame_num:
+                        in_motion_event = False
+                        event_end = FrameTimecode(
+                            self.video_fps, curr_pos.frame_num)
+                        event_duration = FrameTimecode(
+                            self.video_fps, curr_pos.frame_num - event_start.frame_num)
+                        self.event_list.append((event_start, event_end, event_duration))
+                        video_writer.release()
+            else:
+                buffered_frames.append(frame_rgb)
+                if all(score >= self.threshold for score in event_window):
+                    in_motion_event = True
+                    num_frames_post_event = 0
+                    event_start = FrameTimecode(
+                        self.video_fps, curr_pos.frame_num)
+                    # Open new VideoWriter, write buffered_frames to file.
+                    if not self.comp_file:
+                        output_path = '%s.DSME_%04d.avi' % (
+                            output_prefix, len(self.event_list))
+                        video_writer = cv2.VideoWriter(
+                            output_path, self.fourcc, self.video_fps,
+                            self.video_resolution)
+                        for frame in buffered_frames:
+                            video_writer.write(frame)
+                        buffered_frames.clear()
+                        event_window.clear()
+                else:
+                    # Trim event_window and buffered_frames lists to their max lengths.
+                    event_window = event_window[-self.min_event_len.frame_num:]
+                    buffered_frames = buffered_frames[-self.pre_event_len.frame_num:]
+
             curr_pos.frame_num += 1
             num_frames_read += 1
             num_frames_processed += 1
@@ -232,4 +300,4 @@ class ScanContext(object):
 
         print("[DVR-Scan] Processed %d / %d frames read in %3.1f secs (avg %3.1f FPS)." % (
             num_frames_processed, num_frames_read, processing_time, processing_rate))
-
+        print("[DVR-Scan] Detected %d motion events in input." % len(self.event_list))

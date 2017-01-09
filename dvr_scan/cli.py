@@ -304,7 +304,7 @@ def get_cli_parser():
     parser.add_argument(
         '-t', '--threshold', metavar = 'value', dest = 'threshold',
         type = float_type_check(0.0, None, 'value'),
-        default = 0.5,
+        default = 0.15,
         help = ('Threshold value representing the amount of motion in a frame'
                 ' required to trigger a motion event. Lower values require'
                 ' less movement, and are more sensitive to motion. If the threshold'
