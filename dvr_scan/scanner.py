@@ -110,7 +110,7 @@ class ScanContext(object):
                 self.end_time = FrameTimecode(self.video_fps, args.end_time)
             # Video processing related arguments
             self.frame_skip = args.frame_skip
-            self.downscale_factor = args.downscale_factor
+            #self.downscale_factor = args.downscale_factor
 
             self.initialized = True
 
@@ -199,9 +199,7 @@ class ScanContext(object):
         event_window = []
         self.event_list = []
         num_frames_post_event = 0
-        in_event = False
         event_start = None
-        last_above_threshold = -1
 
         video_writer = None
         output_prefix = ''
@@ -264,7 +262,8 @@ class ScanContext(object):
                         event_duration = FrameTimecode(
                             self.video_fps, curr_pos.frame_num - event_start.frame_num)
                         self.event_list.append((event_start, event_end, event_duration))
-                        video_writer.release()
+                        if not self.comp_file:
+                            video_writer.release()
             else:
                 buffered_frames.append(frame_rgb)
                 if all(score >= self.threshold for score in event_window):
@@ -272,17 +271,17 @@ class ScanContext(object):
                     num_frames_post_event = 0
                     event_start = FrameTimecode(
                         self.video_fps, curr_pos.frame_num)
-                    # Open new VideoWriter, write buffered_frames to file.
+                    # Open new VideoWriter if needed, write buffered_frames to file.
                     if not self.comp_file:
                         output_path = '%s.DSME_%04d.avi' % (
                             output_prefix, len(self.event_list))
                         video_writer = cv2.VideoWriter(
                             output_path, self.fourcc, self.video_fps,
                             self.video_resolution)
-                        for frame in buffered_frames:
-                            video_writer.write(frame)
-                        buffered_frames.clear()
-                        event_window.clear()
+                    for frame in buffered_frames:
+                        video_writer.write(frame)
+                    buffered_frames.clear()
+                    event_window.clear()
                 else:
                     # Trim event_window and buffered_frames lists to their max lengths.
                     event_window = event_window[-self.min_event_len.frame_num:]
@@ -301,3 +300,4 @@ class ScanContext(object):
         print("[DVR-Scan] Processed %d / %d frames read in %3.1f secs (avg %3.1f FPS)." % (
             num_frames_processed, num_frames_read, processing_time, processing_rate))
         print("[DVR-Scan] Detected %d motion events in input." % len(self.event_list))
+
