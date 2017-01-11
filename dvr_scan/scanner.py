@@ -294,6 +294,16 @@ class ScanContext(object):
             num_frames_read += 1
             num_frames_processed += 1
 
+        # If we're still in a motion event, we still need to compute the duration
+        # and ending timecode and add it to the event list.
+        if in_motion_event:
+            curr_pos.frame_num -= 1  # Correct for the increment at the end of the loop
+            event_end = FrameTimecode(
+                self.video_fps, curr_pos.frame_num)
+            event_duration = FrameTimecode(
+                self.video_fps, curr_pos.frame_num - event_start.frame_num)
+            self.event_list.append((event_start, event_end, event_duration))
+
         if video_writer is not None:
             video_writer.release()
 
