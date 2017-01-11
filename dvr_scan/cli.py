@@ -293,6 +293,12 @@ def get_cli_parser():
                 ' MUST end with .avi.'))
 
     parser.add_argument(
+        '-so', '--scan-only', dest = 'scan_only_mode',
+        action = 'store_true', default = False,
+        help = ('Only perform motion detection on the input, and generate a'
+                ' list of comma-separated timecodes, writing no files to disk.'))
+
+    parser.add_argument(
         '-c', '--codec', metavar = 'FOURCC', dest = 'fourcc_str',
         type = string_type_check(
             ['XVID', 'MP4V', 'MP42', 'H264'], False, 'FOURCC'),

@@ -77,6 +77,7 @@ class ScanContext(object):
             self.kernel = np.ones((args.kernel_size, args.kernel_size), np.uint8)
         self.fourcc = cv2.VideoWriter_fourcc(*args.fourcc_str.upper())
         self.comp_file = None
+        self.scan_only_mode = args.scan_only_mode
         if args.output:
             self.comp_file = args.output.name
             args.output.close()
@@ -244,13 +245,15 @@ class ScanContext(object):
             frame_filt = cv2.morphologyEx(frame_mask, cv2.MORPH_OPEN, self.kernel)
             frame_score = np.sum(frame_filt) / float(frame_filt.shape[0] * frame_filt.shape[1])
             event_window.append(frame_score)
+            event_window = event_window[-self.min_event_len.frame_num:]
 
             if in_motion_event:
                 # in event or post event, write all queued frames to file,
                 # and write current frame to file.
                 # if the current frame doesn't meet the threshold, increment
                 # the current scene's post-event counter.
-                video_writer.write(frame_rgb)
+                if not self.scan_only_mode:
+                    video_writer.write(frame_rgb)
                 if frame_score >= self.threshold:
                     num_frames_post_event = 0
                 else:
@@ -262,30 +265,30 @@ class ScanContext(object):
                         event_duration = FrameTimecode(
                             self.video_fps, curr_pos.frame_num - event_start.frame_num)
                         self.event_list.append((event_start, event_end, event_duration))
-                        if not self.comp_file:
+                        if not self.comp_file and not self.scan_only_mode:
                             video_writer.release()
             else:
-                buffered_frames.append(frame_rgb)
-                if all(score >= self.threshold for score in event_window):
+                if not self.scan_only_mode:
+                    buffered_frames.append(frame_rgb)
+                    buffered_frames = buffered_frames[-self.pre_event_len.frame_num:]
+                if len(event_window) >= self.min_event_len.frame_num and all(
+                        score >= self.threshold for score in event_window):
                     in_motion_event = True
+                    event_window.clear()
                     num_frames_post_event = 0
                     event_start = FrameTimecode(
                         self.video_fps, curr_pos.frame_num)
                     # Open new VideoWriter if needed, write buffered_frames to file.
-                    if not self.comp_file:
-                        output_path = '%s.DSME_%04d.avi' % (
-                            output_prefix, len(self.event_list))
-                        video_writer = cv2.VideoWriter(
-                            output_path, self.fourcc, self.video_fps,
-                            self.video_resolution)
-                    for frame in buffered_frames:
-                        video_writer.write(frame)
-                    buffered_frames.clear()
-                    event_window.clear()
-                else:
-                    # Trim event_window and buffered_frames lists to their max lengths.
-                    event_window = event_window[-self.min_event_len.frame_num:]
-                    buffered_frames = buffered_frames[-self.pre_event_len.frame_num:]
+                    if not self.scan_only_mode:
+                        if not self.comp_file:
+                            output_path = '%s.DSME_%04d.avi' % (
+                                output_prefix, len(self.event_list))
+                            video_writer = cv2.VideoWriter(
+                                output_path, self.fourcc, self.video_fps,
+                                self.video_resolution)
+                        for frame in buffered_frames:
+                            video_writer.write(frame)
+                        buffered_frames.clear()
 
             curr_pos.frame_num += 1
             num_frames_read += 1
