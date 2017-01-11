@@ -36,7 +36,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## Ancillary Software Licenses
 
-This section contains the license agreements for all third-party software libraries used and distributed with PySceneDetect.
+This section contains the license agreements for all third-party software libraries used and distributed with DVR-Scan.
 
 
 ### NumPy License
