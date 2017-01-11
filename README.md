@@ -5,7 +5,7 @@
 
 ------------------------------------------------
 
-### | [Download](http://dvr-scan.readthedocs.io/en/latest/download/) | [Install Guide](http://dvr-scan.readthedocs.io/en/latest/guide/installing/) | [Getting Started](https://github.com/Breakthrough/DVR-Scan/blob/master/docs/guide/examples.md) | [FAQ](http://dvr-scan.readthedocs.io/en/latest/faq/) | [Documentation](http://dvr-scan.readthedocs.io/) |
+### | [Download](http://dvr-scan.readthedocs.io/en/latest/download/) | [Install Guide](http://dvr-scan.readthedocs.io/en/latest/guide/installing/) | [Getting Started](http://dvr-scan.readthedocs.io/en/latest/guide/examples/) | [FAQ](http://dvr-scan.readthedocs.io/en/latest/faq/) | [Documentation](http://dvr-scan.readthedocs.io/) |
 
 ------------------------------------------------
 
