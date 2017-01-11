@@ -1,6 +1,6 @@
 
 
-After installation, you can run DVR-Scan from any terminal/command prompt by typing `dvr-scan` (try running `dvr-scan --version` to verify that everything was installed correctly).  If using a binary distribution on Windows, you need to run the program from the folder containing the `dvr-scan.exe` file, unless you perform the steps below.
+After installation, you can run DVR-Scan from any terminal/command prompt by typing `dvr-scan` (try running `dvr-scan --version` to verify that everything was installed correctly).  If using a portable distribution on Windows, you need to run the program from the folder containing the `dvr-scan.exe` file, unless you add the folder to your system's `%PATH%` variable.  You do not need to do this if you used the .MSI installer.
 
 ------------------------------------------------
 
