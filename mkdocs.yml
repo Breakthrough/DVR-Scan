@@ -21,10 +21,10 @@ pages:
 - 'User Guide':
     - 'Installing & Updating': 'guide/installing.md'
     - 'Getting Started & Examples': 'guide/examples.md'
-    - 'Motion Detection Options': 'guide/detection_options.md'
-    - 'Additional Program Options': 'guide/program_options.md'
+#    - 'Motion Detection Options': 'guide/detection_options.md'
+#    - 'Additional Program Options': 'guide/program_options.md'
 - 'External Resources':
     - 'Other Similar/Related Software': 'other/similar_software.md'
-    - 'Technical Resources & Articles': 'other/resources.md'
+#    - 'Technical Resources & Articles': 'other/resources.md'
 
 markdown_extensions: [fenced_code]

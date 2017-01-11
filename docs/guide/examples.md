@@ -11,15 +11,21 @@ To see what version of DVR-Scan is installed:
 
 ----------------------
 
+### Examples
+
 To perform motion detection on a file `some_video.mp4`, saving each event to a separate video clip (default), specify the `-i` / `--input` option (required):
 
     dvr-scan -i some_video.mp4
 
-To output all motion events in a single video (must end in `.avi`):
+To use scan-only mode, which doesn't create or change any files, use the `-so` / `--scan-only` option:
+
+    dvr-scan -i some_video.mp4 -so
+
+By default, scan-only mode outputs a list of comma-separated timecodes for each event. To output all motion events in a single video (must end in `.avi`) specify the `-o` / `--output` option:
 
     dvr-scan -i some_video.mp4 -o some_video_motion_only.avi
 
-All output files will be written in the current working directory.
+For users wanting finer control over the output video encoding method, the default timecode format (`HH:MM:SS.nnnn`) is compatible with most popular video tools, so in most cases the motion events DVR-Scan finds can be simply copied and pasted into another tool of your choice (e.g. `ffmpeg`, `avconv` or the `mkvtoolnix` suite).
 
 ----------------------
 
