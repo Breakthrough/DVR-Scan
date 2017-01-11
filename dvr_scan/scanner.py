@@ -299,8 +299,32 @@ class ScanContext(object):
 
         processing_time = time.time() - processing_start
         processing_rate = float(num_frames_read) / processing_time
-
         print("[DVR-Scan] Processed %d / %d frames read in %3.1f secs (avg %3.1f FPS)." % (
             num_frames_processed, num_frames_read, processing_time, processing_rate))
+
+        if not len(self.event_list) > 0:
+            print("[DVR-Scan] No motion events detected in input.")
+            return
+
         print("[DVR-Scan] Detected %d motion events in input." % len(self.event_list))
+        print("[DVR-Scan] Scan-only mode specified, list of motion events:")
+        print("-------------------------------------------------------------")
+        print("|   Event #    |  Start Time  |   Duration   |   End Time   |")
+        print("-------------------------------------------------------------")
+        for event_num, (event_start, event_end, event_duration) in enumerate(self.event_list):
+            print("|  Event %4d  |  %s  |  %s  |  %s  |" % (
+                event_num + 1, event_start.get_timecode(precision=1),
+                event_duration.get_timecode(precision=1),
+                event_end.get_timecode(precision=1)))
+        print("-------------------------------------------------------------")
+
+        if self.scan_only_mode:
+            print("[DVR-Scan] Comma-separated timecode values:")
+            timecode_list = []
+            for event_start, event_end, event_duration in self.event_list:
+                timecode_list.append(event_start.get_timecode())
+                timecode_list.append(event_end.get_timecode())
+            print(','.join(timecode_list))
+        else:
+            print("[DVR-Scan] Motion events written to disk.")
 
