@@ -274,7 +274,7 @@ class ScanContext(object):
                 if len(event_window) >= self.min_event_len.frame_num and all(
                         score >= self.threshold for score in event_window):
                     in_motion_event = True
-                    event_window.clear()
+                    event_window = []
                     num_frames_post_event = 0
                     event_start = FrameTimecode(
                         self.video_fps, curr_pos.frame_num)
@@ -288,7 +288,7 @@ class ScanContext(object):
                                 self.video_resolution)
                         for frame in buffered_frames:
                             video_writer.write(frame)
-                        buffered_frames.clear()
+                        buffered_frames = []
 
             curr_pos.frame_num += 1
             num_frames_read += 1
