@@ -10,14 +10,14 @@ Start by downloading the latest release of DVR-Scan and extracting it to a locat
 
 ### Installing Dependencies
 
-If installing from source, DVR-Scan requires [Python 2 or 3](https://www.python.org/) (tested on 2.7.X, untested but should work on 2.X) and the following libraries ([quick install guide](http://breakthrough.github.io/Installing-OpenCV/)):
+If installing from source, DVR-Scan requires [Python 2 or 3](https://www.python.org/) (tested on 3.X, untested but should work on 2.X) and the following libraries ([quick install guide](http://breakthrough.github.io/Installing-OpenCV/)):
 
- - [OpenCV](http://opencv.org/) (compatible with both 2.X or 3.X) and the Python module (`cv2`)
+ - [OpenCV](http://opencv.org/) (requires version 3.0 and above) and the Python module (`cv2`)
  - [Numpy](http://sourceforge.net/projects/numpy/) Python module (`numpy`)
 
 You can [click here](http://breakthrough.github.io/Installing-OpenCV/) for a quick guide (OpenCV + Numpy on Windows & Linux) on installing the latest versions of OpenCV/Numpy on [Windows (using pre-built binaries)](http://breakthrough.github.io/Installing-OpenCV/#installing-on-windows-pre-built-binaries) and [Linux (compiling from source)](http://breakthrough.github.io/Installing-OpenCV/#installing-on-linux-compiling-from-source).  If the Python module that comes with OpenCV on Windows is incompatible with your system architecture or Python version, [see this page](http://www.lfd.uci.edu/~gohlke/pythonlibs/#opencv) to obtain a pre-compiled (unofficial) module.
 
-Note that some Linux package managers still provide older, dated builds of OpenCV (pre-3.0).  DVR-Scan is compatible with both versions, but if you want to ensure you have the latest version, it's recommended that you [build and install OpenCV from source](http://breakthrough.github.io/Installing-OpenCV/#installing-on-linux-compiling-from-source) on Linux.
+Note that some Linux package managers still provide older, dated builds of OpenCV (pre-3.0); if you want to ensure you have the latest version, it's recommended that you [build and install OpenCV from source](http://breakthrough.github.io/Installing-OpenCV/#installing-on-linux-compiling-from-source) on Linux.
 
 ### Installing DVR-Scan
 
