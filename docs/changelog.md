@@ -3,7 +3,7 @@
 
 ### 1.0.1 (2017-01-12)
 
- * [bugfix] fixed bug when running under Python 2.7
+ * [bugfix] unhandled exception affecting users running source distributions under Python 2.7 environments
 
 ### 1.0 (2017-01-11)
 
