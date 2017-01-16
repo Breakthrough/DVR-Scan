@@ -1,5 +1,5 @@
 
-# Obtaining DVR-Scan
+<h1>Obtaining DVR-Scan</h1>
 
 DVR-Scan is completely free software, and can be downloaded from the links below.  See the [license and copyright information](copyright.md) page for details.  If you have trouble running DVR-Scan, ensure that you have all the required dependencies listed on the [Installing & Updating](guide/installing.md) page.
 

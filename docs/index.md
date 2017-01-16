@@ -1,5 +1,5 @@
 <h1 class="wy-text-neutral">DVR-Scan &nbsp;<img src="img/dvr-scan-logo_small.png"/></h1>
-<h4 class="wy-text-info">Find and extract motion events in videos.</h4>
+<h4 class="wy-text-info" style="margin-top:-1em;">Find and extract motion events in videos.</h4>
 
 <div class="important">
 <h3 class="wy-text-neutral"><span class="fa fa-info-circle wy-text-info"></span>&nbsp; Latest Release: <b>v1.0.1</b> (January 12, 2017)</h3>
