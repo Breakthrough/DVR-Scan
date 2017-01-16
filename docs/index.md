@@ -1,4 +1,4 @@
-<h1 class="wy-text-neutral">DVR-Scan &nbsp;<span class="fa fa-fast-forward wy-text-info"></span>&nbsp;<span class="fa fa-barcode wy-text-info"></span></h1>
+<h1 class="wy-text-neutral">DVR-Scan &nbsp;<img src="img/dvr-scan-logo_small.png"/></h1>
 <h4 class="wy-text-info">Find and extract motion events in videos.</h4>
 
 <div class="important">
