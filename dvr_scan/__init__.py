@@ -33,7 +33,7 @@ import dvr_scan.scanner
 
 
 # Used for module identification and when printing copyright & version info.
-__version__ = 'v1.0.1'
+__version__ = 'v1.1-dev'
 
 # About & copyright message string shown for the -v/--version CLI argument.
 ABOUT_STRING   = """-----------------------------------------------

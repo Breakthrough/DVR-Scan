@@ -33,6 +33,7 @@ import time
 
 # DVR-Scan Library Imports
 from dvr_scan.timecode import FrameTimecode
+import dvr_scan.platform
 
 # Third-Party Library Imports
 import cv2
@@ -56,6 +57,7 @@ class ScanContext(object):
         self.suppress_output = args.quiet_mode
         self.frames_read = -1
         self.frames_processed = -1
+        self.frames_total = -1
         self._cap = None
         self._cap_path = None
 
@@ -120,6 +122,7 @@ class ScanContext(object):
         be processed, and have the same resolution and framerate. """
         self.video_resolution = None
         self.video_fps = None
+        self.frames_total = 0
         if not len(self.video_paths) > 0:
             return False
         for video_path in self.video_paths:
@@ -137,6 +140,7 @@ class ScanContext(object):
             curr_resolution = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
                                int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
             curr_framerate = cap.get(cv2.CAP_PROP_FPS)
+            self.frames_total += cap.get(cv2.CAP_PROP_FRAME_COUNT)
             cap.release()
             if self.video_resolution is None and self.video_fps is None:
                 self.video_resolution = curr_resolution
@@ -220,12 +224,22 @@ class ScanContext(object):
         num_frames_processed = 0
         processing_start = time.time()
 
+        tqdm = dvr_scan.platform.get_tqdm()
+        progress_bar = None
+        self.frames_total = int(self.frames_total)
+        if tqdm is not None and self.frames_total > 0 and not self.suppress_output:
+            progress_bar = tqdm.tqdm(
+                total = self.frames_total, unit = ' frames',
+                desc = "[DVR-Scan] Processed")
+
         # Seek to starting position if required.
         if self.start_time is not None:
             while curr_pos.frame_num < self.start_time.frame_num:
                 if self._get_next_frame() is None:
                     break
                 num_frames_read += 1
+                if progress_bar:
+                    progress_bar.update(1)
         # Motion event scanning/detection loop.
         while True:
             if self.end_time is not None and curr_pos.frame_num >= self.end_time:
@@ -236,6 +250,8 @@ class ScanContext(object):
                         break
                     curr_pos.frame_num += 1
                     num_frames_read += 1
+                    if progress_bar:
+                        progress_bar.update(1)
             frame_rgb = self._get_next_frame()
             if frame_rgb is None:
                 break
@@ -293,6 +309,8 @@ class ScanContext(object):
             curr_pos.frame_num += 1
             num_frames_read += 1
             num_frames_processed += 1
+            if progress_bar:
+                progress_bar.update(1)
 
         # If we're still in a motion event, we still need to compute the duration
         # and ending timecode and add it to the event list.
@@ -306,11 +324,13 @@ class ScanContext(object):
 
         if video_writer is not None:
             video_writer.release()
-
-        processing_time = time.time() - processing_start
-        processing_rate = float(num_frames_read) / processing_time
-        print("[DVR-Scan] Processed %d / %d frames read in %3.1f secs (avg %3.1f FPS)." % (
-            num_frames_processed, num_frames_read, processing_time, processing_rate))
+        if progress_bar:
+            progress_bar.close()
+        elif not self.suppress_output:
+            processing_time = time.time() - processing_start
+            processing_rate = float(num_frames_read) / processing_time
+            print("[DVR-Scan] Processed %d / %d frames read in %3.1f secs (avg %3.1f FPS)." % (
+                num_frames_processed, num_frames_read, processing_time, processing_rate))
 
         if not len(self.event_list) > 0:
             print("[DVR-Scan] No motion events detected in input.")

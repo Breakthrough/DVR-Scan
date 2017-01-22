@@ -36,3 +36,14 @@ if (cv2.__version__[0] == '2') or (not cv2.__version__[0] == '3'):
     cv2.CAP_PROP_POS_MSEC = cv2.cv.CV_CAP_PROP_POS_MSEC
     cv2.CAP_PROP_POS_FRAMES = cv2.cv.CV_CAP_PROP_POS_FRAMES
     cv2.CAP_PROP_FRAME_COUNT = cv2.cv.CV_CAP_PROP_FRAME_COUNT
+
+
+def get_tqdm():
+    """ Safely attempts to import the tqdm module, returning either a
+    reference to the imported module, or None if tqdm was not found."""
+    try:
+        import tqdm
+        return tqdm
+    except ImportError:
+        print("")
+    return None
