@@ -223,11 +223,18 @@ class ScanContext(object):
         num_frames_read = 0
         num_frames_processed = 0
         processing_start = time.time()
+        
 
         tqdm = dvr_scan.platform.get_tqdm()
         progress_bar = None
         self.frames_total = int(self.frames_total)
         if tqdm is not None and self.frames_total > 0 and not self.suppress_output:
+            if self.end_time and self.end_time.frame_num < self.frames_total:
+                self.frames_total = self.end_time.frame_num
+            if self.start_time:
+                self.frames_total -= self.start_time.frame_num
+            if self.frames_total < 0:
+                self.frames_total = 0
             progress_bar = tqdm.tqdm(
                 total = self.frames_total, unit = ' frames',
                 desc = "[DVR-Scan] Processed")
@@ -235,14 +242,14 @@ class ScanContext(object):
         # Seek to starting position if required.
         if self.start_time is not None:
             while curr_pos.frame_num < self.start_time.frame_num:
-                if self._get_next_frame() is None:
+                if self._get_next_frame(False) is None:
                     break
                 num_frames_read += 1
-                if progress_bar:
-                    progress_bar.update(1)
+                curr_pos.frame_num += 1
+
         # Motion event scanning/detection loop.
         while True:
-            if self.end_time is not None and curr_pos.frame_num >= self.end_time:
+            if self.end_time is not None and curr_pos.frame_num >= self.end_time.frame_num:
                 break
             if self.frame_skip > 0:
                 for _ in range(self.frame_skip):
@@ -324,14 +331,13 @@ class ScanContext(object):
 
         if video_writer is not None:
             video_writer.release()
-        if progress_bar:
+        if progress_bar is not None:
             progress_bar.close()
         elif not self.suppress_output:
             processing_time = time.time() - processing_start
             processing_rate = float(num_frames_read) / processing_time
             print("[DVR-Scan] Processed %d / %d frames read in %3.1f secs (avg %3.1f FPS)." % (
                 num_frames_processed, num_frames_read, processing_time, processing_rate))
-
         if not len(self.event_list) > 0:
             print("[DVR-Scan] No motion events detected in input.")
             return
