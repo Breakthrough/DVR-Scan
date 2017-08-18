@@ -15,7 +15,7 @@ pages:
     - 'Introduction & Features': 'index.md'
     - 'Download': 'download.md'
     - 'FAQ / Frequently Asked Questions': 'faq.md'
-    - 'Version History': 'changelog.md'
+    - 'Version History (Changelog)': 'changelog.md'
     - 'Contributing & Bug Reports': 'contributing.md'
     - 'License & Copyright Info': 'copyright.md'
 - 'User Guide':
