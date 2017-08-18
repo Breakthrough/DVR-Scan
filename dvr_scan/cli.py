@@ -384,13 +384,13 @@ def get_cli_parser():
         help = ('Timecode to stop motion detection at (see -st for valid'
                 'timecode formats).'))
 
-    #parser.add_argument(
-    #    '-df', '--downscale-factor', metavar = 'factor', dest = 'downscale_factor',
-    #    type = int_type_check(1, None, 'factor'), default = 1,
-    #    help = ('Factor to downscale (shrink) video before processing, to'
-    #            ' improve performance. For example, if input video resolution'
-    #            ' is 1024 x 400, and factor = 2, each frame is reduced to'
-    #            ' 1024/2 x 400/2 = 512 x 200 before processing.'))
+    parser.add_argument(
+        '-df', '--downscale-factor', metavar = 'factor', dest = 'downscale_factor',
+        type = int_type_check(1, None, 'factor'), default = 1,
+        help = ('Factor to downscale (shrink) video before processing, to'
+                ' improve performance. For example, if input video resolution'
+                ' is 1024 x 400, and factor = 2, each frame is reduced to'
+                ' 1024/2 x 400/2 = 512 x 200 before processing.'))
 
     parser.add_argument(
         '-fs', '--frame-skip', metavar = 'num_frames', dest = 'frame_skip',

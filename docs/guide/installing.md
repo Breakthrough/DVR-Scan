@@ -14,6 +14,7 @@ If installing from source, DVR-Scan requires [Python 2 or 3](https://www.python.
 
  - [OpenCV](http://opencv.org/) (requires version 3.0 and above) and the Python module (`cv2`)
  - [Numpy](http://sourceforge.net/projects/numpy/) Python module (`numpy`)
+ - [tqdm](https://pypi.python.org/pypi/tqdm), *optional* Python module (`tqdm`) for displaying progress bar and estimated time remaining
 
 You can [click here](http://breakthrough.github.io/Installing-OpenCV/) for a quick guide (OpenCV + Numpy on Windows & Linux) on installing the latest versions of OpenCV/Numpy on [Windows (using pre-built binaries)](http://breakthrough.github.io/Installing-OpenCV/#installing-on-windows-pre-built-binaries) and [Linux (compiling from source)](http://breakthrough.github.io/Installing-OpenCV/#installing-on-linux-compiling-from-source).  If the Python module that comes with OpenCV on Windows is incompatible with your system architecture or Python version, [see this page](http://www.lfd.uci.edu/~gohlke/pythonlibs/#opencv) to obtain a pre-compiled (unofficial) module.
 
@@ -21,7 +22,7 @@ Note that some Linux package managers still provide older, dated builds of OpenC
 
 ### Installing DVR-Scan
 
-To ensure you have all the requirements installed, open a `python` interpreter, and ensure you can run `import numpy` and `import cv2` without any errors.
+To ensure you have all the requirements installed, open a `python` interpreter, and ensure you can run `import numpy` and `import cv2` without any errors (optionally, if you installed tqdm, run `import tqdm` as well).
 
 DVR-Scan can then be installed by running the following command in the location of the extracted files:
 
@@ -35,7 +36,7 @@ Once finished, DVR-Scan will be installed, and you should be able to run the `dv
 dvr-scan --version
 ```
 
-To get familiar with DVR-Scan, try running `dvr-scan --help`, or see the [Getting Started & Examples](guide/examples.md) section.  If you encounter any runtime errors while running DVR-Scan, ensure that you have all the required dependencies listed in the System Requirements section above (again, you should be able to `import numpy` and `import cv2`).
+To get familiar with DVR-Scan, try running `dvr-scan --help`, or see the [Getting Started & Examples](guide/examples.md) section.  If you encounter any runtime errors while running DVR-Scan, ensure that you have all the required dependencies listed in the System Requirements section above (again, you should be able to `import numpy` and `import cv2`, and optionally, `import tqdm` if tqdm was installed).
 
 
 ------------------------------------------------

@@ -113,7 +113,7 @@ class ScanContext(object):
                 self.end_time = FrameTimecode(self.video_fps, args.end_time)
             # Video processing related arguments
             self.frame_skip = args.frame_skip
-            #self.downscale_factor = args.downscale_factor
+            self.downscale_factor = args.downscale_factor
 
             self.initialized = True
 
