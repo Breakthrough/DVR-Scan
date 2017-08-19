@@ -7,7 +7,7 @@
 
 --------------------------------------------------------------------------------
 
-<h3><span class="wy-text-info">Version 1.0.1 (2017-01-12)</span>   &nbsp;&nbsp;<span class="fa fa-tags wy-text-success"></span> <span class="fa wy-text-success">Latest Release  &nbsp; &nbsp;<span class="fa fa-hand-o-right wy-text-neutral"></span> &nbsp; <a href="../download/">Download &nbsp;<span class="fa fa-download wy-text-info"></span></a></span></h3>
+<h3><span class="wy-text-info">Version 1.0.1 (2017-01-12)</span>   &nbsp; &nbsp;  &nbsp; &nbsp;<span class="fa fa-tags wy-text-success"></span> <span class="fa wy-text-success">Latest &nbsp;<span class="fa fa-hand-o-right wy-text-neutral"></span> &nbsp; <a href="../download/">Download &nbsp;<span class="fa fa-download wy-text-info"></span></a></span></h3>
 
  * [bugfix] unhandled exception affecting users running source distributions under Python 2.7 environments
 
@@ -30,7 +30,7 @@ Any completed features listed below can be tried by installing the latest develo
 
 --------------------------------------------------------------------------------
 
-<h3>Current development version: <span class="wy-text-neutral">DVR-Scan v1.1-dev</span></h3>
+<h3><span class="wy-text-neutral">Current development version:</span> <b>v1.1-dev</b></h3>
 <br\><span class="fa wy-text-small wy-text-info">See the section <i>Obtaining & Installing</i> below for details on using the latest development version.</span>
 
 #### <span class="wy-text-neutral">Latest Changes / Bugfixes</span>
