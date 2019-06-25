@@ -413,5 +413,11 @@ def get_cli_parser():
     #            ' event will be saved to disk. Images will be saved in the'
     #            ' same folder as the input video, unless set otherwise.'))
 
+    parser.add_argument(
+        '-tc', '--time-code', dest='draw_timecode',
+        action='store_true', default=False,
+        help=('draw time code of each frame on the top left corner'
+              ))
+
     return parser
 

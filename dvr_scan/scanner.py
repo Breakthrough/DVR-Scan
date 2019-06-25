@@ -115,6 +115,8 @@ class ScanContext(object):
             self.frame_skip = args.frame_skip
             self.downscale_factor = args.downscale_factor
 
+            self.draw_timecode = args.draw_timecode
+
             self.initialized = True
 
     def _load_input_videos(self):
@@ -188,6 +190,25 @@ class ScanContext(object):
                 print("[DVR-Scan] Error: Unable to load video for processing.")
                 self._cap = None
 
+        return None
+
+    def _stampText(self, frame, text, line):
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 1
+        margin = 5
+        thickness = 2
+        color = (255, 255, 255)
+
+        size = cv2.getTextSize(text, font, font_scale, thickness)
+
+        text_width = size[0][0]
+        text_height = size[0][1]
+        line_height = text_height + size[1] + margin
+
+        x = margin
+        y = margin + size[0][1] + line * line_height
+        cv2.rectangle(frame, (margin, margin), (margin + text_width, margin + text_height + 2), (0, 0, 0), -1)
+        cv2.putText(frame, text, (x, y), font, font_scale, color, thickness)
         return None
 
     def scan_motion(self):
@@ -276,6 +297,8 @@ class ScanContext(object):
                 # if the current frame doesn't meet the threshold, increment
                 # the current scene's post-event counter.
                 if not self.scan_only_mode:
+                    if self.draw_timecode:
+                        self._stampText(frame_rgb, curr_pos.get_timecode(), 0)
                     video_writer.write(frame_rgb)
                 if frame_score >= self.threshold:
                     num_frames_post_event = 0
@@ -310,6 +333,8 @@ class ScanContext(object):
                                 output_path, self.fourcc, self.video_fps,
                                 self.video_resolution)
                         for frame in buffered_frames:
+                            if self.draw_timecode:
+                                self._stampText(frame, curr_pos.get_timecode(), 0)
                             video_writer.write(frame)
                         buffered_frames = []
 
