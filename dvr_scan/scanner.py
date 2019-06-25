@@ -116,6 +116,7 @@ class ScanContext(object):
             self.downscale_factor = args.downscale_factor
 
             self.draw_timecode = args.draw_timecode
+            self.roi_enabled = args.roi_enabled
 
             self.initialized = True
 
@@ -268,6 +269,14 @@ class ScanContext(object):
                 num_frames_read += 1
                 curr_pos.frame_num += 1
 
+        # area selection
+        if self.roi_enabled:
+            frame_for_crop = self._get_next_frame()
+            if self.draw_timecode:
+                self._stampText(frame_for_crop, curr_pos.get_timecode(), 0)
+            r = cv2.selectROI("Image", frame_for_crop)
+            cv2.destroyAllWindows()
+
         # Motion event scanning/detection loop.
         while True:
             if self.end_time is not None and curr_pos.frame_num >= self.end_time.frame_num:
@@ -284,6 +293,11 @@ class ScanContext(object):
             if frame_rgb is None:
                 break
 
+            frame_rgb_origin = frame_rgb
+
+            if self.roi_enabled:
+                frame_rgb = frame_rgb[int(r[1]):int(r[1]+r[3]), int(r[0]):int(r[0]+r[2])]  # area selection
+
             frame_gray = cv2.cvtColor(frame_rgb, cv2.COLOR_BGR2GRAY)
             frame_mask = bg_subtractor.apply(frame_gray)
             frame_filt = cv2.morphologyEx(frame_mask, cv2.MORPH_OPEN, self.kernel)
@@ -298,8 +312,8 @@ class ScanContext(object):
                 # the current scene's post-event counter.
                 if not self.scan_only_mode:
                     if self.draw_timecode:
-                        self._stampText(frame_rgb, curr_pos.get_timecode(), 0)
-                    video_writer.write(frame_rgb)
+                        self._stampText(frame_rgb_origin, curr_pos.get_timecode(), 0)
+                    video_writer.write(frame_rgb_origin)
                 if frame_score >= self.threshold:
                     num_frames_post_event = 0
                 else:
@@ -315,7 +329,7 @@ class ScanContext(object):
                             video_writer.release()
             else:
                 if not self.scan_only_mode:
-                    buffered_frames.append(frame_rgb)
+                    buffered_frames.append(frame_rgb_origin)
                     buffered_frames = buffered_frames[-self.pre_event_len.frame_num:]
                 if len(event_window) >= self.min_event_len.frame_num and all(
                         score >= self.threshold for score in event_window):
