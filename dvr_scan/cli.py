@@ -416,14 +416,14 @@ def get_cli_parser():
     parser.add_argument(
         '-tc', '--time-code', dest='draw_timecode',
         action='store_true', default=False,
-        help=('draw time code of each frame on the top left corner'
+        help=('Draw time code of each frame on the top left corner.'
               ))
 
     parser.add_argument(
         '-roi', '--rectangle-of-interest',  dest = 'roi_enabled',
         action='store_true', default = False,
-        help = ('Opens up a window with the first frame'
-                ' draw a rectangle with mouse, then press enter.'
+        help=('Opens up a window with the first processed frame.'
+                ' Draw a rectangle with mouse, then press enter.'
                 ' The motion detection will occur only in the selected area.'
                 ))
 
