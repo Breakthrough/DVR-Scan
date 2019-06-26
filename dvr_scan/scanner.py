@@ -115,9 +115,15 @@ class ScanContext(object):
             self.frame_skip = args.frame_skip
             self.downscale_factor = args.downscale_factor
 
+            # timecode and ROI:
             self.draw_timecode = args.draw_timecode
-            self.roi_enabled = args.roi_enabled
-
+            self.roi = args.roi
+            if self.roi is not False:
+                if len(self.roi) is not 0:
+                    for i in range(0, 4):
+                        self.roi[i] = int(self.roi[i])
+                else:
+                    self.roi = True
             self.initialized = True
 
     def _load_input_videos(self):
@@ -270,12 +276,17 @@ class ScanContext(object):
                 curr_pos.frame_num += 1
 
         # area selection
-        if self.roi_enabled:
+        if self.roi is True:
+            print("[DVR-Scan] selecting area of interest:")
             frame_for_crop = self._get_next_frame()
             if self.draw_timecode:
                 self._stampText(frame_for_crop, curr_pos.get_timecode(), 0)
-            r = cv2.selectROI("Image", frame_for_crop)
+            self.roi = cv2.selectROI("Image", frame_for_crop)
             cv2.destroyAllWindows()
+            print("[DVR-Scan] area selected.")
+        # Motion event scanning/detection loop.
+        if self.roi is not False:
+            print("[DVR-Scan] area selected(x,y,w,h): " + str(self.roi))
 
         # Motion event scanning/detection loop.
         while True:
@@ -295,8 +306,8 @@ class ScanContext(object):
 
             frame_rgb_origin = frame_rgb
 
-            if self.roi_enabled:
-                frame_rgb = frame_rgb[int(r[1]):int(r[1]+r[3]), int(r[0]):int(r[0]+r[2])]  # area selection
+            if self.roi is not False:
+                frame_rgb = frame_rgb[int(self.roi[1]):int(self.roi[1]+self.roi[3]), int(self.roi[0]):int(self.roi[0]+self.roi[2])]  # area selection
 
             frame_gray = cv2.cvtColor(frame_rgb, cv2.COLOR_BGR2GRAY)
             frame_mask = bg_subtractor.apply(frame_gray)
