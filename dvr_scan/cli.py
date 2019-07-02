@@ -413,5 +413,22 @@ def get_cli_parser():
     #            ' event will be saved to disk. Images will be saved in the'
     #            ' same folder as the input video, unless set otherwise.'))
 
+    parser.add_argument(
+        '-tc', '--time-code', dest='draw_timecode',
+        action='store_true', default=False,
+        help=('Draw time code of each frame on the top left corner.'
+              ))
+
+    parser.add_argument(
+        '-roi', '--rectangle-of-interest',  dest='roi', metavar='area to scan (x,y,w,h)',
+        nargs='*', default = False,
+        help=('If set, scan only in selected area, which is selected in a popup window'
+              '(select with mouse, then press enter).'
+              'Can add the data of the rectangle in the form of x-coordinate y-coordinate width height,'
+              'with this option, there will be no pop up window which would stop the program running.'
+              'Example for pop-up window: dvr-scan -i c:\\video-toscan.avi -roi '
+              'Example for predefined rectangle: dvr-scan -i c:\\video-toscan.avi -roi 100 110 50 50 '
+                ))
+
     return parser
 

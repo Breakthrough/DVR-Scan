@@ -115,6 +115,15 @@ class ScanContext(object):
             self.frame_skip = args.frame_skip
             self.downscale_factor = args.downscale_factor
 
+            # timecode and ROI:
+            self.draw_timecode = args.draw_timecode
+            self.roi = args.roi
+            if self.roi is not False:
+                if len(self.roi) is not 0:
+                    for i in range(0, 4):
+                        self.roi[i] = int(self.roi[i])
+                else:
+                    self.roi = True
             self.initialized = True
 
     def _load_input_videos(self):
@@ -190,6 +199,25 @@ class ScanContext(object):
 
         return None
 
+    def _stampText(self, frame, text, line):
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 1
+        margin = 5
+        thickness = 2
+        color = (255, 255, 255)
+
+        size = cv2.getTextSize(text, font, font_scale, thickness)
+
+        text_width = size[0][0]
+        text_height = size[0][1]
+        line_height = text_height + size[1] + margin
+
+        x = margin
+        y = margin + size[0][1] + line * line_height
+        cv2.rectangle(frame, (margin, margin), (margin + text_width, margin + text_height + 2), (0, 0, 0), -1)
+        cv2.putText(frame, text, (x, y), font, font_scale, color, thickness)
+        return None
+
     def scan_motion(self):
         """ Performs motion analysis on the ScanContext's input video(s). """
         if self.initialized is not True:
@@ -247,6 +275,19 @@ class ScanContext(object):
                 num_frames_read += 1
                 curr_pos.frame_num += 1
 
+        # area selection
+        if self.roi is True:
+            print("[DVR-Scan] selecting area of interest:")
+            frame_for_crop = self._get_next_frame()
+            if self.draw_timecode:
+                self._stampText(frame_for_crop, curr_pos.get_timecode(), 0)
+            self.roi = cv2.selectROI("Image", frame_for_crop)
+            cv2.destroyAllWindows()
+            print("[DVR-Scan] area selected.")
+        # Motion event scanning/detection loop.
+        if self.roi is not False:
+            print("[DVR-Scan] area selected(x,y,w,h): " + str(self.roi))
+
         # Motion event scanning/detection loop.
         while True:
             if self.end_time is not None and curr_pos.frame_num >= self.end_time.frame_num:
@@ -263,6 +304,11 @@ class ScanContext(object):
             if frame_rgb is None:
                 break
 
+            frame_rgb_origin = frame_rgb
+
+            if self.roi is not False:
+                frame_rgb = frame_rgb[int(self.roi[1]):int(self.roi[1]+self.roi[3]), int(self.roi[0]):int(self.roi[0]+self.roi[2])]  # area selection
+
             frame_gray = cv2.cvtColor(frame_rgb, cv2.COLOR_BGR2GRAY)
             frame_mask = bg_subtractor.apply(frame_gray)
             frame_filt = cv2.morphologyEx(frame_mask, cv2.MORPH_OPEN, self.kernel)
@@ -276,7 +322,9 @@ class ScanContext(object):
                 # if the current frame doesn't meet the threshold, increment
                 # the current scene's post-event counter.
                 if not self.scan_only_mode:
-                    video_writer.write(frame_rgb)
+                    if self.draw_timecode:
+                        self._stampText(frame_rgb_origin, curr_pos.get_timecode(), 0)
+                    video_writer.write(frame_rgb_origin)
                 if frame_score >= self.threshold:
                     num_frames_post_event = 0
                 else:
@@ -292,7 +340,7 @@ class ScanContext(object):
                             video_writer.release()
             else:
                 if not self.scan_only_mode:
-                    buffered_frames.append(frame_rgb)
+                    buffered_frames.append(frame_rgb_origin)
                     buffered_frames = buffered_frames[-self.pre_event_len.frame_num:]
                 if len(event_window) >= self.min_event_len.frame_num and all(
                         score >= self.threshold for score in event_window):
@@ -310,6 +358,8 @@ class ScanContext(object):
                                 output_path, self.fourcc, self.video_fps,
                                 self.video_resolution)
                         for frame in buffered_frames:
+                            if self.draw_timecode:
+                                self._stampText(frame, curr_pos.get_timecode(), 0)
                             video_writer.write(frame)
                         buffered_frames = []
 
