@@ -29,7 +29,7 @@
 import cv2
 
 # Compatibility fix for OpenCV < 3.0
-if (cv2.__version__[0] == '2') or (not cv2.__version__[0] == '3'):
+if (int(cv2.__version__[0]) <= 3):
     cv2.CAP_PROP_FRAME_WIDTH = cv2.cv.CV_CAP_PROP_FRAME_WIDTH
     cv2.CAP_PROP_FRAME_HEIGHT = cv2.cv.CV_CAP_PROP_FRAME_HEIGHT
     cv2.CAP_PROP_FPS = cv2.cv.CV_CAP_PROP_FPS
