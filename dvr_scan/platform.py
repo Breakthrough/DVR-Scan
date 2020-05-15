@@ -36,7 +36,7 @@ if (int(cv2.__version__[0]) <= 3):
     cv2.CAP_PROP_POS_MSEC = cv2.cv.CV_CAP_PROP_POS_MSEC
     cv2.CAP_PROP_POS_FRAMES = cv2.cv.CV_CAP_PROP_POS_FRAMES
     cv2.CAP_PROP_FRAME_COUNT = cv2.cv.CV_CAP_PROP_FRAME_COUNT
-
+    cv2.VideoWriter_fourcc = cv.CV_FOURCC
 
 def get_tqdm():
     """ Safely attempts to import the tqdm module, returning either a
