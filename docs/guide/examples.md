@@ -27,7 +27,7 @@ By default, scan-only mode outputs a list of comma-separated timecodes for each 
 
 An example with an adjusted `-threshold` of `0.3`, `--time-before-event` equal to 5 seconds, `--time-post-event` equal to 10 seconds and `min-event-length` equal to 20 frames:
 
-    dvr-scan -i $f -t 0.3 -tb 00:00:05.0000 -tp 00:00:10.0000 -l 20
+    dvr-scan -i some_video.mp4 -t 0.3 -tb 00:00:05.0000 -tp 00:00:10.0000 -l 20
 
 For users wanting finer control over the output video encoding method, the default timecode format (`HH:MM:SS.nnnn`) is compatible with most popular video tools, so in most cases the motion events DVR-Scan finds can be simply copied and pasted into another tool of your choice (e.g. `ffmpeg`, `avconv` or the `mkvtoolnix` suite).
 
