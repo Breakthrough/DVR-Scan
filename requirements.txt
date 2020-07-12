@@ -1,0 +1,6 @@
+#
+# DVR-Scan Python Requirements
+#
+opencv-python
+numpy
+tqdm
