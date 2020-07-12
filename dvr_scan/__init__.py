@@ -39,7 +39,7 @@ __version__ = 'v1.1'
 ABOUT_STRING = """-----------------------------------------------
 DVR-Scan %s
 -----------------------------------------------
-Copyright (C) 2016-2017 Brandon Castellano
+Copyright (C) 2016-2020 Brandon Castellano
 < https://github.com/Breakthrough/DVR-Scan >
 
 This DVR-Scan is licensed under the BSD 2-Clause license; see the
