@@ -7,7 +7,7 @@
 # This file contains all platform/library specific code, intended to improve
 # compatibility of DVR-Scan with a wider array of software versions.
 #
-# Copyright (C) 2016-2017 Brandon Castellano <http://www.bcastell.com>.
+# Copyright (C) 2016-2020 Brandon Castellano <http://www.bcastell.com>.
 #
 # DVR-Scan is licensed under the BSD 2-Clause License; see the included
 # LICENSE file or visit one of the following pages for details:
@@ -29,7 +29,8 @@
 import cv2
 
 # Compatibility fix for OpenCV < 3.0
-if (int(cv2.__version__[0]) <= 3):
+if cv2.__version__[0] == '2' or not (
+        cv2.__version__[0].isdigit() and int(cv2.__version__[0]) >= 3):
     cv2.CAP_PROP_FRAME_WIDTH = cv2.cv.CV_CAP_PROP_FRAME_WIDTH
     cv2.CAP_PROP_FRAME_HEIGHT = cv2.cv.CV_CAP_PROP_FRAME_HEIGHT
     cv2.CAP_PROP_FPS = cv2.cv.CV_CAP_PROP_FPS
