@@ -25,17 +25,23 @@ if sys.version_info < (2, 6) or (3, 0) <= sys.version_info < (3, 3):
     print('DVR-Scan requires at least Python 2.6 or 3.3 to run.')
     sys.exit(1)
 
-
 def get_requires():
     requires = ['numpy']
     if sys.version_info == (2, 6):
         requires += ['argparse']
     return requires
 
+def get_extra_requires():
+    # type: () -> Dict[str, List[str]]
+    """ Get Extra Requires: Returns a list of extra/optional packages. """
+    return {
+        'opencv': ['opencv-python'],
+        'progress_bar': ['tqdm']
+    }
 
 setup(
     name='DVR-Scan',
-    version='1.0.1',
+    version='1.1',
     description="Tool for finding and extracting motion events in video files (e.g. security camera footage).",
     long_description=open('package-info.rst').read(),
     author='Brandon Castellano',
@@ -44,10 +50,7 @@ setup(
     license="BSD 2-Clause",
     keywords="video computer-vision analysis",
     install_requires=get_requires(),
-    extras_require={
-        #'GUI': ['gi'],
-        #'VIDEOENC': ['moviepy']
-    },
+    extras_require=get_extra_requires(),
     packages=['dvr_scan'],
     package_data={'': ['../LICENSE*', '../package-info.rst']},
     #include_package_data = True,   # Only works with this line commented.
@@ -63,11 +66,14 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'Topic :: Multimedia :: Video',
         'Topic :: Multimedia :: Video :: Conversion',
         'Topic :: Multimedia :: Video :: Non-Linear Editor',

@@ -8,7 +8,7 @@
 # is used to provide a high level interface to the logic used by
 # DVR-Scan to implement the motion detection/scanning algorithm.
 #
-# Copyright (C) 2016-2017 Brandon Castellano <http://www.bcastell.com>.
+# Copyright (C) 2016-2020 Brandon Castellano <http://www.bcastell.com>.
 #
 # DVR-Scan is licensed under the BSD 2-Clause License; see the included
 # LICENSE file or visit one of the following pages for details:
@@ -251,7 +251,7 @@ class ScanContext(object):
         num_frames_read = 0
         num_frames_processed = 0
         processing_start = time.time()
-        
+
 
         tqdm = dvr_scan.platform.get_tqdm()
         progress_bar = None

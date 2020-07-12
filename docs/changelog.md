@@ -7,7 +7,13 @@
 
 --------------------------------------------------------------------------------
 
-<h3><span class="wy-text-info">Version 1.0.1 (2017-01-12)</span>   &nbsp; &nbsp;  &nbsp; &nbsp;<span class="fa fa-tags wy-text-success"></span> <span class="fa wy-text-success">Latest &nbsp;<span class="fa fa-hand-o-right wy-text-neutral"></span> &nbsp; <a href="../download/">Download &nbsp;<span class="fa fa-download wy-text-info"></span></a></span></h3>
+<h3>Version 1.1 (2020-07-12)  &nbsp; &nbsp;  &nbsp; &nbsp;<span class="fa fa-tags wy-text-success"></span> <span class="fa wy-text-success">Latest &nbsp;<span class="fa fa-hand-o-right wy-text-neutral"></span> &nbsp; <a href="../download/">Download &nbsp;<span class="fa fa-download wy-text-info"></span></a></span></h3>
+
+ * [feature] add
+
+ * [general] Deprecated Windows installer/binaries in favor of pure Python releases on pip
+
+<h3>Version 1.0.1 (2017-01-12)</h3>
 
  * [bugfix] unhandled exception affecting users running source distributions under Python 2.7 environments
 
@@ -37,7 +43,7 @@ Any completed features listed below can be tried by installing the latest develo
 
  * major release including several new features, bugfixes, and enhancements; includes updated documentation, and updated (optional) dependencies
  * [enhance] added progress bar and show estimated time remaining during processing (requires [the `tqdm` module](https://pypi.python.org/pypi/tqdm) to be installed)
- * [bugfix]  fixed case where motion events would not be detected when specifying the `-st` / `--start-time` option 
+ * [bugfix]  fixed case where motion events would not be detected when specifying the `-st` / `--start-time` option
 
 #### <span class="wy-text-neutral">Planned Features & Goals for Development</span>
 

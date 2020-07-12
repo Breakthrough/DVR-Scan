@@ -39,8 +39,14 @@ For users wanting finer control over the output video encoding method, the defau
 The following parameters directly affect the "sensitivity" of the detection algorithm, and may need to be adjusted for some video footage to achieve desirable results.
 
  - `-t` / `-threshold`: The threshold a frame's motion score must meet to trigger a motion event.  Default is 0.15, lower values (e.g. 0.08) will be more sensitive to changes, whereas higher values will be less sensitive (e.g. 0.5).  If the output contains scenes without any motion, or background movement causes false events to be detected, try raising the threshold value.
- - `-l` / `--min-event-length`: Number of frames in a row that must exceed the set threshold value in order to trigger a motion event (default is 2 frames).  Represents the size of the event detection window, should only need to be adjusted for footage with very low or high framerates.  In most cases the default value should be sufficient. 
+ - `-l` / `--min-event-length`: Number of frames in a row that must exceed the set threshold value in order to trigger a motion event (default is 2 frames).  Represents the size of the event detection window, should only need to be adjusted for footage with very low or high framerates.  In most cases the default value should be sufficient.
  - `-k` / `--kernel-size`: The size of the noise reduction kernel, must be an odd integer, or -1 to set automatically (based on video resolution).  Default values are 3 for SD, 5 for 720p, and 7 for 1080p and above.  Higher values indicate more aggressive noise removal.  In most cases the default value should be sufficient.
+ - `-roi` / `--region-of-interest`:  If specified, scans only in the specified
+ rectangular area.  If specified without a bounding box, a pop up window
+ will allow selection via the mouse.  Otherwise a bounding box can be
+ specified in terms of x/y/width/height (e.g. `-roi 100 110 50 75` will only
+ perform motion detection in a box starting at (100,110) with a width and height of 50x75 pixels).  If specified without a bounding box, selection
+ is made with the mouse followed by hitting the enter/return key.
 
 The following two parameters can be adjusted to specify how much of the original video clip is included in the output events:
 

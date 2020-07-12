@@ -7,7 +7,7 @@
 # This file contains all code related to timecode formats, interpreting,
 # parsing, and conversion.
 #
-# Copyright (C) 2016-2017 Brandon Castellano <http://www.bcastell.com>.
+# Copyright (C) 2016-2020 Brandon Castellano <http://www.bcastell.com>.
 #
 # DVR-Scan is licensed under the BSD 2-Clause License; see the included
 # LICENSE file or visit one of the following pages for details:

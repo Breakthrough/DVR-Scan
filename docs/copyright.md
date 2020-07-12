@@ -6,7 +6,7 @@
                 DVR-Scan License (BSD 2-Clause)
           < https://github.com/Breakthrough/DVR-Scan >
 
-Copyright (C) 2016-2017, Brandon Castellano.
+Copyright (C) 2016-2020, Brandon Castellano.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -18,7 +18,7 @@ are met:
 
     2. Redistributions in binary form must reproduce the above
        copyright notice, this list of conditions and the following
-       disclaimer in the documentation and/or other materials 
+       disclaimer in the documentation and/or other materials
        provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS

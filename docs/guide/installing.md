@@ -4,6 +4,19 @@ After installation, you can run DVR-Scan from any terminal/command prompt by typ
 
 ------------------------------------------------
 
+## Installation from Pip via Pypi (all platforms)
+
+If you have Python & pip installed, you can get DVR-Scan the following two ways:
+
+<div class="important">
+<h4 class="wy-text-neutral"><span class="fa fa-angle-double-down wy-text-info"></span> Including all dependencies:</h4>
+<h3 class="wy-text-neutral"><tt>pip install dvr-scan[opencv,progress_bar]</tt></h3>
+<h4 class="wy-text-neutral"><span class="fa fa-angle-down wy-text-info"></span> Without extras (OpenCV installation required):</h4>
+<h3 class="wy-text-neutral"><tt>pip install dvr-scan</tt></h3>
+</div>
+
+After installation, you should be able to execute `dvr-scan` from any terminal/command prompt.
+
 ## Installation from Source (all platforms)
 
 Start by downloading the latest release of DVR-Scan and extracting it to a location of your choice.  Make sure you have the appropriate [system requirements](#installing-dependencies) installed before continuing.  DVR-Scan requires Python, Numpy, and OpenCV to function correctly.

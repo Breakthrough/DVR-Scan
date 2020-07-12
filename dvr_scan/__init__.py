@@ -6,7 +6,7 @@
 #
 # This file contains all code for the main `dvr_scan` module.
 #
-# Copyright (C) 2016-2017 Brandon Castellano <http://www.bcastell.com>.
+# Copyright (C) 2016-2020 Brandon Castellano <http://www.bcastell.com>.
 #
 # DVR-Scan is licensed under the BSD 2-Clause License; see the included
 # LICENSE file or visit one of the following pages for details:
@@ -33,10 +33,10 @@ import dvr_scan.scanner
 
 
 # Used for module identification and when printing copyright & version info.
-__version__ = 'v1.1-dev'
+__version__ = 'v1.1'
 
 # About & copyright message string shown for the -v/--version CLI argument.
-ABOUT_STRING   = """-----------------------------------------------
+ABOUT_STRING = """-----------------------------------------------
 DVR-Scan %s
 -----------------------------------------------
 Copyright (C) 2016-2017 Brandon Castellano
