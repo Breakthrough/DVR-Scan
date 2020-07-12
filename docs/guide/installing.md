@@ -25,7 +25,7 @@ Start by downloading the latest release of DVR-Scan and extracting it to a locat
 
 If installing from source, DVR-Scan requires [Python 2 or 3](https://www.python.org/) (tested on 3.X, untested but should work on 2.X) and the following libraries ([quick install guide](http://breakthrough.github.io/Installing-OpenCV/)):
 
- - [OpenCV](http://opencv.org/) (requires version 3.0 and above) and the Python module (`cv2`)
+ - [OpenCV](http://opencv.org/) (requires version 3.0 and above) and the Python module (`cv2` - can find on Pypi as `opencv-python`)
  - [Numpy](http://sourceforge.net/projects/numpy/) Python module (`numpy`)
  - [tqdm](https://pypi.python.org/pypi/tqdm), *optional* Python module (`tqdm`) for displaying progress bar and estimated time remaining
 

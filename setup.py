@@ -40,7 +40,7 @@ def get_extra_requires():
     }
 
 setup(
-    name='DVR-Scan',
+    name='dvr-scan',
     version='1.1',
     description="Tool for finding and extracting motion events in video files (e.g. security camera footage).",
     long_description=open('package-info.rst').read(),
