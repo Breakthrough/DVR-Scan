@@ -420,14 +420,13 @@ def get_cli_parser():
               ))
 
     parser.add_argument(
-        '-roi', '--rectangle-of-interest',  dest='roi', metavar='area to scan (x,y,w,h)',
-        nargs='*', default = False,
+        '-roi', '--rectangle-of-interest',  dest='roi', metavar='x0 y0 w h',
+        nargs='*', default = None,
         help=('If set, scan only in selected area, which is selected in a popup window'
-              '(select with mouse, then press enter).'
-              'Can add the data of the rectangle in the form of x-coordinate y-coordinate width height,'
-              'with this option, there will be no pop up window which would stop the program running.'
-              'Example for pop-up window: dvr-scan -i c:\\video-toscan.avi -roi '
-              'Example for predefined rectangle: dvr-scan -i c:\\video-toscan.avi -roi 100 110 50 50 '
+              ' (select with mouse, then press enter).'
+              ' Can also specify the window in terms of x/y/w/h.'
+              ' Example for pop-up window: dvr-scan -i video.mp4 -roi '
+              ' Example for predefined rectangle: dvr-scan -i video.mp4 -roi 100 110 50 50 '
                 ))
 
     return parser

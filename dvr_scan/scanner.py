@@ -118,12 +118,16 @@ class ScanContext(object):
             # timecode and ROI:
             self.draw_timecode = args.draw_timecode
             self.roi = args.roi
-            if self.roi is not False:
-                if len(self.roi) is not 0:
+            if self.roi is not None:
+                if self.roi:
+                    if len(self.roi) != 4:
+                        print("[DVR-Scan] Error: ROI must be specified as a rectangle of the form x/y/w/h!")
+                        print("    For example: -roi 200 250 50 100")
+                        return
                     for i in range(0, 4):
                         self.roi[i] = int(self.roi[i])
                 else:
-                    self.roi = True
+                    self.roi = []
             self.initialized = True
 
     def _load_input_videos(self):
@@ -252,6 +256,31 @@ class ScanContext(object):
         num_frames_processed = 0
         processing_start = time.time()
 
+        # Seek to starting position if required.
+        if self.start_time is not None:
+            while curr_pos.frame_num < self.start_time.frame_num:
+                if self._get_next_frame(False) is None:
+                    break
+                num_frames_read += 1
+                curr_pos.frame_num += 1
+
+        # area selection
+        if self.roi is not None and len(self.roi) == 0:
+            print("[DVR-Scan] selecting area of interest:")
+            frame_for_crop = self._get_next_frame()
+            if self.draw_timecode:
+                self._stampText(frame_for_crop, curr_pos.get_timecode(), 0)
+            self.roi = cv2.selectROI("DVR-Scan ROI Selection", frame_for_crop)
+            cv2.destroyAllWindows()
+            if all([coord == 0 for coord in self.roi]):
+                print("[DVR-Scan] ROI selection cancelled.")
+                print("[DVR-Scan] Aborting...")
+                return
+        # Motion event scanning/detection loop.
+        assert self.roi is None or len(self.roi) == 4
+        if self.roi:
+            print("[DVR-Scan] area selected (x,y,w,h): %s" % str(self.roi))
+
 
         tqdm = dvr_scan.platform.get_tqdm()
         progress_bar = None
@@ -266,27 +295,6 @@ class ScanContext(object):
             progress_bar = tqdm.tqdm(
                 total = self.frames_total, unit = ' frames',
                 desc = "[DVR-Scan] Processed")
-
-        # Seek to starting position if required.
-        if self.start_time is not None:
-            while curr_pos.frame_num < self.start_time.frame_num:
-                if self._get_next_frame(False) is None:
-                    break
-                num_frames_read += 1
-                curr_pos.frame_num += 1
-
-        # area selection
-        if self.roi is True:
-            print("[DVR-Scan] selecting area of interest:")
-            frame_for_crop = self._get_next_frame()
-            if self.draw_timecode:
-                self._stampText(frame_for_crop, curr_pos.get_timecode(), 0)
-            self.roi = cv2.selectROI("Image", frame_for_crop)
-            cv2.destroyAllWindows()
-            print("[DVR-Scan] area selected.")
-        # Motion event scanning/detection loop.
-        if self.roi is not False:
-            print("[DVR-Scan] area selected(x,y,w,h): " + str(self.roi))
 
         # Motion event scanning/detection loop.
         while True:
@@ -306,7 +314,7 @@ class ScanContext(object):
 
             frame_rgb_origin = frame_rgb
 
-            if self.roi is not False:
+            if self.roi:
                 frame_rgb = frame_rgb[int(self.roi[1]):int(self.roi[1]+self.roi[3]), int(self.roi[0]):int(self.roi[0]+self.roi[2])]  # area selection
 
             frame_gray = cv2.cvtColor(frame_rgb, cv2.COLOR_BGR2GRAY)
