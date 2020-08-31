@@ -1,4 +1,4 @@
-<h1 class="wy-text-neutral">DVR-Scan &nbsp;<img src="img/dvr-scan-logo_small.png"/></h1>
+<img alt="DVR-Scan Logo" src="img/dvr-scan-logo_small.png"/>
 <h4 class="wy-text-info" style="margin-top:-1em;">Find and extract motion events in videos.</h4>
 
 <div class="important">

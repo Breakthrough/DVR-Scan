@@ -1,4 +1,4 @@
-# DVR-Scan &nbsp;![DVR-Scan Logo](https://raw.githubusercontent.com/Breakthrough/DVR-Scan/master/docs/img/dvr-scan-logo_small.png)
+# ![DVR-Scan Logo](https://raw.githubusercontent.com/Breakthrough/DVR-Scan/master/docs/img/dvr-scan-logo_small.png)
 :vhs: Tool for extracting scenes with motion from security camera/DVR footage.  Written in Python, depends on OpenCV.
 
 **Latest Release:** [v1.1 (July 12, 2020)](http://dvr-scan.readthedocs.io/en/latest/changelog/)
@@ -9,11 +9,11 @@
 
 ------------------------------------------------
 
-**Quick Install**: Requires Python modules `numpy`, OpenCV `cv2`, and (optional) `tqdm` for displaying progress.  To install PySceneDetect via `pip` with all dependencies:
+**Quick Install**: Requires Python modules `numpy`, OpenCV `cv2`, and `tqdm` (optional) for displaying progress.  To install DVR-Scan via `pip` with all dependencies:
 
     pip install dvr-scan[opencv,progress_bar]
 
-Or to install just PySceneDetect (OpenCV installation required):
+Or to install just DVR-Scan (OpenCV installation required):
 
     pip install dvr-scan
 
