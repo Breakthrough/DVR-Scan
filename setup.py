@@ -26,7 +26,9 @@ if sys.version_info < (2, 6) or (3, 0) <= sys.version_info < (3, 3):
     sys.exit(1)
 
 def get_requires():
-    requires = ['numpy']
+    # type: () -> List[str]
+    """ Get Requires: Returns a list of required packages. """
+    requires = ['numpy', 'tqdm']
     if sys.version_info == (2, 6):
         requires += ['argparse']
     return requires
@@ -35,9 +37,17 @@ def get_extra_requires():
     # type: () -> Dict[str, List[str]]
     """ Get Extra Requires: Returns a list of extra/optional packages. """
     return {
-        'opencv': ['opencv-python'],
-        'progress_bar': ['tqdm']
+        'opencv:python_version <= "3.5"':
+            ['opencv-python<=4.2.0.32'],
+        'opencv:python_version > "3.5"':
+            ['opencv-python'],
+
+        'opencv-headless:python_version <= "3.5"':
+            ['opencv-python-headless<=4.2.0.32'],
+        'opencv-headless:python_version > "3.5"':
+            ['opencv-python-headless'],
     }
+
 
 setup(
     name='dvr-scan',
