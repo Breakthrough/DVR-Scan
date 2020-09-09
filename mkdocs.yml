@@ -14,13 +14,13 @@ pages:
 - 'DVR-Scan':
     - 'Introduction & Features': 'index.md'
     - 'Download': 'download.md'
-    - 'FAQ / Frequently Asked Questions': 'faq.md'
     - 'Version History (Changelog)': 'changelog.md'
     - 'Contributing & Bug Reports': 'contributing.md'
     - 'License & Copyright Info': 'copyright.md'
 - 'User Guide':
     - 'Installing & Updating': 'guide/installing.md'
     - 'Getting Started & Examples': 'guide/examples.md'
+    - 'Frequently Asked Questions (FAQ)': 'guide/faq.md'
 #    - 'Motion Detection Options': 'guide/detection_options.md'
 #    - 'Additional Program Options': 'guide/program_options.md'
 - 'External Resources':
