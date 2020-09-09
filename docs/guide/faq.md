@@ -41,6 +41,25 @@ If all is successful, the output video should be roughly the same size as the or
 ----------------------------------------------------------
 
 
+### How do I run this in a docker container?
+
+DVR-Scan comes with a dockerfile so you can easily get things working without worrying about installing dependencies locally. Simply [install docker](https://docs.docker.com/get-docker/), then run the following in the root of the project:
+
+```
+$ docker build -t dvr-scan .
+```
+
+This will build the container, and then to run it on a file in the local directory, you'd run the command like this:
+
+```
+$ docker run --rm -it -v $(pwd):/videos/ dvr-scan -i your_video_file.mkv
+```
+
+The most important thing to keep in mind is the `-v` flag, which specifies the local folders to share. Inside the docker container `/videos/` is the working directory, so map that to wherever you want to process your files.
+
+----------------------------------------------------------
+
+
 ### How do I submit bug reports, feature requests, or code changes?
 
 Please submit any bug reports or feature requests to <a href="https://github.com/Breakthrough/DVR-Scan/issues" target="_blank" alt="DVR-Scan Issue Tracker @ Github">the issue tracker on Github</a>.
