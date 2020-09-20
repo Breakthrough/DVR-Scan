@@ -65,6 +65,7 @@ class ScanContext(object):
         self.video_resolution = None
         self.video_fps = None
         self.video_paths = [input_file.name for input_file in args.input]
+        self.running = True
         # We close the open file handles, as only the paths are required.
         for input_file in args.input:
             input_file.close()
@@ -308,7 +309,7 @@ class ScanContext(object):
                 desc="[DVR-Scan] Processed")
 
         # Motion event scanning/detection loop.
-        while True:
+        while self.running:
             if self.end_time is not None and curr_pos.frame_num >= self.end_time.frame_num:
                 break
             if self.frame_skip > 0:

@@ -12,11 +12,12 @@ class SettingsWindow(QMainWindow):
             self.updateVideoList()
 
     def scanFinished(self):
-        print('scan finished')
+        self.scanButton.setEnabled(True)
 
     def scanClicked(self):
         self.scanWindow = ScanningWindow(self.args, self)
         self.scanWindow.show()
+        self.scanButton.setEnabled(False)
 
     def updateVideoList(self):
         self.videoList.clear()
