@@ -4,4 +4,5 @@ site/
 build/
 dist/
 *.egg-info/
-/venv/*
+/tutorial-env/*
+.DS_Store

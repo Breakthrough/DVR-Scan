@@ -45,7 +45,7 @@ class ScanContext(object):
     which includes application initialization, handling the options,
     and coordinating overall application logic (via scan_motion()). """
 
-    def __init__(self, args):
+    def __init__(self, args, updateGUI=None):
         print(args)
         """ Initializes the ScanContext with the supplied arguments. """
         if not args.quiet_mode:
@@ -319,6 +319,7 @@ class ScanContext(object):
                     num_frames_read += 1
                     if progress_bar:
                         progress_bar.update(1)
+                    self.frames_read = num_frames_read
             frame_rgb = self._get_next_frame()
             if frame_rgb is None:
                 break
@@ -391,6 +392,7 @@ class ScanContext(object):
             curr_pos.frame_num += 1
             num_frames_read += 1
             num_frames_processed += 1
+            self.frames_processed = num_frames_processed
             if progress_bar:
                 progress_bar.update(1)
 
