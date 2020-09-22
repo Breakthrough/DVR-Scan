@@ -1,4 +1,5 @@
-from PyQt5.QtWidgets import QMainWindow, QPushButton, QVBoxLayout, QHBoxLayout, QWidget, QListWidget, QFileDialog, QLabel
+from PyQt5.QtWidgets import QMainWindow, QPushButton, QVBoxLayout, QLineEdit, QHBoxLayout, QWidget, QListWidget, QFileDialog, QLabel
+from PyQt5.QtGui import QIntValidator, QDoubleValidator
 from gui.args import Args
 from gui.scanning import ScanningWindow
 
@@ -15,6 +16,10 @@ class SettingsWindow(QMainWindow):
         self.scanButton.setEnabled(True)
 
     def scanClicked(self):
+        skipInput = self.skipInput.text()
+        if(len(skipInput) > 0):
+            self.args.setFrameSkip(skipInput)
+        self.args.setTreshold(self.tresholdInput.text())
         self.scanWindow = ScanningWindow(self.args, self)
         self.scanWindow.show()
         self.scanButton.setEnabled(False)
@@ -53,13 +58,21 @@ class SettingsWindow(QMainWindow):
 
         self.targetLabel = QLabel('No target file selected.')
         self.targetButton = QPushButton('Select target')
+        self.skipLabel = QLabel("Skip frames: ")
+        self.skipInput = QLineEdit()
+        self.skipInput.setValidator(QIntValidator())
+        self.tresholdLabel = QLabel("Threshold:")
+        self.tresholdInput = QLineEdit()
+        self.tresholdInput.setText('0.15')
+        self.tresholdInput.setValidator(QDoubleValidator())
         self.scanButton = QPushButton('Start scan', self.centralWidget)
         self.scanButton.setEnabled(False)
 
         # setup event handling
         self.addButton.clicked.connect(self.addClicked)
-        self.scanButton.clicked.connect(self.scanClicked)
         self.targetButton.clicked.connect(self.targetFileClicked)
+        self.scanButton.clicked.connect(self.scanClicked)
+
         # layouting
         self.layout = QVBoxLayout(self.centralWidget)
         self.listActionsLayout = QHBoxLayout()
@@ -67,9 +80,17 @@ class SettingsWindow(QMainWindow):
         self.targetLayout = QVBoxLayout()
         self.targetLayout.addWidget(self.targetLabel)
         self.targetLayout.addWidget(self.targetButton)
+        self.skipLayout = QVBoxLayout()
+        self.skipLayout.addWidget(self.skipLabel)
+        self.tresholdLayout = QVBoxLayout()
+        self.tresholdLayout.addWidget(self.tresholdLabel)
+        self.tresholdLayout.addWidget(self.tresholdInput)
+        self.skipLayout.addWidget(self.skipInput)
 
         self.layout.addWidget(self.videoList)
         self.layout.addLayout(self.listActionsLayout)
         self.layout.addLayout(self.targetLayout)
+        self.layout.addLayout(self.skipLayout)
+        self.layout.addLayout(self.tresholdLayout)
         self.layout.addWidget(self.scanButton)
         self.setCentralWidget(self.centralWidget)

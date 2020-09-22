@@ -4,7 +4,7 @@ class Args:
     def __init__(self, input=[], output=None, scan_only_mode=False, fourcc_str='xvid', threshold=1,
                  kernel_size=-1, min_event_len=2, time_post_event=2.0, time_pre_event=1.5,
                  quiet_mode=False, start_time=None, duration=None, end_time=None, downscale_factor=1,
-                 frame_skip=10, draw_timecode=False, roi=[9, 240, 712, 456]):
+                 frame_skip=4, draw_timecode=False, roi=[9, 240, 712, 456]):
         self.input = [open(input_file, 'r') for input_file in input]
         self.output = output
         self.scan_only_mode = scan_only_mode
@@ -32,3 +32,13 @@ class Args:
     def setTarget(self, path):
         if path:
             self.output = open(path, 'w')
+
+    def setFrameSkip(self, frames):
+        if(int(frames) > 0):
+            self.frame_skip = int(frames)
+
+    def setTreshold(self, treshold):
+        if(len(treshold) > 0):
+            self.treshold = float(treshold)
+        else:
+            self.treshold = 0.15
