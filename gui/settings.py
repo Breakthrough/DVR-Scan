@@ -1,5 +1,7 @@
+import cv2
 from PyQt5.QtWidgets import QMainWindow, QPushButton, QVBoxLayout, QLineEdit, QHBoxLayout, QWidget, QListWidget, QFileDialog, QLabel
-from PyQt5.QtGui import QIntValidator, QDoubleValidator
+from PyQt5.QtGui import QIntValidator, QDoubleValidator, QPixmap, QImage
+from PyQt5.QtCore import Qt
 from gui.args import Args
 from gui.scanning import ScanningWindow
 
@@ -41,6 +43,18 @@ class SettingsWindow(QMainWindow):
             self.args.setTarget(fileName)
             self.targetLabel.setText(fileName)
 
+    def videoSelected(self):
+        selectedVideo = self.videoList.selectedItems()[0].text()
+        ret, firstFrame = cv2.VideoCapture(selectedVideo).read()
+        if ret:
+            rgbImage = cv2.cvtColor(firstFrame, cv2.COLOR_BGR2RGB)
+            h, w, ch = rgbImage.shape
+            bytesPerLine = ch * w
+            convertToQtFormat = QImage(
+                rgbImage.data, w, h, bytesPerLine, QImage.Format_RGB888)
+            readyImage = convertToQtFormat.scaled(640, 480, Qt.KeepAspectRatio)
+            self.roiImage.setPixmap(QPixmap.fromImage(readyImage))
+
     def __init__(self):
         super().__init__()
         self.setGeometry(50, 50, 500, 500)
@@ -67,14 +81,17 @@ class SettingsWindow(QMainWindow):
         self.tresholdInput.setValidator(QDoubleValidator())
         self.scanButton = QPushButton('Start scan', self.centralWidget)
         self.scanButton.setEnabled(False)
+        self.roiImage = QLabel('img')
 
         # setup event handling
+        self.videoList.itemClicked.connect(self.videoSelected)
         self.addButton.clicked.connect(self.addClicked)
         self.targetButton.clicked.connect(self.targetFileClicked)
         self.scanButton.clicked.connect(self.scanClicked)
 
         # layouting
-        self.layout = QVBoxLayout(self.centralWidget)
+        self.layout = QHBoxLayout(self.centralWidget)
+        self.settingsLayout = QVBoxLayout()
         self.listActionsLayout = QHBoxLayout()
         self.listActionsLayout.addWidget(self.addButton)
         self.targetLayout = QVBoxLayout()
@@ -86,11 +103,14 @@ class SettingsWindow(QMainWindow):
         self.tresholdLayout.addWidget(self.tresholdLabel)
         self.tresholdLayout.addWidget(self.tresholdInput)
         self.skipLayout.addWidget(self.skipInput)
-
-        self.layout.addWidget(self.videoList)
-        self.layout.addLayout(self.listActionsLayout)
-        self.layout.addLayout(self.targetLayout)
-        self.layout.addLayout(self.skipLayout)
-        self.layout.addLayout(self.tresholdLayout)
-        self.layout.addWidget(self.scanButton)
+        self.roiLayout = QVBoxLayout()
+        self.roiLayout.addWidget(self.roiImage)
+        self.layout.addLayout(self.settingsLayout)
+        self.layout.addLayout(self.roiLayout)
+        self.settingsLayout.addWidget(self.videoList)
+        self.settingsLayout.addLayout(self.listActionsLayout)
+        self.settingsLayout.addLayout(self.targetLayout)
+        self.settingsLayout.addLayout(self.skipLayout)
+        self.settingsLayout.addLayout(self.tresholdLayout)
+        self.settingsLayout.addWidget(self.scanButton)
         self.setCentralWidget(self.centralWidget)
