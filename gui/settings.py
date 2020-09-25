@@ -1,9 +1,8 @@
-import cv2
 from PyQt5.QtWidgets import QMainWindow, QPushButton, QVBoxLayout, QLineEdit, QHBoxLayout, QWidget, QListWidget, QFileDialog, QLabel
-from PyQt5.QtGui import QIntValidator, QDoubleValidator, QPixmap, QImage
-from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QIntValidator, QDoubleValidator
 from gui.args import Args
 from gui.scanning import ScanningWindow
+from gui.RoiSelector import RoiSelector
 
 
 class SettingsWindow(QMainWindow):
@@ -31,6 +30,8 @@ class SettingsWindow(QMainWindow):
         video_paths = [input_file.name for input_file in self.args.input]
         for video_path in video_paths:
             self.videoList.addItem(video_path)
+        if(len(video_paths) > 0):
+            self.roiImage.set_image(video_paths[0])
         if len(video_paths) > 0:
             self.scanButton.setEnabled(True)
 
@@ -44,20 +45,13 @@ class SettingsWindow(QMainWindow):
             self.targetLabel.setText(fileName)
 
     def videoSelected(self):
-        selectedVideo = self.videoList.selectedItems()[0].text()
-        ret, firstFrame = cv2.VideoCapture(selectedVideo).read()
-        if ret:
-            rgbImage = cv2.cvtColor(firstFrame, cv2.COLOR_BGR2RGB)
-            h, w, ch = rgbImage.shape
-            bytesPerLine = ch * w
-            convertToQtFormat = QImage(
-                rgbImage.data, w, h, bytesPerLine, QImage.Format_RGB888)
-            readyImage = convertToQtFormat.scaled(640, 480, Qt.KeepAspectRatio)
-            self.roiImage.setPixmap(QPixmap.fromImage(readyImage))
+        selectedVideo = self.videoList.selectedItems()[
+            0].text()
+        self.roiImage.set_image(selectedVideo)
 
     def __init__(self):
         super().__init__()
-        self.setGeometry(50, 50, 500, 500)
+        self.setGeometry(50, 50, 800, 800)
         self.setWindowTitle("DVR Scan")
         # setup scan arguments model
         self.args = Args()
@@ -66,7 +60,7 @@ class SettingsWindow(QMainWindow):
         self.scanWindow = None
         self.centralWidget = QWidget()
         self.videoList = QListWidget(self.centralWidget)
-        self.videoList.setGeometry(20, 20, 400, 400)
+        self.videoList.resize(640, 480)
 
         self.addButton = QPushButton('Select videos', self.centralWidget)
 
@@ -81,7 +75,7 @@ class SettingsWindow(QMainWindow):
         self.tresholdInput.setValidator(QDoubleValidator())
         self.scanButton = QPushButton('Start scan', self.centralWidget)
         self.scanButton.setEnabled(False)
-        self.roiImage = QLabel('img')
+        self.roiImage = RoiSelector()
 
         # setup event handling
         self.videoList.itemClicked.connect(self.videoSelected)
