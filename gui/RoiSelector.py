@@ -2,6 +2,7 @@ import cv2
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QLabel
 from PyQt5.QtGui import QIntValidator,   QPixmap, QImage
 from PyQt5.QtCore import Qt
+from gui.CoordInput import CoordInput
 
 
 class RoiSelector(QWidget):
@@ -9,31 +10,21 @@ class RoiSelector(QWidget):
         super(RoiSelector, self).__init__(*args, **kwargs)
 
         # initializing widgets
-        self.x1_label = QLabel("X1:")
-        self.x1_input = QLineEdit()
-        self.x1_input.setValidator(QIntValidator())
-        self.y1_label = QLabel("Y1:")
-        self.y1_input = QLineEdit()
-        self.y1_input.setValidator(QIntValidator())
-        self.x2_label = QLabel("X2:")
-        self.x2_input = QLineEdit()
-        self.x2_input.setValidator(QIntValidator())
-        self.y2_label = QLabel("Y2:")
-        self.y2_input = QLineEdit()
-        self.y2_input.setValidator(QIntValidator())
+        self.x1_input = CoordInput('X1:')
+        self.y1_input = CoordInput('Y1:')
+        self.x2_input = CoordInput('X2:')
+        self.y2_input = CoordInput('Y2:')
+
         self.preview_image = QLabel()
+
         # initialize layouting
         self.layout = QVBoxLayout()
         self.input_row = QHBoxLayout()
 
         self.layout.addLayout(self.input_row)
-        self.input_row.addWidget(self.x1_label)
         self.input_row.addWidget(self.x1_input)
-        self.input_row.addWidget(self.y1_label)
         self.input_row.addWidget(self.y1_input)
-        self.input_row.addWidget(self.x2_label)
         self.input_row.addWidget(self.x2_input)
-        self.input_row.addWidget(self.y2_label)
         self.input_row.addWidget(self.y2_input)
         self.layout.addWidget(self.preview_image)
         self.setLayout(self.layout)
@@ -50,27 +41,19 @@ class RoiSelector(QWidget):
                 640, 480, Qt.KeepAspectRatio)
             self.preview_image.setPixmap(
                 QPixmap.fromImage(ready_image))
-            if(not self.roi_is_valid(h, w)):
-                self.x1_input.setText('0')
-                self.y1_input.setText('0')
-                self.x2_input.setText(str(w))
-                self.y2_input.setText(str(h))
+            self.x1_input.set_max(w)
+            self.x2_input.set_max(w)
+            self.y1_input.set_max(h)
+            self.y2_input.set_max(h)
+            if(self.x1_input.is_invalid()):
+                self.x1_input.show_min()
+            if(self.y1_input.is_invalid()):
+                self.y1_input.show_min()
+            if(self.x2_input.is_invalid()):
+                self.x2_input.show_max()
+            if(self.y2_input.is_invalid()):
+                self.y2_input.show_max()
 
-    def roi_is_valid(self, height, width):
-        if(not self.roi_is_set()):
-            return False
-        set_height = int(self.x2_input.text())
-        set_width = int(self.x2_input.text())
-        if(set_height < 0 or set_height > height):
-            return False
-        if(set_width < 0 or set_width > width):
-            return False
-        return True
-
-    def roi_is_set(self):
-        if(len(self.x2_input.text()) == 0 or len(self.y2_input.text()) == 0):
-            return False
-        else:
-            return True
-
+    def get_roi(self):
+        return [self.x1_input.value(), self.y1_input.value(), self.x2_input.value(), self.y2_input.value()]
     # TODO get_roi function + draw roi

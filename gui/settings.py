@@ -21,6 +21,7 @@ class SettingsWindow(QMainWindow):
         if(len(skipInput) > 0):
             self.args.setFrameSkip(skipInput)
         self.args.setTreshold(self.tresholdInput.text())
+        self.args.roi = self.roiImage.get_roi()
         self.scanWindow = ScanningWindow(self.args, self)
         self.scanWindow.show()
         self.scanButton.setEnabled(False)
