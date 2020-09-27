@@ -1,5 +1,10 @@
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLineEdit, QLabel
 from PyQt5.QtGui import QIntValidator
+from PyQt5.QtCore import pyqtSignal, QObject
+
+
+class CoordInputCommunicate(QObject):
+    value_changed = pyqtSignal()
 
 
 class CoordInput(QWidget):
@@ -8,11 +13,20 @@ class CoordInput(QWidget):
         self._max = max
         self._min = min
 
+        # initialize widgets
         self.label = QLabel(label_name)
         self.input = QLineEdit()
+
+        # event handling
         self.input.textChanged.connect(self.make_valid)
+        self.input.editingFinished.connect(self.emit_value_changed)
+
+        self.communicate = CoordInputCommunicate()
         self.input.setValidator(QIntValidator())
+
+        # layouting
         self.layout = QHBoxLayout()
+        self.layout.setSpacing(0)
         self.layout.addWidget(self.label)
         self.layout.addWidget(self.input)
         self.setLayout(self.layout)
@@ -65,4 +79,10 @@ class CoordInput(QWidget):
                 self.input.setText(str(self._min))
 
     def value(self):
-        return int(self.input.text())
+        try:
+            return int(self.input.text())
+        except:
+            return 0
+
+    def emit_value_changed(self):
+        self.communicate.value_changed.emit()

@@ -1,8 +1,8 @@
 import cv2
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QLabel
-from PyQt5.QtGui import QIntValidator,   QPixmap, QImage
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLineEdit
 from PyQt5.QtCore import Qt
 from gui.CoordInput import CoordInput
+from gui.PreviewImage import PreviewImage
 
 
 class RoiSelector(QWidget):
@@ -14,9 +14,13 @@ class RoiSelector(QWidget):
         self.y1_input = CoordInput('Y1:')
         self.x2_input = CoordInput('X2:')
         self.y2_input = CoordInput('Y2:')
+        self.preview_image = PreviewImage()
 
-        self.preview_image = QLabel()
-
+        # event handling
+        self.x1_input.communicate.value_changed.connect(self.update_roi)
+        self.y1_input.communicate.value_changed.connect(self.update_roi)
+        self.x2_input.communicate.value_changed.connect(self.update_roi)
+        self.y2_input.communicate.value_changed.connect(self.update_roi)
         # initialize layouting
         self.layout = QVBoxLayout()
         self.input_row = QHBoxLayout()
@@ -29,31 +33,32 @@ class RoiSelector(QWidget):
         self.layout.addWidget(self.preview_image)
         self.setLayout(self.layout)
 
+    def update_roi(self):
+        self.preview_image.update_roi(self.get_roi())
+
+    # get called when image changes. if a valid ROI is set does nothing
+    # else puts ROI values for whole image
+    def normalize_input(self, width, height):
+        self.x1_input.set_max(width)
+        self.x2_input.set_max(width)
+        self.y1_input.set_max(height)
+        self.y2_input.set_max(height)
+        if(self.x1_input.is_invalid()):
+            self.x1_input.show_min()
+        if(self.y1_input.is_invalid()):
+            self.y1_input.show_min()
+        if(self.x2_input.is_invalid()):
+            self.x2_input.show_max()
+        if(self.y2_input.is_invalid()):
+            self.y2_input.show_max()
+        self.preview_image.update_roi(self.get_roi())
+
     def set_image(self, path):
-        ret, firstFrame = cv2.VideoCapture(path).read()
-        if ret:
-            rgb_image = cv2.cvtColor(firstFrame, cv2.COLOR_BGR2RGB)
-            h, w, ch = rgb_image.shape
-            bytesPerLine = ch * w
-            convert_to_QtFormat = QImage(
-                rgb_image.data, w, h, bytesPerLine, QImage.Format_RGB888)
-            ready_image = convert_to_QtFormat.scaled(
-                640, 480, Qt.KeepAspectRatio)
-            self.preview_image.setPixmap(
-                QPixmap.fromImage(ready_image))
-            self.x1_input.set_max(w)
-            self.x2_input.set_max(w)
-            self.y1_input.set_max(h)
-            self.y2_input.set_max(h)
-            if(self.x1_input.is_invalid()):
-                self.x1_input.show_min()
-            if(self.y1_input.is_invalid()):
-                self.y1_input.show_min()
-            if(self.x2_input.is_invalid()):
-                self.x2_input.show_max()
-            if(self.y2_input.is_invalid()):
-                self.y2_input.show_max()
+        self.preview_image.update_img(path, self.get_roi())
+        height, width = self.preview_image.get_dimensions()
+        self.normalize_input(width, height)
 
     def get_roi(self):
         return [self.x1_input.value(), self.y1_input.value(), self.x2_input.value(), self.y2_input.value()]
+
     # TODO get_roi function + draw roi
