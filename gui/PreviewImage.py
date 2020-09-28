@@ -27,8 +27,9 @@ class PreviewImage(QLabel):
         return self.height, self.width
 
     def draw_roi(self, img, roi):
-        cv2.rectangle(img, (roi[0], roi[1]), (roi[2], roi[3]), (255, 0, 0), 3)
-        return img
+        img_roi = cv2.rectangle(img.copy(), (roi[0], roi[1]),
+                                (roi[2], roi[3]), (255, 0, 0), 3)
+        return img_roi
 
     def display_rgb_image(self, rgb_image):
         convert_to_QtFormat = QImage(
@@ -40,8 +41,7 @@ class PreviewImage(QLabel):
 
     def update_img(self, path, roi):
         self.first_frame = self.get_first_frame(path)
-        editable_frame = self.first_frame
-        self.image = self.draw_roi(editable_frame, roi)
+        self.image = self.draw_roi(self.first_frame.copy(), roi)
         self.display_rgb_image(self.image)
 
     def update_roi(self, roi):
