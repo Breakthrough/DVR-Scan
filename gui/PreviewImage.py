@@ -12,6 +12,7 @@ class PreviewImage(QLabel):
         self.height = 0
         self.width = 0
         self.bytesPerLine = 0
+        self.setFixedWidth(640)
 
     def get_first_frame(self, path):
         ret, firstFrame = cv2.VideoCapture(path).read()

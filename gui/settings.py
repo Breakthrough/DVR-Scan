@@ -52,7 +52,7 @@ class SettingsWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setGeometry(50, 50, 800, 800)
+        self.setGeometry(50, 50, 1200, 800)
         self.setWindowTitle("DVR Scan")
         # setup scan arguments model
         self.args = Args()
@@ -100,8 +100,8 @@ class SettingsWindow(QMainWindow):
         self.skipLayout.addWidget(self.skipInput)
         self.roiLayout = QVBoxLayout()
         self.roiLayout.addWidget(self.roiImage)
-        self.layout.addLayout(self.settingsLayout)
-        self.layout.addLayout(self.roiLayout)
+        self.layout.addLayout(self.settingsLayout, 1)
+        self.layout.addLayout(self.roiLayout, 1)
         self.settingsLayout.addWidget(self.videoList)
         self.settingsLayout.addLayout(self.listActionsLayout)
         self.settingsLayout.addLayout(self.targetLayout)

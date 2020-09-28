@@ -23,8 +23,9 @@ class RoiSelector(QWidget):
         self.y2_input.communicate.value_changed.connect(self.update_roi)
         # initialize layouting
         self.layout = QVBoxLayout()
+        self.layout.setAlignment(Qt.AlignTop)
         self.input_row = QHBoxLayout()
-
+        self.input_row.setAlignment(Qt.AlignTop)
         self.layout.addLayout(self.input_row)
         self.input_row.addWidget(self.x1_input)
         self.input_row.addWidget(self.y1_input)
