@@ -23,21 +23,21 @@ class Args:
         self.draw_timecode = draw_timecode
         self.roi = roi
 
-    def addVideos(self, videos):
+    def add_videos(self, videos):
         videoPaths = set([input_file.name for input_file in self.input])
         for video in videos:
             if video not in videoPaths:
                 self.input.append(open(video, 'r'))
 
-    def setTarget(self, path):
+    def set_target(self, path):
         if path:
             self.output = open(path, 'w')
 
-    def setFrameSkip(self, frames):
+    def set_frame_skip(self, frames):
         if(int(frames) > 0):
             self.frame_skip = int(frames)
 
-    def setTreshold(self, treshold):
+    def set_treshold(self, treshold):
         if(len(treshold) > 0):
             self.treshold = float(treshold)
         else:

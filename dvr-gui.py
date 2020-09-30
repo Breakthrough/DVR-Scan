@@ -8,7 +8,7 @@
 #    sctx.scan_motion()
 
 from PyQt5.QtWidgets import QApplication, QMainWindow
-from gui.settings import SettingsWindow
+from gui.SettingsWindow import SettingsWindow
 
 app = QApplication([])
 win = SettingsWindow()
