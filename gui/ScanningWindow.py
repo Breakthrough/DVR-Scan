@@ -1,3 +1,4 @@
+from datetime import datetime
 from PyQt5.QtCore import QThread, QTimer
 from PyQt5.QtWidgets import QMainWindow, QProgressBar, QLabel, QPushButton, QVBoxLayout, QWidget
 from dvr_scan.scanner import ScanContext
@@ -13,11 +14,13 @@ class ScanThread(QThread):
         self.update_timer.setInterval(int(100))
         self.update_timer.start()
         self.update_timer.timeout.connect(self.update_progress)
+        self.start_time = datetime.now()
 
     def run(self):
         self.sctx = ScanContext(self.args)
         self.scan_window.progress.setMaximum(self.sctx.frames_total)
         self.sctx.scan_motion()
+        self.start_time = datetime.now()
 
     def update_progress(self):
         if self.sctx:
@@ -25,12 +28,18 @@ class ScanThread(QThread):
             total = self.sctx.frames_total
             read = self.sctx.frames_read
             percentage = read/total
-            status_text = "Processed: {:.2%} - {}/{} frames.".format(
-                percentage, read, total)
+            time_left = self.calc_time_left(total, read)
+            status_text = "Processed: {:.2%} - {}/{} frames. {}".format(
+                percentage, read, total, time_left)
             self.scan_window.status_label.setText(status_text)
 
     def stop(self):
         self.sctx.running = False
+
+    def calc_time_left(self, total, read):
+        left = total - read
+        time_elapsed = datetime.now() - self.start_time
+        return time_elapsed / read * left
 
 
 class ScanningWindow(QMainWindow):
