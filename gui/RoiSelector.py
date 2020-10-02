@@ -21,6 +21,7 @@ class RoiSelector(QWidget):
         self.y1_input.communicate.value_changed.connect(self.update_roi)
         self.x2_input.communicate.value_changed.connect(self.update_roi)
         self.y2_input.communicate.value_changed.connect(self.update_roi)
+        self.preview_image.communicate.changed.connect(self.image_roi_changed)
         # initialize layouting
         self.layout = QVBoxLayout()
         self.layout.setAlignment(Qt.AlignTop)
@@ -53,6 +54,13 @@ class RoiSelector(QWidget):
         if(self.y2_input.is_invalid()):
             self.y2_input.show_max()
         self.preview_image.update_roi(self.get_roi())
+
+    def image_roi_changed(self):
+        new_roi = self.preview_image.get_roi()
+        self.x1_input.setText(str(new_roi[0]))
+        self.y1_input.setText(str(new_roi[1]))
+        self.x2_input.setText(str(new_roi[2]))
+        self.y2_input.setText(str(new_roi[3]))
 
     def set_image(self, path):
         self.preview_image.update_img(path, self.get_roi())
