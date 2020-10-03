@@ -29,17 +29,19 @@ class ScanThread(QThread):
             read = self.sctx.frames_read
             percentage = read/total
             time_left = self.calc_time_left(total, read)
-            status_text = "Processed: {:.2%} - {}/{} frames. {}".format(
+            status_text = "Processed: {:.2%} - {}/{} frames. \nTime left: {}".format(
                 percentage, read, total, time_left)
             self.scan_window.status_label.setText(status_text)
 
     def stop(self):
         self.sctx.running = False
 
+    # calculates time left in scan based on start time and scanned frames
+    # string split cuts of microseconds
     def calc_time_left(self, total, read):
         left = total - read
         time_elapsed = datetime.now() - self.start_time
-        return time_elapsed / read * left
+        return str(time_elapsed / read * left).split('.')[0]
 
 
 class ScanningWindow(QMainWindow):
@@ -49,6 +51,7 @@ class ScanningWindow(QMainWindow):
 
     def cancel_clicked(self):
         self.scan_thread.stop()
+        self.scan_thread = None
         self.close()
 
     def __init__(self, args, settingsWindow):
