@@ -29,6 +29,9 @@ class Args:
             if video not in videoPaths:
                 self.input.append(open(video, 'r'))
 
+    def remove_video(self, index):
+        self.input.pop(index)
+
     def set_target(self, path):
         if path:
             self.output = open(path, 'w')

@@ -50,6 +50,19 @@ class SettingsWindow(QMainWindow):
             0].text()
         self.roi_image.set_image(selected_video)
 
+    def remove_clicked(self):
+        if(len(self.video_list.selectedItems()) > 0):
+            del_index = self.video_list.row(self.video_list.selectedItems()[0])
+            self.video_list.takeItem(del_index)
+            self.args.remove_video(del_index)
+            # check if videolist is empty and disable scan button
+            if(len(self.args.input) == 0):
+                self.scan_button.setEnabled(False)
+            if(len(self.video_list.selectedItems()) > 0):
+                new_item = self.video_list.item(
+                    self.video_list.currentRow()).text()
+                self.roi_image.set_image(new_item)
+
     def __init__(self):
         super().__init__()
         self.setGeometry(50, 50, 1200, 800)
@@ -64,7 +77,7 @@ class SettingsWindow(QMainWindow):
         self.video_list.resize(640, 480)
 
         self.add_button = QPushButton('Select videos', self.central_widget)
-
+        self.remove_button = QPushButton('Remove')
         self.target_label = QLabel('No target file selected.')
         self.target_button = QPushButton('Select target')
         self.skip_label = QLabel("Skip frames: ")
@@ -81,6 +94,7 @@ class SettingsWindow(QMainWindow):
         # setup event handling
         self.video_list.itemClicked.connect(self.video_selected)
         self.add_button.clicked.connect(self.add_clicked)
+        self.remove_button.clicked.connect(self.remove_clicked)
         self.target_button.clicked.connect(self.target_file_clicked)
         self.scan_button.clicked.connect(self.scan_clicked)
 
@@ -89,6 +103,7 @@ class SettingsWindow(QMainWindow):
         self.settings_layout = QVBoxLayout()
         self.list_actions_layout = QHBoxLayout()
         self.list_actions_layout.addWidget(self.add_button)
+        self.list_actions_layout.addWidget(self.remove_button)
         self.target_layout = QVBoxLayout()
         self.target_layout.addWidget(self.target_label)
         self.target_layout.addWidget(self.target_button)

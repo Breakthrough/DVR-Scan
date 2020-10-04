@@ -66,6 +66,8 @@ class RoiSelector(QWidget):
         self.preview_image.update_img(path, self.get_roi())
         height, width = self.preview_image.get_dimensions()
         self.normalize_input(width, height)
+        # repaint required to fix bug in delete video code
+        self.preview_image.repaint()
 
     def get_roi(self):
         return [self.x1_input.value(), self.y1_input.value(), self.x2_input.value(), self.y2_input.value()]
