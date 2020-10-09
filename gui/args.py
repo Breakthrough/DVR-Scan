@@ -37,8 +37,26 @@ class Args:
             self.output = open(path, 'w')
 
     def set_frame_skip(self, frames):
-        if(int(frames) > 0):
+        if(len(frames) > 0):
             self.frame_skip = int(frames)
+
+    def set_before_frames(self, frames):
+        if(len(frames) > 0):
+            self.time_pre_event = int(frames)
+
+    def set_after_frames(self, frames):
+        if(len(frames) > 0):
+            self.time_post_event = int(frames)
+
+    def set_downscale_factor(self, downscale_factor):
+        if(len(downscale_factor) > 0):
+            self.downscale_factor = float(downscale_factor)
+
+    def set_min_len(self, min_len):
+        try:
+            self.min_event_len = int(min_len)
+        except:
+            self.min_event_len = 2
 
     def set_treshold(self, treshold):
         if(len(treshold) > 0):

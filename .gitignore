@@ -6,3 +6,4 @@ dist/
 *.egg-info/
 /tutorial-env/*
 .DS_Store
+.vs_code/
