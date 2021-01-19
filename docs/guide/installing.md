@@ -1,8 +1,8 @@
 
 
-After installation, you can run DVR-Scan from any terminal/command prompt by typing `dvr-scan` (try running `dvr-scan --version` to verify that everything was installed correctly).  If using a portable distribution on Windows, you need to run the program from the folder containing the `dvr-scan.exe` file, unless you add the folder to your system's `%PATH%` variable.  You do not need to do this if you used the .MSI installer.
+## Installation using Windows binaries (64-bit only)
 
-------------------------------------------------
+After installing or extracting DVR-Scan, you can run it from any terminal/command prompt by typing `dvr-scan` (try running `dvr-scan --version` to verify that everything was installed correctly).  If using a portable distribution on Windows, you need to run the program from the folder containing the `dvr-scan.exe` file, or add the folder to your system's `%PATH%` variable.  This is not required if using the installer, as the installer will update your `%PATH` variable automatically.
 
 ## Installation from Pip via Pypi (all platforms)
 
