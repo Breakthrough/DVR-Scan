@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
@@ -32,7 +32,11 @@
 # OTHER DEALINGS IN THE SOFTWARE.
 #
 
+""" ``dvr_scan.__main__`` Module
+
+Provides entry point for DVR-Scan's command-line interface (CLI).
+"""
+
 if __name__ == '__main__':
     import dvr_scan
     dvr_scan.main()
-

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #
 #       DVR-Scan: Find & Export Motion Events in Video Footage
 #   --------------------------------------------------------------
@@ -24,6 +25,21 @@
 # ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 #
+
+""" ``dvr_scan.platform`` Module
+
+This file contains all platform/library/OS-specific compatibility fixes,
+intended to improve the systems that are able to run DVR-Scan, and allow
+for maintaining backwards compatibility with existing libraries going forwards.
+
+For OpenCV 2.x, the scenedetect.platform module also makes a copy of the
+OpenCV VideoCapture property constants from the cv2.cv namespace directly
+to the cv2 namespace.  This ensures that the cv2 API is consistent
+with those changes made to it in OpenCV 3.0 and above.
+
+TODO: Replace with PySceneDetect's platform module to reduce code duplication
+across both projects.
+"""
 
 # Third-Party Library Imports
 import cv2

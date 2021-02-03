@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #
 #       DVR-Scan: Find & Export Motion Events in Video Footage
 #   --------------------------------------------------------------
@@ -24,6 +25,19 @@
 # OTHER DEALINGS IN THE SOFTWARE.
 #
 
+""" ``dvr_scan`` Module
+
+This is the main DVR-Scan module containing all application logic,
+motion detection implementation, and command line processing. The
+modules are organized as follows:
+
+  dvr_scan.cli:
+    Command-line interface (argparse)
+
+  dvr_scan.scanner:
+    Application logic + motion detection algorithm (ScanContext)
+"""
+
 # Standard Library Imports
 from __future__ import print_function
 
@@ -33,13 +47,13 @@ import dvr_scan.scanner
 
 
 # Used for module identification and when printing copyright & version info.
-__version__ = 'v1.1'
+__version__ = 'v1.2-dev'
 
 # About & copyright message string shown for the -v/--version CLI argument.
 ABOUT_STRING = """-----------------------------------------------
 DVR-Scan %s
 -----------------------------------------------
-Copyright (C) 2016-2020 Brandon Castellano
+Copyright (C) 2016-2021 Brandon Castellano
 < https://github.com/Breakthrough/DVR-Scan >
 
 This DVR-Scan is licensed under the BSD 2-Clause license; see the
@@ -64,4 +78,3 @@ def main():
     # If the context was successfully initialized, we can process the video(s).
     if sctx.initialized is True:
         sctx.scan_motion()
-

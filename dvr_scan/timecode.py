@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #
 #       DVR-Scan: Find & Export Motion Events in Video Footage
 #   --------------------------------------------------------------
@@ -25,6 +26,13 @@
 # OTHER DEALINGS IN THE SOFTWARE.
 #
 
+""" ``dvr_scan.timecode`` Module
+
+This module provides the FrameTimecode class, used for representing
+video timecodes that are frame-based.
+
+TODO: Replace with PySceneDetect's FrameTimecode to reduce code duplication.
+"""
 
 class FrameTimecode(object):
     """ Object for frame-based timecodes, using the video framerate
@@ -137,4 +145,3 @@ class FrameTimecode(object):
             secs = '%02d' % int(round(secs, 0)) if use_rounding else '%02d' % int(secs)
         # Return hours, minutes, and seconds as a formatted timecode string.
         return '%02d:%02d:%s' % (hrs, mins, secs)
-

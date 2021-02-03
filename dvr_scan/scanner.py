@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
@@ -26,18 +27,24 @@
 # OTHER DEALINGS IN THE SOFTWARE.
 #
 
+""" ``dvr_scan.scanner`` Module
+
+This module contains the ScanContext class, which implements the
+DVR-Scan program logic, as well as the motion detection algorithm.
+"""
+
 # Standard Library Imports
 from __future__ import print_function
 import os
 import time
 
-# DVR-Scan Library Imports
-from dvr_scan.timecode import FrameTimecode
-import dvr_scan.platform
-
 # Third-Party Library Imports
 import cv2
 import numpy as np
+
+# DVR-Scan Library Imports
+from dvr_scan.timecode import FrameTimecode
+import dvr_scan.platform
 
 
 class ScanContext(object):
@@ -45,33 +52,33 @@ class ScanContext(object):
     which includes application initialization, handling the options,
     and coordinating overall application logic (via scan_motion()). """
 
-    def __init__(self, args, gui=None):
+    def __init__(self, args):
         """ Initializes the ScanContext with the supplied arguments. """
+        # We close the open file handles, as only the paths are required.
+        for input_file in args.input:
+            input_file.close()
+
         if not args.quiet_mode:
             print("[DVR-Scan] Initializing scan context...")
 
         self.initialized = False
+        self.running = True         # Allows asynchronous termination of scanning loop.
 
         self.event_list = []
-
         self.suppress_output = args.quiet_mode
-        self.frames_processed = -1
-        self.frames_processed = -1
-        self.frames_total = -1
+
         self._cap = None
         self._cap_path = None
 
         self.video_resolution = None
         self.video_fps = None
         self.video_paths = [input_file.name for input_file in args.input]
+        self.frames_total = 0
         self.frames_processed = 0
-        self.running = True
-        # We close the open file handles, as only the paths are required.
-        for input_file in args.input:
-            input_file.close()
         if not len(args.fourcc_str) == 4:
             print("[DVR-Scan] Error: Specified codec (-c/--codec) must be exactly 4 characters.")
             return
+        self.fourcc = cv2.VideoWriter_fourcc(*args.fourcc_str.upper())
         if args.kernel_size == -1:
             self.kernel = None
         elif (args.kernel_size % 2) == 0:
@@ -79,7 +86,6 @@ class ScanContext(object):
             return
         else:
             self.kernel = np.ones((args.kernel_size, args.kernel_size), np.uint8)
-        self.fourcc = cv2.VideoWriter_fourcc(*args.fourcc_str.upper())
         self.comp_file = None
         self.scan_only_mode = args.scan_only_mode
         if args.output:
@@ -135,9 +141,6 @@ class ScanContext(object):
     def _load_input_videos(self):
         """ Opens and checks that all input video files are valid, can
         be processed, and have the same resolution and framerate. """
-        self.video_resolution = None
-        self.video_fps = None
-        self.frames_total = 0
         if not len(self.video_paths) > 0:
             return False
         for video_path in self.video_paths:
@@ -205,7 +208,7 @@ class ScanContext(object):
 
         return None
 
-    def _stampText(self, frame, text, line):
+    def _stamp_text(self, frame, text, line):
         font = cv2.FONT_HERSHEY_SIMPLEX
         font_scale = 1
         margin = 5
@@ -218,11 +221,10 @@ class ScanContext(object):
         text_height = size[0][1]
         line_height = text_height + size[1] + margin
 
-        x = margin
-        y = margin + size[0][1] + line * line_height
+        text_pos = (margin, margin + size[0][1] + line * line_height)
         cv2.rectangle(frame, (margin, margin),
                       (margin + text_width, margin + text_height + 2), (0, 0, 0), -1)
-        cv2.putText(frame, text, (x, y), font, font_scale, color, thickness)
+        cv2.putText(frame, text, text_pos, font, font_scale, color, thickness)
         return None
 
     def scan_motion(self):
@@ -256,7 +258,6 @@ class ScanContext(object):
         #curr_state = 'no_event'     # 'no_event', 'in_event', or 'post_even
         in_motion_event = False
         self.frames_processed = 0
-        num_frames_processed = 0
         processing_start = time.time()
 
         # Seek to starting position if required.
@@ -272,7 +273,7 @@ class ScanContext(object):
             print("[DVR-Scan] selecting area of interest:")
             frame_for_crop = self._get_next_frame()
             if self.draw_timecode:
-                self._stampText(frame_for_crop, curr_pos.get_timecode(), 0)
+                self._stamp_text(frame_for_crop, curr_pos.get_timecode(), 0)
             self.roi = cv2.selectROI("DVR-Scan ROI Selection", frame_for_crop)
             cv2.destroyAllWindows()
             if all([coord == 0 for coord in self.roi]):
@@ -337,7 +338,7 @@ class ScanContext(object):
                 # the current scene's post-event counter.
                 if not self.scan_only_mode:
                     if self.draw_timecode:
-                        self._stampText(frame_rgb_origin, curr_pos.get_timecode(), 0)
+                        self._stamp_text(frame_rgb_origin, curr_pos.get_timecode(), 0)
                     video_writer.write(frame_rgb_origin)
                 if frame_score >= self.threshold:
                     num_frames_post_event = 0
@@ -373,13 +374,12 @@ class ScanContext(object):
                                 self.video_resolution)
                         for frame in buffered_frames:
                             if self.draw_timecode:
-                                self._stampText(frame, curr_pos.get_timecode(), 0)
+                                self._stamp_text(frame, curr_pos.get_timecode(), 0)
                             video_writer.write(frame)
                         buffered_frames = []
 
             curr_pos.frame_num += 1
             self.frames_processed += 1
-            num_frames_processed += 1
             if progress_bar:
                 progress_bar.update(1)
 
@@ -400,8 +400,8 @@ class ScanContext(object):
         elif not self.suppress_output:
             processing_time = time.time() - processing_start
             processing_rate = float(self.frames_processed) / processing_time
-            print("[DVR-Scan] Processed %d / %d frames read in %3.1f secs (avg %3.1f FPS)." % (
-                num_frames_processed, self.frames_processed, processing_time, processing_rate))
+            print("[DVR-Scan] Processed %d frames read in %3.1f secs (avg %3.1f FPS)." % (
+                self.frames_processed, processing_time, processing_rate))
         if not len(self.event_list) > 0:
             print("[DVR-Scan] No motion events detected in input.")
             return
@@ -427,4 +427,3 @@ class ScanContext(object):
             print(','.join(timecode_list))
         else:
             print("[DVR-Scan] Motion events written to disk.")
-

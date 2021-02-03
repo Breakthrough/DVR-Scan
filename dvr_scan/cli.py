@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
@@ -24,19 +25,21 @@
 # OTHER DEALINGS IN THE SOFTWARE.
 #
 
+""" ``dvr_scan.cli`` Module
+
+This module provides the get_cli_parser() function, which provides
+an argparse-based CLI parser used by the DVR-Scan application.
+"""
+
 # Standard Library Imports
 from __future__ import print_function
-import os
-import sys
 import argparse
 
 # DVR-Scan Library Imports
 import dvr_scan
-import dvr_scan.timecode
 
 
-
-def timecode_type_check(metavar = None):
+def timecode_type_check(metavar=None):
     """ Creates an argparse type for a user-inputted timecode.
 
     The passed argument is declared valid if it meets one of three valid forms:
@@ -92,7 +95,7 @@ def timecode_type_check(metavar = None):
     return _type_checker
 
 
-def int_type_check(min_val, max_val = None, metavar = None):
+def int_type_check(min_val, max_val=None, metavar=None):
     """ Creates an argparse type for a range-limited integer.
 
     The passed argument is declared valid if it is a valid integer which
@@ -127,7 +130,7 @@ def int_type_check(min_val, max_val = None, metavar = None):
     return _type_checker
 
 
-def odd_int_type_check(min_val, max_val = None, metavar = None, allow_zero = True):
+def odd_int_type_check(min_val, max_val=None, metavar=None, allow_zero=True):
     """ Creates an argparse type for a range-limited integer which must be odd.
 
     The passed argument is declared valid if it is a valid integer which is odd
@@ -169,7 +172,7 @@ def odd_int_type_check(min_val, max_val = None, metavar = None, allow_zero = Tru
     return _type_checker
 
 
-def float_type_check(min_val, max_val = None, metavar = None, default_str = None):
+def float_type_check(min_val, max_val=None, metavar=None, default_str=None):
     """ Creates an argparse type for a range-limited float.
 
     The passed argument is declared valid if it is a valid float which is
@@ -205,7 +208,7 @@ def float_type_check(min_val, max_val = None, metavar = None, default_str = None
     return _type_checker
 
 
-def string_type_check(valid_strings, case_sensitive = True, metavar = None):
+def string_type_check(valid_strings, case_sensitive=True, metavar=None):
     """ Creates an argparse type for a list of strings.
 
     The passed argument is declared valid if it is a valid string which exists
@@ -240,25 +243,26 @@ def string_type_check(valid_strings, case_sensitive = True, metavar = None):
     return _type_checker
 
 
-
+# pylint: disable=too-few-public-methods
 class AboutAction(argparse.Action):
     """Custom argparse action for displaying the DVR-Scan ABOUT_STRING.
 
     Based off of the default VersionAction for displaying a string to the user.
     """
-    def __init__(self, option_strings, version = None,
-                 dest = argparse.SUPPRESS, default = argparse.SUPPRESS,
-                 help = "show version number and license/copyright information"):
-        super(AboutAction, self).__init__(option_strings = option_strings,
-                                          dest = dest, default = default,
-                                          nargs = 0, help = help)
+    # pylint: disable=redefined-builtin, too-many-arguments
+    def __init__(self, option_strings, version=None,
+                 dest=argparse.SUPPRESS, default=argparse.SUPPRESS,
+                 help="show version number and license/copyright information"):
+        super(AboutAction, self).__init__(option_strings=option_strings,
+                                          dest=dest, default=default,
+                                          nargs=0, help=help)
         self.version = version
 
-    def __call__(self, parser, namespace, values, option_string = None):
+    def __call__(self, parser, namespace, values, option_string=None):
         version = self.version
         if version is None:
             version = parser.version
-        parser.exit(message = version)
+        parser.exit(message=version)
 
 
 def get_cli_parser():
@@ -268,166 +272,164 @@ def get_cli_parser():
         ArgumentParser object, which parse_args() can be called with.
     """
     parser = argparse.ArgumentParser(
-        formatter_class = argparse.ArgumentDefaultsHelpFormatter)
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    # pylint: disable=protected-access
     parser._optionals.title = 'arguments'
 
     parser.add_argument(
         '-v', '--version',
-        action = AboutAction, version = dvr_scan.ABOUT_STRING)
+        action=AboutAction, version=dvr_scan.ABOUT_STRING)
 
     parser.add_argument(
-        '-i', '--input', metavar = 'VIDEO_FILE',
-        required = True, type = argparse.FileType('r'), action='append',
-        help = ('[REQUIRED] Path to input video. May be specified multiple'
-                ' times to join several videos with the same resolution'
-                ' and framerate. Any output filenames will be generated'
-                ' using the first filename only.'))
+        '-i', '--input', metavar='VIDEO_FILE',
+        required=True, type=argparse.FileType('r'), action='append',
+        help=('[REQUIRED] Path to input video. May be specified multiple'
+              ' times to join several videos with the same resolution'
+              ' and framerate. Any output filenames will be generated'
+              ' using the first filename only.'))
 
     parser.add_argument(
-        '-o', '--output', metavar = 'OUTPUT_VIDEO.avi',
-        type = argparse.FileType('w'),
-        help = ('If specified, all motion events will be written to a single'
-                ' file, creating a compilation of only the frames in'
-                ' the input video containing motion. By default each'
-                ' motion event is written to a separate file. Filename'
-                ' MUST end with .avi.'))
+        '-o', '--output', metavar='OUTPUT_VIDEO.avi',
+        type=argparse.FileType('w'),
+        help=('If specified, all motion events will be written to a single'
+              ' file, creating a compilation of only the frames in'
+              ' the input video containing motion. By default each'
+              ' motion event is written to a separate file. Filename'
+              ' MUST end with .avi.'))
 
     parser.add_argument(
-        '-so', '--scan-only', dest = 'scan_only_mode',
-        action = 'store_true', default = False,
-        help = ('Only perform motion detection on the input, and generate a'
-                ' list of comma-separated timecodes, writing no files to disk.'))
+        '-so', '--scan-only', dest='scan_only_mode',
+        action='store_true', default=False,
+        help=('Only perform motion detection on the input, and generate a'
+              ' list of comma-separated timecodes, writing no files to disk.'))
 
     parser.add_argument(
-        '-c', '--codec', metavar = 'FOURCC', dest = 'fourcc_str',
-        type = string_type_check(
+        '-c', '--codec', metavar='FOURCC', dest='fourcc_str',
+        type=string_type_check(
             ['XVID', 'MP4V', 'MP42', 'H264'], False, 'FOURCC'),
-        default = 'XVID',
-        help = ('The four-letter identifier of the encoder/video codec to use'
-                ' when exporting motion events as videos. Possible values'
-                ' are: XVID, MP4V, MP42, H264.'))
+        default='XVID',
+        help=('The four-letter identifier of the encoder/video codec to use'
+              ' when exporting motion events as videos. Possible values'
+              ' are: XVID, MP4V, MP42, H264.'))
 
     parser.add_argument(
-        '-t', '--threshold', metavar = 'value', dest = 'threshold',
-        type = float_type_check(0.0, None, 'value'),
-        default = 0.15,
-        help = ('Threshold value representing the amount of motion in a frame'
-                ' required to trigger a motion event. Lower values require'
-                ' less movement, and are more sensitive to motion. If the threshold'
-                ' is too high, some movement in the scene may not be detected,'
-                ' while too low of a threshold can trigger a false motion event.'))
+        '-t', '--threshold', metavar='value', dest='threshold',
+        type=float_type_check(0.0, None, 'value'),
+        default=0.15,
+        help=('Threshold value representing the amount of motion in a frame'
+              ' required to trigger a motion event. Lower values require'
+              ' less movement, and are more sensitive to motion. If the threshold'
+              ' is too high, some movement in the scene may not be detected,'
+              ' while too low of a threshold can trigger a false motion event.'))
 
     parser.add_argument(
-        '-k', '--kernel-size', metavar = 'N', dest = 'kernel_size',
-        type = odd_int_type_check(3, None, 'N', True), default = -1,
-        help = ('Size in pixels of the noise reduction kernel. Must be an odd'
-                ' integer greater than 1, or set to -1 to auto-set based on'
-                ' input video resolution (default). If the kernel size is set too'
-                ' large, some movement in the scene may not be detected.'))
+        '-k', '--kernel-size', metavar='N', dest='kernel_size',
+        type=odd_int_type_check(3, None, 'N', True), default=-1,
+        help=('Size in pixels of the noise reduction kernel. Must be an odd'
+              ' integer greater than 1, or set to -1 to auto-set based on'
+              ' input video resolution (default). If the kernel size is set too'
+              ' large, some movement in the scene may not be detected.'))
 
     parser.add_argument(
-        '-l', '--min-event-length', metavar = 'T', dest = 'min_event_len',
-        #type = int_type_check(1, None, 'num_frames'), default = 2,
-        type = timecode_type_check('T'), default = 2,
-        help = ('Number of frames that must exceed the threshold in a row to trigger'
-                ' a new motion event, effectively setting a minimum event length.'
-                ' Can also be specified as a timecode or # of seconds.'))
+        '-l', '--min-event-length', metavar='T', dest='min_event_len',
+        #type=int_type_check(1, None, 'num_frames'), default=2,
+        type=timecode_type_check('T'), default=2,
+        help=('Number of frames that must exceed the threshold in a row to trigger'
+              ' a new motion event, effectively setting a minimum event length.'
+              ' Can also be specified as a timecode or # of seconds.'))
 
     parser.add_argument(
-        '-tp', '--time-post-event', metavar = 'T', dest = 'time_post_event',
-        type = timecode_type_check('T'), default = '2s',
-        help = ('Number of frames to include after each motion event ends.'
-                ' Any new motion events that occur in this period are'
-                ' automatically joined with the current motion event.'
-                ' Can also be specified as a timecode or # of seconds.'))
+        '-tp', '--time-post-event', metavar='T', dest='time_post_event',
+        type=timecode_type_check('T'), default='2s',
+        help=('Number of frames to include after each motion event ends.'
+              ' Any new motion events that occur in this period are'
+              ' automatically joined with the current motion event.'
+              ' Can also be specified as a timecode or # of seconds.'))
 
     parser.add_argument(
-        '-tb', '--time-before-event', metavar = 'T', dest = 'time_pre_event',
-        type = timecode_type_check('T'), default = '1.5s',
-        help = ('Number of frames to include before a motion event is detected.'
-                ' Can also be specified as a timecode or # of seconds.'))
+        '-tb', '--time-before-event', metavar='T', dest='time_pre_event',
+        type=timecode_type_check('T'), default='1.5s',
+        help=('Number of frames to include before a motion event is detected.'
+              ' Can also be specified as a timecode or # of seconds.'))
 
     #parser.add_argument(
-    #    '-s', '--statsfile', metavar = 'STATS_FILE', dest = 'stats_file',
-    #    type = argparse.FileType('w'),
-    #    help = 'File to store video statistics data, comma-separated value '
+    #    '-s', '--statsfile', metavar='STATS_FILE', dest='stats_file',
+    #    type=argparse.FileType('w'),
+    #    help='File to store video statistics data, comma-separated value '
     #           'format (.csv). Will be overwritten if exists.')
 
     #parser.add_argument(
-    #    '-e', '--list-events', dest = 'list_events',
-    #    action = 'store_true', default = False,
-    #    help = ('Output the times and lengths of any motion events that are'
+    #    '-e', '--list-events', dest='list_events',
+    #    action='store_true', default=False,
+    #    help=('Output the times and lengths of any motion events that are'
     #            ' found to the terminal as a human-readable table.'))
 
     parser.add_argument(
-        '-q', '--quiet', dest = 'quiet_mode',
-        action = 'store_true', default = False,
-        help = ('Suppress all output except for final comma-separated list of motion events.'
-                ' Useful for computing or piping output directly into other programs/scripts.'))
+        '-q', '--quiet', dest='quiet_mode',
+        action='store_true', default=False,
+        help=('Suppress all output except for final comma-separated list of motion events.'
+              ' Useful for computing or piping output directly into other programs/scripts.'))
 
     parser.add_argument(
-        '-st', '--start-time', metavar = 'time', dest = 'start_time',
-        type = timecode_type_check('time'), default = None,
-        help = ('Time to seek to in video before performing detection. Can be'
-                ' given in number of frames (12345), seconds (number followed'
-                ' by s, e.g. 123s or 123.45s), or timecode (HH:MM:SS[.nnn]).'))
+        '-st', '--start-time', metavar='time', dest='start_time',
+        type=timecode_type_check('time'), default=None,
+        help=('Time to seek to in video before performing detection. Can be'
+              ' given in number of frames (12345), seconds (number followed'
+              ' by s, e.g. 123s or 123.45s), or timecode (HH:MM:SS[.nnn]).'))
 
     parser.add_argument(
-        '-dt', '--duration', metavar = 'time', dest = 'duration',
-        type = timecode_type_check('time'), default = None,
-        help = ('Length of time in input video to limit motion detection to (see'
-                ' -st for valid timecode formats). Overrides -et.'))
+        '-dt', '--duration', metavar='time', dest='duration',
+        type=timecode_type_check('time'), default=None,
+        help=('Length of time in input video to limit motion detection to (see'
+              ' -st for valid timecode formats). Overrides -et.'))
 
     parser.add_argument(
-        '-et', '--end-time', metavar = 'time', dest = 'end_time',
-        type = timecode_type_check('time'), default = None,
-        help = ('Timecode to stop motion detection at (see -st for valid'
-                'timecode formats).'))
+        '-et', '--end-time', metavar='time', dest='end_time',
+        type=timecode_type_check('time'), default=None,
+        help=('Timecode to stop motion detection at (see -st for valid'
+              'timecode formats).'))
 
     parser.add_argument(
-        '-df', '--downscale-factor', metavar = 'factor', dest = 'downscale_factor',
-        type = int_type_check(1, None, 'factor'), default = 1,
-        help = ('Factor to downscale (shrink) video before processing, to'
-                ' improve performance. For example, if input video resolution'
-                ' is 1024 x 400, and factor = 2, each frame is reduced to'
-                ' 1024/2 x 400/2 = 512 x 200 before processing.'))
+        '-df', '--downscale-factor', metavar='factor', dest='downscale_factor',
+        type=int_type_check(1, None, 'factor'), default=1,
+        help=('Factor to downscale (shrink) video before processing, to'
+              ' improve performance. For example, if input video resolution'
+              ' is 1024 x 400, and factor=2, each frame is reduced to'
+              ' 1024/2 x 400/2=512 x 200 before processing.'))
 
     parser.add_argument(
-        '-fs', '--frame-skip', metavar = 'num_frames', dest = 'frame_skip',
-        type = int_type_check(0, None, 'num_frames'), default = 0,
-        help = ('Number of frames to skip after processing a given frame.'
-                ' Improves performance, at expense of frame and time accuracy,'
-                ' and may increase probability of missing motion events.'
-                ' If required, values above 1 or 2 are not recommended.'))
+        '-fs', '--frame-skip', metavar='num_frames', dest='frame_skip',
+        type=int_type_check(0, None, 'num_frames'), default=0,
+        help=('Number of frames to skip after processing a given frame.'
+              ' Improves performance, at expense of frame and time accuracy,'
+              ' and may increase probability of missing motion events.'
+              ' If required, values above 1 or 2 are not recommended.'))
 
     #parser.add_argument(
-    #    '-u', '--update-rate', metavar = 'interval', dest = 'update_rate',
-    #    type = int_type_check(0, None, 'interval'), default = 0,
-    #    help = ('Prints a status message at the specified interval,'
-    #            ' including performance and position information.'))
+    #    '-u', '--update-rate', metavar='interval', dest='update_rate',
+    #    type=int_type_check(0, None, 'interval'), default=0,
+    #    help=('Prints a status message at the specified interval,'
+    #          ' including performance and position information.'))
 
     #parser.add_argument(
-    #    '-si', '--save-images', dest = 'save_images',
-    #    action = 'store_true', default = False,
-    #    help = ('If set, the first and last frames in each detected motion'
-    #            ' event will be saved to disk. Images will be saved in the'
-    #            ' same folder as the input video, unless set otherwise.'))
+    #    '-si', '--save-images', dest='save_images',
+    #    action='store_true', default=False,
+    #    help=('If set, the first and last frames in each detected motion'
+    #          ' event will be saved to disk. Images will be saved in the'
+    #          ' same folder as the input video, unless set otherwise.'))
 
     parser.add_argument(
         '-tc', '--time-code', dest='draw_timecode',
         action='store_true', default=False,
-        help=('Draw time code of each frame on the top left corner.'
-              ))
+        help=('Draw time code of each frame on the top left corner.'))
 
     parser.add_argument(
         '-roi', '--rectangle-of-interest',  dest='roi', metavar='x0 y0 w h',
-        nargs='*', default = None,
+        nargs='*', default=None,
         help=('If set, scan only in selected area, which is selected in a popup window'
               ' (select with mouse, then press enter).'
               ' Can also specify the window in terms of x/y/w/h.'
               ' Example for pop-up window: dvr-scan -i video.mp4 -roi '
-              ' Example for predefined rectangle: dvr-scan -i video.mp4 -roi 100 110 50 50 '
-                ))
+              ' Example for predefined rectangle: dvr-scan -i video.mp4 -roi 100 110 50 50 '))
 
     return parser
-

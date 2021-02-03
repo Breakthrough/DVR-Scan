@@ -1,20 +1,20 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
 #       [  Site: https://github.com/Breakthrough/DVR-Scan/   ]
 #       [  Documentation: http://dvr-scan.readthedocs.org/   ]
 #
-# Installation and build script for DVR-Scan.  To install DVR-Scan in the
-# current environment, run:
-#
-#   > python setup.py install
-#
-# This will allow you to use the `dvr-scan` command from the terminal or
-# command prompt.  When upgrading to a new version, running the above command
-# will automatically overwrite any existing older version.
+# Copyright (C) 2014-2021 Brandon Castellano <http://www.bcastell.com>.
 #
 
+""" DVR-Scan setup.py
+
+To install DVR-Scan:
+
+    python setup.py install
+"""
 
 import sys
 
