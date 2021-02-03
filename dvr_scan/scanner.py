@@ -9,7 +9,7 @@
 # is used to provide a high level interface to the logic used by
 # DVR-Scan to implement the motion detection/scanning algorithm.
 #
-# Copyright (C) 2016-2020 Brandon Castellano <http://www.bcastell.com>.
+# Copyright (C) 2016-2021 Brandon Castellano <http://www.bcastell.com>.
 #
 # DVR-Scan is licensed under the BSD 2-Clause License; see the included
 # LICENSE file or visit one of the following pages for details:
@@ -37,6 +37,7 @@ DVR-Scan program logic, as well as the motion detection algorithm.
 from __future__ import print_function
 import os
 import time
+import logging
 
 # Third-Party Library Imports
 import cv2
@@ -56,17 +57,22 @@ class ScanContext(object):
     and coordinating overall application logic (via scan_motion()). """
 
     # TODO: Remove args, replace with explicit methods (#33)
-    def __init__(self, args):
-        """ Initializes the ScanContext with the supplied arguments. """
+    def __init__(self, args, show_progress=True):
+        """ Initializes the ScanContext with the supplied arguments.
 
-        if not args.quiet_mode:
-            print("[DVR-Scan] Initializing scan context...")
+        Arguments:
+            args: TODO - Remove.
+
+            show_progress: Shows a progress bar if tqdm is available.
+        """
+
+        self._logger = logging.getLogger('dvr_scan')
+        self._logger.info("Initializing scan context...")
 
         self.initialized = False
         self.running = True         # Allows asynchronous termination of scanning loop.
-
         self.event_list = []
-        self.suppress_output = args.quiet_mode
+        self._show_progress = show_progress
 
         # Output Parameters (set_output)
         self._comp_file = None                      # -o/--output
@@ -86,7 +92,6 @@ class ScanContext(object):
         self.video_paths = args.input
         self.frames_total = 0
         self.frames_processed = 0
-
 
         # Check the input video(s) and obtain the framerate/resolution.
         if self._load_input_videos():
@@ -120,8 +125,9 @@ class ScanContext(object):
             if self.roi is not None:
                 if self.roi:
                     if len(self.roi) != 4:
-                        print("[DVR-Scan] Error: ROI must be specified as a rectangle of the form x/y/w/h!")
-                        print("    For example: -roi 200 250 50 100")
+                        self._logger.error(
+                            "Error: ROI must be specified as a rectangle of the form x/y/w/h!\n"
+                            "  For example: -roi 200 250 50 100")
                         return
                     for i in range(0, 4):
                         self.roi[i] = int(self.roi[i])
@@ -144,10 +150,14 @@ class ScanContext(object):
             codec (str): The four-letter identifier of the encoder/video
                 codec to use when exporting motion events as videos.
                 Possible values are: XVID, MP4V, MP42, H264.
+
+        Raises:
+            ValueError if codec is not four characters.
         """
         self._scan_only = scan_only
         self._comp_file = comp_file
-        assert len(codec) == 4
+        if len(codec) != 4:
+            raise ValueError("codec must be exactly four (4) characters")
         self._fourcc = cv2.VideoWriter_fourcc(*codec.upper())
 
 
@@ -182,7 +192,7 @@ class ScanContext(object):
         if kernel_size == 0:
             self._kernel = None
         elif (kernel_size % 2) == 0:
-            raise ValueError("kernel_size must be odd (or None)!")
+            raise ValueError("kernel_size must be odd (or None)")
         else:
             self._kernel = np.ones((kernel_size, kernel_size), np.uint8)
 
@@ -197,11 +207,10 @@ class ScanContext(object):
             cap.open(video_path)
             video_name = os.path.basename(video_path)
             if not cap.isOpened():
-                if not self.suppress_output:
-                    print("[DVR-Scan] Error: Couldn't load video %s." % video_name)
-                    print("[DVR-Scan] Check that the given file is a valid video"
-                          " clip, and ensure all required software dependencies"
-                          " are installed and configured properly.")
+                self._logger.error("Error: Couldn't load video %s.", video_name)
+                self._logger.info("Check that the given file is a valid video"
+                                  " clip, and ensure all required software dependencies"
+                                  " are installed and configured properly.")
                 cap.release()
                 return False
             curr_resolution = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
@@ -212,21 +221,19 @@ class ScanContext(object):
             if self._video_resolution is None and self.video_fps is None:
                 self._video_resolution = curr_resolution
                 self.video_fps = curr_framerate
-                if not self.suppress_output:
-                    print("[DVR-Scan] Opened video %s (%d x %d at %2.3f FPS)." % (
-                        video_name, self._video_resolution[0],
-                        self._video_resolution[1], self.video_fps))
+                self._logger.info(
+                    "Opened video %s (%d x %d at %2.3f FPS).",
+                    video_name, self._video_resolution[0],
+                    self._video_resolution[1], self.video_fps)
             # Check that all other videos specified have the same resolution
             # (we'll assume the framerate is the same if the resolution matches,
             # since the VideoCapture FPS information is not always accurate).
             elif curr_resolution != self._video_resolution:
-                if not self.suppress_output:
-                    print("[DVR-Scan] Error: Can't append clip %s, video resolution"
-                          " does not match the first input file." % video_name)
+                self._logger.error(
+                    "Error: Can't append clip %s, video resolution"
+                    " does not match the first input file.", video_name)
                 return False
-            else:
-                if not self.suppress_output:
-                    print("[DVR-Scan] Appended video %s." % video_name)
+            self._logger.info("Appended video %s.", video_name)
         # If we get to this point, all videos have the same parameters.
         return True
 
@@ -252,7 +259,7 @@ class ScanContext(object):
             if self._cap.isOpened():
                 return self._get_next_frame()
             else:
-                print("[DVR-Scan] Error: Unable to load video for processing.")
+                self._logger.error("Error: Unable to load video for processing.")
                 self._cap = None
 
         return None
@@ -279,11 +286,11 @@ class ScanContext(object):
     def scan_motion(self):
         """ Performs motion analysis on the ScanContext's input video(s). """
         if self.initialized is not True:
-            print("[DVR-Scan] Error: Scan context uninitialized, no analysis performed.")
+            self._logger.error("Error: Scan context uninitialized, no analysis performed.")
             return
-        print("[DVR-Scan] Scanning %s for motion events..." % (
+        self._logger.info("Scanning %s for motion events...",
             "%d input videos" % len(self.video_paths) if len(self.video_paths) > 1
-            else "input video"))
+            else "input video")
 
         bg_subtractor = cv2.createBackgroundSubtractorMOG2(detectShadows=False)
         buffered_frames = []
@@ -319,26 +326,25 @@ class ScanContext(object):
 
         # area selection
         if self.roi is not None and len(self.roi) == 0:
-            print("[DVR-Scan] selecting area of interest:")
+            self._logger.info("Selecting area of interest:")
             frame_for_crop = self._get_next_frame()
             if self.draw_timecode:
                 self._stamp_text(frame_for_crop, curr_pos.get_timecode(), 0)
             self.roi = cv2.selectROI("DVR-Scan ROI Selection", frame_for_crop)
             cv2.destroyAllWindows()
             if all([coord == 0 for coord in self.roi]):
-                print("[DVR-Scan] ROI selection cancelled.")
-                print("[DVR-Scan] Aborting...")
+                self._logger.info("ROI selection cancelled. Aborting...")
                 return
         # Motion event scanning/detection loop.
         assert self.roi is None or len(self.roi) == 4
         if self.roi:
-            print("[DVR-Scan] area selected (x,y,w,h): %s" % str(self.roi))
+            self._logger.info("ROI selected (x,y,w,h): %s", str(self.roi))
 
 
         tqdm = dvr_scan.platform.get_tqdm()
         progress_bar = None
         self.frames_total = int(self.frames_total)
-        if tqdm is not None and self.frames_total > 0 and not self.suppress_output:
+        if tqdm is not None and self.frames_total > 0 and self._show_progress:
             if self.end_time and self.end_time.frame_num < self.frames_total:
                 self.frames_total = self.end_time.frame_num
             if self.start_time:
@@ -449,35 +455,40 @@ class ScanContext(object):
             video_writer.release()
         if progress_bar is not None:
             progress_bar.close()
-        elif not self.suppress_output:
-            processing_time = time.time() - processing_start
-            processing_rate = float(self.frames_processed) / processing_time
-            print("[DVR-Scan] Processed %d frames read in %3.1f secs (avg %3.1f FPS)." % (
-                self.frames_processed, processing_time, processing_rate))
+
+        processing_time = time.time() - processing_start
+        processing_rate = float(self.frames_processed) / processing_time
+        self._logger.info(
+            "Processed %d frames read in %3.1f secs (avg %3.1f FPS).",
+            self.frames_processed, processing_time, processing_rate)
         if not len(self.event_list) > 0:
-            print("[DVR-Scan] No motion events detected in input.")
+            self._logger.info("No motion events detected in input.")
             return
 
-        print("[DVR-Scan] Detected %d motion events in input." % len(self.event_list))
+        self._logger.info("Detected %d motion events in input.", len(self.event_list))
 
         if self.event_list:
-            print("[DVR-Scan] Scan-only mode specified, list of motion events:")
-            print("-------------------------------------------------------------")
-            print("|   Event #    |  Start Time  |   Duration   |   End Time   |")
-            print("-------------------------------------------------------------")
-            for event_num, (event_start, event_end, event_duration) in enumerate(self.event_list):
-                print("|  Event %4d  |  %s  |  %s  |  %s  |" % (
+            output_strs = [
+                "-------------------------------------------------------------",
+                "|   Event #    |  Start Time  |   Duration   |   End Time   |",
+                "-------------------------------------------------------------" ]
+            output_strs += [
+                "|  Event %4d  |  %s  |  %s  |  %s  |" % (
                     event_num + 1, event_start.get_timecode(precision=1),
                     event_duration.get_timecode(precision=1),
-                    event_end.get_timecode(precision=1)))
-            print("-------------------------------------------------------------")
+                    event_end.get_timecode(precision=1))
+                for event_num, (event_start, event_end, event_duration)
+                in enumerate(self.event_list) ]
+            output_strs += [
+                "-------------------------------------------------------------" ]
+            self._logger.info("Scan-only mode specified, list of motion events:\n%s",
+                              '\n'.join(output_strs))
 
-            print("[DVR-Scan] Comma-separated timecode values:")
             timecode_list = []
             for event_start, event_end, event_duration in self.event_list:
                 timecode_list.append(event_start.get_timecode())
                 timecode_list.append(event_end.get_timecode())
-            print(','.join(timecode_list))
+            print("Comma-separated timecode values:\n%s" % ','.join(timecode_list))
 
         if not self._scan_only:
-            print("[DVR-Scan] Motion events written to disk.")
+            self._logger.info("Motion events written to disk.")

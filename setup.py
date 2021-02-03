@@ -21,17 +21,17 @@ import sys
 from setuptools import setup
 
 
-if sys.version_info < (2, 6) or (3, 0) <= sys.version_info < (3, 3):
-    print('DVR-Scan requires at least Python 2.6 or 3.3 to run.')
+if sys.version_info < (2, 7) or (3, 0) <= sys.version_info < (3, 3):
+    print('DVR-Scan requires at least Python 2.7 or 3.3 to run.')
     sys.exit(1)
+
 
 def get_requires():
     # type: () -> List[str]
     """ Get Requires: Returns a list of required packages. """
     requires = ['numpy', 'tqdm']
-    if sys.version_info == (2, 6):
-        requires += ['argparse']
     return requires
+
 
 def get_extra_requires():
     # type: () -> Dict[str, List[str]]
@@ -51,8 +51,9 @@ def get_extra_requires():
 
 setup(
     name='dvr-scan',
-    version='1.1.0',
-    description="Tool for finding and extracting motion events in video files (e.g. security camera footage).",
+    version='1.2a0',
+    description="Tool for finding and extracting motion events in video files"
+                "(e.g. security camera footage).",
     long_description=open('package-info.rst').read(),
     author='Brandon Castellano',
     author_email='brandon248@gmail.com',
@@ -78,12 +79,11 @@ setup(
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
         'Topic :: Multimedia :: Video',
         'Topic :: Multimedia :: Video :: Conversion',
         'Topic :: Multimedia :: Video :: Non-Linear Editor',

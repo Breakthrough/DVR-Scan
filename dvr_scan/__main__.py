@@ -14,7 +14,7 @@
 # directory) will allow the `dvr-scan` command to be used from anywhere,
 # e.g. `dvr-scan -i myfile.mp4`.
 #
-# Copyright (C) 2016-2020 Brandon Castellano <http://www.bcastell.com>.
+# Copyright (C) 2016-2021 Brandon Castellano <http://www.bcastell.com>.
 #
 # DVR-Scan is licensed under the BSD 2-Clause License; see the included
 # LICENSE file or visit one of the following pages for details:

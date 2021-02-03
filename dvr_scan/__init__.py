@@ -7,7 +7,7 @@
 #
 # This file contains all code for the main `dvr_scan` module.
 #
-# Copyright (C) 2016-2020 Brandon Castellano <http://www.bcastell.com>.
+# Copyright (C) 2016-2021 Brandon Castellano <http://www.bcastell.com>.
 #
 # DVR-Scan is licensed under the BSD 2-Clause License; see the included
 # LICENSE file or visit one of the following pages for details:
@@ -40,6 +40,8 @@ modules are organized as follows:
 
 # Standard Library Imports
 from __future__ import print_function
+import logging
+import sys
 
 # DVR-Scan Library Imports
 import dvr_scan.cli
@@ -82,6 +84,24 @@ def parse_cli_args():
     return args
 
 
+def init_logger(quiet_mode, log_level=logging.INFO):
+    """ Initializes the Python logging module for DVR-Scan.
+
+    The logger instance used is 'dvr_scan'.
+    """
+
+    logger = logging.getLogger('dvr_scan')
+    logger.setLevel(log_level)
+    if quiet_mode:
+        for handler in logger.handlers:
+            logger.removeHandler(handler)
+        return
+    handler = logging.StreamHandler(stream=sys.stdout)
+    handler.setLevel(log_level)
+    handler.setFormatter(logging.Formatter(fmt='[DVR-Scan] %(message)s'))
+    logger.addHandler(handler)
+
+
 def main():
     """Entry point for running main DVR-Scan program.
 
@@ -89,7 +109,8 @@ def main():
     """
     # Parse CLI arguments and create our ScanContext.
     args = parse_cli_args()
-    sctx = dvr_scan.scanner.ScanContext(args)
+    init_logger(args.quiet_mode)
+    sctx = dvr_scan.scanner.ScanContext(args, show_progress=not args.quiet_mode)
 
     # Set context properties based on CLI arguments.
     sctx.set_output(args.scan_only_mode, args.output, args.fourcc_str)
