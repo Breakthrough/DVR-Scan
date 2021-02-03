@@ -65,16 +65,36 @@ THE SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, EXPRESS OR IMPLIED.
 
 """ % __version__
 
+def parse_cli_args():
+    """ Parses all given arguments, returning the object containing
+    all options as properties. """
+    # Parse the user-supplied CLI arguments.
+    args = dvr_scan.cli.get_cli_parser().parse_args()
+
+    # We close any opened file handles, as only the paths are required,
+    # and replace the file handles with the path as a string.
+    for input_file in args.input:
+        input_file.close()
+    args.input = [ handle.name for handle in args.input ]
+    if args.output:
+        args.output.close()
+        args.output = args.output.name
+    return args
+
 
 def main():
     """Entry point for running main DVR-Scan program.
 
     Handles high-level interfacing of video IO and motion event detection.
     """
-    # Parse the user-supplied CLI arguments.
-    args = dvr_scan.cli.get_cli_parser().parse_args()
-    # Create and initialize a new ScanContext using the supplied arguments.
+    # Parse CLI arguments and create our ScanContext.
+    args = parse_cli_args()
     sctx = dvr_scan.scanner.ScanContext(args)
+
+    # Set context properties based on CLI arguments.
+    sctx.set_output(args.scan_only_mode, args.output, args.fourcc_str)
+    sctx.set_detection_params(args.threshold, args.kernel_size)
+
     # If the context was successfully initialized, we can process the video(s).
     if sctx.initialized is True:
         sctx.scan_motion()

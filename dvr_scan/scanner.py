@@ -47,16 +47,17 @@ from dvr_scan.timecode import FrameTimecode
 import dvr_scan.platform
 
 
+DEFAULT_VIDEOWRITER_CODEC = cv2.VideoWriter_fourcc('X', 'V', 'I', 'D')
+
+
 class ScanContext(object):
     """ The ScanContext object represents the DVR-Scan program state,
     which includes application initialization, handling the options,
     and coordinating overall application logic (via scan_motion()). """
 
+    # TODO: Remove args, replace with explicit methods (#33)
     def __init__(self, args):
         """ Initializes the ScanContext with the supplied arguments. """
-        # We close the open file handles, as only the paths are required.
-        for input_file in args.input:
-            input_file.close()
 
         if not args.quiet_mode:
             print("[DVR-Scan] Initializing scan context...")
@@ -67,41 +68,30 @@ class ScanContext(object):
         self.event_list = []
         self.suppress_output = args.quiet_mode
 
+        # Output Parameters (set_output)
+        self._comp_file = None                      # -o/--output
+        self._fourcc = DEFAULT_VIDEOWRITER_CODEC    # -c/--codec
+        self._scan_only = False                     # -so/--scan-only
+
+        # Motion Detection Parameters (set_detection_params)
+        self._kernel = None                         # -k/--kernel-size
+        self._threshold = 0.15                      # -t/--threshold
+
+        # Remaining parameters to transition to named methods:
         self._cap = None
         self._cap_path = None
 
-        self.video_resolution = None
+        self._video_resolution = None
         self.video_fps = None
-        self.video_paths = [input_file.name for input_file in args.input]
+        self.video_paths = args.input
         self.frames_total = 0
         self.frames_processed = 0
-        if not len(args.fourcc_str) == 4:
-            print("[DVR-Scan] Error: Specified codec (-c/--codec) must be exactly 4 characters.")
-            return
-        self.fourcc = cv2.VideoWriter_fourcc(*args.fourcc_str.upper())
-        if args.kernel_size == -1:
-            self.kernel = None
-        elif (args.kernel_size % 2) == 0:
-            print("[DVR-Scan] Error: Kernel size must be an odd, positive integer (e.g. 3, 5, 7.")
-            return
-        else:
-            self.kernel = np.ones((args.kernel_size, args.kernel_size), np.uint8)
-        self.comp_file = None
-        self.scan_only_mode = args.scan_only_mode
-        if args.output:
-            self.comp_file = args.output.name
-            args.output.close()
+
+
         # Check the input video(s) and obtain the framerate/resolution.
         if self._load_input_videos():
             # Motion detection and output related arguments
-            self.threshold = args.threshold
-            if self.kernel is None:
-                if self.video_resolution[0] >= 1920:
-                    self.kernel = np.ones((7, 7), np.uint8)
-                elif self.video_resolution[0] >= 1280:
-                    self.kernel = np.ones((5, 5), np.uint8)
-                else:
-                    self.kernel = np.ones((3, 3), np.uint8)
+            self._threshold = args.threshold
             # Event detection window properties
             self.min_event_len = FrameTimecode(self.video_fps, args.min_event_len)
             self.pre_event_len = FrameTimecode(self.video_fps, args.time_pre_event)
@@ -121,6 +111,7 @@ class ScanContext(object):
                 self.end_time = FrameTimecode(self.video_fps, args.end_time)
             # Video processing related arguments
             self.frame_skip = args.frame_skip
+            # TODO: Implement downscale factor (#46)
             self.downscale_factor = args.downscale_factor
 
             # timecode and ROI:
@@ -137,6 +128,64 @@ class ScanContext(object):
                 else:
                     self.roi = []
             self.initialized = True
+
+
+    def set_output(self, scan_only=False, comp_file=None, codec='XVID'):
+        # type: (bool, str, str) -> None
+        """ Sets the path and encoder codec to use when exporting videos.
+
+        Arguments:
+            scan_only (bool): If True, only scans input for motion, but
+                does not write any video(s) to disk.  In this case,
+                comp_file and codec are ignored.
+            comp_file (str): If set, represents the path that all
+                concatenated motion events will be written to.
+                If None, each motion event will be saved as a separate file.
+            codec (str): The four-letter identifier of the encoder/video
+                codec to use when exporting motion events as videos.
+                Possible values are: XVID, MP4V, MP42, H264.
+        """
+        self._scan_only = scan_only
+        self._comp_file = comp_file
+        assert len(codec) == 4
+        self._fourcc = cv2.VideoWriter_fourcc(*codec.upper())
+
+
+    def set_detection_params(self, threshold=0.15, kernel_size=None):
+        """ Sets motion detection parameters.
+
+        Arguments:
+            threshold (float): Threshold value representing the amount of motion
+                in a frame required to trigger a motion event. Lower values
+                require less movement, and are more sensitive to motion. If the
+                threshold is too high, some movement in the scene may not be
+                detected, while a threshold too low can trigger a false events.
+            kernel_size (Optional[int]): Size in pixels of the noise reduction
+                kernel. Must be an odd integer greater than 1. If not set,
+                will be automatically calculated based on input video resolution.
+                If too large, some movement in the scene may not be detected.
+                Values < 0 are treated as if kernel_size is None.  If kernel_size
+                is set to 0, no noise reduction is performed.
+
+        Raises:
+            ValueError if kernel_size is not odd.
+        """
+        self._threshold = threshold
+        if kernel_size is None or kernel_size < 0:
+            # If kernel_size is None, set based on video resolution.
+            if self._video_resolution[0] >= 1920:
+                kernel_size = 7
+            elif self._video_resolution[0] >= 1280:
+                kernel_size = 5
+            else:
+                kernel_size = 3
+        if kernel_size == 0:
+            self._kernel = None
+        elif (kernel_size % 2) == 0:
+            raise ValueError("kernel_size must be odd (or None)!")
+        else:
+            self._kernel = np.ones((kernel_size, kernel_size), np.uint8)
+
 
     def _load_input_videos(self):
         """ Opens and checks that all input video files are valid, can
@@ -160,17 +209,17 @@ class ScanContext(object):
             curr_framerate = cap.get(cv2.CAP_PROP_FPS)
             self.frames_total += cap.get(cv2.CAP_PROP_FRAME_COUNT)
             cap.release()
-            if self.video_resolution is None and self.video_fps is None:
-                self.video_resolution = curr_resolution
+            if self._video_resolution is None and self.video_fps is None:
+                self._video_resolution = curr_resolution
                 self.video_fps = curr_framerate
                 if not self.suppress_output:
                     print("[DVR-Scan] Opened video %s (%d x %d at %2.3f FPS)." % (
-                        video_name, self.video_resolution[0],
-                        self.video_resolution[1], self.video_fps))
+                        video_name, self._video_resolution[0],
+                        self._video_resolution[1], self.video_fps))
             # Check that all other videos specified have the same resolution
             # (we'll assume the framerate is the same if the resolution matches,
             # since the VideoCapture FPS information is not always accurate).
-            elif curr_resolution != self.video_resolution:
+            elif curr_resolution != self._video_resolution:
                 if not self.suppress_output:
                     print("[DVR-Scan] Error: Can't append clip %s, video resolution"
                           " does not match the first input file." % video_name)
@@ -245,9 +294,9 @@ class ScanContext(object):
 
         video_writer = None
         output_prefix = ''
-        if self.comp_file:
-            video_writer = cv2.VideoWriter(self.comp_file, self.fourcc,
-                                           self.video_fps, self.video_resolution)
+        if self._comp_file:
+            video_writer = cv2.VideoWriter(self._comp_file, self._fourcc,
+                                           self.video_fps, self._video_resolution)
         elif len(self.video_paths[0]) > 0:
             output_prefix = os.path.basename(self.video_paths[0])
             dot_index = output_prefix.rfind('.')
@@ -326,7 +375,10 @@ class ScanContext(object):
 
             frame_gray = cv2.cvtColor(frame_rgb, cv2.COLOR_BGR2GRAY)
             frame_mask = bg_subtractor.apply(frame_gray)
-            frame_filt = cv2.morphologyEx(frame_mask, cv2.MORPH_OPEN, self.kernel)
+            if self._kernel is not None:
+                frame_filt = cv2.morphologyEx(frame_mask, cv2.MORPH_OPEN, self._kernel)
+            else:
+                frame_filt = frame_mask
             frame_score = np.sum(frame_filt) / float(frame_filt.shape[0] * frame_filt.shape[1])
             event_window.append(frame_score)
             event_window = event_window[-self.min_event_len.frame_num:]
@@ -336,11 +388,11 @@ class ScanContext(object):
                 # and write current frame to file.
                 # if the current frame doesn't meet the threshold, increment
                 # the current scene's post-event counter.
-                if not self.scan_only_mode:
+                if not self._scan_only:
                     if self.draw_timecode:
                         self._stamp_text(frame_rgb_origin, curr_pos.get_timecode(), 0)
                     video_writer.write(frame_rgb_origin)
-                if frame_score >= self.threshold:
+                if frame_score >= self._threshold:
                     num_frames_post_event = 0
                 else:
                     num_frames_post_event += 1
@@ -351,27 +403,27 @@ class ScanContext(object):
                         event_duration = FrameTimecode(
                             self.video_fps, curr_pos.frame_num - event_start.frame_num)
                         self.event_list.append((event_start, event_end, event_duration))
-                        if not self.comp_file and not self.scan_only_mode:
+                        if not self._comp_file and not self._scan_only:
                             video_writer.release()
             else:
-                if not self.scan_only_mode:
+                if not self._scan_only:
                     buffered_frames.append(frame_rgb_origin)
                     buffered_frames = buffered_frames[-self.pre_event_len.frame_num:]
                 if len(event_window) >= self.min_event_len.frame_num and all(
-                        score >= self.threshold for score in event_window):
+                        score >= self._threshold for score in event_window):
                     in_motion_event = True
                     event_window = []
                     num_frames_post_event = 0
                     event_start = FrameTimecode(
                         self.video_fps, curr_pos.frame_num)
                     # Open new VideoWriter if needed, write buffered_frames to file.
-                    if not self.scan_only_mode:
-                        if not self.comp_file:
+                    if not self._scan_only:
+                        if not self._comp_file:
                             output_path = '%s.DSME_%04d.avi' % (
                                 output_prefix, len(self.event_list))
                             video_writer = cv2.VideoWriter(
-                                output_path, self.fourcc, self.video_fps,
-                                self.video_resolution)
+                                output_path, self._fourcc, self.video_fps,
+                                self._video_resolution)
                         for frame in buffered_frames:
                             if self.draw_timecode:
                                 self._stamp_text(frame, curr_pos.get_timecode(), 0)
@@ -407,23 +459,25 @@ class ScanContext(object):
             return
 
         print("[DVR-Scan] Detected %d motion events in input." % len(self.event_list))
-        print("[DVR-Scan] Scan-only mode specified, list of motion events:")
-        print("-------------------------------------------------------------")
-        print("|   Event #    |  Start Time  |   Duration   |   End Time   |")
-        print("-------------------------------------------------------------")
-        for event_num, (event_start, event_end, event_duration) in enumerate(self.event_list):
-            print("|  Event %4d  |  %s  |  %s  |  %s  |" % (
-                event_num + 1, event_start.get_timecode(precision=1),
-                event_duration.get_timecode(precision=1),
-                event_end.get_timecode(precision=1)))
-        print("-------------------------------------------------------------")
 
-        if self.scan_only_mode:
+        if self.event_list:
+            print("[DVR-Scan] Scan-only mode specified, list of motion events:")
+            print("-------------------------------------------------------------")
+            print("|   Event #    |  Start Time  |   Duration   |   End Time   |")
+            print("-------------------------------------------------------------")
+            for event_num, (event_start, event_end, event_duration) in enumerate(self.event_list):
+                print("|  Event %4d  |  %s  |  %s  |  %s  |" % (
+                    event_num + 1, event_start.get_timecode(precision=1),
+                    event_duration.get_timecode(precision=1),
+                    event_end.get_timecode(precision=1)))
+            print("-------------------------------------------------------------")
+
             print("[DVR-Scan] Comma-separated timecode values:")
             timecode_list = []
             for event_start, event_end, event_duration in self.event_list:
                 timecode_list.append(event_start.get_timecode())
                 timecode_list.append(event_end.get_timecode())
             print(','.join(timecode_list))
-        else:
+
+        if not self._scan_only:
             print("[DVR-Scan] Motion events written to disk.")

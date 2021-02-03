@@ -149,23 +149,24 @@ def odd_int_type_check(min_val, max_val=None, metavar=None, allow_zero=True):
         value = int(value)
         valid = True
         msg   = ''
+        if value == -1:
+            return -1
         if value == 0 and allow_zero is True:
-            valid = True
-        else:
-            if (value % 2) == 0:
+            return 0
+        if (value % 2) == 0:
+            valid = False
+            msg = 'invalid choice: %d (%s must be an odd number)' % (
+                value, metavar )
+        elif max_val is None:
+            if value < min_val:
                 valid = False
-                msg = 'invalid choice: %d (%s must be an odd number)' % (
-                    value, metavar )
-            if max_val is None:
-                if value < min_val:
-                    valid = False
-                msg = 'invalid choice: %d (%s must be at least %d)' % (
-                    value, metavar, min_val )
-            else:
-                if value < min_val or value > max_val:
-                    valid = False
-                msg = 'invalid choice: %d (%s must be between %d and %d)' % (
-                    value, metavar, min_val, max_val )
+            msg = 'invalid choice: %d (%s must be at least %d)' % (
+                value, metavar, min_val )
+        else:
+            if value < min_val or value > max_val:
+                valid = False
+            msg = 'invalid choice: %d (%s must be between %d and %d)' % (
+                value, metavar, min_val, max_val )
         if not valid:
             raise argparse.ArgumentTypeError(msg)
         return value
