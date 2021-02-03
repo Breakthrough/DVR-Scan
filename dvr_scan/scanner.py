@@ -45,7 +45,7 @@ class ScanContext(object):
     which includes application initialization, handling the options,
     and coordinating overall application logic (via scan_motion()). """
 
-    def __init__(self, args):
+    def __init__(self, args, gui=None):
         """ Initializes the ScanContext with the supplied arguments. """
         if not args.quiet_mode:
             print("[DVR-Scan] Initializing scan context...")
@@ -55,7 +55,7 @@ class ScanContext(object):
         self.event_list = []
 
         self.suppress_output = args.quiet_mode
-        self.frames_read = -1
+        self.frames_processed = -1
         self.frames_processed = -1
         self.frames_total = -1
         self._cap = None
@@ -64,6 +64,8 @@ class ScanContext(object):
         self.video_resolution = None
         self.video_fps = None
         self.video_paths = [input_file.name for input_file in args.input]
+        self.frames_processed = 0
+        self.running = True
         # We close the open file handles, as only the paths are required.
         for input_file in args.input:
             input_file.close()
@@ -176,7 +178,7 @@ class ScanContext(object):
         # If we get to this point, all videos have the same parameters.
         return True
 
-    def _get_next_frame(self, retrieve = True):
+    def _get_next_frame(self, retrieve=True):
         """ Returns a new frame from the current series of video files,
         or None when no more frames are available. """
         if self._cap:
@@ -218,7 +220,8 @@ class ScanContext(object):
 
         x = margin
         y = margin + size[0][1] + line * line_height
-        cv2.rectangle(frame, (margin, margin), (margin + text_width, margin + text_height + 2), (0, 0, 0), -1)
+        cv2.rectangle(frame, (margin, margin),
+                      (margin + text_width, margin + text_height + 2), (0, 0, 0), -1)
         cv2.putText(frame, text, (x, y), font, font_scale, color, thickness)
         return None
 
@@ -252,7 +255,7 @@ class ScanContext(object):
         curr_pos = FrameTimecode(self.video_fps, 0)
         #curr_state = 'no_event'     # 'no_event', 'in_event', or 'post_even
         in_motion_event = False
-        num_frames_read = 0
+        self.frames_processed = 0
         num_frames_processed = 0
         processing_start = time.time()
 
@@ -261,7 +264,7 @@ class ScanContext(object):
             while curr_pos.frame_num < self.start_time.frame_num:
                 if self._get_next_frame(False) is None:
                     break
-                num_frames_read += 1
+                self.frames_processed += 1
                 curr_pos.frame_num += 1
 
         # area selection
@@ -293,11 +296,12 @@ class ScanContext(object):
             if self.frames_total < 0:
                 self.frames_total = 0
             progress_bar = tqdm.tqdm(
-                total = self.frames_total, unit = ' frames',
-                desc = "[DVR-Scan] Processed")
+                total=self.frames_total,
+                unit=' frames',
+                desc="[DVR-Scan] Processed")
 
         # Motion event scanning/detection loop.
-        while True:
+        while self.running:
             if self.end_time is not None and curr_pos.frame_num >= self.end_time.frame_num:
                 break
             if self.frame_skip > 0:
@@ -305,7 +309,7 @@ class ScanContext(object):
                     if self._get_next_frame(False) is None:
                         break
                     curr_pos.frame_num += 1
-                    num_frames_read += 1
+                    self.frames_processed += 1
                     if progress_bar:
                         progress_bar.update(1)
             frame_rgb = self._get_next_frame()
@@ -315,7 +319,9 @@ class ScanContext(object):
             frame_rgb_origin = frame_rgb
 
             if self.roi:
-                frame_rgb = frame_rgb[int(self.roi[1]):int(self.roi[1]+self.roi[3]), int(self.roi[0]):int(self.roi[0]+self.roi[2])]  # area selection
+                frame_rgb = frame_rgb[
+                    int(self.roi[1]):int(self.roi[1] + self.roi[3]),
+                    int(self.roi[0]):int(self.roi[0] + self.roi[2])]  # area selection
 
             frame_gray = cv2.cvtColor(frame_rgb, cv2.COLOR_BGR2GRAY)
             frame_mask = bg_subtractor.apply(frame_gray)
@@ -372,7 +378,7 @@ class ScanContext(object):
                         buffered_frames = []
 
             curr_pos.frame_num += 1
-            num_frames_read += 1
+            self.frames_processed += 1
             num_frames_processed += 1
             if progress_bar:
                 progress_bar.update(1)
@@ -393,9 +399,9 @@ class ScanContext(object):
             progress_bar.close()
         elif not self.suppress_output:
             processing_time = time.time() - processing_start
-            processing_rate = float(num_frames_read) / processing_time
+            processing_rate = float(self.frames_processed) / processing_time
             print("[DVR-Scan] Processed %d / %d frames read in %3.1f secs (avg %3.1f FPS)." % (
-                num_frames_processed, num_frames_read, processing_time, processing_rate))
+                num_frames_processed, self.frames_processed, processing_time, processing_rate))
         if not len(self.event_list) > 0:
             print("[DVR-Scan] No motion events detected in input.")
             return
