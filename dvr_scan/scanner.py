@@ -56,7 +56,6 @@ class ScanContext(object):
     which includes application initialization, handling the options,
     and coordinating overall application logic (via scan_motion()). """
 
-    # TODO: Remove args, replace with explicit methods (#33)
     def __init__(self, args, show_progress=True):
         """ Initializes the ScanContext with the supplied arguments.
 
@@ -75,14 +74,16 @@ class ScanContext(object):
         self._show_progress = show_progress
 
         # Output Parameters (set_output)
+        self._scan_only = False                     # -so/--scan-only
         self._comp_file = None                      # -o/--output
         self._fourcc = DEFAULT_VIDEOWRITER_CODEC    # -c/--codec
-        self._scan_only = False                     # -so/--scan-only
 
         # Motion Detection Parameters (set_detection_params)
-        self._kernel = None                         # -k/--kernel-size
         self._threshold = 0.15                      # -t/--threshold
+        self._kernel = None                         # -k/--kernel-size
+        self._downscale_factor = 1                  # -df/--downscale-factor
 
+        # TODO: Remove args, replace with explicit methods (#33)
         # Remaining parameters to transition to named methods:
         self._cap = None
         self._cap_path = None
@@ -116,8 +117,6 @@ class ScanContext(object):
                 self.end_time = FrameTimecode(self.video_fps, args.end_time)
             # Video processing related arguments
             self.frame_skip = args.frame_skip
-            # TODO: Implement downscale factor (#46)
-            self.downscale_factor = args.downscale_factor
 
             # timecode and ROI:
             self.draw_timecode = args.draw_timecode
@@ -161,7 +160,7 @@ class ScanContext(object):
         self._fourcc = cv2.VideoWriter_fourcc(*codec.upper())
 
 
-    def set_detection_params(self, threshold=0.15, kernel_size=None):
+    def set_detection_params(self, threshold=0.15, kernel_size=None, downscale_factor=1):
         """ Sets motion detection parameters.
 
         Arguments:
@@ -170,31 +169,39 @@ class ScanContext(object):
                 require less movement, and are more sensitive to motion. If the
                 threshold is too high, some movement in the scene may not be
                 detected, while a threshold too low can trigger a false events.
-            kernel_size (Optional[int]): Size in pixels of the noise reduction
-                kernel. Must be an odd integer greater than 1. If not set,
-                will be automatically calculated based on input video resolution.
+            kernel_size (int): Size in pixels of the noise reduction kernel.
+                Must be an odd integer greater than 1. If not set, will
+                automatically be calculated based on input video resolution.
                 If too large, some movement in the scene may not be detected.
-                Values < 0 are treated as if kernel_size is None.  If kernel_size
+                Values < 0 are treated as if kernel_size is None. If kernel_size
                 is set to 0, no noise reduction is performed.
-
+            downscale_factor (int): Factor to downscale (shrink) video before
+                processing, to improve performance. For example, if input video
+                resolution is 1024 x 400, and factor=2, each frame is reduced to'
+                1024/2 x 400/2=512 x 200 before processing. 1 (the default)
+                indicates no downscaling.
         Raises:
-            ValueError if kernel_size is not odd.
+            ValueError if kernel_size is not odd, or downscale_factor < 1.
         """
         self._threshold = threshold
+
+        if downscale_factor < 1:
+            raise ValueError("Downscale factor must be at least 1.")
+        self._downscale_factor = downscale_factor
+
         if kernel_size is None or kernel_size < 0:
             # If kernel_size is None, set based on video resolution.
-            if self._video_resolution[0] >= 1920:
+            video_width = self._video_resolution[0] / float(self._downscale_factor)
+            if video_width >= 1920:
                 kernel_size = 7
-            elif self._video_resolution[0] >= 1280:
+            elif video_width >= 1280:
                 kernel_size = 5
             else:
                 kernel_size = 3
-        if kernel_size == 0:
-            self._kernel = None
-        elif (kernel_size % 2) == 0:
+        if (kernel_size % 2) == 0:
             raise ValueError("kernel_size must be odd (or None)")
-        else:
-            self._kernel = np.ones((kernel_size, kernel_size), np.uint8)
+        self._kernel = None if kernel_size == 0 else (
+            np.ones((kernel_size, kernel_size), np.uint8))
 
 
     def _load_input_videos(self):
@@ -371,13 +378,16 @@ class ScanContext(object):
             frame_rgb = self._get_next_frame()
             if frame_rgb is None:
                 break
-
             frame_rgb_origin = frame_rgb
-
+            # Cut frame to selected sub-set if ROI area provided.
             if self.roi:
                 frame_rgb = frame_rgb[
                     int(self.roi[1]):int(self.roi[1] + self.roi[3]),
-                    int(self.roi[0]):int(self.roi[0] + self.roi[2])]  # area selection
+                    int(self.roi[0]):int(self.roi[0] + self.roi[2])]
+            # Apply downscaling factor if provided.
+            if self._downscale_factor > 1:
+                frame_rgb = frame_rgb[
+                    ::self._downscale_factor, ::self._downscale_factor, :]
 
             frame_gray = cv2.cvtColor(frame_rgb, cv2.COLOR_BGR2GRAY)
             frame_mask = bg_subtractor.apply(frame_gray)
@@ -488,7 +498,8 @@ class ScanContext(object):
             for event_start, event_end, event_duration in self.event_list:
                 timecode_list.append(event_start.get_timecode())
                 timecode_list.append(event_end.get_timecode())
-            print("Comma-separated timecode values:\n%s" % ','.join(timecode_list))
+            print("[DVR-Scan] Comma-separated timecode values:\n%s" % (
+                ','.join(timecode_list)))
 
         if not self._scan_only:
             self._logger.info("Motion events written to disk.")

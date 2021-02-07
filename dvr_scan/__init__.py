@@ -45,7 +45,7 @@ import sys
 
 # DVR-Scan Library Imports
 import dvr_scan.cli
-import dvr_scan.scanner
+from dvr_scan.scanner import ScanContext
 
 
 # Used for module identification and when printing copyright & version info.
@@ -110,11 +110,13 @@ def main():
     # Parse CLI arguments and create our ScanContext.
     args = parse_cli_args()
     init_logger(args.quiet_mode)
-    sctx = dvr_scan.scanner.ScanContext(args, show_progress=not args.quiet_mode)
+    sctx = ScanContext(args, show_progress=not args.quiet_mode)
 
     # Set context properties based on CLI arguments.
-    sctx.set_output(args.scan_only_mode, args.output, args.fourcc_str)
-    sctx.set_detection_params(args.threshold, args.kernel_size)
+    sctx.set_output(scan_only=args.scan_only_mode, comp_file=args.output,
+                    codec=args.fourcc_str)
+    sctx.set_detection_params(threshold=args.threshold, kernel_size=args.kernel_size,
+                              downscale_factor=args.downscale_factor)
 
     # If the context was successfully initialized, we can process the video(s).
     if sctx.initialized is True:
