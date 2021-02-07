@@ -112,6 +112,9 @@ def main():
     init_logger(args.quiet_mode)
     sctx = ScanContext(args, show_progress=not args.quiet_mode)
 
+    if not sctx.initialized:
+        return
+
     # Set context properties based on CLI arguments.
     sctx.set_output(scan_only=args.scan_only_mode, comp_file=args.output,
                     codec=args.fourcc_str)

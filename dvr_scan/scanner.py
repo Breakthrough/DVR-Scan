@@ -99,34 +99,34 @@ class ScanContext(object):
             # Motion detection and output related arguments
             self._threshold = args.threshold
             # Event detection window properties
-            self.min_event_len = FrameTimecode(self.video_fps, args.min_event_len)
-            self.pre_event_len = FrameTimecode(self.video_fps, args.time_pre_event)
-            self.post_event_len = FrameTimecode(self.video_fps, args.time_post_event)
+            self.min_event_len = FrameTimecode(args.min_event_len, self.video_fps)
+            self.pre_event_len = FrameTimecode(args.time_pre_event, self.video_fps)
+            self.post_event_len = FrameTimecode(args.time_post_event, self.video_fps)
             # Start time, end time, and duration
             self.start_time, self.end_time = None, None
             if args.start_time is not None:
                 self.start_time = FrameTimecode(self.video_fps, args.start_time)
             if args.duration is not None:
-                duration = FrameTimecode(self.video_fps, args.duration)
+                duration = FrameTimecode(args.duration, self.video_fps)
                 if isinstance(self.start_time, FrameTimecode):
                     self.end_time = FrameTimecode(
-                        self.video_fps, self.start_time.frame_num + duration.frame_num)
+                        self.start_time.frame_num + duration.frame_num, self.video_fps)
                 else:
                     self.end_time = duration
             elif args.end_time is not None:
-                self.end_time = FrameTimecode(self.video_fps, args.end_time)
+                self.end_time = FrameTimecode(args.end_time, self.video_fps)
             # Video processing related arguments
             self.frame_skip = args.frame_skip
 
-            # timecode and ROI:
+            # Timecode and ROI:
             self.draw_timecode = args.draw_timecode
             self.roi = args.roi
             if self.roi is not None:
                 if self.roi:
                     if len(self.roi) != 4:
                         self._logger.error(
-                            "Error: ROI must be specified as a rectangle of the form x/y/w/h!\n"
-                            "  For example: -roi 200 250 50 100")
+                            "Error: ROI must be specified as a rectangle of"
+                            " the form x y w h!\n  For example: -roi 200 250 50 100")
                         return
                     for i in range(0, 4):
                         self.roi[i] = int(self.roi[i])
@@ -160,7 +160,8 @@ class ScanContext(object):
         self._fourcc = cv2.VideoWriter_fourcc(*codec.upper())
 
 
-    def set_detection_params(self, threshold=0.15, kernel_size=None, downscale_factor=1):
+    def set_detection_params(self, threshold=0.15, kernel_size=None,
+                             downscale_factor=1):
         """ Sets motion detection parameters.
 
         Arguments:
@@ -317,7 +318,7 @@ class ScanContext(object):
             if dot_index > 0:
                 output_prefix = output_prefix[:dot_index]
 
-        curr_pos = FrameTimecode(self.video_fps, 0)
+        curr_pos = FrameTimecode(0, self.video_fps)
         #curr_state = 'no_event'     # 'no_event', 'in_event', or 'post_even
         in_motion_event = False
         self.frames_processed = 0
@@ -415,9 +416,9 @@ class ScanContext(object):
                     if num_frames_post_event >= self.post_event_len.frame_num:
                         in_motion_event = False
                         event_end = FrameTimecode(
-                            self.video_fps, curr_pos.frame_num)
+                            curr_pos.frame_num, self.video_fps)
                         event_duration = FrameTimecode(
-                            self.video_fps, curr_pos.frame_num - event_start.frame_num)
+                            curr_pos.frame_num - event_start.frame_num, self.video_fps)
                         self.event_list.append((event_start, event_end, event_duration))
                         if not self._comp_file and not self._scan_only:
                             video_writer.release()
@@ -430,8 +431,7 @@ class ScanContext(object):
                     in_motion_event = True
                     event_window = []
                     num_frames_post_event = 0
-                    event_start = FrameTimecode(
-                        self.video_fps, curr_pos.frame_num)
+                    event_start = FrameTimecode(curr_pos.frame_num, self.video_fps)
                     # Open new VideoWriter if needed, write buffered_frames to file.
                     if not self._scan_only:
                         if not self._comp_file:
@@ -455,10 +455,9 @@ class ScanContext(object):
         # and ending timecode and add it to the event list.
         if in_motion_event:
             curr_pos.frame_num -= 1  # Correct for the increment at the end of the loop
-            event_end = FrameTimecode(
-                self.video_fps, curr_pos.frame_num)
+            event_end = FrameTimecode(curr_pos.frame_num, self.video_fps)
             event_duration = FrameTimecode(
-                self.video_fps, curr_pos.frame_num - event_start.frame_num)
+                curr_pos.frame_num - event_start.frame_num, self.video_fps)
             self.event_list.append((event_start, event_end, event_duration))
 
         if video_writer is not None:

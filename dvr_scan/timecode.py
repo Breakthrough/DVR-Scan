@@ -38,7 +38,8 @@ class FrameTimecode(object):
     """ Object for frame-based timecodes, using the video framerate
     to compute back and forth between frame number and second/timecode formats.
 
-    The passed argument is declared valid if it meets one of three valid forms:
+    The passed timecode argument is declared valid if it meets one of three
+    valid forms:
       1) Standard timecode HH:MM:SS[.nnn]:
             in string form 'HH:MM:SS' or 'HH:MM:SS.nnn', or
             in list/tuple form [HH, MM, SS] or [HH, MM, SS.nnn]
@@ -52,7 +53,7 @@ class FrameTimecode(object):
         TypeError, ValueError
     """
 
-    def __init__(self, fps, timecode):
+    def __init__(self, timecode, fps):
         if not isinstance(fps, (int, float)):
             raise TypeError('Framerate must be of type int/float.')
         self.framerate = float(fps)
