@@ -57,6 +57,7 @@ class ScanContext(object):
     and coordinating overall application logic (via scan_motion()). """
 
     def __init__(self, args, show_progress=True):
+        # type: (..., bool) -> None
         """ Initializes the ScanContext with the supplied arguments.
 
         Arguments:
@@ -117,21 +118,21 @@ class ScanContext(object):
                 self.end_time = FrameTimecode(args.end_time, self.video_fps)
             # Video processing related arguments
             self.frame_skip = args.frame_skip
-
             # Timecode and ROI:
-            self.draw_timecode = args.draw_timecode
-            self.roi = args.roi
-            if self.roi is not None:
-                if self.roi:
-                    if len(self.roi) != 4:
+            self._draw_timecode = args.draw_timecode    # -tc/--time-code
+            self._roi = args.roi                        # --roi
+            # Validate ROI.
+            if self._roi is not None:
+                if self._roi:
+                    if len(self._roi) != 4:
                         self._logger.error(
                             "Error: ROI must be specified as a rectangle of"
                             " the form x y w h!\n  For example: -roi 200 250 50 100")
                         return
                     for i in range(0, 4):
-                        self.roi[i] = int(self.roi[i])
+                        self._roi[i] = int(self._roi[i])
                 else:
-                    self.roi = []
+                    self._roi = []
             self.initialized = True
 
 
@@ -162,6 +163,7 @@ class ScanContext(object):
 
     def set_detection_params(self, threshold=0.15, kernel_size=None,
                              downscale_factor=1):
+        # type: (float, int, int) -> None
         """ Sets motion detection parameters.
 
         Arguments:
@@ -206,6 +208,7 @@ class ScanContext(object):
 
 
     def _load_input_videos(self):
+        # type: () -> bool
         """ Opens and checks that all input video files are valid, can
         be processed, and have the same resolution and framerate. """
         if not len(self.video_paths) > 0:
@@ -224,7 +227,7 @@ class ScanContext(object):
             curr_resolution = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
                                int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
             curr_framerate = cap.get(cv2.CAP_PROP_FPS)
-            self.frames_total += cap.get(cv2.CAP_PROP_FRAME_COUNT)
+            self.frames_total += int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             cap.release()
             if self._video_resolution is None and self.video_fps is None:
                 self._video_resolution = curr_resolution
@@ -245,7 +248,9 @@ class ScanContext(object):
         # If we get to this point, all videos have the same parameters.
         return True
 
+
     def _get_next_frame(self, retrieve=True):
+        # type: (Optional[bool]) -> Optional[numpy.ndarray]
         """ Returns a new frame from the current series of video files,
         or None when no more frames are available. """
         if self._cap:
@@ -272,7 +277,9 @@ class ScanContext(object):
 
         return None
 
-    def _stamp_text(self, frame, text, line):
+
+    def _stamp_text(self, frame, text, line=0):
+        # type: (numpy.ndarray, str, Optional[int]) -> None
         font = cv2.FONT_HERSHEY_SIMPLEX
         font_scale = 1
         margin = 5
@@ -289,9 +296,53 @@ class ScanContext(object):
         cv2.rectangle(frame, (margin, margin),
                       (margin + text_width, margin + text_height + 2), (0, 0, 0), -1)
         cv2.putText(frame, text, text_pos, font, font_scale, color, thickness)
-        return None
+
+
+    def _create_progress_bar(self, show_progress, num_frames):
+        # type: (bool, int) -> tqdm.tqdm
+        tqdm = None if not show_progress else dvr_scan.platform.get_tqdm()
+        if tqdm is not None:
+            if self.end_time and self.end_time.frame_num < num_frames:
+                num_frames = self.end_time.frame_num
+            if self.start_time:
+                num_frames -= self.start_time.frame_num
+            if num_frames < 0:
+                num_frames = 0
+            return tqdm.tqdm(
+                total=num_frames,
+                unit=' frames',
+                desc="[DVR-Scan] Processed")
+        class NullProgressBar(object):
+            """ Acts like a tqdm.tqdm object, but really a no-operation. """
+            def update(self, _):
+                """ No-op. """
+            def close(self):
+                """ No-op. """
+        return NullProgressBar()
+
+
+    def _select_roi(self, curr_time=None, add_timecode=False):
+        # type: (FrameTimecode, bool) -> bool
+        # area selection
+        if self._roi is not None and len(self._roi) == 0:
+            self._logger.info("Selecting area of interest:")
+            frame_for_crop = self._get_next_frame()
+            if add_timecode:
+                assert curr_time is not None
+                self._stamp_text(frame_for_crop, curr_time.get_timecode())
+            self._roi = cv2.selectROI("DVR-Scan ROI Selection", frame_for_crop)
+            cv2.destroyAllWindows()
+            if all([coord == 0 for coord in self._roi]):
+                self._logger.info("ROI selection cancelled. Aborting...")
+                return False
+        assert self._roi is None or len(self._roi) == 4
+        if self._roi:
+            self._logger.info("ROI selected (x,y,w,h): %s", str(self._roi))
+        return True
+
 
     def scan_motion(self):
+        # type: () -> None
         """ Performs motion analysis on the ScanContext's input video(s). """
         if self.initialized is not True:
             self._logger.error("Error: Scan context uninitialized, no analysis performed.")
@@ -319,7 +370,6 @@ class ScanContext(object):
                 output_prefix = output_prefix[:dot_index]
 
         curr_pos = FrameTimecode(0, self.video_fps)
-        #curr_state = 'no_event'     # 'no_event', 'in_event', or 'post_even
         in_motion_event = False
         self.frames_processed = 0
         processing_start = time.time()
@@ -332,37 +382,14 @@ class ScanContext(object):
                 self.frames_processed += 1
                 curr_pos.frame_num += 1
 
-        # area selection
-        if self.roi is not None and len(self.roi) == 0:
-            self._logger.info("Selecting area of interest:")
-            frame_for_crop = self._get_next_frame()
-            if self.draw_timecode:
-                self._stamp_text(frame_for_crop, curr_pos.get_timecode(), 0)
-            self.roi = cv2.selectROI("DVR-Scan ROI Selection", frame_for_crop)
-            cv2.destroyAllWindows()
-            if all([coord == 0 for coord in self.roi]):
-                self._logger.info("ROI selection cancelled. Aborting...")
-                return
-        # Motion event scanning/detection loop.
-        assert self.roi is None or len(self.roi) == 4
-        if self.roi:
-            self._logger.info("ROI selected (x,y,w,h): %s", str(self.roi))
+        # Show ROI selection window if required.
+        if not self._select_roi(
+            curr_time=curr_pos, add_timecode=self._draw_timecode):
+            return
 
-
-        tqdm = dvr_scan.platform.get_tqdm()
-        progress_bar = None
-        self.frames_total = int(self.frames_total)
-        if tqdm is not None and self.frames_total > 0 and self._show_progress:
-            if self.end_time and self.end_time.frame_num < self.frames_total:
-                self.frames_total = self.end_time.frame_num
-            if self.start_time:
-                self.frames_total -= self.start_time.frame_num
-            if self.frames_total < 0:
-                self.frames_total = 0
-            progress_bar = tqdm.tqdm(
-                total=self.frames_total,
-                unit=' frames',
-                desc="[DVR-Scan] Processed")
+        # TQDM-based progress bar, or a stub if in quiet mode (or no TQDM).
+        progress_bar = self._create_progress_bar(
+            show_progress=self._show_progress, num_frames=self.frames_total)
 
         # Motion event scanning/detection loop.
         while self.running:
@@ -374,17 +401,16 @@ class ScanContext(object):
                         break
                     curr_pos.frame_num += 1
                     self.frames_processed += 1
-                    if progress_bar:
-                        progress_bar.update(1)
+                    progress_bar.update(1)
             frame_rgb = self._get_next_frame()
             if frame_rgb is None:
                 break
             frame_rgb_origin = frame_rgb
             # Cut frame to selected sub-set if ROI area provided.
-            if self.roi:
+            if self._roi:
                 frame_rgb = frame_rgb[
-                    int(self.roi[1]):int(self.roi[1] + self.roi[3]),
-                    int(self.roi[0]):int(self.roi[0] + self.roi[2])]
+                    int(self._roi[1]):int(self._roi[1] + self._roi[3]),
+                    int(self._roi[0]):int(self._roi[0] + self._roi[2])]
             # Apply downscaling factor if provided.
             if self._downscale_factor > 1:
                 frame_rgb = frame_rgb[
@@ -406,8 +432,8 @@ class ScanContext(object):
                 # if the current frame doesn't meet the threshold, increment
                 # the current scene's post-event counter.
                 if not self._scan_only:
-                    if self.draw_timecode:
-                        self._stamp_text(frame_rgb_origin, curr_pos.get_timecode(), 0)
+                    if self._draw_timecode:
+                        self._stamp_text(frame_rgb_origin, curr_pos.get_timecode())
                     video_writer.write(frame_rgb_origin)
                 if frame_score >= self._threshold:
                     num_frames_post_event = 0
@@ -441,15 +467,14 @@ class ScanContext(object):
                                 output_path, self._fourcc, self.video_fps,
                                 self._video_resolution)
                         for frame in buffered_frames:
-                            if self.draw_timecode:
-                                self._stamp_text(frame, curr_pos.get_timecode(), 0)
+                            if self._draw_timecode:
+                                self._stamp_text(frame, curr_pos.get_timecode())
                             video_writer.write(frame)
                         buffered_frames = []
 
             curr_pos.frame_num += 1
             self.frames_processed += 1
-            if progress_bar:
-                progress_bar.update(1)
+            progress_bar.update(1)
 
         # If we're still in a motion event, we still need to compute the duration
         # and ending timecode and add it to the event list.
@@ -465,6 +490,11 @@ class ScanContext(object):
         if progress_bar is not None:
             progress_bar.close()
 
+        self._post_scan_motion(processing_start=processing_start)
+
+
+    def _post_scan_motion(self, processing_start):
+        # type: (float) -> None
         processing_time = time.time() - processing_start
         processing_rate = float(self.frames_processed) / processing_time
         self._logger.info(
@@ -494,7 +524,7 @@ class ScanContext(object):
                               '\n'.join(output_strs))
 
             timecode_list = []
-            for event_start, event_end, event_duration in self.event_list:
+            for event_start, event_end, _ in self.event_list:
                 timecode_list.append(event_start.get_timecode())
                 timecode_list.append(event_end.get_timecode())
             print("[DVR-Scan] Comma-separated timecode values:\n%s" % (
