@@ -100,6 +100,7 @@ def init_logger(quiet_mode, log_level=logging.INFO):
     handler.setLevel(log_level)
     handler.setFormatter(logging.Formatter(fmt='[DVR-Scan] %(message)s'))
     logger.addHandler(handler)
+    return logger
 
 
 def main():
@@ -109,7 +110,7 @@ def main():
     """
     # Parse CLI arguments and create our ScanContext.
     args = parse_cli_args()
-    init_logger(args.quiet_mode)
+    logger = init_logger(args.quiet_mode)
     sctx = ScanContext(args, show_progress=not args.quiet_mode)
 
     if not sctx.initialized:
@@ -117,23 +118,28 @@ def main():
 
     # Set context properties based on CLI arguments.
     #sctx.open_input(paths, start, duration, end)
-    #sctx.set_roi
-    # add draw_timecode to set_output
 
-    sctx.set_output(
-        scan_only=args.scan_only_mode,
-        comp_file=args.output,
-        codec=args.fourcc_str)
+    try:
+        sctx.set_output(
+            scan_only=args.scan_only_mode,
+            comp_file=args.output,
+            codec=args.fourcc_str,
+            draw_timecode=args.draw_timecode)
 
-    sctx.set_detection_params(
-        threshold=args.threshold,
-        kernel_size=args.kernel_size,
-        downscale_factor=args.downscale_factor)
+        sctx.set_detection_params(
+            threshold=args.threshold,
+            kernel_size=args.kernel_size,
+            downscale_factor=args.downscale_factor,
+            roi=args.roi)
 
-    sctx.set_event_params(
-        min_event_len=args.min_event_len,
-        time_pre_event=args.time_pre_event,
-        time_post_event=args.time_post_event)
+        sctx.set_event_params(
+            min_event_len=args.min_event_len,
+            time_pre_event=args.time_pre_event,
+            time_post_event=args.time_post_event)
+
+    except ValueError as ex:
+        sctx.initialized = False
+        logger.error(ex)
 
     # If the context was successfully initialized, we can process the video(s).
     if sctx.initialized is True:

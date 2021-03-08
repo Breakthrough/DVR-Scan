@@ -84,6 +84,7 @@ class ScanContext(object):
         self._threshold = 0.15                      # -t/--threshold
         self._kernel = None                         # -k/--kernel-size
         self._downscale_factor = 1                  # -df/--downscale-factor
+        self._roi = None                            # --roi
 
         # Motion Event Parameters (set_event_params)
         self._min_event_len = None                  # -l/--min-event-length
@@ -120,22 +121,8 @@ class ScanContext(object):
                 self.end_time = FrameTimecode(args.end_time, self._video_fps)
             # Video processing related arguments
             self.frame_skip = args.frame_skip
-            # ROI:
-            self._roi = args.roi                        # --roi
-            # Validate ROI.
-            if self._roi is not None:
-                if self._roi:
-                    if len(self._roi) != 4:
-                        self._logger.error(
-                            "Error: ROI must be specified as a rectangle of"
-                            " the form x y w h!\n  For example: -roi 200 250 50 100")
-                        return
-                    for i in range(0, 4):
-                        self._roi[i] = int(self._roi[i])
-                else:
-                    self._roi = []
-            self.initialized = True
 
+            self.initialized = True
 
     def set_output(self, scan_only=False, comp_file=None, codec='XVID', draw_timecode=False):
         # type: (bool, str, str) -> None
@@ -165,7 +152,7 @@ class ScanContext(object):
 
 
     def set_detection_params(self, threshold=0.15, kernel_size=None,
-                             downscale_factor=1):
+                             downscale_factor=1, roi=None):
         # type: (float, int, int) -> None
         """ Sets motion detection parameters.
 
@@ -186,15 +173,18 @@ class ScanContext(object):
                 resolution is 1024 x 400, and factor=2, each frame is reduced to'
                 1024/2 x 400/2=512 x 200 before processing. 1 (the default)
                 indicates no downscaling.
+            roi (List[int]): Rectangle of form [x y w h] representing
+                bounding box of subset of each frame to look at.
         Raises:
-            ValueError if kernel_size is not odd, or downscale_factor < 1.
+            ValueError if kernel_size is not odd, downscale_factor < 1, or roi
+            is invalid.
         """
         assert self.initialized
 
         self._threshold = threshold
 
         if downscale_factor < 1:
-            raise ValueError("Downscale factor must be at least 1.")
+            raise ValueError("Error: Downscale factor must be at least 1.")
         self._downscale_factor = downscale_factor
 
         if kernel_size is None or kernel_size < 0:
@@ -207,10 +197,22 @@ class ScanContext(object):
             else:
                 kernel_size = 3
         if (kernel_size % 2) == 0:
-            raise ValueError("kernel_size must be odd (or None)")
+            raise ValueError("Error: kernel_size must be odd (or None)")
         self._kernel = None if kernel_size == 0 else (
             np.ones((kernel_size, kernel_size), np.uint8))
 
+        self._roi = roi
+        # Validate ROI.
+        if self._roi is not None:
+            if self._roi:
+                if len(self._roi) != 4 or any(int(i) < 0 for i in roi):
+                    raise ValueError(
+                        "Error: ROI must be specified as a rectangle of"
+                        " the form x y w h!\n  For example: -roi 200 250 50 100")
+                for i in range(0, 4):
+                    self._roi[i] = int(self._roi[i])
+            else:
+                self._roi = []
 
     def set_event_params(self, min_event_len=2, time_pre_event="1.5s", time_post_event="2s"):
         # type: (...) -> None
@@ -350,8 +352,9 @@ class ScanContext(object):
             if any([coord == 0 for coord in self._roi[2:]]):
                 self._logger.info("ROI selection cancelled. Aborting...")
                 return False
-        assert self._roi is None or len(self._roi) == 4
         if self._roi:
+            if len(self._roi) != 4:
+                return False
             self._logger.info("ROI selected (x,y,w,h): %s", str(self._roi))
         return True
 
