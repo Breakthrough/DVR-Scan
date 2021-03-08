@@ -332,7 +332,7 @@ class ScanContext(object):
                 self._stamp_text(frame_for_crop, curr_time.get_timecode())
             self._roi = cv2.selectROI("DVR-Scan ROI Selection", frame_for_crop)
             cv2.destroyAllWindows()
-            if all([coord == 0 for coord in self._roi]):
+            if any([coord == 0 for coord in self._roi[2:]]):
                 self._logger.info("ROI selection cancelled. Aborting...")
                 return False
         assert self._roi is None or len(self._roi) == 4
