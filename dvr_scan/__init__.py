@@ -116,10 +116,24 @@ def main():
         return
 
     # Set context properties based on CLI arguments.
-    sctx.set_output(scan_only=args.scan_only_mode, comp_file=args.output,
-                    codec=args.fourcc_str)
-    sctx.set_detection_params(threshold=args.threshold, kernel_size=args.kernel_size,
-                              downscale_factor=args.downscale_factor)
+    #sctx.open_input(paths, start, duration, end)
+    #sctx.set_roi
+    # add draw_timecode to set_output
+
+    sctx.set_output(
+        scan_only=args.scan_only_mode,
+        comp_file=args.output,
+        codec=args.fourcc_str)
+
+    sctx.set_detection_params(
+        threshold=args.threshold,
+        kernel_size=args.kernel_size,
+        downscale_factor=args.downscale_factor)
+
+    sctx.set_event_params(
+        min_event_len=args.min_event_len,
+        time_pre_event=args.time_pre_event,
+        time_post_event=args.time_post_event)
 
     # If the context was successfully initialized, we can process the video(s).
     if sctx.initialized is True:

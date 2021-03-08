@@ -78,11 +78,17 @@ class ScanContext(object):
         self._scan_only = False                     # -so/--scan-only
         self._comp_file = None                      # -o/--output
         self._fourcc = DEFAULT_VIDEOWRITER_CODEC    # -c/--codec
+        self._draw_timecode = False                 # -tc/--time-code
 
         # Motion Detection Parameters (set_detection_params)
         self._threshold = 0.15                      # -t/--threshold
         self._kernel = None                         # -k/--kernel-size
         self._downscale_factor = 1                  # -df/--downscale-factor
+
+        # Motion Event Parameters (set_event_params)
+        self._min_event_len = None                  # -l/--min-event-length
+        self._pre_event_len = None                  # -tb/--time-before-event
+        self._pre_event_len = None                  # -tp/--time-post-event
 
         # TODO: Remove args, replace with explicit methods (#33)
         # Remaining parameters to transition to named methods:
@@ -90,7 +96,7 @@ class ScanContext(object):
         self._cap_path = None
 
         self._video_resolution = None
-        self.video_fps = None
+        self._video_fps = None
         self.video_paths = args.input
         self.frames_total = 0
         self.frames_processed = 0
@@ -99,27 +105,22 @@ class ScanContext(object):
         if self._load_input_videos():
             # Motion detection and output related arguments
             self._threshold = args.threshold
-            # Event detection window properties
-            self.min_event_len = FrameTimecode(args.min_event_len, self.video_fps)
-            self.pre_event_len = FrameTimecode(args.time_pre_event, self.video_fps)
-            self.post_event_len = FrameTimecode(args.time_post_event, self.video_fps)
             # Start time, end time, and duration
             self.start_time, self.end_time = None, None
             if args.start_time is not None:
-                self.start_time = FrameTimecode(self.video_fps, args.start_time)
+                self.start_time = FrameTimecode(self._video_fps, args.start_time)
             if args.duration is not None:
-                duration = FrameTimecode(args.duration, self.video_fps)
+                duration = FrameTimecode(args.duration, self._video_fps)
                 if isinstance(self.start_time, FrameTimecode):
                     self.end_time = FrameTimecode(
-                        self.start_time.frame_num + duration.frame_num, self.video_fps)
+                        self.start_time.frame_num + duration.frame_num, self._video_fps)
                 else:
                     self.end_time = duration
             elif args.end_time is not None:
-                self.end_time = FrameTimecode(args.end_time, self.video_fps)
+                self.end_time = FrameTimecode(args.end_time, self._video_fps)
             # Video processing related arguments
             self.frame_skip = args.frame_skip
-            # Timecode and ROI:
-            self._draw_timecode = args.draw_timecode    # -tc/--time-code
+            # ROI:
             self._roi = args.roi                        # --roi
             # Validate ROI.
             if self._roi is not None:
@@ -136,7 +137,7 @@ class ScanContext(object):
             self.initialized = True
 
 
-    def set_output(self, scan_only=False, comp_file=None, codec='XVID'):
+    def set_output(self, scan_only=False, comp_file=None, codec='XVID', draw_timecode=False):
         # type: (bool, str, str) -> None
         """ Sets the path and encoder codec to use when exporting videos.
 
@@ -150,6 +151,7 @@ class ScanContext(object):
             codec (str): The four-letter identifier of the encoder/video
                 codec to use when exporting motion events as videos.
                 Possible values are: XVID, MP4V, MP42, H264.
+            draw_timecode (bool): If True, draws timecode on each frame.
 
         Raises:
             ValueError if codec is not four characters.
@@ -159,6 +161,7 @@ class ScanContext(object):
         if len(codec) != 4:
             raise ValueError("codec must be exactly four (4) characters")
         self._fourcc = cv2.VideoWriter_fourcc(*codec.upper())
+        self._draw_timecode = draw_timecode
 
 
     def set_detection_params(self, threshold=0.15, kernel_size=None,
@@ -186,6 +189,8 @@ class ScanContext(object):
         Raises:
             ValueError if kernel_size is not odd, or downscale_factor < 1.
         """
+        assert self.initialized
+
         self._threshold = threshold
 
         if downscale_factor < 1:
@@ -205,6 +210,16 @@ class ScanContext(object):
             raise ValueError("kernel_size must be odd (or None)")
         self._kernel = None if kernel_size == 0 else (
             np.ones((kernel_size, kernel_size), np.uint8))
+
+
+    def set_event_params(self, min_event_len=2, time_pre_event="1.5s", time_post_event="2s"):
+        # type: (...) -> None
+        """ Sets motion event parameters. """
+        assert self.initialized
+        assert self._video_fps is not None
+        self._min_event_len = FrameTimecode(min_event_len, self._video_fps)
+        self._pre_event_len = FrameTimecode(time_pre_event, self._video_fps)
+        self._pre_event_len = FrameTimecode(time_post_event, self._video_fps)
 
 
     def _load_input_videos(self):
@@ -229,13 +244,13 @@ class ScanContext(object):
             curr_framerate = cap.get(cv2.CAP_PROP_FPS)
             self.frames_total += int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             cap.release()
-            if self._video_resolution is None and self.video_fps is None:
+            if self._video_resolution is None and self._video_fps is None:
                 self._video_resolution = curr_resolution
-                self.video_fps = curr_framerate
+                self._video_fps = curr_framerate
                 self._logger.info(
                     "Opened video %s (%d x %d at %2.3f FPS).",
                     video_name, self._video_resolution[0],
-                    self._video_resolution[1], self.video_fps)
+                    self._video_resolution[1], self._video_fps)
             # Check that all other videos specified have the same resolution
             # (we'll assume the framerate is the same if the resolution matches,
             # since the VideoCapture FPS information is not always accurate).
@@ -362,14 +377,14 @@ class ScanContext(object):
         output_prefix = ''
         if self._comp_file:
             video_writer = cv2.VideoWriter(self._comp_file, self._fourcc,
-                                           self.video_fps, self._video_resolution)
+                                           self._video_fps, self._video_resolution)
         elif len(self.video_paths[0]) > 0:
             output_prefix = os.path.basename(self.video_paths[0])
             dot_index = output_prefix.rfind('.')
             if dot_index > 0:
                 output_prefix = output_prefix[:dot_index]
 
-        curr_pos = FrameTimecode(0, self.video_fps)
+        curr_pos = FrameTimecode(0, self._video_fps)
         in_motion_event = False
         self.frames_processed = 0
         processing_start = time.time()
@@ -424,7 +439,7 @@ class ScanContext(object):
                 frame_filt = frame_mask
             frame_score = np.sum(frame_filt) / float(frame_filt.shape[0] * frame_filt.shape[1])
             event_window.append(frame_score)
-            event_window = event_window[-self.min_event_len.frame_num:]
+            event_window = event_window[-self._min_event_len.frame_num:]
 
             if in_motion_event:
                 # in event or post event, write all queued frames to file,
@@ -439,32 +454,32 @@ class ScanContext(object):
                     num_frames_post_event = 0
                 else:
                     num_frames_post_event += 1
-                    if num_frames_post_event >= self.post_event_len.frame_num:
+                    if num_frames_post_event >= self._pre_event_len.frame_num:
                         in_motion_event = False
                         event_end = FrameTimecode(
-                            curr_pos.frame_num, self.video_fps)
+                            curr_pos.frame_num, self._video_fps)
                         event_duration = FrameTimecode(
-                            curr_pos.frame_num - event_start.frame_num, self.video_fps)
+                            curr_pos.frame_num - event_start.frame_num, self._video_fps)
                         self.event_list.append((event_start, event_end, event_duration))
                         if not self._comp_file and not self._scan_only:
                             video_writer.release()
             else:
                 if not self._scan_only:
                     buffered_frames.append(frame_rgb_origin)
-                    buffered_frames = buffered_frames[-self.pre_event_len.frame_num:]
-                if len(event_window) >= self.min_event_len.frame_num and all(
+                    buffered_frames = buffered_frames[-self._pre_event_len.frame_num:]
+                if len(event_window) >= self._min_event_len.frame_num and all(
                         score >= self._threshold for score in event_window):
                     in_motion_event = True
                     event_window = []
                     num_frames_post_event = 0
-                    event_start = FrameTimecode(curr_pos.frame_num, self.video_fps)
+                    event_start = FrameTimecode(curr_pos.frame_num, self._video_fps)
                     # Open new VideoWriter if needed, write buffered_frames to file.
                     if not self._scan_only:
                         if not self._comp_file:
                             output_path = '%s.DSME_%04d.avi' % (
                                 output_prefix, len(self.event_list))
                             video_writer = cv2.VideoWriter(
-                                output_path, self._fourcc, self.video_fps,
+                                output_path, self._fourcc, self._video_fps,
                                 self._video_resolution)
                         for frame in buffered_frames:
                             if self._draw_timecode:
@@ -480,9 +495,9 @@ class ScanContext(object):
         # and ending timecode and add it to the event list.
         if in_motion_event:
             curr_pos.frame_num -= 1  # Correct for the increment at the end of the loop
-            event_end = FrameTimecode(curr_pos.frame_num, self.video_fps)
+            event_end = FrameTimecode(curr_pos.frame_num, self._video_fps)
             event_duration = FrameTimecode(
-                curr_pos.frame_num - event_start.frame_num, self.video_fps)
+                curr_pos.frame_num - event_start.frame_num, self._video_fps)
             self.event_list.append((event_start, event_end, event_duration))
 
         if video_writer is not None:
