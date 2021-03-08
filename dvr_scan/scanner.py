@@ -173,8 +173,9 @@ class ScanContext(object):
                 resolution is 1024 x 400, and factor=2, each frame is reduced to'
                 1024/2 x 400/2=512 x 200 before processing. 1 (the default)
                 indicates no downscaling.
-            roi (List[int]): Rectangle of form [x y w h] representing
-                bounding box of subset of each frame to look at.
+            roi (List[int]): Rectangle of form [x y w h] representing bounding
+                box of subset of each frame to look at. If an empty list, the ROI
+                is set by popping up a GUI window when scan_motion() is called.
         Raises:
             ValueError if kernel_size is not odd, downscale_factor < 1, or roi
             is invalid.
@@ -205,10 +206,14 @@ class ScanContext(object):
         # Validate ROI.
         if self._roi is not None:
             if self._roi:
-                if len(self._roi) != 4 or any(int(i) < 0 for i in roi):
+                error_string = (
+                    "ROI must be specified as a rectangle of"
+                    " the form x y w h.\n  For example: -roi 200 250 50 100")
+                if any(not i.isdigit() for i in roi):
                     raise ValueError(
-                        "Error: ROI must be specified as a rectangle of"
-                        " the form x y w h!\n  For example: -roi 200 250 50 100")
+                        'Error: Non-numeric character specified in ROI.\n%s' % error_string)
+                if len(self._roi) != 4 or any(int(i) < 0 for i in roi):
+                    raise ValueError('Error: %s' % error_string)
                 for i in range(0, 4):
                     self._roi[i] = int(self._roi[i])
             else:
