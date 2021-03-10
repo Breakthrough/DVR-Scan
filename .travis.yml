@@ -1,0 +1,12 @@
+language: python
+python:
+  - "2.7"
+  - "3.5"
+  - "3.6"
+  - "3.7"
+  - "3.8"
+install:
+  - "pip install -r requirements.txt"
+  - "git fetch --depth=1 https://github.com/Breakthrough/DVR-Scan.git refs/heads/resources:refs/remotes/origin/resources"
+script:
+  - python -m pytest tests/
