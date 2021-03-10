@@ -51,25 +51,33 @@ import dvr_scan.platform
 DEFAULT_VIDEOWRITER_CODEC = cv2.VideoWriter_fourcc('X', 'V', 'I', 'D')
 
 
+class VideoLoadFailure(Exception):
+    """ Raised when the input video(s) fail to load. """
+    def __init__(self, message="One or more videos(s) failed to load!"):
+        # type: (str)
+        super(VideoLoadFailure, self).__init__(message)
+
+
 class ScanContext(object):
     """ The ScanContext object represents the DVR-Scan program state,
     which includes application initialization, handling the options,
     and coordinating overall application logic (via scan_motion()). """
 
-    def __init__(self, args, show_progress=True):
+    def __init__(self, input_videos, frame_skip=0, show_progress=True):
         # type: (..., bool) -> None
         """ Initializes the ScanContext with the supplied arguments.
 
         Arguments:
-            args: TODO - Remove.
-
+            input_videos (List[str]): List of paths of videos to process.
+            frame_skip (int): Skip every 1 in (frame_skip+1) frames to
+                speed up processing at expense of accuracy (default is 0
+                for no frame skipping).
             show_progress: Shows a progress bar if tqdm is available.
         """
 
         self._logger = logging.getLogger('dvr_scan')
         self._logger.info("Initializing scan context...")
 
-        self.initialized = False
         self.running = True         # Allows asynchronous termination of scanning loop.
         self.event_list = []
         self._show_progress = show_progress
@@ -98,31 +106,11 @@ class ScanContext(object):
 
         self._video_resolution = None
         self._video_fps = None
-        self.video_paths = args.input
-        self.frames_total = 0
-        self.frames_processed = 0
-
-        # Check the input video(s) and obtain the framerate/resolution.
-        if self._load_input_videos():
-            # Motion detection and output related arguments
-            self._threshold = args.threshold
-            # Start time, end time, and duration
-            self.start_time, self.end_time = None, None
-            if args.start_time is not None:
-                self.start_time = FrameTimecode(self._video_fps, args.start_time)
-            if args.duration is not None:
-                duration = FrameTimecode(args.duration, self._video_fps)
-                if isinstance(self.start_time, FrameTimecode):
-                    self.end_time = FrameTimecode(
-                        self.start_time.frame_num + duration.frame_num, self._video_fps)
-                else:
-                    self.end_time = duration
-            elif args.end_time is not None:
-                self.end_time = FrameTimecode(args.end_time, self._video_fps)
-            # Video processing related arguments
-            self.frame_skip = args.frame_skip
-
-            self.initialized = True
+        self._video_paths = input_videos
+        self._frames_total = 0
+        self._frames_processed = 0
+        self._frame_skip = frame_skip
+        self._load_input_videos()
 
     def set_output(self, scan_only=False, comp_file=None, codec='XVID', draw_timecode=False):
         # type: (bool, str, str) -> None
@@ -229,14 +217,31 @@ class ScanContext(object):
         self._pre_event_len = FrameTimecode(time_pre_event, self._video_fps)
         self._pre_event_len = FrameTimecode(time_post_event, self._video_fps)
 
+    def set_video_time(self, start_time=None, end_time=None, duration=None):
+        # type: (str, str, str) -> None
+        self._start_time = None
+        self._end_time = None
+        assert self._video_fps is not None
+        if start_time is not None:
+            self._start_time = FrameTimecode(self._video_fps, start_time)
+        if duration is not None:
+            duration = FrameTimecode(duration, self._video_fps)
+            if self._start_time is not None:
+                self._end_time = FrameTimecode(
+                    self._start_time.frame_num + duration.frame_num, self._video_fps)
+            else:
+                self._end_time = duration
+        elif end_time is not None:
+            self._end_time = FrameTimecode(end_time, self._video_fps)
+
 
     def _load_input_videos(self):
         # type: () -> bool
         """ Opens and checks that all input video files are valid, can
         be processed, and have the same resolution and framerate. """
-        if not len(self.video_paths) > 0:
-            return False
-        for video_path in self.video_paths:
+        if not len(self._video_paths) > 0:
+            raise VideoLoadFailure()
+        for video_path in self._video_paths:
             cap = cv2.VideoCapture()
             cap.open(video_path)
             video_name = os.path.basename(video_path)
@@ -246,11 +251,11 @@ class ScanContext(object):
                                   " clip, and ensure all required software dependencies"
                                   " are installed and configured properly.")
                 cap.release()
-                return False
+                raise VideoLoadFailure()
             curr_resolution = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
                                int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
             curr_framerate = cap.get(cv2.CAP_PROP_FPS)
-            self.frames_total += int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            self._frames_total += int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             cap.release()
             if self._video_resolution is None and self._video_fps is None:
                 self._video_resolution = curr_resolution
@@ -266,12 +271,12 @@ class ScanContext(object):
                 self._logger.error(
                     "Error: Can't append clip %s, video resolution"
                     " does not match the first input file.", video_name)
-                return False
+                raise VideoLoadFailure()
             self._logger.info("Appended video %s.", video_name)
         # Make sure we initialize defaults.
         self.set_detection_params()
         self.set_event_params()
-        return True
+        self.set_video_time()
 
 
     def _get_next_frame(self, retrieve=True):
@@ -290,9 +295,9 @@ class ScanContext(object):
                 self._cap.release()
                 self._cap = None
 
-        if self._cap is None and len(self.video_paths) > 0:
-            self._cap_path = self.video_paths[0]
-            self.video_paths = self.video_paths[1:]
+        if self._cap is None and len(self._video_paths) > 0:
+            self._cap_path = self._video_paths[0]
+            self._video_paths = self._video_paths[1:]
             self._cap = cv2.VideoCapture(self._cap_path)
             if self._cap.isOpened():
                 return self._get_next_frame()
@@ -327,10 +332,10 @@ class ScanContext(object):
         # type: (bool, int) -> tqdm.tqdm
         tqdm = None if not show_progress else dvr_scan.platform.get_tqdm()
         if tqdm is not None:
-            if self.end_time and self.end_time.frame_num < num_frames:
-                num_frames = self.end_time.frame_num
-            if self.start_time:
-                num_frames -= self.start_time.frame_num
+            if self._end_time and self._end_time.frame_num < num_frames:
+                num_frames = self._end_time.frame_num
+            if self._start_time:
+                num_frames -= self._start_time.frame_num
             if num_frames < 0:
                 num_frames = 0
             return tqdm.tqdm(
@@ -370,11 +375,8 @@ class ScanContext(object):
     def scan_motion(self):
         # type: () -> None
         """ Performs motion analysis on the ScanContext's input video(s). """
-        if self.initialized is not True:
-            self._logger.error("Error: Scan context uninitialized, no analysis performed.")
-            return
         self._logger.info("Scanning %s for motion events...",
-            "%d input videos" % len(self.video_paths) if len(self.video_paths) > 1
+            "%d input videos" % len(self._video_paths) if len(self._video_paths) > 1
             else "input video")
         bg_subtractor = cv2.createBackgroundSubtractorMOG2(detectShadows=False)
         buffered_frames = []
@@ -388,23 +390,23 @@ class ScanContext(object):
         if self._comp_file:
             video_writer = cv2.VideoWriter(self._comp_file, self._fourcc,
                                            self._video_fps, self._video_resolution)
-        elif len(self.video_paths[0]) > 0:
-            output_prefix = os.path.basename(self.video_paths[0])
+        elif len(self._video_paths[0]) > 0:
+            output_prefix = os.path.basename(self._video_paths[0])
             dot_index = output_prefix.rfind('.')
             if dot_index > 0:
                 output_prefix = output_prefix[:dot_index]
 
         curr_pos = FrameTimecode(0, self._video_fps)
         in_motion_event = False
-        self.frames_processed = 0
+        self._frames_processed = 0
         processing_start = time.time()
 
         # Seek to starting position if required.
-        if self.start_time is not None:
-            while curr_pos.frame_num < self.start_time.frame_num:
+        if self._start_time is not None:
+            while curr_pos.frame_num < self._start_time.frame_num:
                 if self._get_next_frame(False) is None:
                     break
-                self.frames_processed += 1
+                self._frames_processed += 1
                 curr_pos.frame_num += 1
 
         # Show ROI selection window if required.
@@ -414,18 +416,18 @@ class ScanContext(object):
 
         # TQDM-based progress bar, or a stub if in quiet mode (or no TQDM).
         progress_bar = self._create_progress_bar(
-            show_progress=self._show_progress, num_frames=self.frames_total)
+            show_progress=self._show_progress, num_frames=self._frames_total)
 
         # Motion event scanning/detection loop.
         while self.running:
-            if self.end_time is not None and curr_pos.frame_num >= self.end_time.frame_num:
+            if self._end_time is not None and curr_pos.frame_num >= self._end_time.frame_num:
                 break
-            if self.frame_skip > 0:
-                for _ in range(self.frame_skip):
+            if self._frame_skip > 0:
+                for _ in range(self._frame_skip):
                     if self._get_next_frame(False) is None:
                         break
                     curr_pos.frame_num += 1
-                    self.frames_processed += 1
+                    self._frames_processed += 1
                     progress_bar.update(1)
             frame_rgb = self._get_next_frame()
             if frame_rgb is None:
@@ -498,7 +500,7 @@ class ScanContext(object):
                         buffered_frames = []
 
             curr_pos.frame_num += 1
-            self.frames_processed += 1
+            self._frames_processed += 1
             progress_bar.update(1)
 
         # If we're still in a motion event, we still need to compute the duration
@@ -521,10 +523,10 @@ class ScanContext(object):
     def _post_scan_motion(self, processing_start):
         # type: (float) -> None
         processing_time = time.time() - processing_start
-        processing_rate = float(self.frames_processed) / processing_time
+        processing_rate = float(self._frames_processed) / processing_time
         self._logger.info(
             "Processed %d frames read in %3.1f secs (avg %3.1f FPS).",
-            self.frames_processed, processing_time, processing_rate)
+            self._frames_processed, processing_time, processing_rate)
         if not len(self.event_list) > 0:
             self._logger.info("No motion events detected in input.")
             return

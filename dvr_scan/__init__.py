@@ -46,6 +46,7 @@ import sys
 # DVR-Scan Library Imports
 import dvr_scan.cli
 from dvr_scan.scanner import ScanContext
+from dvr_scan.scanner import VideoLoadFailure
 
 
 # Used for module identification and when printing copyright & version info.
@@ -108,18 +109,17 @@ def main():
 
     Handles high-level interfacing of video IO and motion event detection.
     """
-    # Parse CLI arguments and create our ScanContext.
     args = parse_cli_args()
     logger = init_logger(args.quiet_mode)
-    sctx = ScanContext(args, show_progress=not args.quiet_mode)
-
-    if not sctx.initialized:
-        return
-
-    # Set context properties based on CLI arguments.
-    #sctx.open_input(paths, start, duration, end)
 
     try:
+        sctx = ScanContext(
+            input_videos=args.input,
+            frame_skip=args.frame_skip,
+            show_progress=not args.quiet_mode)
+
+        # Set context properties based on CLI arguments.
+
         sctx.set_output(
             scan_only=args.scan_only_mode,
             comp_file=args.output,
@@ -137,10 +137,17 @@ def main():
             time_pre_event=args.time_pre_event,
             time_post_event=args.time_post_event)
 
+        sctx.set_video_time(
+            start_time=args.start_time,
+            end_time=args.end_time,
+            duration=args.duration)
+
+        sctx.scan_motion()
+
+    except VideoLoadFailure:
+        # Error information is logged in ScanContext when this exception is raised.
+        logger.error('Failed to load input, see above output for details.')
+
     except ValueError as ex:
-        sctx.initialized = False
         logger.error(ex)
 
-    # If the context was successfully initialized, we can process the video(s).
-    if sctx.initialized is True:
-        sctx.scan_motion()
