@@ -14,6 +14,11 @@
 To install DVR-Scan:
 
     python setup.py install
+
+To run the DVR-Scan unit tests:
+
+    python setup.py test
+
 """
 
 import sys
@@ -62,11 +67,13 @@ setup(
     keywords="video computer-vision analysis",
     install_requires=get_requires(),
     extras_require=get_extra_requires(),
+    setup_requires=['pytest-runner'],
+    tests_require=['pytest'],
     packages=['dvr_scan'],
     package_data={'': ['../LICENSE*', '../package-info.rst']},
     #include_package_data = True,   # Only works with this line commented.
     #test_suite="unitest.py",
-    entry_points={"console_scripts": ["dvr-scan=dvr_scan:main"]},
+    entry_points={"console_scripts": ["dvr-scan=dvr_scan.__main__:main"]},
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Console',

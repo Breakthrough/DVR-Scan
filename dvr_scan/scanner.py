@@ -63,7 +63,7 @@ class ScanContext(object):
     which includes application initialization, handling the options,
     and coordinating overall application logic (via scan_motion()). """
 
-    def __init__(self, input_videos, frame_skip=0, show_progress=True):
+    def __init__(self, input_videos, frame_skip=0, show_progress=False):
         # type: (..., bool) -> None
         """ Initializes the ScanContext with the supplied arguments.
 
@@ -83,7 +83,7 @@ class ScanContext(object):
         self._show_progress = show_progress
 
         # Output Parameters (set_output)
-        self._scan_only = False                     # -so/--scan-only
+        self._scan_only = True                      # -so/--scan-only
         self._comp_file = None                      # -o/--output
         self._fourcc = DEFAULT_VIDEOWRITER_CODEC    # -c/--codec
         self._draw_timecode = False                 # -tc/--time-code
@@ -99,27 +99,28 @@ class ScanContext(object):
         self._pre_event_len = None                  # -tb/--time-before-event
         self._pre_event_len = None                  # -tp/--time-post-event
 
-        # TODO: Remove args, replace with explicit methods (#33)
-        # Remaining parameters to transition to named methods:
+        # Input Video Parameters
+        self._video_paths = input_videos            # -i/--input
+        self._frame_skip = frame_skip               # -fs/--frame-skip
+
         self._cap = None
         self._cap_path = None
-
         self._video_resolution = None
         self._video_fps = None
-        self._video_paths = input_videos
         self._frames_total = 0
         self._frames_processed = 0
-        self._frame_skip = frame_skip
+
         self._load_input_videos()
 
-    def set_output(self, scan_only=False, comp_file=None, codec='XVID', draw_timecode=False):
+    def set_output(self, scan_only=True, comp_file=None, codec='XVID', draw_timecode=False):
         # type: (bool, str, str) -> None
         """ Sets the path and encoder codec to use when exporting videos.
 
         Arguments:
             scan_only (bool): If True, only scans input for motion, but
                 does not write any video(s) to disk.  In this case,
-                comp_file and codec are ignored.
+                comp_file and codec are ignored. Note that the default
+                value here is the opposite of the CLI default.
             comp_file (str): If set, represents the path that all
                 concatenated motion events will be written to.
                 If None, each motion event will be saved as a separate file.
@@ -196,7 +197,9 @@ class ScanContext(object):
             "ROI must be specified as a rectangle of"
             " the form x y w h.\n  For example: -roi 200 250 50 100")
         if roi is not None:
-            if roi:
+            if roi and all(isinstance(i, int) for i in roi):
+                self._roi = roi
+            elif roi:
                 roi = [i.replace(',', '') for i in roi]
                 if any(not i.isdigit() for i in roi):
                     raise ValueError(
@@ -518,6 +521,8 @@ class ScanContext(object):
             progress_bar.close()
 
         self._post_scan_motion(processing_start=processing_start)
+
+        return self.event_list
 
 
     def _post_scan_motion(self, processing_start):

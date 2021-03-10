@@ -29,6 +29,7 @@
 # OTHER DEALINGS IN THE SOFTWARE.
 #
 
-
-import dvr_scan
-dvr_scan.main()
+if __name__ == "__main__":
+    # pylint: disable=no-name-in-module
+    from dvr_scan.__main__ import main
+    main()

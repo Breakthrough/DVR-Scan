@@ -6,3 +6,4 @@ opencv-python-headless; python_version > "3.5"
 numpy
 tqdm
 scenedetect
+pytest
