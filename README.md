@@ -1,7 +1,7 @@
 # ![DVR-Scan Logo](https://raw.githubusercontent.com/Breakthrough/DVR-Scan/master/docs/img/dvr-scan-logo_small.png)
 :vhs: Tool for extracting scenes with motion from security camera/DVR footage.  Written in Python, depends on OpenCV.
 
-**Latest Release:** [v1.1 (July 12, 2020)](http://dvr-scan.readthedocs.io/en/latest/changelog/)
+**Latest Release:** [v1.2 (March 10, 2021)](http://dvr-scan.readthedocs.io/en/latest/changelog/)
 
 ------------------------------------------------
 
