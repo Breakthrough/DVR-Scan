@@ -180,7 +180,7 @@ class ScanContext(object):
             ValueError if kernel_size is not odd, downscale_factor < 1, or roi
             is invalid.
         """
-        assert self.initialized
+        assert self._video_resolution is not None
 
         self._threshold = threshold
 
@@ -204,25 +204,26 @@ class ScanContext(object):
 
         self._roi = roi
         # Validate ROI.
-        if self._roi is not None:
-            if self._roi:
-                error_string = (
-                    "ROI must be specified as a rectangle of"
-                    " the form x y w h.\n  For example: -roi 200 250 50 100")
+        error_string = (
+            "ROI must be specified as a rectangle of"
+            " the form x y w h.\n  For example: -roi 200 250 50 100")
+        if roi is not None:
+            if roi:
+                roi = [i.replace(',', '') for i in roi]
                 if any(not i.isdigit() for i in roi):
                     raise ValueError(
                         'Error: Non-numeric character specified in ROI.\n%s' % error_string)
-                if len(self._roi) != 4 or any(int(i) < 0 for i in roi):
+                if len(roi) != 4 or any(int(i) < 0 for i in roi):
                     raise ValueError('Error: %s' % error_string)
                 for i in range(0, 4):
-                    self._roi[i] = int(self._roi[i])
+                    roi[i] = int(roi[i])
+                self._roi = roi
             else:
                 self._roi = []
 
     def set_event_params(self, min_event_len=2, time_pre_event="1.5s", time_post_event="2s"):
         # type: (...) -> None
         """ Sets motion event parameters. """
-        assert self.initialized
         assert self._video_fps is not None
         self._min_event_len = FrameTimecode(min_event_len, self._video_fps)
         self._pre_event_len = FrameTimecode(time_pre_event, self._video_fps)
@@ -267,7 +268,9 @@ class ScanContext(object):
                     " does not match the first input file.", video_name)
                 return False
             self._logger.info("Appended video %s.", video_name)
-        # If we get to this point, all videos have the same parameters.
+        # Make sure we initialize defaults.
+        self.set_detection_params()
+        self.set_event_params()
         return True
 
 
@@ -373,7 +376,6 @@ class ScanContext(object):
         self._logger.info("Scanning %s for motion events...",
             "%d input videos" % len(self.video_paths) if len(self.video_paths) > 1
             else "input video")
-
         bg_subtractor = cv2.createBackgroundSubtractorMOG2(detectShadows=False)
         buffered_frames = []
         event_window = []
@@ -536,9 +538,11 @@ class ScanContext(object):
                 "-------------------------------------------------------------" ]
             output_strs += [
                 "|  Event %4d  |  %s  |  %s  |  %s  |" % (
-                    event_num + 1, event_start.get_timecode(precision=1),
+                    event_num + 1,
+                    event_start.get_timecode(precision=1),
                     event_duration.get_timecode(precision=1),
-                    event_end.get_timecode(precision=1))
+                    event_end.get_timecode(precision=1)
+                )
                 for event_num, (event_start, event_end, event_duration)
                 in enumerate(self.event_list) ]
             output_strs += [
