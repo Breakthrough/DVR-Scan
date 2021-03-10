@@ -1,0 +1,32 @@
+traffic_camera.mp4
+roi = [631, 532, 210, 127]
+
+-----------------------------------
+| Event | Start Frame | End Frame |
+-----------------------------------
+|     1 |          10 |       148 |
+|     2 |         359 |       490 |
+|     3 |         543 |       575 |
+-----------------------------------
+
+Output:
+
+> python dvr-scan.py -i tests/resources/traffic_camera.mp4 -so -roi 631 532 210, 127
+[DVR-Scan] Initializing scan context...
+[DVR-Scan] Opened video traffic_camera.mp4 (1280 x 720 at 25.000 FPS).
+[DVR-Scan] Appended video traffic_camera.mp4.
+[DVR-Scan] Scanning input video for motion events...
+[DVR-Scan] ROI selected (x,y,w,h): [631, 532, 210, 127]
+[DVR-Scan] Processed: 100%|██████████████████| 576/576 [00:02<00:00, 282.71 frames/s]
+[DVR-Scan] Processed 576 frames read in 2.1 secs (avg 279.5 FPS).
+[DVR-Scan] Detected 3 motion events in input.
+[DVR-Scan] Scan-only mode specified, list of motion events:
+-------------------------------------------------------------
+|   Event #    |  Start Time  |   Duration   |   End Time   |
+-------------------------------------------------------------
+|  Event    1  |  00:00:00.4  |  00:00:05.5  |  00:00:05.9  |
+|  Event    2  |  00:00:14.4  |  00:00:05.2  |  00:00:19.6  |
+|  Event    3  |  00:00:21.7  |  00:00:01.3  |  00:00:23.0  |
+-------------------------------------------------------------
+[DVR-Scan] Comma-separated timecode values:
+00:00:00.400,00:00:05.920,00:00:14.360,00:00:19.600,00:00:21.720,00:00:23.000
