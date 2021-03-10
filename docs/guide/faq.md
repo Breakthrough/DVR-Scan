@@ -41,9 +41,9 @@ If all is successful, the output video should be roughly the same size as the or
 ----------------------------------------------------------
 
 
-### How do I run this in a docker container?
+### How do I run this in a Docker container?
 
-DVR-Scan comes with a dockerfile so you can easily get things working without worrying about installing dependencies locally. Simply [install docker](https://docs.docker.com/get-docker/), then run the following in the root of the project:
+DVR-Scan comes with a Dockerfile so you can easily get things working without worrying about installing dependencies locally. Simply [install Docker](https://docs.docker.com/get-docker/), then run the following in the root of the project:
 
 ```
 $ docker build -t dvr-scan .
@@ -64,5 +64,5 @@ The most important thing to keep in mind is the `-v` flag, which specifies the l
 
 Please submit any bug reports or feature requests to <a href="https://github.com/Breakthrough/DVR-Scan/issues" target="_blank" alt="DVR-Scan Issue Tracker @ Github">the issue tracker on Github</a>.
 
-Code changes and pull requests are accepted and welcome, provided that the changes include fixes or improvements to the codebase, rather than just cosmetic changes, and that the changes meet or exceed the quality of the application codebase and standards guiding its development. 
+Code changes and pull requests are accepted and welcome, provided that the changes include fixes or improvements to the codebase, rather than just cosmetic changes, and that the changes meet or exceed the quality of the application codebase and standards guiding its development.
 

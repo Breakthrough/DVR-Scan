@@ -13,7 +13,7 @@ DVR-Scan is compatible with both Python 2 and 3.  Note that Python 3 usually pro
 
 <div class="important">
 <h4 class="wy-text-neutral"><span class="fa fa-angle-double-down wy-text-info"></span> Including all dependencies:</h4>
-<h3 class="wy-text-neutral"><tt>pip install dvr-scan[opencv,progress_bar]</tt></h3>
+<h3 class="wy-text-neutral"><tt>pip install dvr-scan[opencv]</tt></h3>
 <h4 class="wy-text-neutral"><span class="fa fa-angle-down wy-text-info"></span> Without extras (OpenCV installation required):</h4>
 <h3 class="wy-text-neutral"><tt>pip install dvr-scan</tt></h3>
 </div>

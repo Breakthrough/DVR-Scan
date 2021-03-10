@@ -11,7 +11,7 @@
 
 **Quick Install**: Requires Python modules `numpy`, OpenCV `cv2`, and `tqdm` (optional) for displaying progress.  To install DVR-Scan via `pip` with all dependencies:
 
-    pip install dvr-scan[opencv,progress_bar]
+    pip install dvr-scan[opencv]
 
 Or to install just DVR-Scan (OpenCV installation required):
 
@@ -32,5 +32,5 @@ For users wanting finer control over the output video encoding method, the defau
 
 ------------------------------------------------
 
-Copyright © 2016-2020 Brandon Castellano. All rights reserved.
+Copyright © 2016-2021 Brandon Castellano. All rights reserved.
 Licensed under BSD 2-Clause (see the LICENSE file for details).
