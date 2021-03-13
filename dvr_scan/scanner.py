@@ -102,6 +102,8 @@ class ScanContext(object):
         # Input Video Parameters
         self._video_paths = input_videos            # -i/--input
         self._frame_skip = frame_skip               # -fs/--frame-skip
+        self._start_time = None                     # -st/--start-time
+        self._end_time = None                       # -et/--end-time
 
         self._cap = None
         self._cap_path = None
@@ -222,11 +224,10 @@ class ScanContext(object):
 
     def set_video_time(self, start_time=None, end_time=None, duration=None):
         # type: (str, str, str) -> None
-        self._start_time = None
-        self._end_time = None
+        """ Used to select a sub-set of the video in time for processing. """
         assert self._video_fps is not None
         if start_time is not None:
-            self._start_time = FrameTimecode(self._video_fps, start_time)
+            self._start_time = FrameTimecode(start_time, self._video_fps)
         if duration is not None:
             duration = FrameTimecode(duration, self._video_fps)
             if self._start_time is not None:
@@ -236,7 +237,6 @@ class ScanContext(object):
                 self._end_time = duration
         elif end_time is not None:
             self._end_time = FrameTimecode(end_time, self._video_fps)
-
 
     def _load_input_videos(self):
         # type: () -> bool
