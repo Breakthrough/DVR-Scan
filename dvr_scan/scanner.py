@@ -97,7 +97,7 @@ class ScanContext(object):
         # Motion Event Parameters (set_event_params)
         self._min_event_len = None                  # -l/--min-event-length
         self._pre_event_len = None                  # -tb/--time-before-event
-        self._pre_event_len = None                  # -tp/--time-post-event
+        self._post_event_len = None                 # -tp/--time-post-event
 
         # Input Video Parameters
         self._video_paths = input_videos            # -i/--input
@@ -218,7 +218,7 @@ class ScanContext(object):
         assert self._video_fps is not None
         self._min_event_len = FrameTimecode(min_event_len, self._video_fps)
         self._pre_event_len = FrameTimecode(time_pre_event, self._video_fps)
-        self._pre_event_len = FrameTimecode(time_post_event, self._video_fps)
+        self._post_event_len = FrameTimecode(time_post_event, self._video_fps)
 
     def set_video_time(self, start_time=None, end_time=None, duration=None):
         # type: (str, str, str) -> None
@@ -469,7 +469,7 @@ class ScanContext(object):
                     num_frames_post_event = 0
                 else:
                     num_frames_post_event += 1
-                    if num_frames_post_event >= self._pre_event_len.frame_num:
+                    if num_frames_post_event >= self._post_event_len.frame_num:
                         in_motion_event = False
                         event_end = FrameTimecode(
                             curr_pos.frame_num, self._video_fps)
