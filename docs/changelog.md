@@ -18,6 +18,11 @@ This is the final release of DVR-Scan 1.x.  All new development will proceed wit
  * [api] Refactor ScanContext class for better usage from Python ([#33](https://github.com/Breakthrough/DVR-Scan/issues/33))
  * [api] Use named logger rather than print statements ([#35](https://github.com/Breakthrough/DVR-Scan/issues/35))
 
+#### Known Issues
+
+ * When using the `-o`/`--output` argument, a file is still written to disk even if no motion events are discovered in the input file ([#50](https://github.com/Breakthrough/DVR-Scan/issues/50))
+
+
 ### 1.1 (2020-07-12) &nbsp;<span class="fa fa-tags"></span>
 
 #### Changelog
