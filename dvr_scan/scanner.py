@@ -390,10 +390,7 @@ class ScanContext(object):
 
         video_writer = None
         output_prefix = ''
-        if self._comp_file:
-            video_writer = cv2.VideoWriter(self._comp_file, self._fourcc,
-                                           self._video_fps, self._video_resolution)
-        elif len(self._video_paths[0]) > 0:
+        if not self._comp_file and len(self._video_paths[0]) > 0:
             output_prefix = os.path.basename(self._video_paths[0])
             dot_index = output_prefix.rfind('.')
             if dot_index > 0:
@@ -490,9 +487,10 @@ class ScanContext(object):
                     event_start = FrameTimecode(curr_pos.frame_num, self._video_fps)
                     # Open new VideoWriter if needed, write buffered_frames to file.
                     if not self._scan_only:
-                        if not self._comp_file:
-                            output_path = '%s.DSME_%04d.avi' % (
-                                output_prefix, len(self.event_list))
+                        if not self._comp_file or video_writer is None:
+                            output_path = (
+                                self._comp_file if self._comp_file else
+                                '%s.DSME_%04d.avi' % (output_prefix, len(self.event_list)))
                             video_writer = cv2.VideoWriter(
                                 output_path, self._fourcc, self._video_fps,
                                 self._video_resolution)
