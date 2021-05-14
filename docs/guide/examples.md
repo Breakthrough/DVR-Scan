@@ -48,6 +48,13 @@ The following two parameters can be adjusted to specify how much of the original
  - `-tp` / `--time-post-event`: Event continuation window size, or the number of frames to include after the frame's motion score falls below the threshold (default 2.0 seconds).  Any frames that score above the threshold during this interval will be added to the motion event, and reset the counter.
  - `-tb` / `--time-before-event`: Number of frames (or timecode/length) to include before a detected motion event (default 1.5 seconds), if possible.  Represents the maximum amount a given event's beginning timecode can be shifted back.  Unlike `-l` or `-tp`, this option has no effect on the actual detection process, only the starting timecode of the current event when output.
 
+ ### Performance
+
+The following parameters affect performance, possibly at the expense of accuracy.
+
+ - '-b' / '--bg-subtractor': The type of background subtractor to use.  Must be either MOG (default) or CNT (faster).
+ - '-df' / '--downscale-factor': Factor to downscale (shrink) video before processing.  Must be integer values (default 1 for no downscaling).
+
 ----------------------
 
 

@@ -299,6 +299,14 @@ def get_cli_parser():
               ' MUST end with .avi.'))
 
     parser.add_argument(
+        '-b', '--bg-subtractor', metavar='TYPE', dest='bg_subtractor',
+        type=string_type_check(
+            ['MOG', 'CNT'], False, 'TYPE'),
+        default='MOG',
+        help=('The type of background subtractor to use, must be one of: '
+              ' MOG (default), CNT (parallel).'))
+
+    parser.add_argument(
         '-so', '--scan-only', dest='scan_only_mode',
         action='store_true', default=False,
         help=('Only perform motion detection on the input, and generate a'

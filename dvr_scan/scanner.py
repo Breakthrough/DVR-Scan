@@ -375,13 +375,13 @@ class ScanContext(object):
         return True
 
 
-    def scan_motion(self):
+    def scan_motion(self, method='mog'):
         # type: () -> None
         """ Performs motion analysis on the ScanContext's input video(s). """
-        self._logger.info("Scanning %s for motion events...",
-            "%d input videos" % len(self._video_paths) if len(self._video_paths) > 1
-            else "input video")
-        bg_subtractor = cv2.createBackgroundSubtractorMOG2(detectShadows=False)
+        if method == 'cnt':
+            bg_subtractor = cv2.bgsegm.createBackgroundSubtractorCNT()
+        else:
+            bg_subtractor = cv2.createBackgroundSubtractorMOG2(detectShadows=False)
         buffered_frames = []
         event_window = []
         self.event_list = []
@@ -417,6 +417,10 @@ class ScanContext(object):
         # TQDM-based progress bar, or a stub if in quiet mode (or no TQDM).
         progress_bar = self._create_progress_bar(
             show_progress=self._show_progress, num_frames=self._frames_total)
+
+        self._logger.info("Scanning %s for motion events...",
+            "%d input videos" % len(self._video_paths) if len(self._video_paths) > 1
+            else "input video")
 
         # Motion event scanning/detection loop.
         while self.running:

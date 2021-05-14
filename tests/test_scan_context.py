@@ -42,6 +42,12 @@ TRAFFIC_CAMERA_EVENTS = [
     (543, 575)
 ]
 
+TRAFFIC_CAMERA_EVENTS_CNT = [
+    (1, 148),
+    (365, 490),
+    (544, 575)
+]
+
 def test_scan_context(traffic_camera_video):
     """ Test basic functionality of ScanContext with default parameters. """
 
@@ -56,3 +62,17 @@ def test_scan_context(traffic_camera_video):
                   for event in event_list]
     assert all([x == y for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS)])
 
+
+def test_scan_context_cnt(traffic_camera_video):
+    """ Test basic functionality of ScanContext using the CNT algorithm. """
+
+    sctx = ScanContext([traffic_camera_video])
+    sctx.set_detection_params(roi=TRAFFIC_CAMERA_ROI)
+
+    event_list = sctx.scan_motion(use_cnt=True)
+
+    assert len(event_list) == len(TRAFFIC_CAMERA_EVENTS_CNT)
+    # Remove duration, check start/end times.
+    event_list = [(event[0].frame_num, event[1].frame_num)
+                  for event in event_list]
+    assert all([x == y for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS_CNT)])

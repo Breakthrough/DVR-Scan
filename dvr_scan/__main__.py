@@ -47,6 +47,7 @@ from dvr_scan import init_logger
 from dvr_scan.cli import get_cli_parser
 from dvr_scan.scanner import ScanContext
 from dvr_scan.scanner import VideoLoadFailure
+from dvr_scan.platform import cnt_is_available
 
 def parse_cli_args():
     """ Parses all given arguments, returning the object containing
@@ -74,6 +75,10 @@ def main():
     logger = init_logger(args.quiet_mode)
 
     try:
+        if args.bg_subtractor == 'cnt' and not cnt_is_available():
+            logger.error('Method CNT not available: OpenCV update is required.')
+            sys.exit(1)
+
         sctx = ScanContext(
             input_videos=args.input,
             frame_skip=args.frame_skip,
@@ -103,7 +108,7 @@ def main():
             end_time=args.end_time,
             duration=args.duration)
 
-        sctx.scan_motion()
+        sctx.scan_motion(args.bg_subtractor)
 
     except VideoLoadFailure:
         # Error information is logged in ScanContext when this exception is raised.

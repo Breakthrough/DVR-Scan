@@ -64,3 +64,9 @@ def get_tqdm():
     except ImportError:
         print("")
     return None
+
+def cnt_is_available():
+    try:
+        return 'createBackgroundSubtractorCNT' in dir(cv2.bgsegm)
+    except AttributeError:
+        return False
