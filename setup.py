@@ -43,14 +43,14 @@ def get_extra_requires():
     """ Get Extra Requires: Returns a list of extra/optional packages. """
     return {
         'opencv:python_version <= "3.5"':
-            ['opencv-python<=4.2.0.32'],
+            ['opencv-python<=4.2.0.32', 'opencv-contrib-python<=4.2.0.32'],
         'opencv:python_version > "3.5"':
-            ['opencv-python'],
+            ['opencv-python', 'opencv-contrib-python'],
 
         'opencv-headless:python_version <= "3.5"':
-            ['opencv-python-headless<=4.2.0.32'],
+            ['opencv-python-headless<=4.2.0.32','opencv-contrib-python-headless<=4.2.0.32'],
         'opencv-headless:python_version > "3.5"':
-            ['opencv-python-headless'],
+            ['opencv-python-headless', 'opencv-contrib-python-headless'],
     }
 
 
