@@ -69,7 +69,7 @@ def test_scan_context_cnt(traffic_camera_video):
     sctx = ScanContext([traffic_camera_video])
     sctx.set_detection_params(roi=TRAFFIC_CAMERA_ROI)
 
-    event_list = sctx.scan_motion(use_cnt=True)
+    event_list = sctx.scan_motion(method='cnt')
 
     assert len(event_list) == len(TRAFFIC_CAMERA_EVENTS_CNT)
     # Remove duration, check start/end times.

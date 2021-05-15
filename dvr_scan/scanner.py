@@ -378,7 +378,7 @@ class ScanContext(object):
     def scan_motion(self, method='mog'):
         # type: () -> None
         """ Performs motion analysis on the ScanContext's input video(s). """
-        if method == 'cnt':
+        if method.lower() == 'cnt':
             bg_subtractor = cv2.bgsegm.createBackgroundSubtractorCNT()
         else:
             bg_subtractor = cv2.createBackgroundSubtractorMOG2(detectShadows=False)
