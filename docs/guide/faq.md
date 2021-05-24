@@ -19,6 +19,14 @@ Windows users can also try downloading a binary/portable distribution, which inc
 ----------------------------------------------------------
 
 
+### How can I improve the performance of DVR-Scan?
+
+On the Getting Started & Examples page, see the [Performance section](examples.md#performance) under Motion Detection Parameters.  Additional performance improvements are being worked on for future versions (parallel processing, utilization of GPU, etc...).
+
+
+----------------------------------------------------------
+
+
 ### How can I join/concatenate two or more video files for processing?
 
 If you have a series of video clips from the same source, you can append subsequent video clips to the DVR-Scan input by including another `-i` flag for each file.  For example, to process three videos sequentially:

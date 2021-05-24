@@ -4,7 +4,7 @@ DVR-Scan Changelog
 
 ## DVR-Scan 1.0
 
-### 1.3 (In Progress)
+### 1.3 (May 23, 2021) &nbsp;<span class="fa fa-tags"></span>
 
 #### Release Notes
 
@@ -22,7 +22,7 @@ This version of DVR-Scan includes a new, faster background subtraction algorithm
  * Variable framerate videos (VFR) are not fully supported, and will yield incorrect timestamps ([#20](https://github.com/Breakthrough/DVR-Scan/issues/20))
 
 
-### 1.2 (March 10, 2021) &nbsp;<span class="fa fa-tags"></span>
+### 1.2 (March 10, 2021)
 
 #### Changelog
 
