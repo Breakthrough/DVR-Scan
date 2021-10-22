@@ -93,6 +93,8 @@ class ScanContext(object):
         self._kernel = None                         # -k/--kernel-size
         self._downscale_factor = 1                  # -df/--downscale-factor
         self._roi = None                            # --roi
+        self._max_roi_size = dvr_scan.platform.get_min_screen_bounds()
+        self._show_roi_window = False
 
         # Motion Event Parameters (set_event_params)
         self._min_event_len = None                  # -l/--min-event-length
@@ -193,26 +195,31 @@ class ScanContext(object):
         self._kernel = None if kernel_size == 0 else (
             np.ones((kernel_size, kernel_size), np.uint8))
 
-        self._roi = roi
         # Validate ROI.
         error_string = (
-            "ROI must be specified as a rectangle of"
-            " the form x y w h.\n  For example: -roi 200 250 50 100")
+            'ROI must be specified as a rectangle of the form (x,y,w,h) or '
+            'the max window size (w,h).\n  For example: -roi 200 250 50 100')
         if roi is not None:
-            if roi and all(isinstance(i, int) for i in roi):
-                self._roi = roi
-            elif roi:
-                roi = [i.replace(',', '') for i in roi]
-                if any(not i.isdigit() for i in roi):
-                    raise ValueError(
-                        'Error: Non-numeric character specified in ROI.\n%s' % error_string)
-                if len(roi) != 4 or any(int(i) < 0 for i in roi):
+            if roi:
+                if not all(isinstance(i, int) for i in roi):
+                    roi = [i.replace(',', '') for i in roi]
+                    if any(not i.isdigit() for i in roi):
+                        raise ValueError(
+                            'Error: Non-numeric character specified in ROI.\n%s' % error_string)
+                roi = [int(x) for x in roi]
+                if any(x < 0 for x in roi):
+                    raise ValueError('Error: value passed to -roi was negative')
+                if len(roi) == 2:
+                    self._max_roi_size = roi
+                    self._show_roi_window = True
+                elif len(roi) == 4:
+                    self._roi = roi
+                    self._show_roi_window = False
+                else:
                     raise ValueError('Error: %s' % error_string)
-                for i in range(0, 4):
-                    roi[i] = int(roi[i])
-                self._roi = roi
+            # -roi
             else:
-                self._roi = []
+                self._show_roi_window = True
 
     def set_event_params(self, min_event_len=2, time_pre_event="1.5s", time_post_event="2s"):
         # type: (...) -> None
@@ -357,20 +364,36 @@ class ScanContext(object):
     def _select_roi(self, curr_time=None, add_timecode=False):
         # type: (FrameTimecode, bool) -> bool
         # area selection
-        if self._roi is not None and len(self._roi) == 0:
+        if self._show_roi_window:
             self._logger.info("Selecting area of interest:")
             frame_for_crop = self._get_next_frame()
+            scale_factor = None
+            if self._max_roi_size is not None:
+                frame_h, frame_w = (frame_for_crop.shape[0], frame_for_crop.shape[1])
+                max_h, max_w = self._max_roi_size
+                if frame_h > max_h or frame_w > max_w:
+                    factor_h = frame_h / float(max_h)
+                    factor_w = frame_w / float(max_w)
+                    scale_factor = max(factor_h, factor_w)
+                    new_height = int(frame_h / scale_factor)
+                    new_width = int(frame_w / scale_factor)
+                    frame_for_crop = cv2.resize(
+                        frame_for_crop, (new_width, new_height), interpolation=cv2.INTER_CUBIC)
+            # Downscale the image if it's too large for the screen.
+            #if self._max_roi_size is not None and frame_for_crop.shape[0]
             if add_timecode:
                 assert curr_time is not None
                 self._stamp_text(frame_for_crop, curr_time.get_timecode())
-            self._roi = cv2.selectROI("DVR-Scan ROI Selection", frame_for_crop)
+            roi = cv2.selectROI("DVR-Scan ROI Selection", frame_for_crop)
             cv2.destroyAllWindows()
-            if any([coord == 0 for coord in self._roi[2:]]):
+            if any([coord == 0 for coord in roi[2:]]):
                 self._logger.info("ROI selection cancelled. Aborting...")
                 return False
+            # Unscale coordinates if we downscaled the image.
+            if scale_factor:
+                roi = [int(x * scale_factor) for x in roi]
+            self._roi = roi
         if self._roi:
-            if len(self._roi) != 4:
-                return False
             self._logger.info("ROI selected (x,y,w,h): %s", str(self._roi))
         return True
 

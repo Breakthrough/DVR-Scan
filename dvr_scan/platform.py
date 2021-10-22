@@ -70,3 +70,16 @@ def cnt_is_available():
         return 'createBackgroundSubtractorCNT' in dir(cv2.bgsegm)
     except AttributeError:
         return False
+
+def get_min_screen_bounds():
+    """ Safely attempts to get the minimum screen resolution of all monitors
+    using the `screeninfo` package. Returns the minimum of all monitor's heights
+    and widths with 10% padding."""
+    try:
+        import screeninfo
+        monitors = screeninfo.get_monitors()
+        return (int(0.9 * min(m.height for m in monitors)),
+                int(0.9 * min(m.width for m in monitors)))
+    except ImportError:
+        pass
+    return None
