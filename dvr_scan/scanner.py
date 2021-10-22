@@ -370,7 +370,7 @@ class ScanContext(object):
             scale_factor = None
             if self._max_roi_size is not None:
                 frame_h, frame_w = (frame_for_crop.shape[0], frame_for_crop.shape[1])
-                max_h, max_w = self._max_roi_size
+                max_w, max_h = self._max_roi_size
                 if frame_h > max_h or frame_w > max_w:
                     factor_h = frame_h / float(max_h)
                     factor_w = frame_w / float(max_w)

@@ -4,6 +4,19 @@ DVR-Scan Changelog
 
 ## DVR-Scan 1.0
 
+### 1.4 (In Development)
+
+#### Changelog
+
+ * [bugfix] Allow a maximum window size to be set when using `-roi` ([#59](https://github.com/Breakthrough/DVR-Scan/issues/59)):
+     * The `-roi` flag now accepts a maximum window size for the ROI selection window (e.g. `-roi 1920 1080`)
+     * If the `screeninfo` package is installed, or you are using a Windows build, videos will automatically be resized to the maximum screen size
+
+#### Known Issues
+
+ * Variable framerate videos (VFR) are not fully supported, and will yield incorrect timestamps ([#20](https://github.com/Breakthrough/DVR-Scan/issues/20))
+
+
 ### 1.3 (May 23, 2021) &nbsp;<span class="fa fa-tags"></span>
 
 #### Release Notes

@@ -34,7 +34,7 @@ if sys.version_info < (2, 7) or (3, 0) <= sys.version_info < (3, 3):
 def get_requires():
     # type: () -> List[str]
     """ Get Requires: Returns a list of required packages. """
-    requires = ['numpy', 'tqdm']
+    requires = ['numpy', 'tqdm', 'scenedetect']
     return requires
 
 

@@ -68,6 +68,13 @@ The most important thing to keep in mind is the `-v` flag, which specifies the l
 ----------------------------------------------------------
 
 
+### What if my video is larger than my monitor resolution?
+
+As of DVR-Scan v1.4, you can either manually specify the max width/height (e.g. `-roi 1920 1080`), or if the `screeninfo` package is installed, the window will be sized to the minimum monitor size.
+
+----------------------------------------------------------
+
+
 ### How do I submit bug reports, feature requests, or code changes?
 
 Please submit any bug reports or feature requests to <a href="https://github.com/Breakthrough/DVR-Scan/issues" target="_blank" alt="DVR-Scan Issue Tracker @ Github">the issue tracker on Github</a>.
