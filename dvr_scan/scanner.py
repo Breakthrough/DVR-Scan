@@ -504,7 +504,8 @@ class ScanContext(object):
                             video_writer.release()
             else:
                 if not self._scan_only:
-                    buffered_frames.append(frame_rgb_origin)
+                    buffered_frames.append(
+                        (frame_rgb_origin, FrameTimecode(curr_pos.frame_num, curr_pos.framerate)))
                     buffered_frames = buffered_frames[-self._pre_event_len.frame_num:]
                 if len(event_window) >= self._min_event_len.frame_num and all(
                         score >= self._threshold for score in event_window):
@@ -521,9 +522,9 @@ class ScanContext(object):
                             video_writer = cv2.VideoWriter(
                                 output_path, self._fourcc, self._video_fps,
                                 self._video_resolution)
-                        for frame in buffered_frames:
+                        for frame, frame_pos in buffered_frames:
                             if self._draw_timecode:
-                                self._stamp_text(frame, curr_pos.get_timecode())
+                                self._stamp_text(frame, frame_pos.get_timecode())
                             video_writer.write(frame)
                         buffered_frames = []
 
