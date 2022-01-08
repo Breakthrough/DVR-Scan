@@ -9,7 +9,7 @@
 # is used to provide a high level interface to the logic used by
 # DVR-Scan to implement the motion detection/scanning algorithm.
 #
-# Copyright (C) 2016-2021 Brandon Castellano <http://www.bcastell.com>.
+# Copyright (C) 2016-2022 Brandon Castellano <http://www.bcastell.com>.
 #
 # DVR-Scan is licensed under the BSD 2-Clause License; see the included
 # LICENSE file or visit one of the following pages for details:
@@ -580,8 +580,7 @@ class ScanContext(object):
                 in enumerate(self.event_list) ]
             output_strs += [
                 "-------------------------------------------------------------" ]
-            self._logger.info("Scan-only mode specified, list of motion events:\n%s",
-                              '\n'.join(output_strs))
+            self._logger.info("List of motion events:\n%s", '\n'.join(output_strs))
 
             timecode_list = []
             for event_start, event_end, _ in self.event_list:
