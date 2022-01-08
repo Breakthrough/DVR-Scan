@@ -20,7 +20,9 @@ This version of DVR-Scan includes a new, faster background subtraction algorithm
 #### Known Issues
 
  * Variable framerate videos (VFR) are not fully supported, and will yield incorrect timestamps ([#20](https://github.com/Breakthrough/DVR-Scan/issues/20))
-
+ * When using `-tc`/`--time-code` the start of the video may have a frozen timestamp ([#68](https://github.com/Breakthrough/DVR-Scan/issues/68))
+ * The kernel size must be manually adjusted when using `-df`/`--downscale-factor` ([#46](https://github.com/Breakthrough/DVR-Scan/issues/46))
+ * When using `--frame-skip`, the `--min-event-length` parameter must be manually adjusted, and exported clips will have the wrong playback speed
 
 ### 1.2 (March 10, 2021)
 
