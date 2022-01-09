@@ -445,6 +445,9 @@ class ScanContext(object):
             "%d input videos" % len(self._video_paths) if len(self._video_paths) > 1
             else "input video")
 
+        # Length of buffer we require in memory to keep track of all frames required for -l and -tb.
+        buff_len = self._pre_event_len.frame_num + self._min_event_len.frame_num
+
         # Motion event scanning/detection loop.
         while self.running:
             if self._end_time is not None and curr_pos.frame_num >= self._end_time.frame_num:
@@ -503,16 +506,19 @@ class ScanContext(object):
                         if not self._comp_file and not self._scan_only:
                             video_writer.release()
             else:
-                if not self._scan_only:
-                    buffered_frames.append(
-                        (frame_rgb_origin, FrameTimecode(curr_pos.frame_num, curr_pos.framerate)))
-                    buffered_frames = buffered_frames[-self._pre_event_len.frame_num:]
+                buffered_frames.append(
+                    (frame_rgb_origin if not self._scan_only else None,
+                     FrameTimecode(curr_pos.frame_num, curr_pos.framerate)))
+                buffered_frames = buffered_frames[-buff_len:]
                 if len(event_window) >= self._min_event_len.frame_num and all(
                         score >= self._threshold for score in event_window):
                     in_motion_event = True
                     event_window = []
                     num_frames_post_event = 0
-                    event_start = FrameTimecode(curr_pos.frame_num, self._video_fps)
+                    shifted_start = curr_pos.frame_num - len(buffered_frames)
+                    if shifted_start < 0:
+                        shifted_start = 0
+                    event_start = FrameTimecode(shifted_start, self._video_fps)
                     # Open new VideoWriter if needed, write buffered_frames to file.
                     if not self._scan_only:
                         if not self._comp_file or video_writer is None:
@@ -526,7 +532,7 @@ class ScanContext(object):
                             if self._draw_timecode:
                                 self._stamp_text(frame, frame_pos.get_timecode())
                             video_writer.write(frame)
-                        buffered_frames = []
+                    buffered_frames = []
 
             curr_pos.frame_num += 1
             self._frames_processed += 1
