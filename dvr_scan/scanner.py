@@ -226,6 +226,9 @@ class ScanContext(object):
         """ Sets motion event parameters. """
         assert self._video_fps is not None
         self._min_event_len = FrameTimecode(min_event_len, self._video_fps)
+        # Make sure minimum event length is at least 1.
+        if not self._min_event_len.frame_num >= 1:
+            raise ValueError('min_event_len must be >= 1!')
         self._pre_event_len = FrameTimecode(time_pre_event, self._video_fps)
         self._post_event_len = FrameTimecode(time_post_event, self._video_fps)
 
@@ -515,7 +518,9 @@ class ScanContext(object):
                     in_motion_event = True
                     event_window = []
                     num_frames_post_event = 0
-                    shifted_start = curr_pos.frame_num - len(buffered_frames)
+                    # Need to add 1 since the frame is included in buffered_frames
+                    # (i.e. on frame 0, len(buffered_frames) == 1).
+                    shifted_start = 1 + curr_pos.frame_num - len(buffered_frames)
                     if shifted_start < 0:
                         shifted_start = 0
                     event_start = FrameTimecode(shifted_start, self._video_fps)

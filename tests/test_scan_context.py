@@ -37,15 +37,15 @@ from dvr_scan.scanner import ScanContext
 TRAFFIC_CAMERA_ROI = [631, 532, 210, 127]
 # Pairs of frames representing event start/end times.
 TRAFFIC_CAMERA_EVENTS = [
-    (10, 148),
-    (359, 490),
-    (543, 575)
+    (9, 148),
+    (358, 490),
+    (542, 575)
 ]
 
 TRAFFIC_CAMERA_EVENTS_CNT = [
-    (1, 148),
-    (365, 490),
-    (544, 575)
+    (0, 148),
+    (364, 490),
+    (543, 575)
 ]
 
 def test_scan_context(traffic_camera_video):
@@ -53,6 +53,7 @@ def test_scan_context(traffic_camera_video):
 
     sctx = ScanContext([traffic_camera_video])
     sctx.set_detection_params(roi=TRAFFIC_CAMERA_ROI)
+    sctx.set_event_params(min_event_len=4, time_pre_event=0, time_post_event="2s")
 
     event_list = sctx.scan_motion()
 
@@ -68,6 +69,7 @@ def test_scan_context_cnt(traffic_camera_video):
 
     sctx = ScanContext([traffic_camera_video])
     sctx.set_detection_params(roi=TRAFFIC_CAMERA_ROI)
+    sctx.set_event_params(min_event_len=3, time_pre_event=0, time_post_event="2s")
 
     event_list = sctx.scan_motion(method='cnt')
 
