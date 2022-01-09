@@ -12,6 +12,8 @@ DVR-Scan Changelog
      * The `-roi` flag now accepts a maximum window size for the ROI selection window (e.g. `-roi 1920 1080`)
      * If the `screeninfo` package is installed, or you are using a Windows build, videos will automatically be resized to the maximum screen size
  * [bugfix] Fix frozen timestamp at beginning of video ([#68](https://github.com/Breakthrough/DVR-Scan/issues/68), was frozen for time specified by `-tb`/`--time-before`)
+ * [bugfix] Fix output videos not including all of the duration specified by `-tb`/`--time-before` in certain cases ([#68](https://github.com/Breakthrough/DVR-Scan/issues/68)
+ * [bugfix] Fix event start times not reflecting `-l`/`--min-event-length` and `-tb`/`--time-before` ([#68](https://github.com/Breakthrough/DVR-Scan/issues/68)
 
 #### Known Issues
 
