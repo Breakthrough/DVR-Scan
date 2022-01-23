@@ -38,6 +38,7 @@ from __future__ import print_function
 import os
 import time
 import logging
+from tkinter.ttk import Frame
 
 # Third-Party Library Imports
 import cv2
@@ -81,6 +82,7 @@ class ScanContext(object):
         self.running = True         # Allows asynchronous termination of scanning loop.
         self.event_list = []
         self._show_progress = show_progress
+        self._curr_pos = None         # FrameTimecode representing number of decoded frames
 
         # Output Parameters (set_output)
         self._scan_only = True                      # -so/--scan-only
@@ -292,21 +294,22 @@ class ScanContext(object):
         self.set_video_time()
 
 
-    def _get_next_frame(self, retrieve=True):
-        # type: (Optional[bool]) -> Optional[numpy.ndarray]
+    def _get_next_frame(self, retrieve=True, num_retries=5):
+        # type: (Optional[bool], Optional[int]) -> Optional[numpy.ndarray]
         """ Returns a new frame from the current series of video files,
         or None when no more frames are available. """
+
         if self._cap:
             if retrieve:
                 (ret_val, frame) = self._cap.read()
             else:
                 ret_val = self._cap.grab()
                 frame = True
+            self._curr_pos.frame_num += 1
             if ret_val:
                 return frame
-            else:
-                self._cap.release()
-                self._cap = None
+            self._cap.release()
+            self._cap = None
 
         if self._cap is None and len(self._video_paths) > 0:
             self._cap_path = self._video_paths[0]
@@ -364,7 +367,7 @@ class ScanContext(object):
         return NullProgressBar()
 
 
-    def _select_roi(self, curr_time=None, add_timecode=False):
+    def _select_roi(self, add_timecode=False):
         # type: (FrameTimecode, bool) -> bool
         # area selection
         if self._show_roi_window:
@@ -385,8 +388,8 @@ class ScanContext(object):
             # Downscale the image if it's too large for the screen.
             #if self._max_roi_size is not None and frame_for_crop.shape[0]
             if add_timecode:
-                assert curr_time is not None
-                self._stamp_text(frame_for_crop, curr_time.get_timecode())
+                assert self._curr_pos is not None
+                self._stamp_text(frame_for_crop, self._curr_pos.get_timecode())
             roi = cv2.selectROI("DVR-Scan ROI Selection", frame_for_crop)
             cv2.destroyAllWindows()
             if any([coord == 0 for coord in roi[2:]]):
@@ -422,22 +425,21 @@ class ScanContext(object):
             if dot_index > 0:
                 output_prefix = output_prefix[:dot_index]
 
-        curr_pos = FrameTimecode(0, self._video_fps)
+        self._curr_pos = FrameTimecode(0, self._video_fps)
         in_motion_event = False
         self._frames_processed = 0
         processing_start = time.time()
 
         # Seek to starting position if required.
         if self._start_time is not None:
-            while curr_pos.frame_num < self._start_time.frame_num:
+            while self._curr_pos.frame_num < self._start_time.frame_num:
                 if self._get_next_frame(False) is None:
                     break
                 self._frames_processed += 1
-                curr_pos.frame_num += 1
+                self._curr_pos.frame_num += 1
 
         # Show ROI selection window if required.
-        if not self._select_roi(
-            curr_time=curr_pos, add_timecode=self._draw_timecode):
+        if not self._select_roi(add_timecode=self._draw_timecode):
             return
 
         # TQDM-based progress bar, or a stub if in quiet mode (or no TQDM).
@@ -453,19 +455,20 @@ class ScanContext(object):
 
         # Motion event scanning/detection loop.
         while self.running:
-            if self._end_time is not None and curr_pos.frame_num >= self._end_time.frame_num:
+            if self._end_time is not None and self._curr_pos.frame_num >= self._end_time.frame_num:
                 break
             if self._frame_skip > 0:
                 for _ in range(self._frame_skip):
                     if self._get_next_frame(False) is None:
                         break
-                    curr_pos.frame_num += 1
                     self._frames_processed += 1
                     progress_bar.update(1)
             frame_rgb = self._get_next_frame()
             if frame_rgb is None:
                 break
             frame_rgb_origin = frame_rgb
+            # self._curr_pos points to the time at the end of the current frame
+            presentation_time = FrameTimecode(timecode=self._curr_pos.frame_num - 1, fps=self._video_fps)
             # Cut frame to selected sub-set if ROI area provided.
             if self._roi:
                 frame_rgb = frame_rgb[
@@ -493,7 +496,7 @@ class ScanContext(object):
                 # the current scene's post-event counter.
                 if not self._scan_only:
                     if self._draw_timecode:
-                        self._stamp_text(frame_rgb_origin, curr_pos.get_timecode())
+                        self._stamp_text(frame_rgb_origin, self._curr_pos.get_timecode())
                     video_writer.write(frame_rgb_origin)
                 if frame_score >= self._threshold:
                     num_frames_post_event = 0
@@ -501,26 +504,24 @@ class ScanContext(object):
                     num_frames_post_event += 1
                     if num_frames_post_event >= self._post_event_len.frame_num:
                         in_motion_event = False
-                        event_end = FrameTimecode(
-                            curr_pos.frame_num, self._video_fps)
+                        # The event ended on the previous frame, so correct for that.
+                        event_end = presentation_time
+                        # The duration, however, should include the PTS of the end frame.
                         event_duration = FrameTimecode(
-                            curr_pos.frame_num - event_start.frame_num, self._video_fps)
+                            self._curr_pos.frame_num - event_start.frame_num, self._video_fps)
                         self.event_list.append((event_start, event_end, event_duration))
                         if not self._comp_file and not self._scan_only:
                             video_writer.release()
             else:
                 buffered_frames.append(
-                    (frame_rgb_origin if not self._scan_only else None,
-                     FrameTimecode(curr_pos.frame_num, curr_pos.framerate)))
+                    (frame_rgb_origin if not self._scan_only else None, presentation_time))
                 buffered_frames = buffered_frames[-buff_len:]
                 if len(event_window) >= self._min_event_len.frame_num and all(
                         score >= self._threshold for score in event_window):
                     in_motion_event = True
                     event_window = []
                     num_frames_post_event = 0
-                    # Need to add 1 since the frame is included in buffered_frames
-                    # (i.e. on frame 0, len(buffered_frames) == 1).
-                    shifted_start = 1 + curr_pos.frame_num - len(buffered_frames)
+                    shifted_start = self._curr_pos.frame_num - len(buffered_frames)
                     if shifted_start < 0:
                         shifted_start = 0
                     event_start = FrameTimecode(shifted_start, self._video_fps)
@@ -539,17 +540,19 @@ class ScanContext(object):
                             video_writer.write(frame)
                     buffered_frames = []
 
-            curr_pos.frame_num += 1
             self._frames_processed += 1
             progress_bar.update(1)
+
+        # Correct for increment on last call to self._get_next_frame().
+        if self._curr_pos.frame_num > 0:
+            self._curr_pos.frame_num -= 1
 
         # If we're still in a motion event, we still need to compute the duration
         # and ending timecode and add it to the event list.
         if in_motion_event:
-            curr_pos.frame_num -= 1  # Correct for the increment at the end of the loop
-            event_end = FrameTimecode(curr_pos.frame_num, self._video_fps)
+            event_end = FrameTimecode(self._curr_pos.frame_num, self._video_fps)
             event_duration = FrameTimecode(
-                curr_pos.frame_num - event_start.frame_num, self._video_fps)
+                self._curr_pos.frame_num - event_start.frame_num, self._video_fps)
             self.event_list.append((event_start, event_end, event_duration))
 
         if video_writer is not None:

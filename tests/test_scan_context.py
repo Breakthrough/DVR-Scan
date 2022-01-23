@@ -40,27 +40,27 @@ TRAFFIC_CAMERA_ROI = [631, 532, 210, 127]
 TRAFFIC_CAMERA_EVENTS = [
     (9, 148),
     (358, 490),
-    (542, 575)
+    (542, 576)
 ]
 
 TRAFFIC_CAMERA_EVENTS_CNT = [
     (0, 148),
     (364, 490),
-    (543, 575)
+    (543, 576)
 ]
 
 # Pairs of frames representing event start/end times.
 TRAFFIC_CAMERA_EVENTS_TIME_PRE_5 = [
     (4, 148),
     (353, 490),
-    (537, 575)
+    (537, 576)
 ]
 
 # Pairs of frames representing event start/end times.
 TRAFFIC_CAMERA_EVENTS_TIME_POST_40 = [
     (9, 138),
     (358, 480),
-    (542, 575)  # Last event still ends on end of video.
+    (542, 576)  # Last event still ends on end of video.
 ]
 
 
@@ -76,7 +76,7 @@ def test_scan_context(traffic_camera_video):
     assert len(event_list) == len(TRAFFIC_CAMERA_EVENTS)
     # Remove duration, check start/end times.
     event_list = [(event[0].frame_num, event[1].frame_num) for event in event_list]
-    assert all([x == y for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS)])
+    assert event_list == TRAFFIC_CAMERA_EVENTS
 
 
 def test_scan_context_cnt(traffic_camera_video):
@@ -91,7 +91,7 @@ def test_scan_context_cnt(traffic_camera_video):
     assert len(event_list) == len(TRAFFIC_CAMERA_EVENTS_CNT)
     # Remove duration, check start/end times.
     event_list = [(event[0].frame_num, event[1].frame_num) for event in event_list]
-    assert all([x == y for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS_CNT)])
+    assert event_list == TRAFFIC_CAMERA_EVENTS_CNT
 
 
 def test_pre_event_shift(traffic_camera_video):

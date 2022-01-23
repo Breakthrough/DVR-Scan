@@ -6,3 +6,7 @@ simple_movement.mp4:
 traffic_camera.mp4:
     Extracted from https://www.youtube.com/watch?v=wqctLW0Hb_0
     Author: Andrey Nikishaev
+
+issue62.mp4:
+    Provided in https://github.com/Breakthrough/DVR-Scan/issues/62
+    Author: @dany123
