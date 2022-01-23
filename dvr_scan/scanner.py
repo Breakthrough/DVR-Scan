@@ -83,6 +83,7 @@ class ScanContext(object):
         self.event_list = []
         self._show_progress = show_progress
         self._curr_pos = None         # FrameTimecode representing number of decoded frames
+        self._num_corruptions = 0     # The number of times we failed to read a frame
 
         # Output Parameters (set_output)
         self._scan_only = True                      # -so/--scan-only
@@ -300,14 +301,18 @@ class ScanContext(object):
         or None when no more frames are available. """
 
         if self._cap:
-            if retrieve:
-                (ret_val, frame) = self._cap.read()
-            else:
-                ret_val = self._cap.grab()
-                frame = True
-            self._curr_pos.frame_num += 1
-            if ret_val:
-                return frame
+            for i in range(num_retries):
+                if retrieve:
+                    (ret_val, frame) = self._cap.read()
+                else:
+                    ret_val = self._cap.grab()
+                    frame = True
+                if ret_val:
+                    self._curr_pos.frame_num += 1
+                    return frame
+                elif self._frames_total > 0 and self._curr_pos.frame_num >= self._frames_total:
+                    break
+                self._num_corruptions += 1
             self._cap.release()
             self._cap = None
 
@@ -543,10 +548,6 @@ class ScanContext(object):
             self._frames_processed += 1
             progress_bar.update(1)
 
-        # Correct for increment on last call to self._get_next_frame().
-        if self._curr_pos.frame_num > 0:
-            self._curr_pos.frame_num -= 1
-
         # If we're still in a motion event, we still need to compute the duration
         # and ending timecode and add it to the event list.
         if in_motion_event:
@@ -554,6 +555,14 @@ class ScanContext(object):
             event_duration = FrameTimecode(
                 self._curr_pos.frame_num - event_start.frame_num, self._video_fps)
             self.event_list.append((event_start, event_end, event_duration))
+
+        # Allow up to 1 corrupt/failed decoded frame without triggering an error.
+        if self._num_corruptions > 1:
+            self._logger.error(
+                "Failed to decode %d frame(s) from video, result may be incorrect. "
+                "Try re-encoding or remuxing video (e.g. ffmpeg -i video.mp4 -c:v copy out.mp4). "
+                "See https://github.com/Breakthrough/DVR-Scan/issues/62 for details.",
+                self._num_corruptions)
 
         if video_writer is not None:
             video_writer.release()
