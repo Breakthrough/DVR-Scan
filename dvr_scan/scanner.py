@@ -38,7 +38,6 @@ from __future__ import print_function
 import os
 import time
 import logging
-from tkinter.ttk import Frame
 
 # Third-Party Library Imports
 import cv2
