@@ -14,6 +14,9 @@ DVR-Scan Changelog
  * [bugfix] Fix frozen timestamp at beginning of video ([#68](https://github.com/Breakthrough/DVR-Scan/issues/68), was frozen for time specified by `-tb`/`--time-before`)
  * [bugfix] Fix output videos not including all of the duration specified by `-tb`/`--time-before` in certain cases ([#68](https://github.com/Breakthrough/DVR-Scan/issues/68)
  * [bugfix] Fix event start times not reflecting `-l`/`--min-event-length` and `-tb`/`--time-before` ([#68](https://github.com/Breakthrough/DVR-Scan/issues/68)
+ * [bugfix] Scanning no longer stops suddenly after a frame fails to decode ([#62](https://github.com/Breakthrough/DVR-Scan/issues/62))
+     * If more than 1 corrupt frame is found, a warning will be displayed with the number of frame decode failures
+     * If more than 5 frames in a row fail to be decoded, processing will stop and display an error
 
 #### Known Issues
 
