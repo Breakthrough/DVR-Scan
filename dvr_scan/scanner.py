@@ -36,6 +36,7 @@ DVR-Scan program logic, as well as the motion detection algorithm.
 # Standard Library Imports
 from __future__ import print_function
 import os
+import os.path
 import time
 import logging
 
@@ -536,6 +537,10 @@ class ScanContext(object):
                             output_path = (
                                 self._comp_file if self._comp_file else
                                 '%s.DSME_%04d.avi' % (output_prefix, len(self.event_list)))
+                            # Ensure the target folder exists before attempting to write the video.
+                            if self._comp_file:
+                                output_folder = os.path.split(os.path.abspath(output_path))[0]
+                                os.makedirs(output_folder, exist_ok=True)
                             video_writer = cv2.VideoWriter(
                                 output_path, self._fourcc, self._video_fps,
                                 self._video_resolution)

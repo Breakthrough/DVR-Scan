@@ -283,7 +283,7 @@ def get_cli_parser():
 
     parser.add_argument(
         '-i', '--input', metavar='VIDEO_FILE',
-        required=True, type=argparse.FileType('r'), action='append',
+        required=True, type=str, action='append',
         help=('[REQUIRED] Path to input video. May be specified multiple'
               ' times to join several videos with the same resolution'
               ' and framerate. Any output filenames will be generated'
@@ -291,7 +291,7 @@ def get_cli_parser():
 
     parser.add_argument(
         '-o', '--output', metavar='OUTPUT_VIDEO.avi',
-        type=argparse.FileType('w'),
+        type=str,
         help=('If specified, all motion events will be written to a single'
               ' file, creating a compilation of only the frames in'
               ' the input video containing motion. By default each'
@@ -412,19 +412,6 @@ def get_cli_parser():
               ' Improves performance, at expense of frame and time accuracy,'
               ' and may increase probability of missing motion events.'
               ' If required, values above 1 or 2 are not recommended.'))
-
-    #parser.add_argument(
-    #    '-u', '--update-rate', metavar='interval', dest='update_rate',
-    #    type=int_type_check(0, None, 'interval'), default=0,
-    #    help=('Prints a status message at the specified interval,'
-    #          ' including performance and position information.'))
-
-    #parser.add_argument(
-    #    '-si', '--save-images', dest='save_images',
-    #    action='store_true', default=False,
-    #    help=('If set, the first and last frames in each detected motion'
-    #          ' event will be saved to disk. Images will be saved in the'
-    #          ' same folder as the input video, unless set otherwise.'))
 
     parser.add_argument(
         '-tc', '--time-code', dest='draw_timecode',

@@ -39,7 +39,8 @@ Provides entry point for DVR-Scan's command-line interface (CLI).
 
 # Standard Library Imports
 from __future__ import print_function
-import logging
+import os
+import os.path
 import sys
 
 # DVR-Scan Library Imports
@@ -49,21 +50,17 @@ from dvr_scan.scanner import ScanContext
 from dvr_scan.scanner import VideoLoadFailure
 from dvr_scan.platform import cnt_is_available
 
-def parse_cli_args():
-    """ Parses all given arguments, returning the object containing
-    all options as properties. """
-    # Parse the user-supplied CLI arguments.
-    args = get_cli_parser().parse_args()
 
-    # We close any opened file handles, as only the paths are required,
-    # and replace the file handles with the path as a string.
-    for input_file in args.input:
-        input_file.close()
-    args.input = [ handle.name for handle in args.input ]
-    if args.output:
-        args.output.close()
-        args.output = args.output.name
-    return args
+def validate_cli_args(args, logger):
+    """ Validates command line options, returning a boolean indicating if the validation succeeded,
+    and a set of validated options. """
+    for file in args.input:
+        if not os.path.exists(file):
+            logger.error("Error: Input file does not exist:\n  %s", file)
+            return False, None
+    if args.output and not '.' in args.output:
+            args.output += '.avi'
+    return True, args
 
 
 def main():
@@ -71,8 +68,14 @@ def main():
 
     Handles high-level interfacing of video IO and motion event detection.
     """
-    args = parse_cli_args()
+    # Parse the user-supplied CLI arguments and init the logger.
+    args = get_cli_parser().parse_args()
     logger = init_logger(args.quiet_mode)
+    # Validate arguments and then continue.
+    validated, args = validate_cli_args(args, logger)
+
+    if not validated:
+        return 1
 
     try:
         if args.bg_subtractor == 'cnt' and not cnt_is_available():
@@ -113,9 +116,13 @@ def main():
     except VideoLoadFailure:
         # Error information is logged in ScanContext when this exception is raised.
         logger.error('Failed to load input, see above output for details.')
+        return 1
 
     except ValueError as ex:
         logger.error(ex)
+        return 1
+
+    return 0
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

@@ -8,6 +8,7 @@ DVR-Scan Changelog
 
 #### Changelog
 
+ * [bugfix] Processing errors should now return a non-zero exit code
  * [bugfix] Allow a maximum window size to be set when using `-roi` ([#59](https://github.com/Breakthrough/DVR-Scan/issues/59)):
      * The `-roi` flag now accepts a maximum window size for the ROI selection window (e.g. `-roi 1920 1080`)
      * If the `screeninfo` package is installed, or you are using a Windows build, videos will automatically be resized to the maximum screen size
@@ -17,6 +18,7 @@ DVR-Scan Changelog
  * [bugfix] Scanning no longer stops suddenly after a frame fails to decode ([#62](https://github.com/Breakthrough/DVR-Scan/issues/62))
      * If more than 1 corrupt frame is found, a warning will be displayed with the number of frame decode failures
      * If more than 5 frames in a row fail to be decoded, processing will stop and display an error
+ * [bugfix] When specifying `-o/--output` a file is no longer created when no events are detected
 
 #### Known Issues
 
