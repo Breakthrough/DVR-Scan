@@ -298,9 +298,10 @@ class ScanContext(object):
         # type: (Optional[bool], Optional[int]) -> Optional[numpy.ndarray]
         """ Returns a new frame from the current series of video files,
         or None when no more frames are available. """
+        assert num_retries >= 0
 
         if self._cap:
-            for i in range(num_retries):
+            for _ in range(num_retries + 1):
                 if retrieve:
                     (ret_val, frame) = self._cap.read()
                 else:
