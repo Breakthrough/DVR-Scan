@@ -121,3 +121,11 @@ def test_post_event_shift(traffic_camera_video):
     event_list = [(event[0].frame_num, event[1].frame_num) for event in event_list]
     assert all([x == y for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS_TIME_POST_40)])
 
+
+def test_decode_corrupt_video(corrupt_video):
+    """Ensure we can process a video with a single bad frame."""
+    sctx = ScanContext([corrupt_video])
+    sctx.set_detection_params(roi=[0, 0, 32, 32])   # Small ROI for quicker processing
+    event_list = sctx.scan_motion()
+    # Make sure we got a motion event instead of stopping early.
+    assert len(event_list) > 0

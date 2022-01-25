@@ -61,3 +61,9 @@ def traffic_camera_video():
     # type: () -> str
     """ Returns path to traffic_camera.mp4 video. """
     return get_absolute_path("resources/traffic_camera.mp4")
+
+@pytest.fixture
+def corrupt_video():
+    # type: () -> str
+    """ Returns path to issue62.mp4 video. """
+    return get_absolute_path("resources/issue62.mp4")
