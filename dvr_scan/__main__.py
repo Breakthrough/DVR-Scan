@@ -60,6 +60,8 @@ def validate_cli_args(args, logger):
             return False, None
     if args.output and not '.' in args.output:
             args.output += '.avi'
+    if args.kernel_size < 0:
+        args.kernel_size = None
     return True, args
 
 

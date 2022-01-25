@@ -39,6 +39,7 @@ import os
 import os.path
 import time
 import logging
+import math
 
 # Third-Party Library Imports
 import cv2
@@ -52,10 +53,35 @@ import dvr_scan.platform
 DEFAULT_VIDEOWRITER_CODEC = cv2.VideoWriter_fourcc('X', 'V', 'I', 'D')
 
 
+def create_kernel(frame_width, kernel_size=None, downscale_factor=1):
+    # type: (int, int, int) -> numpy.ndarray
+    """ Creates a numpy array to use as a kernel for a morphological filter. If kernel_size is
+    None, the value is calculated automatically based on the video resolution. If downscale_factor
+    is set, the resulting kernel size will be reduced accordingly. """
+    assert kernel_size is None or kernel_size >= 3
+    if kernel_size is None:     # Auto-set based on video resolution
+        video_width = frame_width / float(downscale_factor)
+        if video_width >= 1920:
+            kernel_size = 7
+        elif video_width >= 1280:
+            kernel_size = 5
+        else:
+            kernel_size = 3
+    elif downscale_factor > 1:
+        # Correct kernel size for downscale factor
+        new_factor = kernel_size / downscale_factor
+        if new_factor > 3:
+            new_factor = math.floor(new_factor)
+            if new_factor % 2 == 0:
+                new_factor -= 1
+        kernel_size = new_factor if new_factor > 3 else 3
+    return np.ones((kernel_size, kernel_size), np.uint8)
+
+
 class VideoLoadFailure(Exception):
     """ Raised when the input video(s) fail to load. """
     def __init__(self, message="One or more videos(s) failed to load!"):
-        # type: (str)
+        # type: (str) -> None
         super(VideoLoadFailure, self).__init__(message)
 
 
@@ -65,7 +91,7 @@ class ScanContext(object):
     and coordinating overall application logic (via scan_motion()). """
 
     def __init__(self, input_videos, frame_skip=0, show_progress=False):
-        # type: (..., bool) -> None
+        # type: (List[str], int, bool) -> None
         """ Initializes the ScanContext with the supplied arguments.
 
         Arguments:
@@ -93,7 +119,7 @@ class ScanContext(object):
 
         # Motion Detection Parameters (set_detection_params)
         self._threshold = 0.15                      # -t/--threshold
-        self._kernel = None                         # -k/--kernel-size
+        self._kernel_size = None                    # -k/--kernel-size
         self._downscale_factor = 1                  # -df/--downscale-factor
         self._roi = None                            # --roi
         self._max_roi_size = dvr_scan.platform.get_min_screen_bounds()
@@ -149,7 +175,7 @@ class ScanContext(object):
 
     def set_detection_params(self, threshold=0.15, kernel_size=None,
                              downscale_factor=1, roi=None):
-        # type: (float, int, int) -> None
+        # type: (float, int, int, List[int]) -> None
         """ Sets motion detection parameters.
 
         Arguments:
@@ -159,11 +185,9 @@ class ScanContext(object):
                 threshold is too high, some movement in the scene may not be
                 detected, while a threshold too low can trigger a false events.
             kernel_size (int): Size in pixels of the noise reduction kernel.
-                Must be an odd integer greater than 1. If not set, will
+                Must be an odd integer greater than 1. If None, size will
                 automatically be calculated based on input video resolution.
                 If too large, some movement in the scene may not be detected.
-                Values < 0 are treated as if kernel_size is None. If kernel_size
-                is set to 0, no noise reduction is performed.
             downscale_factor (int): Factor to downscale (shrink) video before
                 processing, to improve performance. For example, if input video
                 resolution is 1024 x 400, and factor=2, each frame is reduced to'
@@ -184,19 +208,10 @@ class ScanContext(object):
             raise ValueError("Error: Downscale factor must be at least 1.")
         self._downscale_factor = downscale_factor
 
-        if kernel_size is None or kernel_size < 0:
-            # If kernel_size is None, set based on video resolution.
-            video_width = self._video_resolution[0] / float(self._downscale_factor)
-            if video_width >= 1920:
-                kernel_size = 7
-            elif video_width >= 1280:
-                kernel_size = 5
-            else:
-                kernel_size = 3
-        if (kernel_size % 2) == 0:
-            raise ValueError("Error: kernel_size must be odd (or None)")
-        self._kernel = None if kernel_size == 0 else (
-            np.ones((kernel_size, kernel_size), np.uint8))
+        if not kernel_size is None:
+            if kernel_size < 3 or (kernel_size % 2) == 0:
+                raise ValueError("Error: kernel_size must be odd number greater than 1, or None")
+        self._kernel_size = kernel_size
 
         # Validate ROI.
         error_string = (
@@ -448,18 +463,21 @@ class ScanContext(object):
         if not self._select_roi(add_timecode=self._draw_timecode):
             return
 
-        # TQDM-based progress bar, or a stub if in quiet mode (or no TQDM).
-        progress_bar = self._create_progress_bar(
-            show_progress=self._show_progress, num_frames=self._frames_total)
-
-        self._logger.info("Scanning %s for motion events...",
-            "%d input videos" % len(self._video_paths) if len(self._video_paths) > 1
-            else "input video")
+        # Kernel size to use with morphological filter for noise reduction.
+        kernel = create_kernel(self._video_resolution[0], self._kernel_size, self._downscale_factor)
 
         # Length of buffer we require in memory to keep track of all frames required for -l and -tb.
         buff_len = self._pre_event_len.frame_num + self._min_event_len.frame_num
 
-        # Motion event scanning/detection loop.
+        # Motion event scanning/detection loop. Need to avoid CLI output/logging until end of the
+        # main scanning loop below, otherwise it will interrupt the progress bar.
+        self._logger.info("Scanning %s for motion events...",
+            "%d input videos" % len(self._video_paths) if len(self._video_paths) > 1
+            else "input video")
+
+        progress_bar = self._create_progress_bar(
+            show_progress=self._show_progress, num_frames=self._frames_total)
+
         while self.running:
             if self._end_time is not None and self._curr_pos.frame_num >= self._end_time.frame_num:
                 break
@@ -485,12 +503,10 @@ class ScanContext(object):
                 frame_rgb = frame_rgb[
                     ::self._downscale_factor, ::self._downscale_factor, :]
 
+            # Process frame and calculate score (relative amount of motion).
             frame_gray = cv2.cvtColor(frame_rgb, cv2.COLOR_BGR2GRAY)
             frame_mask = bg_subtractor.apply(frame_gray)
-            if self._kernel is not None:
-                frame_filt = cv2.morphologyEx(frame_mask, cv2.MORPH_OPEN, self._kernel)
-            else:
-                frame_filt = frame_mask
+            frame_filt = cv2.morphologyEx(frame_mask, cv2.MORPH_OPEN, kernel)
             frame_score = np.sum(frame_filt) / float(frame_filt.shape[0] * frame_filt.shape[1])
             event_window.append(frame_score)
             event_window = event_window[-self._min_event_len.frame_num:]
