@@ -107,6 +107,8 @@ class ScanContext(object):
 
         self.running = True         # Allows asynchronous termination of scanning loop.
         self.event_list = []
+        self._video_writer = None   # Current cv2.VideoWriter for video export
+
         self._show_progress = show_progress
         self._curr_pos = None         # FrameTimecode representing number of decoded frames
         self._num_corruptions = 0     # The number of times we failed to read a frame
@@ -116,6 +118,7 @@ class ScanContext(object):
         self._comp_file = None                      # -o/--output
         self._fourcc = DEFAULT_VIDEOWRITER_CODEC    # -c/--codec
         self._draw_timecode = False                 # -tc/--time-code
+        self._output_prefix = ''
 
         # Motion Detection Parameters (set_detection_params)
         self._threshold = 0.15                      # -t/--threshold
@@ -424,9 +427,42 @@ class ScanContext(object):
             self._logger.info("ROI selected (x,y,w,h): %s", str(self._roi))
         return True
 
+    def _set_output_prefix(self, video_path):
+        self._output_prefix = ''
+        if not self._comp_file:
+            output_prefix = os.path.basename(video_path)
+            dot_index = output_prefix.rfind('.')
+            if dot_index > 0:
+                output_prefix = output_prefix[:dot_index]
+            self._output_prefix = output_prefix
+
+    def _init_video_writer(self):
+        """ Create a new self._video_writer that will write frames to the correct output location.
+
+        Precondition: self._video_writer must be None already. """
+        # type: () -> None
+        assert self._video_writer is None
+        output_path = (
+            self._comp_file if self._comp_file else
+            '%s.DSME_%04d.avi' % (self._output_prefix, len(self.event_list)))
+        # Ensure the target folder exists before attempting to write the video.
+        if self._comp_file:
+            output_folder = os.path.split(os.path.abspath(output_path))[0]
+            os.makedirs(output_folder, exist_ok=True)
+        self._video_writer = cv2.VideoWriter(
+            output_path, self._fourcc, self._video_fps,
+            self._video_resolution)
+
+    def _write_frame(self, frame, frame_pos=None):
+        # type: (np.ndarray, Optional[FrameTimecode]) -> None
+        assert self._video_writer is not None
+        if self._draw_timecode:
+            position = self._curr_pos if frame_pos is None else frame_pos
+            self._stamp_text(frame, position.get_timecode())
+        self._video_writer.write(frame)
 
     def scan_motion(self, method='mog'):
-        # type: () -> None
+        # type: (Optional[str]) -> None
         """ Performs motion analysis on the ScanContext's input video(s). """
         if method.lower() == 'cnt':
             bg_subtractor = cv2.bgsegm.createBackgroundSubtractorCNT()
@@ -437,14 +473,7 @@ class ScanContext(object):
         self.event_list = []
         num_frames_post_event = 0
         event_start = None
-
-        video_writer = None
-        output_prefix = ''
-        if not self._comp_file and len(self._video_paths[0]) > 0:
-            output_prefix = os.path.basename(self._video_paths[0])
-            dot_index = output_prefix.rfind('.')
-            if dot_index > 0:
-                output_prefix = output_prefix[:dot_index]
+        self._set_output_prefix(self._video_paths[0])
 
         self._curr_pos = FrameTimecode(0, self._video_fps)
         in_motion_event = False
@@ -517,9 +546,7 @@ class ScanContext(object):
                 # if the current frame doesn't meet the threshold, increment
                 # the current scene's post-event counter.
                 if not self._scan_only:
-                    if self._draw_timecode:
-                        self._stamp_text(frame_rgb_origin, self._curr_pos.get_timecode())
-                    video_writer.write(frame_rgb_origin)
+                    self._write_frame(frame_rgb_origin)
                 if frame_score >= self._threshold:
                     num_frames_post_event = 0
                 else:
@@ -532,8 +559,9 @@ class ScanContext(object):
                         event_duration = FrameTimecode(
                             self._curr_pos.frame_num - event_start.frame_num, self._video_fps)
                         self.event_list.append((event_start, event_end, event_duration))
-                        if not self._comp_file and not self._scan_only:
-                            video_writer.release()
+                        if not self._comp_file and self._video_writer is not None:
+                            self._video_writer.release()
+                            self._video_writer = None
             else:
                 buffered_frames.append(
                     (frame_rgb_origin if not self._scan_only else None, presentation_time))
@@ -549,21 +577,10 @@ class ScanContext(object):
                     event_start = FrameTimecode(shifted_start, self._video_fps)
                     # Open new VideoWriter if needed, write buffered_frames to file.
                     if not self._scan_only:
-                        if not self._comp_file or video_writer is None:
-                            output_path = (
-                                self._comp_file if self._comp_file else
-                                '%s.DSME_%04d.avi' % (output_prefix, len(self.event_list)))
-                            # Ensure the target folder exists before attempting to write the video.
-                            if self._comp_file:
-                                output_folder = os.path.split(os.path.abspath(output_path))[0]
-                                os.makedirs(output_folder, exist_ok=True)
-                            video_writer = cv2.VideoWriter(
-                                output_path, self._fourcc, self._video_fps,
-                                self._video_resolution)
+                        if self._video_writer is None:
+                            self._init_video_writer()
                         for frame, frame_pos in buffered_frames:
-                            if self._draw_timecode:
-                                self._stamp_text(frame, frame_pos.get_timecode())
-                            video_writer.write(frame)
+                            self._write_frame(frame, frame_pos)
                     buffered_frames = []
 
             self._frames_processed += 1
@@ -585,8 +602,9 @@ class ScanContext(object):
                 "See https://github.com/Breakthrough/DVR-Scan/issues/62 for details.",
                 self._num_corruptions)
 
-        if video_writer is not None:
-            video_writer.release()
+        if self._video_writer is not None:
+            self._video_writer.release()
+            self._video_writer = None
         if progress_bar is not None:
             progress_bar.close()
 
