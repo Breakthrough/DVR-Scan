@@ -449,8 +449,11 @@ class ScanContext(object):
         if self._comp_file:
             output_folder = os.path.split(os.path.abspath(output_path))[0]
             os.makedirs(output_folder, exist_ok=True)
+        effective_framerate = (
+            self._video_fps if self._frame_skip < 1
+            else self._video_fps / (1 + self._frame_skip))
         self._video_writer = cv2.VideoWriter(
-            output_path, self._fourcc, self._video_fps,
+            output_path, self._fourcc, effective_framerate,
             self._video_resolution)
 
     def _write_frame(self, frame, frame_pos=None):

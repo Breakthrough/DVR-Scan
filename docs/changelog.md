@@ -20,6 +20,7 @@ DVR-Scan Changelog
      * If more than 5 frames in a row fail to be decoded, processing will stop and display an error
  * [bugfix] When specifying `-o/--output` a file is no longer created when no events are detected
  * [enhancement] `-k`/`--kernel-size` is now relative to the original video resolution, and if `-df`/`--downscale-factor` is set will be reduced accordingly ([#46](https://github.com/Breakthrough/DVR-Scan/issues/46))
+ * [bugfix] Output videos now have the correct playback speed when using `-fs`/`--frame-skip` by reducing the framerate ([#70](https://github.com/Breakthrough/DVR-Scan/issues/70))
 
 #### Known Issues
 
