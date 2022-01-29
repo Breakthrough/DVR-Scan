@@ -249,7 +249,7 @@ class ScanContext(object):
         self._min_event_len = FrameTimecode(min_event_len, self._video_fps)
         # Make sure minimum event length is at least 1.
         if not self._min_event_len.frame_num >= 1:
-            raise ValueError('min_event_len must be >= 1!')
+            raise ValueError('min_event_len must be >= 1 frame!')
         self._pre_event_len = FrameTimecode(time_pre_event, self._video_fps)
         self._post_event_len = FrameTimecode(time_post_event, self._video_fps)
 
@@ -498,8 +498,14 @@ class ScanContext(object):
         # Kernel size to use with morphological filter for noise reduction.
         kernel = create_kernel(self._video_resolution[0], self._kernel_size, self._downscale_factor)
 
+        # Correct pre/post and minimum event lengths to account for frame skip factor.
+        post_event_len = self._post_event_len.frame_num // (self._frame_skip + 1)
+        pre_event_len = self._pre_event_len.frame_num // (self._frame_skip + 1)
+        # min_event_len must be at least 1
+        min_event_len = max(self._min_event_len.frame_num // (self._frame_skip + 1), 1)
+
         # Length of buffer we require in memory to keep track of all frames required for -l and -tb.
-        buff_len = self._pre_event_len.frame_num + self._min_event_len.frame_num
+        buff_len = pre_event_len + min_event_len
 
         # Motion event scanning/detection loop. Need to avoid CLI output/logging until end of the
         # main scanning loop below, otherwise it will interrupt the progress bar.
@@ -541,7 +547,7 @@ class ScanContext(object):
             frame_filt = cv2.morphologyEx(frame_mask, cv2.MORPH_OPEN, kernel)
             frame_score = np.sum(frame_filt) / float(frame_filt.shape[0] * frame_filt.shape[1])
             event_window.append(frame_score)
-            event_window = event_window[-self._min_event_len.frame_num:]
+            event_window = event_window[-min_event_len:]
 
             if in_motion_event:
                 # in event or post event, write all queued frames to file,
@@ -554,7 +560,7 @@ class ScanContext(object):
                     num_frames_post_event = 0
                 else:
                     num_frames_post_event += 1
-                    if num_frames_post_event >= self._post_event_len.frame_num:
+                    if num_frames_post_event >= post_event_len:
                         in_motion_event = False
                         # The event ended on the previous frame, so correct for that.
                         event_end = presentation_time
@@ -569,7 +575,7 @@ class ScanContext(object):
                 buffered_frames.append(
                     (frame_rgb_origin if not self._scan_only else None, presentation_time))
                 buffered_frames = buffered_frames[-buff_len:]
-                if len(event_window) >= self._min_event_len.frame_num and all(
+                if len(event_window) >= min_event_len and all(
                         score >= self._threshold for score in event_window):
                     in_motion_event = True
                     event_window = []

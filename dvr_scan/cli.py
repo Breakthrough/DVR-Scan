@@ -411,7 +411,8 @@ def get_cli_parser():
         help=('Number of frames to skip after processing a given frame.'
               ' Improves performance, at expense of frame and time accuracy,'
               ' and may increase probability of missing motion events.'
-              ' If required, values above 1 or 2 are not recommended.'))
+              ' If set, -l, -tb, and -tp will all be scaled relative to the source'
+              ' framerate. Values above 1 or 2 are not recommended.'))
 
     parser.add_argument(
         '-tc', '--time-code', dest='draw_timecode',

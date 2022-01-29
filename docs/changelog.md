@@ -12,15 +12,16 @@ DVR-Scan Changelog
  * [bugfix] Allow a maximum window size to be set when using `-roi` ([#59](https://github.com/Breakthrough/DVR-Scan/issues/59)):
      * The `-roi` flag now accepts a maximum window size for the ROI selection window (e.g. `-roi 1920 1080`)
      * If the `screeninfo` package is installed, or you are using a Windows build, videos will automatically be resized to the maximum screen size
- * [bugfix] Fix frozen timestamp at beginning of video ([#68](https://github.com/Breakthrough/DVR-Scan/issues/68), was frozen for time specified by `-tb`/`--time-before`)
+ * [bugfix] Fix frozen timestamp at beginning of video ([#68](https://github.com/Breakthrough/DVR-Scan/issues/68))
  * [bugfix] Fix output videos not including all of the duration specified by `-tb`/`--time-before` in certain cases ([#68](https://github.com/Breakthrough/DVR-Scan/issues/68)
  * [bugfix] Fix event start times not reflecting `-l`/`--min-event-length` and `-tb`/`--time-before` ([#68](https://github.com/Breakthrough/DVR-Scan/issues/68)
  * [bugfix] Scanning no longer stops suddenly after a frame fails to decode ([#62](https://github.com/Breakthrough/DVR-Scan/issues/62))
      * If more than 1 corrupt frame is found, a warning will be displayed with the number of frame decode failures
      * If more than 5 frames in a row fail to be decoded, processing will stop and display an error
- * [bugfix] When specifying `-o/--output` a file is no longer created when no events are detected
- * [enhancement] `-k`/`--kernel-size` is now relative to the original video resolution, and if `-df`/`--downscale-factor` is set will be reduced accordingly ([#46](https://github.com/Breakthrough/DVR-Scan/issues/46))
+ * [bugfix] When no events have been found, an empty file is no longer created if `-o/--output` is specified
+ * [enhancement] `-k`/`--kernel-size` is now relative to the original video resolution, and will be reduced to adjust for `-df`/`--downscale-factor` if set ([#46](https://github.com/Breakthrough/DVR-Scan/issues/46))
  * [bugfix] Output videos now have the correct playback speed when using `-fs`/`--frame-skip` by reducing the framerate ([#70](https://github.com/Breakthrough/DVR-Scan/issues/70))
+ * [bugfix] The `-l`/`--min-event-length`, `-tb`/`--time-before-event`, and `-tp`/`--time-post-event` parameters are now adjusted to compensate for `-fs`/`--frame-skip` if set ([#70](https://github.com/Breakthrough/DVR-Scan/issues/70))
 
 #### Known Issues
 
