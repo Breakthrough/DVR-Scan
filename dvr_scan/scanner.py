@@ -52,6 +52,18 @@ import dvr_scan.platform
 
 DEFAULT_VIDEOWRITER_CODEC = cv2.VideoWriter_fourcc('X', 'V', 'I', 'D')
 
+# Used to calculate minimum size of a bounding box, in pixels, respective to the largest
+# resolution dimension of the input video.
+DEFAULT_MIN_BOUNDING_BOX_RATIO = 0.032
+
+# Used to calculate bounding box thickness, in pixels, respective to the largest
+# resolution dimension of the input video.
+DEFAULT_BOUNDING_BOX_THICKNESS_RATIO = 0.0032
+
+# Default bounding box colour.
+# Tuple of (B, G, R) values in [0, 255]
+DEFAULT_BOUNDING_BOX_COLOUR = (0, 0, 255)
+
 
 def create_kernel(frame_width, kernel_size=None, downscale_factor=1):
     # type: (int, int, int) -> numpy.ndarray
@@ -118,6 +130,7 @@ class ScanContext(object):
         self._comp_file = None                      # -o/--output
         self._fourcc = DEFAULT_VIDEOWRITER_CODEC    # -c/--codec
         self._draw_timecode = False                 # -tc/--time-code
+        self._draw_bounding_box = False             # TODO(v1.4): #31
         self._output_prefix = ''
 
         # Motion Detection Parameters (set_detection_params)
@@ -347,7 +360,6 @@ class ScanContext(object):
 
         return None
 
-
     def _stamp_text(self, frame, text, line=0):
         # type: (numpy.ndarray, str, Optional[int]) -> None
         font = cv2.FONT_HERSHEY_SIMPLEX
@@ -367,6 +379,35 @@ class ScanContext(object):
                       (margin + text_width, margin + text_height + 2), (0, 0, 0), -1)
         cv2.putText(frame, text, text_pos, font, font_scale, color, thickness)
 
+    def _stamp_bounding_box(self, frame, motion_mask):
+        bounding_box = cv2.boundingRect(motion_mask)
+        top_left = (
+            bounding_box[0] * self._downscale_factor,
+            bounding_box[1] * self._downscale_factor
+        )
+        bottom_right = (
+            (bounding_box[0]+bounding_box[2]) * self._downscale_factor,
+            (bounding_box[1]+bounding_box[3]) * self._downscale_factor
+        )
+        max_frame_side = max(frame.shape[0], frame.shape[1])
+        thickness = max(1, round(DEFAULT_BOUNDING_BOX_THICKNESS_RATIO * max_frame_side))
+        # If bounding box is too small, resize it.
+        min_box_size = max(1, round(DEFAULT_MIN_BOUNDING_BOX_RATIO * max_frame_side))
+        correction_x = min_box_size - bounding_box[2] if bounding_box[2] < min_box_size else 0
+        correction_y = min_box_size - bounding_box[3] if bounding_box[3] < min_box_size else 0
+        top_left = (top_left[0] - correction_x // 2, top_left[1] - correction_y // 2)
+        bottom_right = (bottom_right[0] + correction_x // 2, bottom_right[1] + correction_y // 2)
+        # Shift if ROI was set
+        if self._roi:
+            top_left = (top_left[0] + self._roi[0], top_left[1] +  self._roi[1])
+            bottom_right = (bottom_right[0] + self._roi[0], bottom_right[1] + self._roi[1])
+        # Ensure coordinates are all >= 0 (greater than frame size is okay and will be handled
+        # gracefully by cv2.rectangle below.
+        top_left = (max(0, top_left[0]), max(0, top_left[1]))
+        bottom_right = (max(0, bottom_right[0]), max(0, bottom_right[1]))
+
+        cv2.rectangle(frame, top_left, bottom_right, DEFAULT_BOUNDING_BOX_COLOUR,
+                      thickness=thickness)
 
     def _create_progress_bar(self, show_progress, num_frames):
         # type: (bool, int) -> tqdm.tqdm
@@ -456,12 +497,14 @@ class ScanContext(object):
             output_path, self._fourcc, effective_framerate,
             self._video_resolution)
 
-    def _write_frame(self, frame, frame_pos=None):
-        # type: (np.ndarray, Optional[FrameTimecode]) -> None
+    def _write_frame(self, frame, frame_pos=None, motion_mask=None):
+        # type: (np.ndarray, Optional[FrameTimecode], Optional[np.ndarray]) -> None
         assert self._video_writer is not None
         if self._draw_timecode:
             position = self._curr_pos if frame_pos is None else frame_pos
             self._stamp_text(frame, position.get_timecode())
+        if self._draw_bounding_box and motion_mask is not None:
+            self._stamp_bounding_box(frame, motion_mask)
         self._video_writer.write(frame)
 
     def scan_motion(self, method='mog'):
@@ -550,13 +593,12 @@ class ScanContext(object):
             event_window = event_window[-min_event_len:]
 
             if in_motion_event:
-                # in event or post event, write all queued frames to file,
-                # and write current frame to file.
-                # if the current frame doesn't meet the threshold, increment
-                # the current scene's post-event counter.
+                above_threshold = frame_score >= self._threshold
                 if not self._scan_only:
-                    self._write_frame(frame_rgb_origin)
-                if frame_score >= self._threshold:
+                    # Ensure we only draw a bounding box for frames that are above the threshold.
+                    self._write_frame(
+                        frame_rgb_origin, motion_mask=frame_filt if above_threshold else None)
+                if above_threshold:
                     num_frames_post_event = 0
                 else:
                     num_frames_post_event += 1
@@ -589,7 +631,7 @@ class ScanContext(object):
                         if self._video_writer is None:
                             self._init_video_writer()
                         for frame, frame_pos in buffered_frames:
-                            self._write_frame(frame, frame_pos)
+                            self._write_frame(frame, frame_pos=frame_pos)
                     buffered_frames = []
 
             self._frames_processed += 1
