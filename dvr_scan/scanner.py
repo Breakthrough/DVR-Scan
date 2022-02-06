@@ -47,22 +47,11 @@ import numpy as np
 
 # DVR-Scan Library Imports
 from dvr_scan.timecode import FrameTimecode
+from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
 import dvr_scan.platform
 
 
 DEFAULT_VIDEOWRITER_CODEC = cv2.VideoWriter_fourcc('X', 'V', 'I', 'D')
-
-# Used to calculate minimum size of a bounding box, in pixels, respective to the largest
-# resolution dimension of the input video.
-DEFAULT_MIN_BOUNDING_BOX_RATIO = 0.032
-
-# Used to calculate bounding box thickness, in pixels, respective to the largest
-# resolution dimension of the input video.
-DEFAULT_BOUNDING_BOX_THICKNESS_RATIO = 0.0032
-
-# Default bounding box colour.
-# Tuple of (B, G, R) values in [0, 255]
-DEFAULT_BOUNDING_BOX_COLOUR = (0, 0, 255)
 
 
 def create_kernel(frame_width, kernel_size=None, downscale_factor=1):
@@ -129,9 +118,12 @@ class ScanContext(object):
         self._scan_only = True                      # -so/--scan-only
         self._comp_file = None                      # -o/--output
         self._fourcc = DEFAULT_VIDEOWRITER_CODEC    # -c/--codec
-        self._draw_timecode = False                 # -tc/--time-code
-        self._draw_bounding_box = False             # TODO(v1.4): #31
         self._output_prefix = ''
+
+        # Overlay Parameters (set_overlays)
+        self._timecode_overlay = None               # -tc/--time-code, None or TextOverlay
+        # TODO(v1.4): #31 - Add CLI option for below.
+        self._bounding_box = None                   # -bb/--bounding-box, None or BoundingBoxOverlay
 
         # Motion Detection Parameters (set_detection_params)
         self._threshold = 0.15                      # -t/--threshold
@@ -161,7 +153,7 @@ class ScanContext(object):
 
         self._load_input_videos()
 
-    def set_output(self, scan_only=True, comp_file=None, codec='XVID', draw_timecode=False):
+    def set_output(self, scan_only=True, comp_file=None, codec='XVID'):
         # type: (bool, str, str) -> None
         """ Sets the path and encoder codec to use when exporting videos.
 
@@ -176,7 +168,6 @@ class ScanContext(object):
             codec (str): The four-letter identifier of the encoder/video
                 codec to use when exporting motion events as videos.
                 Possible values are: XVID, MP4V, MP42, H264.
-            draw_timecode (bool): If True, draws timecode on each frame.
 
         Raises:
             ValueError if codec is not four characters.
@@ -186,8 +177,10 @@ class ScanContext(object):
         if len(codec) != 4:
             raise ValueError("codec must be exactly four (4) characters")
         self._fourcc = cv2.VideoWriter_fourcc(*codec.upper())
-        self._draw_timecode = draw_timecode
 
+    def set_overlays(self, draw_timecode=False, draw_bounding_box=False):
+        self._timecode_overlay = TextOverlay() if draw_timecode else None
+        self._bounding_box = BoundingBoxOverlay() if draw_bounding_box else None
 
     def set_detection_params(self, threshold=0.15, kernel_size=None,
                              downscale_factor=1, roi=None):
@@ -282,6 +275,7 @@ class ScanContext(object):
         elif end_time is not None:
             self._end_time = FrameTimecode(end_time, self._video_fps)
 
+
     def _load_input_videos(self):
         # type: () -> bool
         """ Opens and checks that all input video files are valid, can
@@ -360,54 +354,6 @@ class ScanContext(object):
 
         return None
 
-    def _stamp_text(self, frame, text, line=0):
-        # type: (numpy.ndarray, str, Optional[int]) -> None
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        font_scale = 1
-        margin = 5
-        thickness = 2
-        color = (255, 255, 255)
-
-        size = cv2.getTextSize(text, font, font_scale, thickness)
-
-        text_width = size[0][0]
-        text_height = size[0][1]
-        line_height = text_height + size[1] + margin
-
-        text_pos = (margin, margin + size[0][1] + line * line_height)
-        cv2.rectangle(frame, (margin, margin),
-                      (margin + text_width, margin + text_height + 2), (0, 0, 0), -1)
-        cv2.putText(frame, text, text_pos, font, font_scale, color, thickness)
-
-    def _stamp_bounding_box(self, frame, motion_mask):
-        bounding_box = cv2.boundingRect(motion_mask)
-        top_left = (
-            bounding_box[0] * self._downscale_factor,
-            bounding_box[1] * self._downscale_factor
-        )
-        bottom_right = (
-            (bounding_box[0]+bounding_box[2]) * self._downscale_factor,
-            (bounding_box[1]+bounding_box[3]) * self._downscale_factor
-        )
-        max_frame_side = max(frame.shape[0], frame.shape[1])
-        thickness = max(1, round(DEFAULT_BOUNDING_BOX_THICKNESS_RATIO * max_frame_side))
-        # If bounding box is too small, resize it.
-        min_box_size = max(1, round(DEFAULT_MIN_BOUNDING_BOX_RATIO * max_frame_side))
-        correction_x = min_box_size - bounding_box[2] if bounding_box[2] < min_box_size else 0
-        correction_y = min_box_size - bounding_box[3] if bounding_box[3] < min_box_size else 0
-        top_left = (top_left[0] - correction_x // 2, top_left[1] - correction_y // 2)
-        bottom_right = (bottom_right[0] + correction_x // 2, bottom_right[1] + correction_y // 2)
-        # Shift if ROI was set
-        if self._roi:
-            top_left = (top_left[0] + self._roi[0], top_left[1] +  self._roi[1])
-            bottom_right = (bottom_right[0] + self._roi[0], bottom_right[1] + self._roi[1])
-        # Ensure coordinates are all >= 0 (greater than frame size is okay and will be handled
-        # gracefully by cv2.rectangle below.
-        top_left = (max(0, top_left[0]), max(0, top_left[1]))
-        bottom_right = (max(0, bottom_right[0]), max(0, bottom_right[1]))
-
-        cv2.rectangle(frame, top_left, bottom_right, DEFAULT_BOUNDING_BOX_COLOUR,
-                      thickness=thickness)
 
     def _create_progress_bar(self, show_progress, num_frames):
         # type: (bool, int) -> tqdm.tqdm
@@ -432,7 +378,7 @@ class ScanContext(object):
         return NullProgressBar()
 
 
-    def _select_roi(self, add_timecode=False):
+    def _select_roi(self):
         # type: (FrameTimecode, bool) -> bool
         # area selection
         if self._show_roi_window:
@@ -442,6 +388,7 @@ class ScanContext(object):
             if self._max_roi_size is not None:
                 frame_h, frame_w = (frame_for_crop.shape[0], frame_for_crop.shape[1])
                 max_w, max_h = self._max_roi_size
+                # Downscale the image if it's too large for the screen.
                 if frame_h > max_h or frame_w > max_w:
                     factor_h = frame_h / float(max_h)
                     factor_w = frame_w / float(max_w)
@@ -449,12 +396,7 @@ class ScanContext(object):
                     new_height = int(frame_h / scale_factor)
                     new_width = int(frame_w / scale_factor)
                     frame_for_crop = cv2.resize(
-                        frame_for_crop, (new_width, new_height), interpolation=cv2.INTER_CUBIC)
-            # Downscale the image if it's too large for the screen.
-            #if self._max_roi_size is not None and frame_for_crop.shape[0]
-            if add_timecode:
-                assert self._curr_pos is not None
-                self._stamp_text(frame_for_crop, self._curr_pos.get_timecode())
+                    frame_for_crop, (new_width, new_height), interpolation=cv2.INTER_CUBIC)
             roi = cv2.selectROI("DVR-Scan ROI Selection", frame_for_crop)
             cv2.destroyAllWindows()
             if any([coord == 0 for coord in roi[2:]]):
@@ -497,15 +439,12 @@ class ScanContext(object):
             output_path, self._fourcc, effective_framerate,
             self._video_resolution)
 
-    def _write_frame(self, frame, frame_pos=None, motion_mask=None):
+    def _draw_overlays(self, frame, frame_pos):
         # type: (np.ndarray, Optional[FrameTimecode], Optional[np.ndarray]) -> None
-        assert self._video_writer is not None
-        if self._draw_timecode:
-            position = self._curr_pos if frame_pos is None else frame_pos
-            self._stamp_text(frame, position.get_timecode())
-        if self._draw_bounding_box and motion_mask is not None:
-            self._stamp_bounding_box(frame, motion_mask)
-        self._video_writer.write(frame)
+        if not self._timecode_overlay is None:
+            self._timecode_overlay.draw(frame=frame, text=frame_pos.get_timecode())
+        if not self._bounding_box is None:
+            self._bounding_box.draw(frame)
 
     def scan_motion(self, method='mog'):
         # type: (Optional[str]) -> None
@@ -535,8 +474,12 @@ class ScanContext(object):
                 self._curr_pos.frame_num += 1
 
         # Show ROI selection window if required.
-        if not self._select_roi(add_timecode=self._draw_timecode):
+        if not self._select_roi():
             return
+
+        if self._bounding_box:
+            self._bounding_box.set_corrections(
+                downscale_factor=self._downscale_factor, roi=self._roi)
 
         # Kernel size to use with morphological filter for noise reduction.
         kernel = create_kernel(self._video_resolution[0], self._kernel_size, self._downscale_factor)
@@ -594,10 +537,15 @@ class ScanContext(object):
 
             if in_motion_event:
                 above_threshold = frame_score >= self._threshold
+                if self._bounding_box:
+                    # Update the bounding box if the frame is above the threshold, else clear it.
+                    if above_threshold:
+                        self._bounding_box.update(frame_filt)
+                    else:
+                        self._bounding_box.clear()
                 if not self._scan_only:
-                    # Ensure we only draw a bounding box for frames that are above the threshold.
-                    self._write_frame(
-                        frame_rgb_origin, motion_mask=frame_filt if above_threshold else None)
+                    self._draw_overlays(frame_rgb_origin, presentation_time)
+                    self._video_writer.write(frame_rgb_origin)
                 if above_threshold:
                     num_frames_post_event = 0
                 else:
@@ -614,15 +562,16 @@ class ScanContext(object):
                             self._video_writer.release()
                             self._video_writer = None
             else:
-                buffered_frames.append(
-                    (frame_rgb_origin if not self._scan_only else None, presentation_time))
-                buffered_frames = buffered_frames[-buff_len:]
+                if not self._scan_only:
+                    self._draw_overlays(frame_rgb_origin, presentation_time)
+                    buffered_frames.append(frame_rgb_origin)
+                    buffered_frames = buffered_frames[-buff_len:]
                 if len(event_window) >= min_event_len and all(
                         score >= self._threshold for score in event_window):
                     in_motion_event = True
                     event_window = []
                     num_frames_post_event = 0
-                    shifted_start = self._curr_pos.frame_num - len(buffered_frames)
+                    shifted_start = max(0, self._curr_pos.frame_num - (pre_event_len + min_event_len))
                     if shifted_start < 0:
                         shifted_start = 0
                     event_start = FrameTimecode(shifted_start, self._video_fps)
@@ -630,8 +579,8 @@ class ScanContext(object):
                     if not self._scan_only:
                         if self._video_writer is None:
                             self._init_video_writer()
-                        for frame, frame_pos in buffered_frames:
-                            self._write_frame(frame, frame_pos=frame_pos)
+                        for frame in buffered_frames:
+                            self._video_writer.write(frame)
                     buffered_frames = []
 
             self._frames_processed += 1

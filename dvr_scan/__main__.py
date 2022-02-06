@@ -59,7 +59,7 @@ def validate_cli_args(args, logger):
             logger.error("Error: Input file does not exist:\n  %s", file)
             return False, None
     if args.output and not '.' in args.output:
-            args.output += '.avi'
+        args.output += '.avi'
     if args.kernel_size < 0:
         args.kernel_size = None
     return True, args
@@ -94,24 +94,32 @@ def main():
         sctx.set_output(
             scan_only=args.scan_only_mode,
             comp_file=args.output,
-            codec=args.fourcc_str,
-            draw_timecode=args.draw_timecode)
+            codec=args.fourcc_str
+        )
+
+        sctx.set_overlays(
+            draw_timecode=args.draw_timecode,
+            draw_bounding_box=True,
+        )
 
         sctx.set_detection_params(
             threshold=args.threshold,
             kernel_size=args.kernel_size,
             downscale_factor=args.downscale_factor,
-            roi=args.roi)
+            roi=args.roi
+        )
 
         sctx.set_event_params(
             min_event_len=args.min_event_len,
             time_pre_event=args.time_pre_event,
-            time_post_event=args.time_post_event)
+            time_post_event=args.time_post_event
+        )
 
         sctx.set_video_time(
             start_time=args.start_time,
             end_time=args.end_time,
-            duration=args.duration)
+            duration=args.duration
+        )
 
         sctx.scan_motion(args.bg_subtractor)
 
