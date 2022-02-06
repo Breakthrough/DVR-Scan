@@ -14,7 +14,7 @@
 # directory) will allow the `dvr-scan` command to be used from anywhere,
 # e.g. `dvr-scan -i myfile.mp4`.
 #
-# Copyright (C) 2016-2021 Brandon Castellano <http://www.bcastell.com>.
+# Copyright (C) 2016-2022 Brandon Castellano <http://www.bcastell.com>.
 #
 # DVR-Scan is licensed under the BSD 2-Clause License; see the included
 # LICENSE file or visit one of the following pages for details:
@@ -31,7 +31,6 @@
 # ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 #
-
 """ ``dvr_scan.__main__`` Module
 
 Provides entry point for DVR-Scan's command-line interface (CLI).
@@ -69,6 +68,9 @@ def main():
     """Entry point for running main DVR-Scan program.
 
     Handles high-level interfacing of video IO and motion event detection.
+
+    Returns:
+        0 on successful termination, non-zero otherwise.
     """
     # Parse the user-supplied CLI arguments and init the logger.
     args = get_cli_parser().parse_args()
@@ -87,14 +89,15 @@ def main():
         sctx = ScanContext(
             input_videos=args.input,
             frame_skip=args.frame_skip,
-            show_progress=not args.quiet_mode)
+            show_progress=not args.quiet_mode,
+        )
 
         # Set context properties based on CLI arguments.
 
         sctx.set_output(
             scan_only=args.scan_only_mode,
             comp_file=args.output,
-            codec=args.fourcc_str
+            codec=args.fourcc_str,
         )
 
         sctx.set_overlays(
@@ -106,19 +109,19 @@ def main():
             threshold=args.threshold,
             kernel_size=args.kernel_size,
             downscale_factor=args.downscale_factor,
-            roi=args.roi
+            roi=args.roi,
         )
 
         sctx.set_event_params(
             min_event_len=args.min_event_len,
             time_pre_event=args.time_pre_event,
-            time_post_event=args.time_post_event
+            time_post_event=args.time_post_event,
         )
 
         sctx.set_video_time(
             start_time=args.start_time,
             end_time=args.end_time,
-            duration=args.duration
+            duration=args.duration,
         )
 
         sctx.scan_motion(args.bg_subtractor)
@@ -133,6 +136,7 @@ def main():
         return 1
 
     return 0
+
 
 if __name__ == '__main__':
     sys.exit(main())

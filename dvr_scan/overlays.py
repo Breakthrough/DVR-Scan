@@ -5,10 +5,6 @@
 #       [  Site: https://github.com/Breakthrough/DVR-Scan/   ]
 #       [  Documentation: http://dvr-scan.readthedocs.org/   ]
 #
-# This file contains the implementation of the ScanContext class, which
-# is used to provide a high level interface to the logic used by
-# DVR-Scan to implement the motion detection/scanning algorithm.
-#
 # Copyright (C) 2016-2022 Brandon Castellano <http://www.bcastell.com>.
 #
 # DVR-Scan is licensed under the BSD 2-Clause License; see the included
@@ -26,7 +22,10 @@
 # ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 #
-""" ``dvr_scan.overlays`` Module """
+""" ``dvr_scan.overlays`` Module
+
+This module contains various classes used to draw overlays onto video frames.
+"""
 
 # Third-Party Library Imports
 import cv2
@@ -47,7 +46,7 @@ class TextOverlay(object):
                  color=(255, 255, 255),
                  bg_color=(0, 0, 0)):
         # type: (int, float, int, float, Tuple[int, int, int], Tuple[int, int, int]) -> None
-        """
+        """Initialize a TextOverlay with the given parameters.
 
         Arguments:
             font: Any of cv2.FONT_*.
@@ -92,20 +91,17 @@ class BoundingBoxOverlay(object):
     """Calculates and draws a bounding box onto of video frames based on a binary mask
     representing areas of interest/motion."""
 
-    # Used to calculate minimum size of a bounding box, in pixels, respective to the largest
-    # resolution dimension of the input video.
     DEFAULT_MIN_SIZE_RATIO = 0.032
+    """Minimum side length of bounding box relative to largest dimension of the video frame."""
 
-    # Used to calculate bounding box thickness, in pixels, respective to the largest
-    # resolution dimension of the input video.
     DEFAULT_THICKNESS_RATIO = 0.0032
+    """Thickness of bounding box lines relative to largest dimension of the video frame."""
 
-    # Default bounding box colour.
-    # Tuple of (B, G, R) values in [0, 255]
     DEFAULT_COLOUR = (0, 0, 255)
+    """Bounding box colour. Tuple of (B, G, R) values in [0, 255]"""
 
-    # Amount of frames to use for rolling window smoothing. Values <=1 indicate no smoothing.
     DEFAULT_SMOOTHING = 5
+    """Number of frames to use for smoothing/averaging. Values <= 1 indicate no smoothing."""
 
     def __init__(self,
                  min_size_ratio=DEFAULT_MIN_SIZE_RATIO,
@@ -113,7 +109,7 @@ class BoundingBoxOverlay(object):
                  color=DEFAULT_COLOUR,
                  smoothing=DEFAULT_SMOOTHING):
         # type: (float, float, Tuple[int, int, int], int) -> None
-        """
+        """Initialize a BoundingBoxOverlay with the given parameters.
 
         Arguments:
             min_size_ratio: Minimum size of resulting bounding box relative to frame size.
@@ -142,14 +138,17 @@ class BoundingBoxOverlay(object):
                 by this amount to match the original video frame scale.
             roi: Area of original frame which was cropped before applying downscale_factor.
                 Used to offset resulting bounding box to correct location when rendering.
-
         """
         self._downscale_factor = max(1, downscale_factor)
         self._roi = roi
 
     def _get_smoothed_window(self):
         # type: () -> Tuple[int, int, int, int]
-        """Average all cached bounding boxes based on the temporal smoothing factor."""
+        """Average all cached bounding boxes based on the temporal smoothing factor.
+
+        Returns:
+            Tuple of ints representing (x, y, width, height) of the smoothed bounding box.
+        """
         assert self._smoothing_window
         return [
             round(sum([box[i]
