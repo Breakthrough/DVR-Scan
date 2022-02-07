@@ -122,7 +122,6 @@ class ScanContext(object):
 
         # Overlay Parameters (set_overlays)
         self._timecode_overlay = None               # -tc/--time-code, None or TextOverlay
-        # TODO(v1.4): #31 - Add CLI option for below.
         self._bounding_box = None                   # -bb/--bounding-box, None or BoundingBoxOverlay
 
         # Motion Detection Parameters (set_detection_params)
@@ -178,9 +177,27 @@ class ScanContext(object):
             raise ValueError("codec must be exactly four (4) characters")
         self._fourcc = cv2.VideoWriter_fourcc(*codec.upper())
 
-    def set_overlays(self, draw_timecode=False, draw_bounding_box=False):
+    def set_overlays(self, draw_timecode=False, bounding_box_smoothing=None):
+        # type: (bool, Optional[Union[int, str]]) -> None
+        """ Sets options to use if/when drawing overlays on the resulting frames.
+
+        Arguments:
+            draw_timecode: If True, draw a timecode (presentation time) on each frame.
+            bounding_box_smoothing: Value to use for temporal smoothing (in time) for drawing a
+                bounding box containing all detected motion in each frame. If None, no box will
+                be drawn. If <= 1, smoothing will be disabled.
+
+        Raises:
+            ValueError if codec is not four characters.
+        """
         self._timecode_overlay = TextOverlay() if draw_timecode else None
-        self._bounding_box = BoundingBoxOverlay() if draw_bounding_box else None
+
+        if bounding_box_smoothing is not None:
+            smoothing_amount = FrameTimecode(bounding_box_smoothing, self._video_fps)
+            self._bounding_box = BoundingBoxOverlay(smoothing=smoothing_amount.frame_num)
+
+        else:
+            self._bounding_box = None
 
     def set_detection_params(self, threshold=0.15, kernel_size=None,
                              downscale_factor=1, roi=None):

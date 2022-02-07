@@ -172,6 +172,7 @@ class BoundingBoxOverlay(object):
         bounding_box = cv2.boundingRect(motion_mask)
         self._smoothing_window.append(bounding_box)
         self._smoothing_window = self._smoothing_window[-self._smoothing:]
+        [print(self._smoothing)]
 
     def draw(self, frame):
         """Draw a bounding box onto a target frame based on the previous calls to `update`."""

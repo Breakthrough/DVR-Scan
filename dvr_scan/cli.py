@@ -87,10 +87,11 @@ def timecode_type_check(metavar=None):
                         and secs < 60):
                     valid = True
                     value = [hrs, mins, secs]
-        msg = ('invalid timecode: %s (timecode must conform to one of the'
-               ' formats the dvr-scan --help message)' % value)
         if not valid:
-            raise argparse.ArgumentTypeError(msg)
+            raise argparse.ArgumentTypeError(
+                'invalid timecode: %s\n'
+                'Timecode must be specified as number of frames (12345), seconds (number followed'
+                ' by s, e.g. 123s or 123.45s), or timecode (HH:MM:SS[.nnn].' % value)
         return value
     return _type_checker
 
@@ -340,7 +341,6 @@ def get_cli_parser():
 
     parser.add_argument(
         '-l', '--min-event-length', metavar='T', dest='min_event_len',
-        #type=int_type_check(1, None, 'num_frames'), default=2,
         type=timecode_type_check('T'), default=2,
         help=('Number of frames that must exceed the threshold in a row to trigger'
               ' a new motion event, effectively setting a minimum event length.'
@@ -359,18 +359,6 @@ def get_cli_parser():
         type=timecode_type_check('T'), default='1.5s',
         help=('Number of frames to include before a motion event is detected.'
               ' Can also be specified as a timecode or # of seconds.'))
-
-    #parser.add_argument(
-    #    '-s', '--statsfile', metavar='STATS_FILE', dest='stats_file',
-    #    type=argparse.FileType('w'),
-    #    help='File to store video statistics data, comma-separated value '
-    #           'format (.csv). Will be overwritten if exists.')
-
-    #parser.add_argument(
-    #    '-e', '--list-events', dest='list_events',
-    #    action='store_true', default=False,
-    #    help=('Output the times and lengths of any motion events that are'
-    #            ' found to the terminal as a human-readable table.'))
 
     parser.add_argument(
         '-q', '--quiet', dest='quiet_mode',
@@ -427,5 +415,13 @@ def get_cli_parser():
               ' Can also specify the window in terms of x/y/w/h.'
               ' Example for pop-up window: dvr-scan -i video.mp4 -roi '
               ' Example for predefined rectangle: dvr-scan -i video.mp4 -roi 100 110 50 50 '))
+
+    parser.add_argument(
+        '-bb', '--bounding-box', metavar='SMOOTH_TIME', dest='bounding_box',
+        type=timecode_type_check('SMOOTH_TIME'), nargs='?', default=None, const='0.1s',
+        help=('If set, draws a bounding box around the area where motion was detected. The amount'
+              ' of temporal smoothing can be specified in either frames (12345) or seconds (number'
+              ' followed by s, e.g. 123s or 123.45s). If omitted, defaults to 0.1s. If set to 0,'
+              ' smoothing is disabled.'))
 
     return parser

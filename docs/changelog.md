@@ -6,8 +6,12 @@ DVR-Scan Changelog
 
 ### 1.4 (In Development)
 
+In addition to several bugfixes, this release of DVR-Scan adds the ability to draw a bounding box around the area in the frame where motion was detected. There are also several improves when using `-fs`/`--frame-skip` and/or `-df`/`--downscale-factor` by ensuring all other option are relative to the original video framerate/resolution.
+
 #### Changelog
 
+ * [feature] Add new `--bb`/`--bounding-box` option to draw rectangle around the area in the video where motion was detected
+     * An amount to temporally smooth the box in time can also be specified after `-bb` (e.g. `-bb 0.5s`), where the default is 0.1s
  * [bugfix] Processing errors should now return a non-zero exit code
  * [bugfix] Allow a maximum window size to be set when using `-roi` ([#59](https://github.com/Breakthrough/DVR-Scan/issues/59)):
      * The `-roi` flag now accepts a maximum window size for the ROI selection window (e.g. `-roi 1920 1080`)

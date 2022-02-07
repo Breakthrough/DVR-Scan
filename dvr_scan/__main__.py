@@ -102,7 +102,7 @@ def main():
 
         sctx.set_overlays(
             draw_timecode=args.draw_timecode,
-            draw_bounding_box=True,
+            bounding_box_smoothing=args.bounding_box,
         )
 
         sctx.set_detection_params(
