@@ -516,6 +516,9 @@ class ScanContext(object):
             "%d input videos" % len(self._video_paths) if len(self._video_paths) > 1
             else "input video")
 
+        # Don't use the first result from the background subtractor.
+        processed_first_frame = False
+
         progress_bar = self._create_progress_bar(
             show_progress=self._show_progress, num_frames=self._frames_total)
 
@@ -549,6 +552,11 @@ class ScanContext(object):
             frame_mask = bg_subtractor.apply(frame_gray)
             frame_filt = cv2.morphologyEx(frame_mask, cv2.MORPH_OPEN, kernel)
             frame_score = np.sum(frame_filt) / float(frame_filt.shape[0] * frame_filt.shape[1])
+            # Always assign the first frame a score of 0 since some subtractors will output a mask
+            # indicating motion on every pixel of the first frame.
+            if not processed_first_frame:
+                frame_score = 0.0
+                processed_first_frame = True
             event_window.append(frame_score)
             event_window = event_window[-min_event_len:]
 

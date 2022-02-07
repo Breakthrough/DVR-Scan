@@ -43,8 +43,11 @@ TRAFFIC_CAMERA_EVENTS = [
     (542, 576)
 ]
 
+# Pairs of frames representing event start/end times.
 TRAFFIC_CAMERA_EVENTS_CNT = [
-    (0, 148),
+    # Even though the first frame contains motion, the first frame we can actually detect it on is
+    # the first frame.
+    (1, 148),
     (364, 490),
     (543, 576)
 ]

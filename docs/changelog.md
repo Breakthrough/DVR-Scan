@@ -26,6 +26,7 @@ In addition to several bugfixes, this release of DVR-Scan adds the ability to dr
  * [enhancement] `-k`/`--kernel-size` is now relative to the original video resolution, and will be reduced to adjust for `-df`/`--downscale-factor` if set ([#46](https://github.com/Breakthrough/DVR-Scan/issues/46))
  * [bugfix] Output videos now have the correct playback speed when using `-fs`/`--frame-skip` by reducing the framerate ([#70](https://github.com/Breakthrough/DVR-Scan/issues/70))
  * [bugfix] The `-l`/`--min-event-length`, `-tb`/`--time-before-event`, and `-tp`/`--time-post-event` parameters are now adjusted to compensate for `-fs`/`--frame-skip` if set ([#70](https://github.com/Breakthrough/DVR-Scan/issues/70))
+ * [bugfix] An erroneus event (false positive) is no longer generated at the beginning of a video when `-l`/`--min-event-length` is equal to 1 frame
 
 #### Known Issues
 
