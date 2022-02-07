@@ -496,7 +496,7 @@ class ScanContext(object):
 
         if self._bounding_box:
             self._bounding_box.set_corrections(
-                downscale_factor=self._downscale_factor, roi=self._roi)
+                downscale_factor=self._downscale_factor, roi=self._roi, frame_skip=self._frame_skip)
 
         # Kernel size to use with morphological filter for noise reduction.
         kernel = create_kernel(self._video_resolution[0], self._kernel_size, self._downscale_factor)

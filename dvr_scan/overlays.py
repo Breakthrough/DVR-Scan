@@ -121,14 +121,15 @@ class BoundingBoxOverlay(object):
         self._thickness_ratio = thickness_ratio
         self._color = color
 
-        self._smoothing = max(1, smoothing)
+        self._smoothing_amount = max(1, smoothing)
         self._smoothing_window = []
 
         self._downscale_factor = 1
         self._roi = None
+        self._frame_skip = 0
 
-    def set_corrections(self, downscale_factor, roi):
-        # type: (int, Tuple[int, int, int, int]) -> None
+    def set_corrections(self, downscale_factor, roi, frame_skip):
+        # type: (int, Tuple[int, int, int, int], int) -> None
         """Set various correction factors which need to be compensated for when drawing the
         resulting bounding box onto a given target frame.
 
@@ -138,9 +139,13 @@ class BoundingBoxOverlay(object):
                 by this amount to match the original video frame scale.
             roi: Area of original frame which was cropped before applying downscale_factor.
                 Used to offset resulting bounding box to correct location when rendering.
+            frame_skip: Amount of frames skipped for every processed frame. Used to correct
+                the smoothing amount.
         """
         self._downscale_factor = max(1, downscale_factor)
         self._roi = roi
+
+        # We're reducing the number of frames by 1 / (frame_skip + 1)
 
     def _get_smoothed_window(self):
         # type: () -> Tuple[int, int, int, int]
@@ -171,8 +176,10 @@ class BoundingBoxOverlay(object):
         """
         bounding_box = cv2.boundingRect(motion_mask)
         self._smoothing_window.append(bounding_box)
-        self._smoothing_window = self._smoothing_window[-self._smoothing:]
-        [print(self._smoothing)]
+        # Correct smoothing amount for frame skip.
+        smoothing_amount = max(1, self._smoothing_amount // (1 + self._frame_skip))
+        # Ensure window size doesn't exceed amount of smoothing required.
+        self._smoothing_window = self._smoothing_window[-smoothing_amount:]
 
     def draw(self, frame):
         """Draw a bounding box onto a target frame based on the previous calls to `update`."""
