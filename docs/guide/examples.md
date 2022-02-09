@@ -52,8 +52,16 @@ The following two parameters can be adjusted to specify how much of the original
 
 The following parameters affect performance, possibly at the expense of accuracy.
 
- - '-b' / '--bg-subtractor': The type of background subtractor to use.  Must be either MOG (default) or CNT (faster).
- - '-df' / '--downscale-factor': Factor to downscale (shrink) video before processing.  Must be integer values (default 1 for no downscaling).
+ - `-b` / `--bg-subtractor`: The type of background subtractor to use.  Must be either MOG (default) or CNT (faster).
+ - `-df` / `--downscale-factor`: Factor to downscale (shrink) video before processing.  Must be integer values (default 1 for no downscaling).
+
+
+### Overlays
+
+ - `-bb` / `--bounding-box`: Draws a box around areas in the frame where motion was detected. See entry in `--help` for more information.
+ - `-tc` / `--time-code`: Draw the timecode of each frame (HH:MM:SS.nnn) in the top-left corner
+
+
 
 ----------------------
 
