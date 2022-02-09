@@ -49,7 +49,7 @@ Once finished, DVR-Scan will be installed, and you should be able to run the `dv
 dvr-scan --version
 ```
 
-To get familiar with DVR-Scan, try running `dvr-scan --help`, or see the [Getting Started & Examples](guide/examples.md) section.  If you encounter any runtime errors while running DVR-Scan, ensure that you have all the required dependencies listed in the System Requirements section above (again, you should be able to `import numpy` and `import cv2`, and optionally, `import tqdm` if tqdm was installed).
+To get familiar with DVR-Scan, try running `dvr-scan --help`, or see the [Getting Started & Examples](examples.md) section.  If you encounter any runtime errors while running DVR-Scan, ensure that you have all the required dependencies listed in the System Requirements section above (again, you should be able to `import numpy` and `import cv2`, and optionally, `import tqdm` if tqdm was installed).
 
 
 ------------------------------------------------

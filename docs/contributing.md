@@ -9,7 +9,7 @@ Provide as much detail as you can - include an example that clearly demonstrates
 
 ### <span class="fa fa-keyboard-o"></span>&nbsp; Contributing
 
-The development of DVR-Scan is done on the public Github Repo, guided by [the feature roadmap](features.md).  Code you wish to submit should be attached to an entry in [the issue tracker](https://github.com/Breakthrough/DVR-Scan/issues?q=) (including the appropriate tags for bugfixes, new features, enhancements, etc...) or submitted as a dedicated [a pull request](https://github.com/Breakthrough/DVR-Scan/pulls).
+The development of DVR-Scan is done on the public Github Repo.  Code you wish to submit should be attached to an entry in [the issue tracker](https://github.com/Breakthrough/DVR-Scan/issues?q=) (including the appropriate tags for bugfixes, new features, enhancements, etc...) or submitted as a dedicated [a pull request](https://github.com/Breakthrough/DVR-Scan/pulls).
 
 This allows for easier communication regarding development and helps ensure that a consistent structure is maintained.  Feel free to create a new issue if required, as some planned features or bugs/issues may not yet exist in the tracker.
 

@@ -10,7 +10,7 @@ copyright: 'Copyright &copy; 2016-2022 Brandon Castellano.  All rights reserved.
 theme: readthedocs
 #google_analytics: ['UA-########-1', 'auto']
 
-pages:
+nav:
 - 'DVR-Scan':
     - 'Introduction & Features': 'index.md'
     - 'Download': 'download.md'
