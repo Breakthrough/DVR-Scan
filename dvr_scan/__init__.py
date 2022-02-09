@@ -49,13 +49,13 @@ from dvr_scan.scanner import VideoLoadFailure
 
 
 # Used for module identification and when printing copyright & version info.
-__version__ = 'v1.3'
+__version__ = 'v1.4'
 
 # About & copyright message string shown for the -v/--version CLI argument.
 ABOUT_STRING = """-----------------------------------------------
 DVR-Scan %s
 -----------------------------------------------
-Copyright (C) 2016-2021 Brandon Castellano
+Copyright (C) 2016-2022 Brandon Castellano
 < https://github.com/Breakthrough/DVR-Scan >
 
 This DVR-Scan is licensed under the BSD 2-Clause license; see the

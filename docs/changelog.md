@@ -4,7 +4,7 @@ DVR-Scan Changelog
 
 ## DVR-Scan 1.0
 
-### 1.4 (In Development)
+### 1.4 (February 8, 2022)
 
 In addition to several bugfixes, this release of DVR-Scan adds the ability to draw a bounding box around the area in the frame where motion was detected. There are also several improves when using `-fs`/`--frame-skip` and/or `-df`/`--downscale-factor` by ensuring all other option are relative to the original video framerate/resolution.
 
