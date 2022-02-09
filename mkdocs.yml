@@ -11,17 +11,17 @@ theme: readthedocs
 #google_analytics: ['UA-########-1', 'auto']
 
 nav:
-- 'DVR-Scan':
-    - 'Introduction & Features': 'index.md'
-    - 'Download': 'download.md'
-    - 'Version History (Changelog)': 'changelog.md'
-    - 'Contributing & Bug Reports': 'contributing.md'
-    - 'License & Copyright Info': 'copyright.md'
-- 'User Guide':
-    - 'Installing & Updating': 'guide/installing.md'
-    - 'Getting Started & Examples': 'guide/examples.md'
-    - 'Frequently Asked Questions (FAQ)': 'guide/faq.md'
-- 'External Resources':
-    - 'Other Similar/Related Software': 'other/similar_software.md'
+    - 'DVR-Scan':
+        - 'Introduction & Features': 'index.md'
+        - 'Download': 'download.md'
+        - 'Version History (Changelog)': 'changelog.md'
+        - 'Contributing & Bug Reports': 'contributing.md'
+        - 'License & Copyright Info': 'copyright.md'
+    - 'User Guide':
+        - 'Installing & Updating': 'guide/installing.md'
+        - 'Getting Started & Examples': 'guide/examples.md'
+        - 'Frequently Asked Questions (FAQ)': 'guide/faq.md'
+    - 'External Resources':
+        - 'Other Similar/Related Software': 'other/similar_software.md'
 
 markdown_extensions: [fenced_code]
