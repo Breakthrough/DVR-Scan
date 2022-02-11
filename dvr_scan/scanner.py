@@ -464,7 +464,7 @@ class ScanContext(object):
             self._bounding_box.draw(frame)
 
     def scan_motion(self, method='mog'):
-        # type: (Optional[str]) -> None
+        # type: (Optional[str]) -> List[Tuple[FrameTimecode, FrameTimecode, FrameTimecode]]
         """ Performs motion analysis on the ScanContext's input video(s). """
         if method.lower() == 'cnt':
             bg_subtractor = cv2.bgsegm.createBackgroundSubtractorCNT()

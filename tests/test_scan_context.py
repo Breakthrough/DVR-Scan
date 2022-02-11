@@ -40,7 +40,7 @@ TRAFFIC_CAMERA_ROI = [631, 532, 210, 127]
 TRAFFIC_CAMERA_EVENTS = [
     (9, 148),
     (358, 490),
-    (542, 576)
+    (542, 576),
 ]
 
 # Pairs of frames representing event start/end times.
@@ -49,21 +49,27 @@ TRAFFIC_CAMERA_EVENTS_CNT = [
     # the first frame.
     (1, 148),
     (364, 490),
-    (543, 576)
+    (543, 576),
 ]
 
 # Pairs of frames representing event start/end times.
 TRAFFIC_CAMERA_EVENTS_TIME_PRE_5 = [
     (4, 148),
     (353, 490),
-    (537, 576)
+    (537, 576),
 ]
 
 # Pairs of frames representing event start/end times.
 TRAFFIC_CAMERA_EVENTS_TIME_POST_40 = [
     (9, 138),
     (358, 480),
-    (542, 576)  # Last event still ends on end of video.
+    (542, 576),  # Last event still ends on end of video.
+]
+
+# Small ROI for quicker processing
+CORRUPT_VIDEO_ROI = [0, 0, 32, 32]
+CORRUPT_VIDEO_EVENTS = [
+    (153, 364),
 ]
 
 
@@ -80,6 +86,8 @@ def test_scan_context(traffic_camera_video):
     # Remove duration, check start/end times.
     event_list = [(event[0].frame_num, event[1].frame_num) for event in event_list]
     assert event_list == TRAFFIC_CAMERA_EVENTS
+
+    # TODO(v1.0): Add check for duration (should be end - start + 1).
 
 
 def test_scan_context_cnt(traffic_camera_video):
@@ -106,7 +114,7 @@ def test_pre_event_shift(traffic_camera_video):
 
     event_list = sctx.scan_motion()
 
-    assert len(event_list) == len(TRAFFIC_CAMERA_EVENTS)
+    assert len(event_list) == len(TRAFFIC_CAMERA_EVENTS_TIME_PRE_5)
     event_list = [(event[0].frame_num, event[1].frame_num) for event in event_list]
     assert all([x == y for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS_TIME_PRE_5)])
 
@@ -120,7 +128,7 @@ def test_post_event_shift(traffic_camera_video):
 
     event_list = sctx.scan_motion()
 
-    assert len(event_list) == len(TRAFFIC_CAMERA_EVENTS)
+    assert len(event_list) == len(TRAFFIC_CAMERA_EVENTS_TIME_POST_40)
     event_list = [(event[0].frame_num, event[1].frame_num) for event in event_list]
     assert all([x == y for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS_TIME_POST_40)])
 
@@ -128,7 +136,10 @@ def test_post_event_shift(traffic_camera_video):
 def test_decode_corrupt_video(corrupt_video):
     """Ensure we can process a video with a single bad frame."""
     sctx = ScanContext([corrupt_video])
-    sctx.set_detection_params(roi=[0, 0, 32, 32])   # Small ROI for quicker processing
+    sctx.set_detection_params(roi=CORRUPT_VIDEO_ROI)
+
     event_list = sctx.scan_motion()
-    # Make sure we got a motion event instead of stopping early.
-    assert len(event_list) > 0
+
+    assert len(event_list) == len(CORRUPT_VIDEO_EVENTS)
+    event_list = [(event[0].frame_num, event[1].frame_num) for event in event_list]
+    assert all([x == y for x, y in zip(event_list, CORRUPT_VIDEO_EVENTS)])
