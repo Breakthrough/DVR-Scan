@@ -14,6 +14,8 @@ DVR-Scan Changelog
 
 In addition to several bugfixes, this release of DVR-Scan adds the ability to draw a bounding box around the area in the frame where motion was detected. There are also several improves when using `-fs`/`--frame-skip` and/or `-df`/`--downscale-factor` by ensuring all other option are relative to the original video framerate/resolution.
 
+**Important:** Aside from critical bugfixes, DVR-Scan 1.4 is the last planned release which will support Python 2.7.  Starting from v1.5, the new minimum supported Python version will be 3.6 (see [#83](https://github.com/Breakthrough/DVR-Scan/issues/83) for details).
+
 #### Changelog
 
  * [feature] Add new `--bb`/`--bounding-box` option to draw rectangle around the area in the video where motion was detected
