@@ -4,7 +4,7 @@ DVR-Scan Changelog
 
 ## DVR-Scan 1.0
 
-### 1.5 (In Development)
+### 1.4.1 (In Development)
 
 #### Changelog
  * Event start times are now correctly calculated when using `-fs`/`--frame-skip` ([#68](https://github.com/Breakthrough/DVR-Scan/issues/68), [#70](https://github.com/Breakthrough/DVR-Scan/issues/70))
