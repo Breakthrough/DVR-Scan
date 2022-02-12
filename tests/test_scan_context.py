@@ -22,7 +22,6 @@
 # ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 #
-
 """ DVR-Scan ScanContext Tests """
 
 # Standard project pylint disables for unit tests using pytest.
@@ -30,40 +29,35 @@
 # pylint: disable=redefined-outer-name
 
 # DVR-Scan Library Imports
-import dvr_scan
 from dvr_scan.scanner import ScanContext
 
 # ROI within the frame used for the test case (see traffic_camera.txt for details).
 TRAFFIC_CAMERA_ROI = [631, 532, 210, 127]
 
-# Pairs of frames representing event start/end times.
 TRAFFIC_CAMERA_EVENTS = [
     (9, 148),
     (358, 490),
     (542, 576),
 ]
 
-# Pairs of frames representing event start/end times.
-TRAFFIC_CAMERA_EVENTS_CNT = [
-    # Even though the first frame contains motion, the first frame we can actually detect it on is
-    # the first frame.
-    (1, 148),
-    (364, 490),
-    (543, 576),
-]
-
-# Pairs of frames representing event start/end times.
 TRAFFIC_CAMERA_EVENTS_TIME_PRE_5 = [
-    (4, 148),
-    (353, 490),
-    (537, 576),
+    (3, 148),
+    (352, 490),
+    (536, 576),
 ]
 
-# Pairs of frames representing event start/end times.
 TRAFFIC_CAMERA_EVENTS_TIME_POST_40 = [
     (9, 138),
     (358, 480),
-    (542, 576),  # Last event still ends on end of video.
+    (542, 576),                        # Last event still ends on end of video.
+]
+
+TRAFFIC_CAMERA_EVENTS_CNT = [
+                              # Even though the first frame contains motion, the first frame we can actually detect it on is
+                              # the first frame.
+    (1, 148),
+    (364, 490),
+    (543, 576),
 ]
 
 # Small ROI for quicker processing
@@ -110,13 +104,33 @@ def test_pre_event_shift(traffic_camera_video):
 
     sctx = ScanContext([traffic_camera_video])
     sctx.set_detection_params(roi=TRAFFIC_CAMERA_ROI)
-    sctx.set_event_params(min_event_len=4, time_pre_event=5)
+    sctx.set_event_params(min_event_len=4, time_pre_event=6)
 
     event_list = sctx.scan_motion()
 
     assert len(event_list) == len(TRAFFIC_CAMERA_EVENTS_TIME_PRE_5)
     event_list = [(event[0].frame_num, event[1].frame_num) for event in event_list]
     assert all([x == y for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS_TIME_PRE_5)])
+
+
+def test_pre_event_shift_with_frame_skip(traffic_camera_video):
+    """ Test setting time_pre_event when using frame_skip. """
+    for frame_skip in range(1, 3):
+
+        sctx = ScanContext([traffic_camera_video], frame_skip=frame_skip)
+        sctx.set_detection_params(roi=TRAFFIC_CAMERA_ROI)
+        sctx.set_event_params(min_event_len=4, time_pre_event=6)
+
+        event_list = sctx.scan_motion()
+
+        assert len(event_list) == len(TRAFFIC_CAMERA_EVENTS_TIME_PRE_5)
+        event_list = [(event[0].frame_num, event[1].frame_num) for event in event_list]
+        # The results should not differ from the ground truth (non-frame-skipped) by the amount
+        # of frames that we are skipping.
+        assert all([
+            abs(x[0] - y[0]) <= frame_skip and abs(x[1] - y[1]) <= frame_skip
+            for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS_TIME_PRE_5)
+        ])
 
 
 def test_post_event_shift(traffic_camera_video):
@@ -131,6 +145,28 @@ def test_post_event_shift(traffic_camera_video):
     assert len(event_list) == len(TRAFFIC_CAMERA_EVENTS_TIME_POST_40)
     event_list = [(event[0].frame_num, event[1].frame_num) for event in event_list]
     assert all([x == y for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS_TIME_POST_40)])
+
+
+def test_post_event_shift_with_frame_skip(traffic_camera_video):
+    """ Test setting time_post_event. """
+    for frame_skip in range(1, 3):
+
+        sctx = ScanContext([traffic_camera_video], frame_skip=frame_skip)
+
+        sctx = ScanContext([traffic_camera_video], frame_skip=1)
+        sctx.set_detection_params(roi=TRAFFIC_CAMERA_ROI)
+        sctx.set_event_params(min_event_len=4, time_pre_event=0, time_post_event=40)
+
+        event_list = sctx.scan_motion()
+
+        assert len(event_list) == len(TRAFFIC_CAMERA_EVENTS_TIME_POST_40)
+        event_list = [(event[0].frame_num, event[1].frame_num) for event in event_list]
+        # The results should not differ from the ground truth (non-frame-skipped) by the amount
+        # of frames that we are skipping.
+        assert all([
+            abs(x[0] - y[0]) <= frame_skip and abs(x[1] - y[1]) <= frame_skip
+            for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS_TIME_POST_40)
+        ])
 
 
 def test_decode_corrupt_video(corrupt_video):

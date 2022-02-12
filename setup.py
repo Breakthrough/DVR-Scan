@@ -56,7 +56,7 @@ def get_extra_requires():
 
 setup(
     name='dvr-scan',
-    version='1.4',
+    version='1.5-dev',
     description="Tool for finding and extracting motion events in video files"
                 "(e.g. security camera footage).",
     long_description=open('package-info.rst').read(),

@@ -4,6 +4,12 @@ DVR-Scan Changelog
 
 ## DVR-Scan 1.0
 
+### 1.5 (In Development)
+
+#### Changelog
+ * Event start times are now correctly calculated when using `-fs`/`--frame-skip` ([#68](https://github.com/Breakthrough/DVR-Scan/issues/68), [#70](https://github.com/Breakthrough/DVR-Scan/issues/70))
+    * Note that event start/end times may still be off by how many frames are skipped due to loss of context with respect to frame-accurate motion detection
+
 ### 1.4 (February 8, 2022)
 
 In addition to several bugfixes, this release of DVR-Scan adds the ability to draw a bounding box around the area in the frame where motion was detected. There are also several improves when using `-fs`/`--frame-skip` and/or `-df`/`--downscale-factor` by ensuring all other option are relative to the original video framerate/resolution.
