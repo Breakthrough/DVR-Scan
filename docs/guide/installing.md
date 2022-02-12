@@ -23,7 +23,7 @@ Start by downloading the latest release of DVR-Scan and extracting it to a locat
 
 ### Installing Dependencies
 
-If installing from source, DVR-Scan requires [Python 2 or 3](https://www.python.org/) (tested on 3.X, untested but should work on 2.X) and the following libraries ([quick install guide](http://breakthrough.github.io/Installing-OpenCV/)):
+If installing from source, DVR-Scan requires [Python 2 or 3](https://www.python.org/) (tested on 3.X, untested but should work on 2.X) and the following libraries ([quick install guide](http://breakthrough.github.io/Installing-OpenCV/)).  Note that starting with DVR-Scan v1.5, the minimum required Python version will be 3.6.
 
  - [OpenCV](http://opencv.org/) (requires version 3.0 and above) the Python module (`pip install opencv-python`) as well as `opencv-contrib-python` is required for some features (e.g. `-b CNT`)
  - [Numpy](http://sourceforge.net/projects/numpy/) Python module (`numpy`)
