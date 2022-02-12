@@ -25,12 +25,14 @@ In addition to several bugfixes, this release of DVR-Scan adds the ability to dr
  * [bugfix] When no events have been found, an empty file is no longer created if `-o/--output` is specified
  * [enhancement] `-k`/`--kernel-size` is now relative to the original video resolution, and will be reduced to adjust for `-df`/`--downscale-factor` if set ([#46](https://github.com/Breakthrough/DVR-Scan/issues/46))
  * [bugfix] Output videos now have the correct playback speed when using `-fs`/`--frame-skip` by reducing the framerate ([#70](https://github.com/Breakthrough/DVR-Scan/issues/70))
- * [bugfix] The `-l`/`--min-event-length`, `-tb`/`--time-before-event`, and `-tp`/`--time-post-event` parameters are now adjusted to compensate for `-fs`/`--frame-skip` if set ([#70](https://github.com/Breakthrough/DVR-Scan/issues/70))
+ * [bugfix] The `-l`/`--min-event-length` and `-tp`/`--time-post-event` parameters are now adjusted to compensate for `-fs`/`--frame-skip` if set ([#70](https://github.com/Breakthrough/DVR-Scan/issues/70))
  * [bugfix] An erroneus event (false positive) is no longer generated at the beginning of a video when `-l`/`--min-event-length` is equal to 1 frame
 
 #### Known Issues
 
  * Variable framerate videos (VFR) are not fully supported, and will yield incorrect timestamps ([#20](https://github.com/Breakthrough/DVR-Scan/issues/20))
+ * When using `-fs`/`--frame-skip`, event start times do not include all of `-tb`/`--time-before-event` ([#68](https://github.com/Breakthrough/DVR-Scan/issues/68), [#70](https://github.com/Breakthrough/DVR-Scan/issues/70))
+ * When using `-bb`/`--bounding-box`, the amount of time covered by `-l`/`--min-event-length` will be missing bounding box overlays ([#31](https://github.com/Breakthrough/DVR-Scan/issues/31))
 
 
 ### 1.3 (May 23, 2021) &nbsp;<span class="fa fa-tags"></span>
