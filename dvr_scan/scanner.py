@@ -506,10 +506,15 @@ class ScanContext(object):
         pre_event_len = self._pre_event_len.frame_num // (self._frame_skip + 1)
         # min_event_len must be at least 1
         min_event_len = max(self._min_event_len.frame_num // (self._frame_skip + 1), 1)
+        # Ensure that we include the exact amount of time specified in `-tb`/`--time-before` when
+        # shifting the event start time, but instead of using `-l`/`--min-event-len` directly,
+        # we need to compensate for rounding errors when we corrected it for frame skip (since this
+        # affects the number of frames we consider for the actual motion event).
+        start_event_shift = self._pre_event_len.frame_num + min_event_len * (self._frame_skip + 1)
 
         # Length of buffer we require in memory to keep track of all frames required for -l and -tb.
         buff_len = pre_event_len + min_event_len
-        frames_since_last_event = 0
+        event_end = FrameTimecode(timecode=0, fps=self._video_fps)
 
         # Motion event scanning/detection loop. Need to avoid CLI output/logging until end of the
         # main scanning loop below, otherwise it will interrupt the progress bar.
@@ -578,7 +583,6 @@ class ScanContext(object):
                     num_frames_post_event += 1
                     if num_frames_post_event >= post_event_len:
                         in_motion_event = False
-                        frames_since_last_event = 0
                         # The event ended on the previous frame, so correct for that.
                         event_end = presentation_time
                         # The duration, however, should include the PTS of the end frame.
@@ -589,7 +593,6 @@ class ScanContext(object):
                             self._video_writer.release()
                             self._video_writer = None
             else:
-                frames_since_last_event += 1
                 if not self._scan_only:
                     self._draw_overlays(frame_rgb_origin, presentation_time)
                     buffered_frames.append(frame_rgb_origin)
@@ -599,9 +602,8 @@ class ScanContext(object):
                     in_motion_event = True
                     event_window = []
                     num_frames_post_event = 0
-                    shift_amount = min(frames_since_last_event, pre_event_len + min_event_len)
-                    if self._frame_skip:
-                        shift_amount *= (self._frame_skip + 1)
+                    frames_since_last_event = presentation_time.frame_num - event_end.frame_num
+                    shift_amount = min(frames_since_last_event, start_event_shift)
                     shifted_start = max(0, self._curr_pos.frame_num - shift_amount)
                     event_start = FrameTimecode(shifted_start, self._video_fps)
                     # Open new VideoWriter if needed, write buffered_frames to file.
