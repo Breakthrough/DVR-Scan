@@ -154,7 +154,6 @@ def test_post_event_shift_with_frame_skip(traffic_camera_video):
 
         sctx = ScanContext([traffic_camera_video], frame_skip=frame_skip)
 
-        sctx = ScanContext([traffic_camera_video], frame_skip=1)
         sctx.set_detection_params(roi=TRAFFIC_CAMERA_ROI)
         sctx.set_event_params(min_event_len=4, time_post_event=40)
 
@@ -163,7 +162,7 @@ def test_post_event_shift_with_frame_skip(traffic_camera_video):
         assert len(event_list) == len(TRAFFIC_CAMERA_EVENTS_TIME_POST_40)
         event_list = [(event[0].frame_num, event[1].frame_num) for event in event_list]
         assert all([
-            abs(x[1] - y[1]) <= frame_skip
+            x[1] >= y[1] and abs(x[1] - y[1]) <= frame_skip
             for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS_TIME_POST_40)
         ])
 

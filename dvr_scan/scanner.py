@@ -515,6 +515,7 @@ class ScanContext(object):
         # Length of buffer we require in memory to keep track of all frames required for -l and -tb.
         buff_len = pre_event_len + min_event_len
         event_end = FrameTimecode(timecode=0, fps=self._video_fps)
+        last_frame_above_threshold = 0
 
         # Motion event scanning/detection loop. Need to avoid CLI output/logging until end of the
         # main scanning loop below, otherwise it will interrupt the progress bar.
@@ -579,12 +580,17 @@ class ScanContext(object):
                     self._video_writer.write(frame_rgb_origin)
                 if above_threshold:
                     num_frames_post_event = 0
+                    last_frame_above_threshold = presentation_time.frame_num
                 else:
                     num_frames_post_event += 1
                     if num_frames_post_event >= post_event_len:
                         in_motion_event = False
-                        # The event ended on the previous frame, so correct for that.
-                        event_end = presentation_time
+                        # Calculate event end based on the last frame we had with motion plus the
+                        # post event length time. We also need to compensate for the number of
+                        # frames that we skipped that could have had motion.
+                        event_end = FrameTimecode(
+                            last_frame_above_threshold + self._post_event_len.frame_num + self._frame_skip,
+                            self._video_fps)
                         # The duration, however, should include the PTS of the end frame.
                         event_duration = FrameTimecode(
                             self._curr_pos.frame_num - event_start.frame_num, self._video_fps)
