@@ -2,9 +2,15 @@
 DVR-Scan Changelog
 ==========================================================
 
-## DVR-Scan 1.0
+## DVR-Scan 1.4
 
 ### 1.4.1 (In Development)
+
+#### Release Notes
+
+This release includes fixes for incorrect event start/end times when using frame skipping, and improvements to the bounding box overlays.
+
+**Important:** Aside from critical bugfixes, DVR-Scan 1.4.x is the last minor version supporting Python 2.7.  Starting from v1.5, the new minimum supported Python version will be 3.6 (see [#83](https://github.com/Breakthrough/DVR-Scan/issues/83) for details).
 
 #### Changelog
 
@@ -12,11 +18,19 @@ DVR-Scan Changelog
     * Note that event start/end times may still be off by how many frames are skipped due to loss of context with respect to frame-accurate motion detection
  * Event end times now take into account the number of skipped frames if `-fs`/`--frame-skip` if specified (e.g. it is assumed all skipped frames contained motion)
 
+#### Known Issues
+
+ * Variable framerate videos (VFR) are not fully supported, and will yield incorrect timestamps ([#20](https://github.com/Breakthrough/DVR-Scan/issues/20))
+ * When using `-bb`/`--bounding-box`, the amount of time covered by `-l`/`--min-event-length` will be missing bounding box overlays ([#31](https://github.com/Breakthrough/DVR-Scan/issues/31))
+
+
 ### 1.4 (February 8, 2022)
+
+#### Release Notes
 
 In addition to several bugfixes, this release of DVR-Scan adds the ability to draw a bounding box around the area in the frame where motion was detected. There are also several improves when using `-fs`/`--frame-skip` and/or `-df`/`--downscale-factor` by ensuring all other option are relative to the original video framerate/resolution.
 
-**Important:** Aside from critical bugfixes, DVR-Scan 1.4 is the last planned release which will support Python 2.7.  Starting from v1.5, the new minimum supported Python version will be 3.6 (see [#83](https://github.com/Breakthrough/DVR-Scan/issues/83) for details).
+**Important:** Aside from critical bugfixes, DVR-Scan 1.4.x is the last minor version supporting Python 2.7.  Starting from v1.5, the new minimum supported Python version will be 3.6 (see [#83](https://github.com/Breakthrough/DVR-Scan/issues/83) for details).
 
 #### Changelog
 
@@ -45,6 +59,8 @@ In addition to several bugfixes, this release of DVR-Scan adds the ability to dr
  * When using `-bb`/`--bounding-box`, the amount of time covered by `-l`/`--min-event-length` will be missing bounding box overlays ([#31](https://github.com/Breakthrough/DVR-Scan/issues/31))
 
 
+## DVR-Scan 1.3
+
 ### 1.3 (May 23, 2021) &nbsp;<span class="fa fa-tags"></span>
 
 #### Release Notes
@@ -66,6 +82,9 @@ This version of DVR-Scan includes a new, faster background subtraction algorithm
  * The kernel size must be manually adjusted when using `-df`/`--downscale-factor` ([#46](https://github.com/Breakthrough/DVR-Scan/issues/46))
  * When using `--frame-skip`, the `--min-event-length` parameter must be manually adjusted, and exported clips will have the wrong playback speed
 
+
+## DVR-Scan 1.2
+
 ### 1.2 (March 10, 2021)
 
 #### Changelog
@@ -82,6 +101,8 @@ This version of DVR-Scan includes a new, faster background subtraction algorithm
  * Variable framerate videos (VFR) are not fully supported, and will yield incorrect timestamps ([#20](https://github.com/Breakthrough/DVR-Scan/issues/20))
 
 
+## DVR-Scan 1.1
+
 ### 1.1 (July 12, 2020)
 
 #### Changelog
@@ -95,9 +116,13 @@ This version of DVR-Scan includes a new, faster background subtraction algorithm
  * Quiet mode (`-q/--quiet`) does not work correctly
  * Variable framerate videos (VFR) are not fully supported, and will yield incorrect timestamps ([#20](https://github.com/Breakthrough/DVR-Scan/issues/20))
 
+
+## DVR-Scan 1.0
+
 ### 1.0.1 (January 12, 2017)
 
  * [bugfix] unhandled exception affecting users running source distributions under Python 2.7 environments
+
 
 ### 1.0 (January 11, 2017)
 

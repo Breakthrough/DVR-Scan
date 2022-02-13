@@ -46,21 +46,22 @@ TRAFFIC_CAMERA_EVENTS_TIME_PRE_5 = [
     (536, 576),
 ]
 
+# Last event still ends on end of video even though we specified to include 40 frames extra.
 TRAFFIC_CAMERA_EVENTS_TIME_POST_40 = [
     (9, 138),
     (358, 480),
-    (542, 576),                        # Last event still ends on end of video.
+    (542, 576),
 ]
 
+# Even though the first frame contains motion, the first frame we can actually detect it on is
+# the second frame (index 1).
 TRAFFIC_CAMERA_EVENTS_CNT = [
-                              # Even though the first frame contains motion, the first frame we can actually detect it on is
-                              # the first frame.
     (1, 148),
     (364, 490),
     (543, 576),
 ]
 
-# Small ROI for quicker processing
+# Small ROI for faster test execution.
 CORRUPT_VIDEO_ROI = [0, 0, 32, 32]
 CORRUPT_VIDEO_EVENTS = [
     (153, 364),
@@ -81,7 +82,7 @@ def test_scan_context(traffic_camera_video):
     event_list = [(event[0].frame_num, event[1].frame_num) for event in event_list]
     assert event_list == TRAFFIC_CAMERA_EVENTS
 
-    # TODO(v1.0): Add check for duration (should be end - start + 1).
+    # TODO: Add check for duration (should be end - start + 1).
 
 
 def test_scan_context_cnt(traffic_camera_video):
@@ -110,7 +111,7 @@ def test_pre_event_shift(traffic_camera_video):
 
     assert len(event_list) == len(TRAFFIC_CAMERA_EVENTS_TIME_PRE_5)
     event_list = [(event[0].frame_num, event[1].frame_num) for event in event_list]
-    assert all([x == y for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS_TIME_PRE_5)])
+    assert event_list == TRAFFIC_CAMERA_EVENTS_TIME_PRE_5
 
 
 def test_pre_event_shift_with_frame_skip(traffic_camera_video):
@@ -131,7 +132,8 @@ def test_pre_event_shift_with_frame_skip(traffic_camera_video):
         assert all([
             abs(x[0] - y[0]) <= frame_skip
             for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS_TIME_PRE_5)
-        ])
+        ]), "Comparison failure when frame_skip = %d" % (
+            frame_skip)
 
 
 def test_post_event_shift(traffic_camera_video):
@@ -161,10 +163,18 @@ def test_post_event_shift_with_frame_skip(traffic_camera_video):
 
         assert len(event_list) == len(TRAFFIC_CAMERA_EVENTS_TIME_POST_40)
         event_list = [(event[0].frame_num, event[1].frame_num) for event in event_list]
+        # The calculated end times should not differ by more than frame_skip from the ground truth.
         assert all([
-            x[1] >= y[1] and abs(x[1] - y[1]) <= frame_skip
+            abs(x[1] - y[1]) <= frame_skip
             for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS_TIME_POST_40)
-        ])
+        ]), "Comparison failure when frame_skip = %d" % (
+            frame_skip)
+
+        # The calculated end times must always be >= the ground truth's frame number, otherwise
+        # we may be discarding frames containing motion due to skipping them.
+        assert all([x[1] >= y[1] for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS_TIME_POST_40)
+                   ]), "Comparison failure when frame_skip = %d" % (
+                       frame_skip)
 
 
 def test_decode_corrupt_video(corrupt_video):
@@ -176,4 +186,4 @@ def test_decode_corrupt_video(corrupt_video):
 
     assert len(event_list) == len(CORRUPT_VIDEO_EVENTS)
     event_list = [(event[0].frame_num, event[1].frame_num) for event in event_list]
-    assert all([x == y for x, y in zip(event_list, CORRUPT_VIDEO_EVENTS)])
+    assert event_list == CORRUPT_VIDEO_EVENTS
