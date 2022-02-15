@@ -14,9 +14,10 @@ This release includes fixes for incorrect event start/end times when using frame
 
 #### Changelog
 
- * Event start times are now correctly calculated when using `-fs`/`--frame-skip` ([#68](https://github.com/Breakthrough/DVR-Scan/issues/68), [#70](https://github.com/Breakthrough/DVR-Scan/issues/70))
+ * [bugfix] Event start times are now correctly calculated when using `-fs`/`--frame-skip` ([#68](https://github.com/Breakthrough/DVR-Scan/issues/68), [#70](https://github.com/Breakthrough/DVR-Scan/issues/70))
     * Note that event start/end times may still be off by how many frames are skipped due to loss of context with respect to frame-accurate motion detection
- * Event end times now take into account the number of skipped frames if `-fs`/`--frame-skip` if specified (e.g. it is assumed all skipped frames contained motion)
+ * [bugfix] Event end times now take into account the number of skipped frames if `-fs`/`--frame-skip` if specified (e.g. it is assumed all skipped frames contained motion)
+ * [bugfix] Bounding box smoothing now takes into account `-fs`/`--frame-skip` ([#31](https://github.com/Breakthrough/DVR-Scan/issues/31))
 
 #### Known Issues
 

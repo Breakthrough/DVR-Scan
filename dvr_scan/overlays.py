@@ -144,8 +144,8 @@ class BoundingBoxOverlay(object):
         """
         self._downscale_factor = max(1, downscale_factor)
         self._roi = roi
-
         # We're reducing the number of frames by 1 / (frame_skip + 1)
+        self._frame_skip = frame_skip
 
     def _get_smoothed_window(self):
         # type: () -> Tuple[int, int, int, int]
