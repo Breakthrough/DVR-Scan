@@ -24,7 +24,6 @@ This release includes fixes for incorrect event start/end times when using frame
 #### Known Issues
 
  * Variable framerate videos (VFR) are not fully supported, and will yield incorrect timestamps ([#20](https://github.com/Breakthrough/DVR-Scan/issues/20))
- * When using `-bb`/`--bounding-box`, the amount of time covered by `-l`/
 
 
 ### 1.4 (February 8, 2022)
