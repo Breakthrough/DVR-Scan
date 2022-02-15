@@ -382,7 +382,8 @@ class ScanContext(object):
             return tqdm.tqdm(
                 total=num_frames,
                 unit=' frames',
-                desc="[DVR-Scan] Processed")
+                desc="[DVR-Scan] Processed",
+                dynamic_ncols=True)
         class NullProgressBar(object):
             """ Acts like a tqdm.tqdm object, but really a no-operation. """
             def update(self, _):
