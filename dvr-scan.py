@@ -17,9 +17,6 @@
 # LICENSE file or visit one of the following pages for details:
 #  - https://github.com/Breakthrough/DVR-Scan/
 #
-# This software uses Numpy and OpenCV; see the LICENSE-NUMPY and
-# LICENSE-OPENCV files or visit the above URL for details.
-#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
