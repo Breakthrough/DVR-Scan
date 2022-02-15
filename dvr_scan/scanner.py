@@ -456,12 +456,12 @@ class ScanContext(object):
             output_path, self._fourcc, effective_framerate,
             self._video_resolution)
 
-    def _draw_overlays(self, frame, frame_pos):
+    def _draw_overlays(self, frame, frame_pos, bounding_box):
         # type: (np.ndarray, Optional[FrameTimecode], Optional[np.ndarray]) -> None
         if not self._timecode_overlay is None:
             self._timecode_overlay.draw(frame=frame, text=frame_pos.get_timecode())
-        if not self._bounding_box is None:
-            self._bounding_box.draw(frame)
+        if not self._bounding_box is None and not bounding_box is None:
+            self._bounding_box.draw(frame, bounding_box)
 
     def scan_motion(self, method='mog'):
         # type: (Optional[str]) -> List[Tuple[FrameTimecode, FrameTimecode, FrameTimecode]]
@@ -559,6 +559,7 @@ class ScanContext(object):
             frame_mask = bg_subtractor.apply(frame_gray)
             frame_filt = cv2.morphologyEx(frame_mask, cv2.MORPH_OPEN, kernel)
             frame_score = np.sum(frame_filt) / float(frame_filt.shape[0] * frame_filt.shape[1])
+            above_threshold = frame_score >= self._threshold
             # Always assign the first frame a score of 0 since some subtractors will output a mask
             # indicating motion on every pixel of the first frame.
             if not processed_first_frame:
@@ -567,16 +568,15 @@ class ScanContext(object):
             event_window.append(frame_score)
             event_window = event_window[-min_event_len:]
 
+            bounding_box = None
+            if self._bounding_box:
+                bounding_box = (
+                    self._bounding_box.update(frame_filt) if above_threshold else
+                    self._bounding_box.clear())
+
             if in_motion_event:
-                above_threshold = frame_score >= self._threshold
-                if self._bounding_box:
-                    # Update the bounding box if the frame is above the threshold, else clear it.
-                    if above_threshold:
-                        self._bounding_box.update(frame_filt)
-                    else:
-                        self._bounding_box.clear()
                 if not self._scan_only:
-                    self._draw_overlays(frame_rgb_origin, presentation_time)
+                    self._draw_overlays(frame_rgb_origin, presentation_time, bounding_box)
                     self._video_writer.write(frame_rgb_origin)
                 if above_threshold:
                     num_frames_post_event = 0
@@ -600,8 +600,8 @@ class ScanContext(object):
                             self._video_writer = None
             else:
                 if not self._scan_only:
-                    self._draw_overlays(frame_rgb_origin, presentation_time)
-                    buffered_frames.append(frame_rgb_origin)
+                    # Need to defer overlay drawing.
+                    buffered_frames.append((frame_rgb_origin, presentation_time, bounding_box))
                     buffered_frames = buffered_frames[-buff_len:]
                 if len(event_window) >= min_event_len and all(
                         score >= self._threshold for score in event_window):
@@ -616,7 +616,8 @@ class ScanContext(object):
                     if not self._scan_only:
                         if self._video_writer is None:
                             self._init_video_writer()
-                        for frame in buffered_frames:
+                        for frame, timecode, bounding_box in buffered_frames:
+                            self._draw_overlays(frame, timecode, bounding_box)
                             self._video_writer.write(frame)
                     buffered_frames = []
 

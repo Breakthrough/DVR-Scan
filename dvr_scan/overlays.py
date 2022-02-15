@@ -180,13 +180,10 @@ class BoundingBoxOverlay(object):
         smoothing_amount = max(1, self._smoothing_amount // (1 + self._frame_skip))
         # Ensure window size doesn't exceed amount of smoothing required.
         self._smoothing_window = self._smoothing_window[-smoothing_amount:]
+        return self._get_smoothed_window()
 
-    def draw(self, frame):
-        """Draw a bounding box onto a target frame based on the previous calls to `update`."""
-        if not self._smoothing_window:
-            return
-        # Bounding box is in the form (x,y,w,h)
-        bounding_box = self._get_smoothed_window()
+    def draw(self, frame, bounding_box):
+        """Draw a bounding box onto a target frame using the provided ROI and downscale factor."""
         # Correct for downscale factor
         bounding_box = [side_len * self._downscale_factor for side_len in bounding_box]
         top_left = (bounding_box[0], bounding_box[1])

@@ -4,7 +4,7 @@ DVR-Scan Changelog
 
 ## DVR-Scan 1.4
 
-### 1.4.1 (In Development)
+### 1.4.1 (In Development) &nbsp;<span class="fa fa-tags"></span>
 
 #### Release Notes
 
@@ -18,11 +18,13 @@ This release includes fixes for incorrect event start/end times when using frame
     * Note that event start/end times may still be off by how many frames are skipped due to loss of context with respect to frame-accurate motion detection
  * [bugfix] Event end times now take into account the number of skipped frames if `-fs`/`--frame-skip` if specified (e.g. it is assumed all skipped frames contained motion)
  * [bugfix] Bounding box smoothing now takes into account `-fs`/`--frame-skip` ([#31](https://github.com/Breakthrough/DVR-Scan/issues/31))
+ * [bugfix] Bounding boxes now cover all frames with motion ([#31](https://github.com/Breakthrough/DVR-Scan/issues/31))
+    * In v1.4 only the frames after `-l`/`--min-event-length` frames had passed were covered
 
 #### Known Issues
 
  * Variable framerate videos (VFR) are not fully supported, and will yield incorrect timestamps ([#20](https://github.com/Breakthrough/DVR-Scan/issues/20))
- * When using `-bb`/`--bounding-box`, the amount of time covered by `-l`/`--min-event-length` will be missing bounding box overlays ([#31](https://github.com/Breakthrough/DVR-Scan/issues/31))
+ * When using `-bb`/`--bounding-box`, the amount of time covered by `-l`/
 
 
 ### 1.4 (February 8, 2022)
@@ -62,7 +64,7 @@ In addition to several bugfixes, this release of DVR-Scan adds the ability to dr
 
 ## DVR-Scan 1.3
 
-### 1.3 (May 23, 2021) &nbsp;<span class="fa fa-tags"></span>
+### 1.3 (May 23, 2021)
 
 #### Release Notes
 
