@@ -4,7 +4,7 @@ DVR-Scan Changelog
 
 ## DVR-Scan 1.4
 
-### 1.4.1 (In Development) &nbsp;<span class="fa fa-tags"></span>
+### 1.4.1 (February 20, 2022) &nbsp;<span class="fa fa-tags"></span>
 
 #### Release Notes
 

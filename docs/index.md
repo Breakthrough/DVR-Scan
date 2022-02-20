@@ -2,7 +2,7 @@
 <h4 class="wy-text-info" style="margin-top:-1em;">Find and extract motion events in videos.</h4>
 
 <div class="important">
-<h3 class="wy-text-neutral"><span class="fa fa-info-circle wy-text-info"></span>&nbsp; Latest Release: <b>v1.4</b> (February 8, 2022)</h3>
+<h3 class="wy-text-neutral"><span class="fa fa-info-circle wy-text-info"></span>&nbsp; Latest Release: <b>v1.4.1</b> (February 20, 2022)</h3>
 <a href="download/" class="btn btn-info" style="margin-bottom:8px;" role="button"><span class="fa fa-download"></span>&nbsp; <b>Download</b>&nbsp;&nbsp;(all platforms)</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href="guide/installing/" class="btn btn-success" style="margin-bottom:8px;" role="button"><span class="fa fa-gear"></span>&nbsp; <b>Installation</b></a> &nbsp;&nbsp;&nbsp;&nbsp; <a href="guide/examples/" class="btn btn-warning" style="margin-bottom:8px;" role="button"><span class="fa fa-book"></span>&nbsp; <b>Getting Started</b></a>
 </div>
 
