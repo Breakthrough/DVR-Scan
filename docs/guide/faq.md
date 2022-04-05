@@ -7,13 +7,9 @@ This FAQ is a supplement to the user guide, and is intended to help solve the mo
 ----------------------------------------------------------
 
 
-### Why won't DVR-Scan open any video files?
+### How can I scan all files in a folder?
 
-If you're unable to get DVR-Scan to process any video files, including those available in the examples section, than you are either missing or have an improperly configured software dependency.
-
-This usually happens because DVR-Scan is not able to find the OpenCV FFMPEG DLL, which is required to decode videos.  Try reinstalling OpenCV, ensuring that when finished, all of the compiled `opencv*.dll` binaries can be found somewhere in your system's `%PATH%` environment variable.
-
-Windows users can also try downloading a binary/portable distribution, which includes DVR-Scan and all dependencies in a single .ZIP archive.  Note that the portable version can be "installed" after extracting by adding the folder containing `dvr-scan.exe` to your system's `%PATH%` environment variable, allowing you to use the `dvr-scan` command system-wide.
+[See this comment](https://github.com/Breakthrough/DVR-Scan/issues/5#issuecomment-599140476) for how to run DVR-Scan on all files in a folder. You can use [a similar for loop in bash](https://github.com/Breakthrough/DVR-Scan/issues/5#issuecomment-633199185).
 
 
 ----------------------------------------------------------
@@ -65,12 +61,14 @@ $ docker run --rm -it -v $(pwd):/videos/ dvr-scan -i your_video_file.mkv
 
 The most important thing to keep in mind is the `-v` flag, which specifies the local folders to share. Inside the docker container `/videos/` is the working directory, so map that to wherever you want to process your files.
 
+
 ----------------------------------------------------------
 
 
 ### What if my video is larger than my monitor resolution?
 
 As of DVR-Scan v1.4, you can either manually specify the max width/height (e.g. `-roi 1920 1080`), or if the `screeninfo` package is installed, the window will be sized to the minimum monitor size.
+
 
 ----------------------------------------------------------
 
@@ -81,3 +79,14 @@ Please submit any bug reports or feature requests to <a href="https://github.com
 
 Code changes and pull requests are accepted and welcome, provided that the changes include fixes or improvements to the codebase, rather than just cosmetic changes, and that the changes meet or exceed the quality of the application codebase and standards guiding its development.
 
+
+----------------------------------------------------------
+
+
+### Why won't DVR-Scan open any video files?
+
+If you're unable to get DVR-Scan to process any video files, including those available in the examples section, than you are either missing or have an improperly configured software dependency.
+
+This usually happens because DVR-Scan is not able to find the OpenCV FFMPEG DLL, which is required to decode videos.  Try reinstalling OpenCV, ensuring that when finished, all of the compiled `opencv*.dll` binaries can be found somewhere in your system's `%PATH%` environment variable.
+
+Windows users can also try downloading a binary/portable distribution, which includes DVR-Scan and all dependencies in a single .ZIP archive.  Note that the portable version can be "installed" after extracting by adding the folder containing `dvr-scan.exe` to your system's `%PATH%` environment variable, allowing you to use the `dvr-scan` command system-wide.
