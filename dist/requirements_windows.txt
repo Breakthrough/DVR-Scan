@@ -1,0 +1,9 @@
+#
+# DVR-Scan Requirements for Windows Build (Python 3.7+)
+#
+# These are pinned to the versions required for the Windows build to work
+# using pyinstaller.
+numpy
+opencv-python==4.5.1.48
+pytest
+tqdm

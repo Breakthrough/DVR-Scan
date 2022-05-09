@@ -2,9 +2,27 @@
 DVR-Scan Changelog
 ==========================================================
 
+## DVR-Scan 1.5
+
+### 1.5 (In Development) &nbsp;<span class="fa fa-tags"></span>
+
+#### Release Notes
+
+ - The new minimum supported Python version is 3.6,
+ - Support for OpenCV 2 has been dropped, new minimum verison is OpenCV 3
+
+#### Changelog
+
+ -
+
+#### Known Issues
+
+ * Variable framerate videos (VFR) are not fully supported, and will yield incorrect timestamps ([#20](https://github.com/Breakthrough/DVR-Scan/issues/20))
+
+
 ## DVR-Scan 1.4
 
-### 1.4.1 (February 20, 2022) &nbsp;<span class="fa fa-tags"></span>
+### 1.4.1 (February 20, 2022)
 
 #### Release Notes
 
