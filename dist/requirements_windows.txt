@@ -5,6 +5,6 @@
 # using pyinstaller.
 numpy
 opencv-python==4.5.1.48
-opencv-contrib==4.5.1.48
+opencv-contrib-python==4.5.1.48
 pytest
 tqdm
