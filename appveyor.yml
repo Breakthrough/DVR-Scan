@@ -1,0 +1,66 @@
+
+skip_commits:
+  files:
+    - docs/*
+    - '**/*.rst'
+    - '**/*.md'
+
+
+# We have to disable the `build` command explicitly otherwise the default is
+# MSBuild which assumes this is a Visual Studio project. Python source/binary
+# wheels a Windows .exe are generated below in `install`.
+build: false
+
+
+environment:
+  matrix:
+    - PYTHON: "C:\\Python37-x64"
+    - PYTHON: "C:\\Python38-x64"
+    - PYTHON: "C:\\Python39-x64"
+
+
+install:
+  # Setup Python environment and update basic packages.
+  - 'SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%'
+  - python --version
+  - python -m pip install --upgrade pip
+  - python -m pip install --upgrade setuptools wheel pyinstaller==4.10
+  - python -m pip install -r dist/requirements_windows.txt
+
+  # Build Python package
+  - python setup.py sdist bdist_wheel
+
+  # Build Windows .EXE
+  - pyinstaller dist/dvr-scan.spec
+
+  # Bundle Windows .EXE distribution with all dependencies.
+  - python dist/cleanup_dependencies.py
+  - 7z a dist/dvr-scan-win64.zip dist/dvr-scan/*
+
+  # TODO: Rename using APPVEYOR_REPO_COMMIT env var and inline Powershell script
+
+
+test_script:
+  # Unit Tests
+  - pytest
+
+  # Test Windows Build
+  - cd dist/dvr-scan
+  - dvr-scan.exe -v
+  - dvr-scan.exe -i ../../tests/resources/simple_movement.mp4 -so -df 4 -et 100
+  # TODO: Test Python Distributions
+  # Wildcard expansion doesn't seem to work with pip here, e.g. the following fails:
+  #- python -m pip install dist\*.whl
+
+artifacts:
+  - path: dist/dvr-scan-win64.zip
+    name: DVR-Scan-win64_portable
+
+  - path: dist/dvr-scan/dvr-scan.exe
+    name: DVR-Scan-win64_exeonly
+
+  - path: dist/*.tar.gz
+    name: DVR-Scan-sdist
+
+  - path: dist/*.whl
+    name: DVR-Scan-bdist_wheel
