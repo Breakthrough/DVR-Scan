@@ -45,7 +45,7 @@ import numpy as np
 # DVR-Scan Library Imports
 from dvr_scan.timecode import FrameTimecode
 from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
-import dvr_scan.platform
+from dvr_scan.platform import get_min_screen_bounds, get_tqdm
 
 
 DEFAULT_VIDEOWRITER_CODEC = cv2.VideoWriter_fourcc('X', 'V', 'I', 'D')
@@ -126,7 +126,7 @@ class ScanContext(object):
         self._kernel_size = None                    # -k/--kernel-size
         self._downscale_factor = 1                  # -df/--downscale-factor
         self._roi = None                            # --roi
-        self._max_roi_size = dvr_scan.platform.get_min_screen_bounds()
+        self._max_roi_size = None                   # --roi
         self._show_roi_window = False
 
         # Motion Event Parameters (set_event_params)
@@ -371,7 +371,7 @@ class ScanContext(object):
 
     def _create_progress_bar(self, show_progress, num_frames):
         # type: (bool, int) -> tqdm.tqdm
-        tqdm = None if not show_progress else dvr_scan.platform.get_tqdm()
+        tqdm = None if not show_progress else get_tqdm()
         if tqdm is not None:
             if self._end_time and self._end_time.frame_num < num_frames:
                 num_frames = self._end_time.frame_num
@@ -400,6 +400,8 @@ class ScanContext(object):
             self._logger.info("Selecting area of interest:")
             frame_for_crop = self._get_next_frame()
             scale_factor = None
+            if self._max_roi_size is None:
+                self._max_roi_size = get_min_screen_bounds()
             if self._max_roi_size is not None:
                 frame_h, frame_w = (frame_for_crop.shape[0], frame_for_crop.shape[1])
                 max_w, max_h = self._max_roi_size

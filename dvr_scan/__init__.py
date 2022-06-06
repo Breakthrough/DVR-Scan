@@ -40,9 +40,19 @@ from __future__ import print_function
 import logging
 import sys
 
+# OpenCV is a required package, but we don't have it as an explicit dependency since we
+# need to support both opencv-python and opencv-python-headless. Include some additional
+# context with the exception if this is the case.
+try:
+    import cv2 as _
+except ModuleNotFoundError as ex:
+    raise ModuleNotFoundError(
+        "OpenCV could not be found, try installing opencv-python:\n\npip install opencv-python",
+        name='cv2',
+    ) from ex
+
 # DVR-Scan Library Imports
-from dvr_scan.scanner import ScanContext
-from dvr_scan.scanner import VideoLoadFailure
+from dvr_scan.scanner import ScanContext, VideoLoadFailure
 
 
 # Used for module identification and when printing copyright & version info.
@@ -67,11 +77,7 @@ THE SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, EXPRESS OR IMPLIED.
 
 
 def init_logger(quiet_mode, log_level=logging.INFO):
-    """ Initializes the Python logging module for DVR-Scan.
-
-    The logger instance used is 'dvr_scan'.
-    """
-
+    """Initializes the Python logger named 'dvr_scan'."""
     logger = logging.getLogger('dvr_scan')
     logger.setLevel(log_level)
     if quiet_mode:

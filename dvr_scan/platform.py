@@ -38,7 +38,7 @@ TODO: Replace with PySceneDetect's platform module to reduce code duplication
 across both projects.
 """
 
-# Third-Party Library Imports
+import logging
 import cv2
 
 # Compatibility fix for OpenCV < 3.0
@@ -59,7 +59,7 @@ def get_tqdm():
         import tqdm
         return tqdm
     except ImportError:
-        print("")
+        pass
     return None
 
 def cnt_is_available():
@@ -74,9 +74,12 @@ def get_min_screen_bounds():
     and widths with 10% padding."""
     try:
         import screeninfo
-        monitors = screeninfo.get_monitors()
-        return (int(0.9 * min(m.height for m in monitors)),
-                int(0.9 * min(m.width for m in monitors)))
+        try:
+            monitors = screeninfo.get_monitors()
+            return (int(0.9 * min(m.height for m in monitors)),
+                    int(0.9 * min(m.width for m in monitors)))
+        except screeninfo.common.ScreenInfoError as ex:
+            logging.getLogger('dvr_scan').warning("Unable to get screen resolution: %s", ex)
     except ImportError:
         pass
     return None
