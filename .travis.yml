@@ -42,18 +42,18 @@ script:
   - python -m pytest tests/
   # Test CLI using source code
   - python -m dvr_scan -v
-  - python -m dvr_scan -i ../../tests/resources/simple_movement.mp4 -so -df 4 -et 100
+  - python -m dvr_scan -i tests/resources/simple_movement.mp4 -so -df 4 -et 100
 
   # Test CLI using source distribution
   - python -m pip install dist/dvr-scan-`python -c "import dvr_scan; print(dvr_scan.__version__[1:])"`.tar.gz
-  - python -m dvr-scan -v
-  - python -m dvr-scan -i ../../tests/resources/simple_movement.mp4 -so -df 4 -et 100ources/testvideo.mp4 -b pyav detect-content time -e 2s
+  - dvr-scan -v
+  - dvr-scan -i tests/resources/simple_movement.mp4 -so -df 4 -et 100ources/testvideo.mp4 -b pyav detect-content time -e 2s
   # Cleanup
   - python -m pip uninstall -y dvr-scan
 
   # Test CLI using binary wheel
   - python -m pip install dist/dvr_scan-`python -c "import dvr_scan; print(dvr_scan.__version__[1:])"`-py3-none-any.whl
-  - python -m dvr-scan -v
-  - python -m dvr-scan -i ../../tests/resources/simple_movement.mp4 -so -df 4 -et 100ources/testvideo.mp4 -b pyav detect-content time -e 2s
+  - dvr-scan -v
+  - dvr-scan -i tests/resources/simple_movement.mp4 -so -df 4 -et 100ources/testvideo.mp4 -b pyav detect-content time -e 2s
   # Cleanup
   - python -m pip uninstall -y dvr-scan
