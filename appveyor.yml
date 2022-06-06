@@ -24,32 +24,25 @@ install:
   - python -m pip install --upgrade pip build wheel virtualenv
   # Make sure we get latest binary packages OpenCV.
   - "python -m pip install opencv-python opencv-contrib-python --only-binary :all:"
-  - python -m pip install -r dist/requirements_windows.txt
+  - python -m pip install -r requirements.txt
 
   # Build Python package
   - python -m build
 
   # TODO: Rename using APPVEYOR_REPO_COMMIT env var and inline Powershell script
 
-  # Build Windows .EXE
-  - pyinstaller dist/dvr-scan.spec
-
 test_script:
   # Unit Tests
   - pytest
 
-  # Test Windows Build
-  - cd dist/dvr-scan
-  - dvr-scan.exe -v
-  - dvr-scan.exe -i ../../tests/resources/simple_movement.mp4 -so -df 4 -et 100
+  # Test Python Module
+  - python -m dvr_scan -v
+  - python -m dvr_scan -i ../../tests/resources/simple_movement.mp4 -so -df 4 -et 100
   # TODO: Test Python Distributions
   # Wildcard expansion doesn't seem to work with pip here, e.g. the following fails:
   #- python -m pip install dist\*.whl
 
 artifacts:
-  - path: dist/dvr-scan/dvr-scan.exe
-    name: DVR-Scan-win64-exeonly
-
   - path: dist/*.tar.gz
     name: DVR-Scan-sdist
 
