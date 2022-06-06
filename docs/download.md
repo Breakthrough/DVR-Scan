@@ -38,11 +38,13 @@ If GUI support is not required (e.g. for server-only usage), you can install the
 <a href="https://github.com/Breakthrough/DVR-Scan/archive/refs/tags/v1.4.1.zip" class="btn btn-info" style="margin-bottom:8px;" role="button"><span class="fa fa-download"></span>&nbsp; <b>Source</b>&nbsp;&nbsp;.zip</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href="https://github.com/Breakthrough/DVR-Scan/archive/refs/tags/v1.4.1.tar.gz" class="btn btn-info" style="margin-bottom:8px;" role="button"><span class="fa fa-download"></span>&nbsp; <b>Source</b>&nbsp;&nbsp;.tar.gz</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href="../examples/usage/" class="btn btn-success" style="margin-bottom:8px;" role="button"><span class="fa fa-book"></span>&nbsp; <b>Getting Started</b></a>
 </div>
 
-To install from source, download and extract the latest release to a location of your choice, and make sure you have the appropriate [system requirements](guide/installing.md) installed before continuing.  DVR-Scan can be installed by running the following command in the location of the extracted files (don't forget `sudo` if you're installing system-wide):
+To install from source, download and extract the latest release to a location of your choice, and make sure you have the appropriate [system requirements](guide/installing.md) installed before continuing.  DVR-Scan can be built by running the following command:
 
 ```md
-python setup.py install
+python -m build
 ```
+
+DVR-Scan can then be installed from the built package using `pip`.
 
 See the section [Installing & Updating](guide/installing.md) for instructions on installing DVR-Scan and the required system dependencies.  The source distribution is the recommended download for Linux and Mac users.  Although source installation is possible on Windows, the installer and portable versions are the recommended downloads for Windows users, as all required dependencies come bundled with these distributions.
 

@@ -10,7 +10,7 @@ If you have Python & pip installed, you can get DVR-Scan the following two ways:
 
 <div class="important">
 <h4 class="wy-text-neutral"><span class="fa fa-angle-double-down wy-text-info"></span> Including all dependencies:</h4>
-<h3 class="wy-text-neutral"><tt>pip install dvr-scan[opencv,progress_bar]</tt></h3>
+<h3 class="wy-text-neutral"><tt>pip install dvr-scan[opencv]</tt></h3>
 <h4 class="wy-text-neutral"><span class="fa fa-angle-down wy-text-info"></span> Without extras (OpenCV installation required):</h4>
 <h3 class="wy-text-neutral"><tt>pip install dvr-scan</tt></h3>
 </div>
@@ -23,7 +23,7 @@ Start by downloading the latest release of DVR-Scan and extracting it to a locat
 
 ### Installing Dependencies
 
-If installing from source, DVR-Scan requires [Python 2 or 3](https://www.python.org/) (tested on 3.X, untested but should work on 2.X) and the following libraries ([quick install guide](http://breakthrough.github.io/Installing-OpenCV/)).  Note that starting with DVR-Scan v1.5, the minimum required Python version will be 3.6.
+DVR-Scan requires [Python 3.7 or higher](https://www.python.org/) and the following dependencies:
 
  - [OpenCV](http://opencv.org/) (requires version 3.0 and above) the Python module (`pip install opencv-python`) as well as `opencv-contrib-python` is required for some features (e.g. `-b CNT`)
  - [Numpy](http://sourceforge.net/projects/numpy/) Python module (`numpy`)
@@ -35,15 +35,13 @@ Note that some Linux package managers still provide older, dated builds of OpenC
 
 ### Installing DVR-Scan
 
-To ensure you have all the requirements installed, open a `python` interpreter, and ensure you can run `import numpy` and `import cv2.bgsegm` without any errors (optionally, if you installed tqdm, run `import tqdm` as well).
-
-DVR-Scan can then be installed by running the following command in the location of the extracted files:
+To ensure you have all the requirements installed, open a `python` interpreter, and ensure you can run `import numpy` and `import cv2.bgsegm` without any errors (optionally, if you installed tqdm, run `import tqdm` as well).  DVR-Scan can then be built by running:
 
 ```md
-sudo python setup.py install
+python -m build
 ```
 
-Once finished, DVR-Scan will be installed, and you should be able to run the `dvr-scan` command from any terminal/command prompt.  To verify that everything was installed properly, try calling the following command:
+The resulting package in the `dist/` folder can be installed with `pip`. To verify that everything was installed properly, try calling the following command:
 
 ```md
 dvr-scan --version

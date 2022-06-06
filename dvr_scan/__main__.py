@@ -5,15 +5,6 @@
 #       [  Site: https://github.com/Breakthrough/DVR-Scan/   ]
 #       [  Documentation: http://dvr-scan.readthedocs.org/   ]
 #
-# Provides functionality to run DVR-Scan directly as a Python module (in
-# addition to using in other scripts via `import dvr_scan`) by running:
-#
-#   > python -m dvr_scan
-#
-# Installing DVR-Scan (using `python setup.py install` command in the parent
-# directory) will allow the `dvr-scan` command to be used from anywhere,
-# e.g. `dvr-scan -i myfile.mp4`.
-#
 # Copyright (C) 2016-2022 Brandon Castellano <http://www.bcastell.com>.
 #
 # DVR-Scan is licensed under the BSD 2-Clause License; see the included

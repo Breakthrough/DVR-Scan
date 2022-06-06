@@ -26,7 +26,7 @@ install:
   - python -m pip install -r dist/requirements_windows.txt
 
   # Build Python package
-  - python setup.py sdist bdist_wheel
+  - python -m build
 
   # TODO: Rename using APPVEYOR_REPO_COMMIT env var and inline Powershell script
 
