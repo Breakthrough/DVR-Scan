@@ -37,7 +37,7 @@ test_script:
 
   # Test Python Module
   - python -m dvr_scan -v
-  - python -m dvr_scan -i ../../tests/resources/simple_movement.mp4 -so -df 4 -et 100
+  - python -m dvr_scan -i tests/resources/simple_movement.mp4 -so -df 4 -et 100
   # TODO: Test Python Distributions
   # Wildcard expansion doesn't seem to work with pip here, e.g. the following fails:
   #- python -m pip install dist\*.whl
