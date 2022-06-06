@@ -41,8 +41,8 @@ install:
 script:
   - python -m pytest tests/
   # Test CLI using source code
-  - python -m dvr-scan -v
-  - python -m dvr-scan -i ../../tests/resources/simple_movement.mp4 -so -df 4 -et 100
+  - python -m dvr_scan -v
+  - python -m dvr_scan -i ../../tests/resources/simple_movement.mp4 -so -df 4 -et 100
 
   # Test CLI using source distribution
   - python -m pip install dist/dvr-scan-`python -c "import dvr_scan; print(dvr_scan.__version__[1:])"`.tar.gz
