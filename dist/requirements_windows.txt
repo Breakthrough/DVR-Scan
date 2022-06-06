@@ -6,7 +6,7 @@
 numpy
 opencv-python==4.5.1.48
 opencv-contrib-python==4.5.1.48
-pyinstaller==4.1.0
+pyinstaller==4.10
 pytest
 screeninfo
 tqdm
