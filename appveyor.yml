@@ -21,8 +21,9 @@ install:
   # Setup Python environment and update basic packages.
   - 'SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%'
   - python --version
-  - python -m pip install --upgrade pip
-  - python -m pip install --upgrade build wheel virtualenv
+  - python -m pip install --upgrade pip build wheel virtualenv
+  # Make sure we get latest binary packages OpenCV.
+  - "python -m pip install opencv-python-headless opencv-contrib-python-headless --only-binary :all:"
   - python -m pip install -r dist/requirements_windows.txt
 
   # Build Python package
