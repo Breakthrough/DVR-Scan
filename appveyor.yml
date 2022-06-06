@@ -5,51 +5,33 @@ skip_commits:
     - '**/*.rst'
     - '**/*.md'
 
-
 # We have to disable the `build` command explicitly otherwise the default is
 # MSBuild which assumes this is a Visual Studio project. Python source/binary
 # wheels a Windows .exe are generated below in `install`.
 build: false
-
-
-# SignPath Config
-deploy:
-- provider: Webhook
-  url: https://app.signpath.io/API/v1/f2efa44c-5b5c-45f2-b44f-8f9dde708313/Integrations/AppVeyor?ProjectSlug=DVR-Scan&SigningPolicySlug=test-signing
-  authorization:
-     secure: mdCtq1nvbA+ADEqG36J9szgR045RLAsBbc58b7rusEnSuUA7rHFE4jMZvtdr6ODZOJqYZX8i/0bTgFPiiG/2rA==
-  on:
-    APPVEYOR_REPO_TAG: true
-    PYTHON: "C:\\Python39-x64"
-
 
 environment:
   matrix:
     - PYTHON: "C:\\Python37-x64"
     - PYTHON: "C:\\Python38-x64"
     - PYTHON: "C:\\Python39-x64"
-
+    - PYTHON: "C:\\Python310-x64"
 
 install:
   # Setup Python environment and update basic packages.
   - 'SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%'
   - python --version
   - python -m pip install --upgrade pip
-  - python -m pip install --upgrade setuptools wheel pyinstaller==4.10
+  - python -m pip install --upgrade setuptools wheel
   - python -m pip install -r dist/requirements_windows.txt
 
   # Build Python package
   - python setup.py sdist bdist_wheel
 
-  # Build Windows .EXE
-  - pyinstaller dist/dvr-scan.spec
-
-  # Bundle Windows .EXE distribution with all dependencies.
-  - python dist/cleanup_dependencies.py
-  - 7z a dist/dvr-scan-win64.zip dist/dvr-scan/*
-
   # TODO: Rename using APPVEYOR_REPO_COMMIT env var and inline Powershell script
 
+  # Build Windows .EXE
+  - pyinstaller dist/dvr-scan.spec
 
 test_script:
   # Unit Tests
@@ -64,11 +46,8 @@ test_script:
   #- python -m pip install dist\*.whl
 
 artifacts:
-  - path: dist/dvr-scan-win64.zip
-    name: DVR-Scan-win64_portable
-
   - path: dist/dvr-scan/dvr-scan.exe
-    name: DVR-Scan-win64_exeonly
+    name: DVR-Scan-win64-exeonly
 
   - path: dist/*.tar.gz
     name: DVR-Scan-sdist

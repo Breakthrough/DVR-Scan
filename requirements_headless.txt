@@ -1,0 +1,10 @@
+#
+# DVR-Scan Python Requirements
+#
+pytest
+numpy
+opencv-python-headless<=4.2.0.32; python_version <= "3.5"
+opencv-python-headless; python_version > "3.5"
+opencv-contrib-python-headless<=4.2.0.32; python_version <= "3.5"
+opencv-contrib-python-headless; python_version > "3.5"
+tqdm
