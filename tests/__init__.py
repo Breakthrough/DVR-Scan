@@ -7,7 +7,7 @@
 #
 # This file contains all code for the main `dvr_scan` module.
 #
-# Copyright (C) 2016-2021 Brandon Castellano <http://www.bcastell.com>.
+# Copyright (C) 2016-2022 Brandon Castellano <http://www.bcastell.com>.
 #
 # DVR-Scan is licensed under the BSD 2-Clause License; see the included
 # LICENSE file or visit one of the following pages for details:
@@ -22,11 +22,5 @@
 # OTHER DEALINGS IN THE SOFTWARE.
 #
 
-""" DVR-Scan Unit Test Suite
-
-To run all available tests run `pytest -v` from the parent directory
-(i.e. the root project folder of DVR-Scan containing the scenedetect/
-and tests/ folders).  This will automatically find and run all of the
-test cases in the tests/ folder and display the results.
-"""
+"""DVR-Scan Unit Test Suite"""
 
