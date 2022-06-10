@@ -21,7 +21,6 @@
 # ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 #
-
 """ ``dvr_scan`` Module
 
 This is the main DVR-Scan module containing all application logic,
@@ -54,7 +53,6 @@ except ModuleNotFoundError as ex:
 # DVR-Scan Library Imports
 from dvr_scan.scanner import ScanContext, VideoLoadFailure
 
-
 # Used for module identification and when printing copyright & version info.
 __version__ = 'v1.4.1'
 
@@ -75,7 +73,6 @@ THE SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, EXPRESS OR IMPLIED.
 """ % __version__
 
 
-
 def init_logger(quiet_mode, log_level=logging.INFO):
     """Initializes the Python logger named 'dvr_scan'."""
     logger = logging.getLogger('dvr_scan')
@@ -89,5 +86,6 @@ def init_logger(quiet_mode, log_level=logging.INFO):
     handler.setFormatter(logging.Formatter(fmt='[DVR-Scan] %(message)s'))
     logger.addHandler(handler)
     return logger
+
 
 init_logger(quiet_mode=True)

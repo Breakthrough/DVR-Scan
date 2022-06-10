@@ -22,7 +22,6 @@
 # ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 #
-
 """ ``dvr_scan.platform`` Module
 
 This file contains all platform/library/OS-specific compatibility fixes,
@@ -32,6 +31,7 @@ for maintaining backwards compatibility with existing libraries going forwards.
 
 import logging
 import cv2
+
 
 def get_tqdm():
     """ Safely attempts to import the tqdm module, returning either a
@@ -43,11 +43,13 @@ def get_tqdm():
         pass
     return None
 
+
 def cnt_is_available():
     try:
         return 'createBackgroundSubtractorCNT' in dir(cv2.bgsegm)
     except AttributeError:
         return False
+
 
 def get_min_screen_bounds():
     """ Safely attempts to get the minimum screen resolution of all monitors
