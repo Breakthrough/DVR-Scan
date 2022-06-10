@@ -54,7 +54,7 @@ except ModuleNotFoundError as ex:
 from dvr_scan.scanner import ScanContext, VideoLoadFailure
 
 # Used for module identification and when printing copyright & version info.
-__version__ = 'v1.4.1'
+__version__ = 'v1.5.dev0'
 
 # About & copyright message string shown for the -v/--version CLI argument.
 ABOUT_STRING = """-----------------------------------------------
