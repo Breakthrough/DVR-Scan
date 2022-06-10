@@ -28,29 +28,10 @@
 This file contains all platform/library/OS-specific compatibility fixes,
 intended to improve the systems that are able to run DVR-Scan, and allow
 for maintaining backwards compatibility with existing libraries going forwards.
-
-For OpenCV 2.x, the scenedetect.platform module also makes a copy of the
-OpenCV VideoCapture property constants from the cv2.cv namespace directly
-to the cv2 namespace.  This ensures that the cv2 API is consistent
-with those changes made to it in OpenCV 3.0 and above.
-
-TODO: Replace with PySceneDetect's platform module to reduce code duplication
-across both projects.
 """
 
 import logging
 import cv2
-
-# Compatibility fix for OpenCV < 3.0
-if cv2.__version__[0] == '2' or not (
-        cv2.__version__[0].isdigit() and int(cv2.__version__[0]) >= 3):
-    cv2.CAP_PROP_FRAME_WIDTH = cv2.cv.CV_CAP_PROP_FRAME_WIDTH
-    cv2.CAP_PROP_FRAME_HEIGHT = cv2.cv.CV_CAP_PROP_FRAME_HEIGHT
-    cv2.CAP_PROP_FPS = cv2.cv.CV_CAP_PROP_FPS
-    cv2.CAP_PROP_POS_MSEC = cv2.cv.CV_CAP_PROP_POS_MSEC
-    cv2.CAP_PROP_POS_FRAMES = cv2.cv.CV_CAP_PROP_POS_FRAMES
-    cv2.CAP_PROP_FRAME_COUNT = cv2.cv.CV_CAP_PROP_FRAME_COUNT
-    cv2.VideoWriter_fourcc = cv2.cv.CV_FOURCC
 
 def get_tqdm():
     """ Safely attempts to import the tqdm module, returning either a

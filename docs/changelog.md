@@ -8,12 +8,14 @@ DVR-Scan Changelog
 
 #### Release Notes
 
- - The new minimum supported Python version is 3.6,
+ - The new minimum supported Python version is 3.7,
  - Support for OpenCV 2 has been dropped, new minimum verison is OpenCV 3
 
 #### Changelog
 
- -
+ * [bugfix] Event start times are now correctly calculated when using `-fs`/`--frame-skip` ([#68](https://github.com/Breakthrough/DVR-Scan/issues/68), [#70](https://github.com/Breakthrough/DVR-Scan/issues/70))
+    * Note that event start/end times may still be off by how many frames are skipped due to loss of context with respect to frame-accurate motion detection
+ * [bugfix] Only get screen resolution when required
 
 #### Known Issues
 
