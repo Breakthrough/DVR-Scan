@@ -325,6 +325,9 @@ def get_cli_parser():
         default=False,
         help=('Only perform motion detection (does not write any files to disk).'))
 
+    # TODO(v1.5): This needs to be changed to a new -c/--config flag.
+    # Just leave default as XVID, since the other codecs don't seem to be as well supported,
+    # and add a config file option to override it instead.
     parser.add_argument(
         '-c',
         '--codec',
@@ -469,7 +472,7 @@ def get_cli_parser():
 
     parser.add_argument(
         '-roi',
-        '--rectangle-of-interest',
+        '--region-of-interest',
         dest='roi',
         metavar='x0 y0 w h',
         nargs='*',
@@ -493,5 +496,9 @@ def get_cli_parser():
               ' of temporal smoothing can be specified in either frames (12345) or seconds (number'
               ' followed by s, e.g. 123s or 123.45s). If omitted, defaults to 0.1s. If set to 0,'
               ' smoothing is disabled.'))
+
+    # TODO(v1.5): Add a new -m/--output-mode flag to specify whether to use ffmpeg or the
+    # OpenCV VideoWriter for output. Also will need to add some flags to specify the ffmpeg
+    # arguments, and a new flag called --keep-temp-files for how concatenation has to work.
 
     return parser

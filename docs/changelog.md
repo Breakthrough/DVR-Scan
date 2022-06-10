@@ -13,6 +13,12 @@ DVR-Scan Changelog
 
 #### Changelog
 
+**Command-Line Interface:**
+
+ * The long form of `-roi` has been renamed to `--region-of-interest` (previously was `--rectangle-of-interest`)
+
+**General:**
+
  * [bugfix] Event start times are now correctly calculated when using `-fs`/`--frame-skip` ([#68](https://github.com/Breakthrough/DVR-Scan/issues/68), [#70](https://github.com/Breakthrough/DVR-Scan/issues/70))
     * Note that event start/end times may still be off by how many frames are skipped due to loss of context with respect to frame-accurate motion detection
  * [bugfix] Only get screen resolution when required
