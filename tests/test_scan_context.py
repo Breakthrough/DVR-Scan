@@ -61,7 +61,7 @@ TRAFFIC_CAMERA_EVENTS_CNT = [
 # Small ROI for faster test execution.
 CORRUPT_VIDEO_ROI = [0, 0, 32, 32]
 CORRUPT_VIDEO_EVENTS = [
-    (153, 364),
+    (152, 365),
 ]
 
 

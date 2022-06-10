@@ -41,9 +41,9 @@ import math
 # Third-Party Library Imports
 import cv2
 import numpy as np
+from scenedetect import FrameTimecode
 
 # DVR-Scan Library Imports
-from dvr_scan.timecode import FrameTimecode
 from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
 from dvr_scan.platform import get_min_screen_bounds, get_tqdm
 
