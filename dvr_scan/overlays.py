@@ -14,7 +14,6 @@
 This module contains various classes used to draw overlays onto video frames.
 """
 
-# Third-Party Library Imports
 import cv2
 import numpy
 

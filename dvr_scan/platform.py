@@ -17,6 +17,7 @@ for maintaining backwards compatibility with existing libraries going forwards.
 """
 
 import logging
+
 import cv2
 
 

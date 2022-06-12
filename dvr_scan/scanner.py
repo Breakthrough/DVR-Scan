@@ -15,20 +15,16 @@ This module contains the ScanContext class, which implements the
 DVR-Scan program logic, as well as the motion detection algorithm.
 """
 
-# Standard Library Imports
-from __future__ import print_function
 import os
 import os.path
 import time
 import logging
 import math
 
-# Third-Party Library Imports
 import cv2
 import numpy as np
 from scenedetect import FrameTimecode
 
-# DVR-Scan Library Imports
 from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
 from dvr_scan.platform import get_min_screen_bounds, get_tqdm
 

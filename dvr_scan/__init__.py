@@ -22,8 +22,6 @@ modules are organized as follows:
     Application logic + motion detection algorithm (ScanContext)
 """
 
-# Standard Library Imports
-from __future__ import print_function
 import logging
 import sys
 
@@ -38,10 +36,10 @@ except ModuleNotFoundError as ex:
         name='cv2',
     ) from ex
 
-# DVR-Scan Library Imports
+# Top-level imports for easier access from the dvr_scan module.
 from dvr_scan.scanner import ScanContext, VideoLoadFailure
 
-# Used for module identification and when printing copyright & version info.
+# Used for module/distribution identification.
 __version__ = 'v1.5.dev0'
 
 # About & copyright message string shown for the -v/--version CLI argument.

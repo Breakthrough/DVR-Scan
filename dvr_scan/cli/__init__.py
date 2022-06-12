@@ -15,11 +15,8 @@ This module provides the get_cli_parser() function, which provides
 an argparse-based CLI parser used by the DVR-Scan application.
 """
 
-# Standard Library Imports
-from __future__ import print_function
 import argparse
 
-# DVR-Scan Library Imports
 import dvr_scan
 
 
