@@ -46,18 +46,15 @@ script:
   - python -m dvr_scan -v
   - python -m dvr_scan -i tests/resources/simple_movement.mp4 -so -df 4 -et 100
 
-  # Get package version for path to source/binary distributions.
- - "PACKAGE_VERSION=`python -c \"import dvr_scan; print(dvr_scan.__version__[1:].replace('-', '.'))\"`"
-
   # Test CLI using source distribution
-  - python -m pip install dist/dvr-scan-$PACKAGE_VERSION.tar.gz
+  - "python -m pip install dist/dvr-scan-`python -c "import dvr_scan; print(dvr_scan.__version__[1:].replace('-', '.'))"`.tar.gz"
   - dvr-scan -v
   - dvr-scan -i tests/resources/simple_movement.mp4 -so -df 4 -et 100
   # Cleanup
   - python -m pip uninstall -y dvr-scan
 
   # Test CLI using binary wheel
-  - python -m pip install dist/dvr_scan-$PACKAGE_VERSION-py3-none-any.whl
+  - "python -m pip install dist/dvr_scan-`python -c "import dvr_scan; print(dvr_scan.__version__[1:].replace('-', '.'))"`-py3-none-any.whl"
   - dvr-scan -v
   - dvr-scan -i tests/resources/simple_movement.mp4 -so -df 4 -et 100
   # Cleanup
