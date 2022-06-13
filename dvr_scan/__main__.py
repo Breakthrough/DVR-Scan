@@ -18,5 +18,11 @@ import sys
 
 from dvr_scan.cli.controller import run_dvr_scan
 
-if __name__ == '__main__':
+
+def main():
+    """Main entry-point for DVR-Scan."""
     sys.exit(run_dvr_scan())
+
+
+if __name__ == '__main__':
+    main()
