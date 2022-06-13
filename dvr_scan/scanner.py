@@ -654,3 +654,27 @@ class ScanContext(object):
 
         if not self._scan_only:
             self._logger.info("Motion events written to disk.")
+
+    def _on_event_start(self):
+        # Called when past [EVENT_WINDOW] frames are > threshold.
+
+        # Seek to start of the event corrected for the event window and time before.
+        # Then calculate ROIs of all the frames before the current timecode.
+
+        #@dataclass
+        #class MotionEvent:
+        #    # Start of the motion event, corrected for event window size.
+        #    start: FrameTimecode
+        #    duration: FrameTimecode
+        #    bounding_box: List[Tuple[int, int, int, int]]
+
+        # Finally, make a new method called _new_output_file to init either an
+        # ffmpeg video filter / cut list.
+        pass
+
+    def _on_event_end(self):
+        # Called when max(time_pre_event, time_post_event) frames have passed w/o being above the
+        # thresold. Duration is then the time of the last frame above threshold.
+
+        #self.event_list.append((event_start, event_end, event_duration))
+        pass
