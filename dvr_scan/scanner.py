@@ -15,15 +15,16 @@ This module contains the ScanContext class, which implements the
 DVR-Scan program logic, as well as the motion detection algorithm.
 """
 
+import logging
+import math
 import os
 import os.path
 import time
-import logging
-import math
+from typing import AnyStr, Iterable, Optional
 
 import cv2
 import numpy as np
-from scenedetect import FrameTimecode
+from scenedetect import FrameTimecode, VideoStream, VideoOpenFailure
 
 from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
 from dvr_scan.platform import get_min_screen_bounds, get_tqdm
@@ -31,8 +32,9 @@ from dvr_scan.platform import get_min_screen_bounds, get_tqdm
 DEFAULT_VIDEOWRITER_CODEC = cv2.VideoWriter_fourcc('X', 'V', 'I', 'D')
 
 
-def create_kernel(frame_width, kernel_size=None, downscale_factor=1):
-    # type: (int, int, int) -> numpy.ndarray
+def create_kernel(frame_width: int,
+                  kernel_size: Optional[int] = None,
+                  downscale_factor: int = 1) -> np.ndarray:
     """ Creates a numpy array to use as a kernel for a morphological filter. If kernel_size is
     None, the value is calculated automatically based on the video resolution. If downscale_factor
     is set, the resulting kernel size will be reduced accordingly. """
@@ -54,14 +56,6 @@ def create_kernel(frame_width, kernel_size=None, downscale_factor=1):
                 new_factor -= 1
         kernel_size = new_factor if new_factor > 3 else 3
     return np.ones((kernel_size, kernel_size), np.uint8)
-
-
-class VideoLoadFailure(Exception):
-    """ Raised when the input video(s) fail to load. """
-
-    def __init__(self, message="One or more videos(s) failed to load!"):
-        # type: (str) -> None
-        super(VideoLoadFailure, self).__init__(message)
 
 
 class ScanContext(object):
@@ -87,6 +81,7 @@ class ScanContext(object):
         self.running = True       # Allows asynchronous termination of scanning loop.
         self.event_list = []
         self._video_writer = None # Current cv2.VideoWriter for video export
+        self._in_motion_event = False
 
         self._show_progress = show_progress
         self._curr_pos = None     # FrameTimecode representing number of decoded frames
@@ -116,13 +111,15 @@ class ScanContext(object):
         self._post_event_len = None # -tp/--time-post-event
 
         # Input Video Parameters
-        self._video_paths = input_videos # -i/--input
-        self._frame_skip = frame_skip    # -fs/--frame-skip
-        self._start_time = None          # -st/--start-time
-        self._end_time = None            # -et/--end-time
+        self._video_paths: Iterable[AnyStr] = input_videos # -i/--input
+        self._frame_skip: int = frame_skip                 # -fs/--frame-skip
+        self._start_time: FrameTimecode = None             # -st/--start-time
+        self._end_time: FrameTimecode = None               # -et/--end-time
 
-        self._cap = None
-        self._cap_path = None
+        # TODO(v1.5): Put self._cap and video paths in a separate object that handles concatenation.
+        # Doesn't need to handle seeking backwards, just forwards.
+        self._cap: VideoStream = None
+        self._cap_path: AnyStr = None
         self._video_resolution = None
         self._video_fps = None
         self._frames_total = 0
@@ -273,7 +270,7 @@ class ScanContext(object):
         """ Opens and checks that all input video files are valid, can
         be processed, and have the same resolution and framerate. """
         if not len(self._video_paths) > 0:
-            raise VideoLoadFailure()
+            raise VideoOpenFailure()
         for video_path in self._video_paths:
             cap = cv2.VideoCapture()
             cap.open(video_path)
@@ -284,7 +281,7 @@ class ScanContext(object):
                                   " clip, and ensure all required software dependencies"
                                   " are installed and configured properly.")
                 cap.release()
-                raise VideoLoadFailure()
+                raise VideoOpenFailure()
             curr_resolution = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
                                int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
             curr_framerate = cap.get(cv2.CAP_PROP_FPS)
@@ -303,7 +300,7 @@ class ScanContext(object):
                 self._logger.error(
                     "Error: Can't append clip %s, video resolution"
                     " does not match the first input file.", video_name)
-                raise VideoLoadFailure()
+                raise VideoOpenFailure()
             self._logger.info("Appended video %s.", video_name)
         # Make sure we initialize defaults.
         self.set_detection_params()
@@ -344,16 +341,17 @@ class ScanContext(object):
 
         return None
 
-    def _create_progress_bar(self, show_progress, num_frames):
-        # type: (bool, int) -> tqdm.tqdm
+    # TODO(v1.5): Assume tqdm is available now as it is listed as a required package.
+    def _create_progress_bar(self, show_progress: bool):
+        """Create and return a `tqdm` object. If show_progress is False, a fake is returned."""
         tqdm = None if not show_progress else get_tqdm()
         if tqdm is not None:
+            num_frames = self._frames_total
+            # Correct for end time.
             if self._end_time and self._end_time.frame_num < num_frames:
                 num_frames = self._end_time.frame_num
-            if self._start_time:
-                num_frames -= self._start_time.frame_num
-            if num_frames < 0:
-                num_frames = 0
+            # Correct for current seek position.
+            num_frames = max(0, num_frames - self._curr_pos.frame_num)
             return tqdm.tqdm(
                 total=num_frames, unit=' frames', desc="[DVR-Scan] Processed", dynamic_ncols=True)
 
@@ -368,8 +366,7 @@ class ScanContext(object):
 
         return NullProgressBar()
 
-    def _select_roi(self):
-        # type: (FrameTimecode, bool) -> bool
+    def _select_roi(self) -> bool:
         # area selection
         if self._show_roi_window:
             self._logger.info("Selecting area of interest:")
@@ -460,8 +457,7 @@ class ScanContext(object):
             while self._curr_pos.frame_num < self._start_time.frame_num:
                 if self._get_next_frame(False) is None:
                     break
-                self._frames_processed += 1
-                self._curr_pos.frame_num += 1
+        start_frame = self._curr_pos.frame_num
 
         # Show ROI selection window if required.
         if not self._select_roi():
@@ -499,8 +495,7 @@ class ScanContext(object):
         # Don't use the first result from the background subtractor.
         processed_first_frame = False
 
-        progress_bar = self._create_progress_bar(
-            show_progress=self._show_progress, num_frames=self._frames_total)
+        progress_bar = self._create_progress_bar(show_progress=self._show_progress)
 
         while self.running:
             if self._end_time is not None and self._curr_pos.frame_num >= self._end_time.frame_num:
@@ -582,7 +577,7 @@ class ScanContext(object):
                     num_frames_post_event = 0
                     frames_since_last_event = presentation_time.frame_num - event_end.frame_num
                     shift_amount = min(frames_since_last_event, start_event_shift)
-                    shifted_start = max(0, self._curr_pos.frame_num - shift_amount)
+                    shifted_start = max(start_frame, self._curr_pos.frame_num - shift_amount)
                     event_start = FrameTimecode(shifted_start, self._video_fps)
                     # Open new VideoWriter if needed, write buffered_frames to file.
                     if not self._scan_only:
@@ -622,6 +617,7 @@ class ScanContext(object):
 
         return self.event_list
 
+    # TODO(v1.5): Move this into cli.controller and just add a getter for frames_processed.
     def _post_scan_motion(self, processing_start):
         # type: (float) -> None
         processing_time = time.time() - processing_start

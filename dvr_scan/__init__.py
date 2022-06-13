@@ -37,7 +37,7 @@ except ModuleNotFoundError as ex:
     ) from ex
 
 # Top-level imports for easier access from the dvr_scan module.
-from dvr_scan.scanner import ScanContext, VideoLoadFailure
+from dvr_scan.scanner import ScanContext
 
 # Used for module/distribution identification.
 __version__ = 'v1.5.dev0'

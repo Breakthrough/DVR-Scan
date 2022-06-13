@@ -174,3 +174,17 @@ def test_decode_corrupt_video(corrupt_video):
     assert len(event_list) == len(CORRUPT_VIDEO_EVENTS)
     event_list = [(event[0].frame_num, event[1].frame_num) for event in event_list]
     assert event_list == CORRUPT_VIDEO_EVENTS
+
+
+def test_start_end_time(traffic_camera_video):
+    """ Test basic functionality of ScanContext with start/stop times defined. """
+    sctx = ScanContext([traffic_camera_video])
+    sctx.set_detection_params(roi=TRAFFIC_CAMERA_ROI)
+    sctx.set_event_params(min_event_len=4, time_pre_event=0)
+    sctx.set_video_time(start_time=200, end_time=500)
+    event_list = sctx.scan_motion()
+    # The set duration should only cover the middle event.
+    assert len(event_list) == len(TRAFFIC_CAMERA_EVENTS[1:2])
+    # Remove duration, check start/end times.
+    event_list = [(event[0].frame_num, event[1].frame_num) for event in event_list]
+    assert event_list == TRAFFIC_CAMERA_EVENTS[1:2]
