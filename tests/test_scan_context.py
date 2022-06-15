@@ -17,7 +17,7 @@
 
 import pytest
 from dvr_scan.scanner import ScanContext
-import cv2
+from dvr_scan.platform import cnt_is_available, cuda_mog_is_available
 
 # ROI within the frame used for the test case (see traffic_camera.txt for details).
 TRAFFIC_CAMERA_ROI = [631, 532, 210, 127]
@@ -83,7 +83,7 @@ def test_scan_context(traffic_camera_video):
     # TODO: Add check for duration (should be end - start + 1).
 
 
-@pytest.mark.skipif(not hasattr(cv2, 'cuda'), reason="CUDA module not available.")
+@pytest.mark.skipif(not cuda_mog_is_available(), reason="CUDA module not available.")
 def test_scan_context_cuda(traffic_camera_video):
     """ Test basic functionality of ScanContext with the CUDA MOG2. """
 
@@ -99,7 +99,7 @@ def test_scan_context_cuda(traffic_camera_video):
     assert event_list == TRAFFIC_CAMERA_EVENTS_CUDA
 
 
-@pytest.mark.skipif(not hasattr(cv2, 'bgsegm'), reason="CNT algorithm not available.")
+@pytest.mark.skipif(not cnt_is_available(), reason="CNT algorithm not available.")
 def test_scan_context_cnt(traffic_camera_video):
     """ Test basic functionality of ScanContext using the CNT algorithm. """
 
