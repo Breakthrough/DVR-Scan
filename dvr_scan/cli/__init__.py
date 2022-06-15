@@ -297,10 +297,10 @@ def get_cli_parser():
         '--bg-subtractor',
         metavar='TYPE',
         dest='bg_subtractor',
-        type=string_type_check(['MOG', 'CNT'], False, 'TYPE'),
+        type=string_type_check(['MOG', 'CNT', 'MOG_CUDA'], False, 'TYPE'),
         default='MOG',
         help=('The type of background subtractor to use, must be one of: '
-              ' MOG (default), CNT (parallel).'))
+              ' MOG (default), CNT (parallel), MOG_CUDA (Nvidia GPU).'))
 
     parser.add_argument(
         '-so',

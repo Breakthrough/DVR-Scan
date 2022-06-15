@@ -436,8 +436,12 @@ class ScanContext(object):
     def scan_motion(self, method='mog'):
         # type: (Optional[str]) -> List[Tuple[FrameTimecode, FrameTimecode, FrameTimecode]]
         """ Performs motion analysis on the ScanContext's input video(s). """
+        use_cuda = False
         if method.lower() == 'cnt':
             bg_subtractor = cv2.bgsegm.createBackgroundSubtractorCNT()
+        elif method.lower() == 'mog_cuda':
+            use_cuda = True
+            bg_subtractor = cv2.cuda.createBackgroundSubtractorMOG2(detectShadows=False)
         else:
             bg_subtractor = cv2.createBackgroundSubtractorMOG2(detectShadows=False)
         buffered_frames = []
@@ -469,6 +473,8 @@ class ScanContext(object):
 
         # Kernel size to use with morphological filter for noise reduction.
         kernel = create_kernel(self._video_resolution[0], self._kernel_size, self._downscale_factor)
+        if use_cuda:
+            morph_filter = cv2.cuda.createMorphologyFilter(cv2.MORPH_OPEN, cv2.CV_8UC1, kernel)
 
         # Correct pre/post and minimum event lengths to account for frame skip factor.
         post_event_len = self._post_event_len.frame_num // (self._frame_skip + 1)
@@ -521,11 +527,24 @@ class ScanContext(object):
             if self._downscale_factor > 1:
                 frame_rgb = frame_rgb[::self._downscale_factor, ::self._downscale_factor, :]
 
-            # Process frame and calculate score (relative amount of motion).
-            frame_gray = cv2.cvtColor(frame_rgb, cv2.COLOR_BGR2GRAY)
-            frame_mask = bg_subtractor.apply(frame_gray)
-            frame_filt = cv2.morphologyEx(frame_mask, cv2.MORPH_OPEN, kernel)
-            frame_score = np.sum(frame_filt) / float(frame_filt.shape[0] * frame_filt.shape[1])
+            if use_cuda:
+                stream = cv2.cuda_Stream()
+                frame_rgb_dev = cv2.cuda_GpuMat()
+                frame_rgb_dev.upload(frame_rgb, stream=stream)
+                frame_gray_dev = cv2.cuda.cvtColor(frame_rgb_dev, cv2.COLOR_BGR2GRAY, stream=stream)
+                frame_mask_dev = bg_subtractor.apply(frame_gray_dev, -1, stream=stream)
+                frame_filt_dev = morph_filter.apply(frame_mask_dev, stream=stream)
+                frame_filt = frame_filt_dev.download(stream=stream)
+                stream.waitForCompletion()
+                frame_score = cv2.sumElems(frame_filt)[0] / float(
+                    frame_filt.shape[0] * frame_filt.shape[1])
+            else:
+                # Process frame and calculate score (relative amount of motion).
+                frame_gray = cv2.cvtColor(frame_rgb, cv2.COLOR_BGR2GRAY)
+                frame_mask = bg_subtractor.apply(frame_gray)
+                frame_filt = cv2.morphologyEx(frame_mask, cv2.MORPH_OPEN, kernel)
+                frame_score = cv2.sumElems(frame_filt)[0] / float(
+                    frame_filt.shape[0] * frame_filt.shape[1])
             above_threshold = frame_score >= self._threshold
             # Always assign the first frame a score of 0 since some subtractors will output a mask
             # indicating motion on every pixel of the first frame.

@@ -15,8 +15,9 @@
 # pylint: disable=no-self-use, protected-access, multiple-statements, invalid-name
 # pylint: disable=redefined-outer-name
 
-# DVR-Scan Library Imports
+import pytest
 from dvr_scan.scanner import ScanContext
+import cv2
 
 # ROI within the frame used for the test case (see traffic_camera.txt for details).
 TRAFFIC_CAMERA_ROI = [631, 532, 210, 127]
@@ -24,6 +25,16 @@ TRAFFIC_CAMERA_ROI = [631, 532, 210, 127]
 TRAFFIC_CAMERA_EVENTS = [
     (9, 148),
     (358, 490),
+    (542, 576),
+]
+
+# The internal math used to perform background subtraction can lead to minute differences
+# in frame offsets.
+# TODO(v1.5): Allow the start/end frame numbers to differ by 1 from the ground truth above
+# instead of hard-coding new values for the CUDA test case.
+TRAFFIC_CAMERA_EVENTS_CUDA = [
+    (9, 149),
+    (357, 490),
     (542, 576),
 ]
 
@@ -72,6 +83,23 @@ def test_scan_context(traffic_camera_video):
     # TODO: Add check for duration (should be end - start + 1).
 
 
+@pytest.mark.skipif(not hasattr(cv2, 'cuda'), reason="CUDA module not available.")
+def test_scan_context_cuda(traffic_camera_video):
+    """ Test basic functionality of ScanContext with the CUDA MOG2. """
+
+    sctx = ScanContext([traffic_camera_video])
+    sctx.set_detection_params(roi=TRAFFIC_CAMERA_ROI)
+    sctx.set_event_params(min_event_len=4, time_pre_event=0)
+
+    event_list = sctx.scan_motion(method='mog_cuda')
+
+    assert len(event_list) == len(TRAFFIC_CAMERA_EVENTS_CUDA)
+    # Remove duration, check start/end times.
+    event_list = [(event[0].frame_num, event[1].frame_num) for event in event_list]
+    assert event_list == TRAFFIC_CAMERA_EVENTS_CUDA
+
+
+@pytest.mark.skipif(not hasattr(cv2, 'bgsegm'), reason="CNT algorithm not available.")
 def test_scan_context_cnt(traffic_camera_video):
     """ Test basic functionality of ScanContext using the CNT algorithm. """
 

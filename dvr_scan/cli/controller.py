@@ -23,7 +23,7 @@ from scenedetect import VideoOpenFailure
 from dvr_scan import init_logger
 from dvr_scan.cli import get_cli_parser
 from dvr_scan.scanner import ScanContext
-from dvr_scan.platform import cnt_is_available
+from dvr_scan.platform import cnt_is_available, cuda_mog_is_available
 
 
 def validate_cli_args(args, logger):
@@ -59,7 +59,15 @@ def run_dvr_scan():
 
     try:
         if args.bg_subtractor == 'cnt' and not cnt_is_available():
-            logger.error('Method CNT not available: OpenCV update is required.')
+            logger.error(
+                'Method CNT not available with this verison of OpenCV. If you installed OpenCV from'
+                ' pip, try installing `opencv-contrib-python`.')
+            sys.exit(1)
+
+        if args.bg_subtractor == 'mog_cuda' and not cuda_mog_is_available():
+            logger.error(
+                'This version of OpenCV was built without CUDA support. If you installed OpenCV'
+                ' from pip, you must uninstall it and manually build OpenCV with CUDA support.')
             sys.exit(1)
 
         sctx = ScanContext(

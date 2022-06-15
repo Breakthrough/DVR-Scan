@@ -10,12 +10,14 @@ DVR-Scan Changelog
 
  - The new minimum supported Python version is 3.7,
  - Support for OpenCV 2 has been dropped, new minimum verison is OpenCV 3
+ - Add experimental GPU support for CUDA-enabled GPUs
 
 #### Changelog
 
 **Command-Line Interface:**
 
  * The long form of `-roi` has been renamed to `--region-of-interest` (previously was `--rectangle-of-interest`)
+ * Experimental CUDA support has been added (set `-b mog_cuda`), requires manual installation of OpenCV compiled with CUDA support
 
 **General:**
 
@@ -24,6 +26,7 @@ DVR-Scan Changelog
     * Note that all skipped frames within the event window are included in motion event, thus the calculated start time may be slightly earlier
  * [bugfix] Only get screen resolution when required
  * [api] Remove `dvr_scan.timecode` and `FrameTimecode`, replace with `scenedetect.FrameTimecode`
+ * [feature] Experimental support for CUDA MOG2 filter
 
 #### Known Issues
 

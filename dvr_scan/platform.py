@@ -33,10 +33,11 @@ def get_tqdm():
 
 
 def cnt_is_available():
-    try:
-        return 'createBackgroundSubtractorCNT' in dir(cv2.bgsegm)
-    except AttributeError:
-        return False
+    return hasattr(cv2, 'bgsegm') and hasattr(cv2.bgsegm, 'createBackgroundSubtractorCNT')
+
+
+def cuda_mog_is_available():
+    return hasattr(cv2, 'cuda') and hasattr(cv2.cuda, 'createBackgroundSubtractorMOG2')
 
 
 def get_min_screen_bounds():
