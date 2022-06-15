@@ -51,11 +51,16 @@ Copyright (C) 2016-2022 Brandon Castellano
 
 This DVR-Scan is licensed under the BSD 2-Clause license; see the
 included LICENSE file, or visit the above link for details. This
-software uses the following third-party components:
-  NumPy: Copyright (C) 2005-2013, Numpy Developers.
- OpenCV: Copyright (C) 2016, Itseez.
-THE SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, EXPRESS OR IMPLIED.
+software uses the following third-party components; see the included
+LICENSE-THIRDPARTY file for details.
 
+ NumPy:  Copyright (C) 2005-2022, Numpy Developers.
+ OpenCV: Copyright (C) 2022, OpenCV Team.
+ FFmpeg: Copyright (C) 2001, Fabrice Bellard.
+ CUDA:   Copyright (C) 2020, Nvidia Corporation.
+
+THIS SOFTWARE CONTAINS SOURCE CODE AS PROVIDED BY NVIDIA CORPORATION.
+THE SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, EXPRESS OR IMPLIED.
 """ % __version__
 
 

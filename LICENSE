@@ -40,17 +40,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
                    Ancillary Software Licenses
 
-This software uses the following third-party open source libraries and
-are released under the terms detailed below. By downloading, copying,
-installing or using this software/tutorial, you agree to these terms.
+This software uses the following third-party libraries. By downloading,
+copying, installing, distributing, or using this software, you agree to
+the terms outlined in the LICENSE-THIRDPARTY file.
 
------------------------------------------------------------------------
-
-> NumPy [Copyright (C) 2005-2013, Numpy Developers]:
-    This software uses Numpy; see the LICENSE-NUMPY file
-    or visit [ http://www.numpy.org/license.html ] for details.
-
-> OpenCV [Copyright (C) 2016, Itseez]:
-    This software uses OpenCV; see the LICENSE-OPENCV file
-    or visit [ http://opencv.org/license.html ] for details.
-
+> NumPy [Copyright (C) 2005-2022, Numpy Developers]
+> OpenCV [Copyright (C) 2022, OpenCV Team]
+> FFmpeg [Copyright (C) 2001, Fabrice Bellard]
+> CUDA [Copyright (C) 2020, Nvidia Corporation]

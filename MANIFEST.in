@@ -3,6 +3,7 @@ recursive-exclude dist *
 exclude *
 include README.md
 include LICENSE
+include LICENSE-THIRDPARTY
 include pyproject.toml
 include setup.cfg
 include dvr-scan.cfg
