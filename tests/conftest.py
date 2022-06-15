@@ -23,8 +23,7 @@ import pytest
 #
 
 
-def get_absolute_path(relative_path):
-    # type: (str) -> str
+def get_absolute_path(relative_path: str) -> str:
     """ Returns the absolute path to a (relative) path of a file that
     should exist within the tests/ directory.
 
@@ -43,14 +42,12 @@ def get_absolute_path(relative_path):
 
 
 @pytest.fixture
-def traffic_camera_video():
-    # type: () -> str
+def traffic_camera_video() -> str:
     """ Returns path to traffic_camera.mp4 video. """
     return get_absolute_path("resources/traffic_camera.mp4")
 
 
 @pytest.fixture
-def corrupt_video():
-    # type: () -> str
+def corrupt_video() -> str:
     """ Returns path to issue62.mp4 video. """
     return get_absolute_path("resources/issue62.mp4")

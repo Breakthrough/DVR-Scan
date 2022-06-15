@@ -16,11 +16,12 @@ an argparse-based CLI parser used by the DVR-Scan application.
 """
 
 import argparse
+from typing import List, Optional
 
 import dvr_scan
 
 
-def timecode_type_check(metavar=None):
+def timecode_type_check(metavar: Optional[str] = None):
     """ Creates an argparse type for a user-inputted timecode.
 
     The passed argument is declared valid if it meets one of three valid forms:
@@ -78,7 +79,7 @@ def timecode_type_check(metavar=None):
     return _type_checker
 
 
-def int_type_check(min_val, max_val=None, metavar=None):
+def int_type_check(min_val: int, max_val: Optional[int] = None, metavar: Optional[str] = None):
     """ Creates an argparse type for a range-limited integer.
 
     The passed argument is declared valid if it is a valid integer which
@@ -114,7 +115,10 @@ def int_type_check(min_val, max_val=None, metavar=None):
     return _type_checker
 
 
-def odd_int_type_check(min_val, max_val=None, metavar=None, allow_zero=True):
+def odd_int_type_check(min_val: int,
+                       max_val: Optional[int] = None,
+                       metavar: Optional[str] = None,
+                       allow_zero: bool = True):
     """ Creates an argparse type for a range-limited integer which must be odd.
 
     The passed argument is declared valid if it is a valid integer which is odd
@@ -157,7 +161,10 @@ def odd_int_type_check(min_val, max_val=None, metavar=None, allow_zero=True):
     return _type_checker
 
 
-def float_type_check(min_val, max_val=None, metavar=None, default_str=None):
+def float_type_check(min_val: float,
+                     max_val: Optional[float] = None,
+                     metavar: Optional[str] = None,
+                     default_str: Optional[str] = None):
     """ Creates an argparse type for a range-limited float.
 
     The passed argument is declared valid if it is a valid float which is
@@ -195,7 +202,9 @@ def float_type_check(min_val, max_val=None, metavar=None, default_str=None):
     return _type_checker
 
 
-def string_type_check(valid_strings, case_sensitive=True, metavar=None):
+def string_type_check(valid_strings: List[str],
+                      case_sensitive: bool = True,
+                      metavar: Optional[str] = None):
     """ Creates an argparse type for a list of strings.
 
     The passed argument is declared valid if it is a valid string which exists
@@ -485,5 +494,9 @@ def get_cli_parser():
     # TODO(v1.5): Add a new -m/--output-mode flag to specify whether to use ffmpeg or the
     # OpenCV VideoWriter for output. Also will need to add some flags to specify the ffmpeg
     # arguments, and a new flag called --keep-temp-files for how concatenation has to work.
+
+    # TODO(v1.5): Add a new -L/--license flag to dump the LICENSE and LICENSE-THIRDPARTY
+    # files to stdout. Ensure works with binary, source, and frozen distributions.
+    # Then cleanup the -v/--version flag to only show the version.
 
     return parser

@@ -20,10 +20,10 @@ import math
 import os
 import os.path
 import time
-from typing import AnyStr, Iterable, Optional
+from typing import AnyStr, Iterable, List, Optional, Tuple, Union
 
 import cv2
-import numpy as np
+import numpy
 from scenedetect import FrameTimecode, VideoStream, VideoOpenFailure
 
 from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
@@ -34,7 +34,7 @@ DEFAULT_VIDEOWRITER_CODEC = cv2.VideoWriter_fourcc('X', 'V', 'I', 'D')
 
 def create_kernel(frame_width: int,
                   kernel_size: Optional[int] = None,
-                  downscale_factor: int = 1) -> np.ndarray:
+                  downscale_factor: int = 1) -> numpy.ndarray:
     """ Creates a numpy array to use as a kernel for a morphological filter. If kernel_size is
     None, the value is calculated automatically based on the video resolution. If downscale_factor
     is set, the resulting kernel size will be reduced accordingly. """
@@ -55,7 +55,7 @@ def create_kernel(frame_width: int,
             if new_factor % 2 == 0:
                 new_factor -= 1
         kernel_size = new_factor if new_factor > 3 else 3
-    return np.ones((kernel_size, kernel_size), np.uint8)
+    return numpy.ones((kernel_size, kernel_size), numpy.uint8)
 
 
 class ScanContext(object):
@@ -63,8 +63,10 @@ class ScanContext(object):
     which includes application initialization, handling the options,
     and coordinating overall application logic (via scan_motion()). """
 
-    def __init__(self, input_videos, frame_skip=0, show_progress=False):
-        # type: (List[str], int, bool) -> None
+    def __init__(self,
+                 input_videos: List[AnyStr],
+                 frame_skip: int = 0,
+                 show_progress: bool = False):
         """ Initializes the ScanContext with the supplied arguments.
 
         Arguments:
@@ -127,8 +129,7 @@ class ScanContext(object):
 
         self._load_input_videos()
 
-    def set_output(self, scan_only=True, comp_file=None, codec='XVID'):
-        # type: (bool, str, str) -> None
+    def set_output(self, scan_only: bool = True, comp_file: AnyStr = None, codec: str = 'XVID'):
         """ Sets the path and encoder codec to use when exporting videos.
 
         Arguments:
@@ -152,8 +153,9 @@ class ScanContext(object):
             raise ValueError("codec must be exactly four (4) characters")
         self._fourcc = cv2.VideoWriter_fourcc(*codec.upper())
 
-    def set_overlays(self, draw_timecode=False, bounding_box_smoothing=None):
-        # type: (bool, Optional[Union[int, str]]) -> None
+    def set_overlays(self,
+                     draw_timecode: bool = False,
+                     bounding_box_smoothing: Optional[Union[int, str, float]] = None):
         """ Sets options to use if/when drawing overlays on the resulting frames.
 
         Arguments:
@@ -174,8 +176,11 @@ class ScanContext(object):
         else:
             self._bounding_box = None
 
-    def set_detection_params(self, threshold=0.15, kernel_size=None, downscale_factor=1, roi=None):
-        # type: (float, int, int, List[int]) -> None
+    def set_detection_params(self,
+                             threshold: float = 0.15,
+                             kernel_size: int = None,
+                             downscale_factor: int = 1,
+                             roi: List[int] = None):
         """ Sets motion detection parameters.
 
         Arguments:
@@ -238,8 +243,10 @@ class ScanContext(object):
             else:
                 self._show_roi_window = True
 
-    def set_event_params(self, min_event_len=2, time_pre_event="1.5s", time_post_event="2s"):
-        # type: (...) -> None
+    def set_event_params(self,
+                         min_event_len: int = 2,
+                         time_pre_event: Union[int, float, str] = "1.5s",
+                         time_post_event: Union[int, float, str] = "2s"):
         """ Sets motion event parameters. """
         assert self._video_fps is not None
         self._min_event_len = FrameTimecode(min_event_len, self._video_fps)
@@ -249,8 +256,10 @@ class ScanContext(object):
         self._pre_event_len = FrameTimecode(time_pre_event, self._video_fps)
         self._post_event_len = FrameTimecode(time_post_event, self._video_fps)
 
-    def set_video_time(self, start_time=None, end_time=None, duration=None):
-        # type: (str, str, str) -> None
+    def set_video_time(self,
+                       start_time: Optional[Union[int, float, str]] = None,
+                       end_time: Optional[Union[int, float, str]] = None,
+                       duration: Optional[Union[int, float, str]] = None):
         """ Used to select a sub-set of the video in time for processing. """
         assert self._video_fps is not None
         if start_time is not None:
@@ -266,7 +275,6 @@ class ScanContext(object):
             self._end_time = FrameTimecode(end_time, self._video_fps)
 
     def _load_input_videos(self):
-        # type: () -> bool
         """ Opens and checks that all input video files are valid, can
         be processed, and have the same resolution and framerate. """
         if not len(self._video_paths) > 0:
@@ -307,8 +315,9 @@ class ScanContext(object):
         self.set_event_params()
         self.set_video_time()
 
-    def _get_next_frame(self, retrieve=True, num_retries=5):
-        # type: (Optional[bool], Optional[int]) -> Optional[numpy.ndarray]
+    def _get_next_frame(self,
+                        retrieve: bool = True,
+                        num_retries: int = 5) -> Optional[numpy.ndarray]:
         """ Returns a new frame from the current series of video files,
         or None when no more frames are available. """
         assert num_retries >= 0
@@ -399,7 +408,7 @@ class ScanContext(object):
             self._logger.info("ROI selected (x,y,w,h): %s", str(self._roi))
         return True
 
-    def _set_output_prefix(self, video_path):
+    def _set_output_prefix(self, video_path: AnyStr):
         self._output_prefix = ''
         if not self._comp_file:
             output_prefix = os.path.basename(video_path)
@@ -412,7 +421,6 @@ class ScanContext(object):
         """ Create a new self._video_writer that will write frames to the correct output location.
 
         Precondition: self._video_writer must be None already. """
-        # type: () -> None
         assert self._video_writer is None
         output_path = (
             self._comp_file if self._comp_file else '%s.DSME_%04d.avi' %
@@ -426,15 +434,16 @@ class ScanContext(object):
         self._video_writer = cv2.VideoWriter(output_path, self._fourcc, effective_framerate,
                                              self._video_resolution)
 
-    def _draw_overlays(self, frame, frame_pos, bounding_box):
-        # type: (np.ndarray, Optional[FrameTimecode], Optional[np.ndarray]) -> None
+    def _draw_overlays(self, frame: numpy.ndarray, frame_pos: FrameTimecode,
+                       bounding_box: Tuple[int, int, int, int]):
         if not self._timecode_overlay is None:
             self._timecode_overlay.draw(frame=frame, text=frame_pos.get_timecode())
         if not self._bounding_box is None and not bounding_box is None:
             self._bounding_box.draw(frame, bounding_box)
 
-    def scan_motion(self, method='mog'):
-        # type: (Optional[str]) -> List[Tuple[FrameTimecode, FrameTimecode, FrameTimecode]]
+    # TODO(v1.5): Replace string with a typed enumeration.
+    def scan_motion(
+            self, method: str = 'mog') -> List[Tuple[FrameTimecode, FrameTimecode, FrameTimecode]]:
         """ Performs motion analysis on the ScanContext's input video(s). """
         use_cuda = False
         if method.lower() == 'cnt':
@@ -637,8 +646,7 @@ class ScanContext(object):
         return self.event_list
 
     # TODO(v1.5): Move this into cli.controller and just add a getter for frames_processed.
-    def _post_scan_motion(self, processing_start):
-        # type: (float) -> None
+    def _post_scan_motion(self, processing_start: float):
         processing_time = time.time() - processing_start
         processing_rate = float(self._frames_processed) / processing_time
         self._logger.info("Processed %d frames read in %3.1f secs (avg %3.1f FPS).",

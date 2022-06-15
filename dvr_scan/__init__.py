@@ -64,7 +64,7 @@ THE SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, EXPRESS OR IMPLIED.
 """ % __version__
 
 
-def init_logger(quiet_mode, log_level=logging.INFO):
+def init_logger(quiet_mode: bool, log_level: int = logging.INFO):
     """Initializes the Python logger named 'dvr_scan'."""
     logger = logging.getLogger('dvr_scan')
     logger.setLevel(log_level)

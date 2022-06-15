@@ -14,6 +14,8 @@
 This module contains various classes used to draw overlays onto video frames.
 """
 
+from typing import Tuple
+
 import cv2
 import numpy
 
@@ -25,13 +27,12 @@ class TextOverlay(object):
     """
 
     def __init__(self,
-                 font=cv2.FONT_HERSHEY_SIMPLEX,
-                 font_scale=1,
-                 margin=5,
-                 thickness=2,
-                 color=(255, 255, 255),
-                 bg_color=(0, 0, 0)):
-        # type: (int, float, int, float, Tuple[int, int, int], Tuple[int, int, int]) -> None
+                 font: int = cv2.FONT_HERSHEY_SIMPLEX,
+                 font_scale: float = 1.0,
+                 margin: int = 5,
+                 thickness: float = 2,
+                 color: Tuple[int, int, int] = (255, 255, 255),
+                 bg_color: Tuple[int, int, int] = (0, 0, 0)):
         """Initialize a TextOverlay with the given parameters.
 
         Arguments:
@@ -49,8 +50,7 @@ class TextOverlay(object):
         self._color = color
         self._bg_color = bg_color
 
-    def draw(self, frame, text, line=0):
-        # type: (numpy.ndarray, str, Optional[int]) -> None
+    def draw(self, frame: numpy.ndarray, text: str, line: int = 0):
         """Render text onto the given frame.
 
         Arguments:
@@ -77,24 +77,23 @@ class BoundingBoxOverlay(object):
     """Calculates and draws a bounding box onto of video frames based on a binary mask
     representing areas of interest/motion."""
 
-    DEFAULT_MIN_SIZE_RATIO = 0.032
+    DEFAULT_MIN_SIZE_RATIO: float = 0.032
     """Minimum side length of bounding box relative to largest dimension of the video frame."""
 
-    DEFAULT_THICKNESS_RATIO = 0.0032
+    DEFAULT_THICKNESS_RATIO: float = 0.0032
     """Thickness of bounding box lines relative to largest dimension of the video frame."""
 
-    DEFAULT_COLOUR = (0, 0, 255)
+    DEFAULT_COLOUR: Tuple[int, int, int] = (0, 0, 255)
     """Bounding box colour. Tuple of (B, G, R) values in [0, 255]"""
 
-    DEFAULT_SMOOTHING = 5
+    DEFAULT_SMOOTHING: int = 5
     """Number of frames to use for smoothing/averaging. Values <= 1 indicate no smoothing."""
 
     def __init__(self,
-                 min_size_ratio=DEFAULT_MIN_SIZE_RATIO,
-                 thickness_ratio=DEFAULT_THICKNESS_RATIO,
-                 color=DEFAULT_COLOUR,
-                 smoothing=DEFAULT_SMOOTHING):
-        # type: (float, float, Tuple[int, int, int], int) -> None
+                 min_size_ratio: float = DEFAULT_MIN_SIZE_RATIO,
+                 thickness_ratio: float = DEFAULT_THICKNESS_RATIO,
+                 color: Tuple[int, int, int] = DEFAULT_COLOUR,
+                 smoothing: int = DEFAULT_SMOOTHING):
         """Initialize a BoundingBoxOverlay with the given parameters.
 
         Arguments:
@@ -114,8 +113,8 @@ class BoundingBoxOverlay(object):
         self._roi = None
         self._frame_skip = 0
 
-    def set_corrections(self, downscale_factor, roi, frame_skip):
-        # type: (int, Tuple[int, int, int, int], int) -> None
+    def set_corrections(self, downscale_factor: int, roi: Tuple[int, int, int, int],
+                        frame_skip: int):
         """Set various correction factors which need to be compensated for when drawing the
         resulting bounding box onto a given target frame.
 
@@ -133,8 +132,7 @@ class BoundingBoxOverlay(object):
         # We're reducing the number of frames by 1 / (frame_skip + 1)
         self._frame_skip = frame_skip
 
-    def _get_smoothed_window(self):
-        # type: () -> Tuple[int, int, int, int]
+    def _get_smoothed_window(self) -> Tuple[int, int, int, int]:
         """Average all cached bounding boxes based on the temporal smoothing factor.
 
         Returns:
@@ -148,12 +146,10 @@ class BoundingBoxOverlay(object):
         ]
 
     def clear(self):
-        # type: () -> None
         """Clear all frames cached within the sliding window."""
         self._smoothing_window = []
 
-    def update(self, motion_mask):
-        # type: (numpy.ndarray) -> None
+    def update(self, motion_mask: numpy.ndarray):
         """Calculate the minimum bounding box given a binary/thresholded mask image, and
         caches it for the next call to `draw`.
 
@@ -168,7 +164,7 @@ class BoundingBoxOverlay(object):
         self._smoothing_window = self._smoothing_window[-smoothing_amount:]
         return self._get_smoothed_window()
 
-    def draw(self, frame, bounding_box):
+    def draw(self, frame: numpy.ndarray, bounding_box: Tuple[int, int, int, int]):
         """Draw a bounding box onto a target frame using the provided ROI and downscale factor."""
         # Correct for downscale factor
         bounding_box = [side_len * self._downscale_factor for side_len in bounding_box]
