@@ -20,6 +20,14 @@ from typing import List, Optional
 
 import dvr_scan
 
+# Version string shown for the -v/--version CLI argument.
+VERSION_STRING = """------------------------------------------------
+DVR-Scan %s
+------------------------------------------------
+-Copyright (C) 2016-2022 Brandon Castellano
+-< https://github.com/Breakthrough/DVR-Scan >
+""" % dvr_scan.__version__
+
 
 def timecode_type_check(metavar: Optional[str] = None):
     """ Creates an argparse type for a user-inputted timecode.
@@ -242,11 +250,30 @@ def string_type_check(valid_strings: List[str],
 
 
 # pylint: disable=too-few-public-methods
-class AboutAction(argparse.Action):
-    """Custom argparse action for displaying the DVR-Scan ABOUT_STRING.
+class LicenseAction(argparse.Action):
+    """argparse Action for displaying DVR-Scan license & copyright info."""
 
-    Based off of the default VersionAction for displaying a string to the user.
-    """
+    # pylint: disable=redefined-builtin, too-many-arguments
+    def __init__(self,
+                 option_strings,
+                 version=None,
+                 dest=argparse.SUPPRESS,
+                 default=argparse.SUPPRESS,
+                 help="show version number and license/copyright information"):
+        super(LicenseAction, self).__init__(
+            option_strings=option_strings, dest=dest, default=default, nargs=0, help=help)
+        self.version = version
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        version = self.version
+        if version is None:
+            version = parser.version
+        parser.exit(message=version)
+
+
+# pylint: disable=too-few-public-methods
+class AboutAction(argparse.Action):
+    """argparse Action for displaying DVR-Scan version."""
 
     # pylint: disable=redefined-builtin, too-many-arguments
     def __init__(self,
@@ -276,7 +303,10 @@ def get_cli_parser():
     # pylint: disable=protected-access
     parser._optionals.title = 'arguments'
 
-    parser.add_argument('-v', '--version', action=AboutAction, version=dvr_scan.ABOUT_STRING)
+    parser.add_argument('-v', '--version', action=AboutAction, version=VERSION_STRING)
+
+    parser.add_argument(
+        '-L', '--show-license', action=AboutAction, version=dvr_scan.get_license_info())
 
     parser.add_argument(
         '-i',
@@ -499,4 +529,7 @@ def get_cli_parser():
     # files to stdout. Ensure works with binary, source, and frozen distributions.
     # Then cleanup the -v/--version flag to only show the version.
 
+    # TODO(v1.5): Add a mode that can dump frame scores (-s/--stats), and another mode
+    # that can dump the resulting frames after processing (-d/--dump-motion OUT.avi).
+    # Might also be helpful to overlay the frame score when using -d.
     return parser

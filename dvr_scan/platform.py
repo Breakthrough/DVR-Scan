@@ -9,14 +9,13 @@
 # PySceneDetect is licensed under the BSD 2-Clause License; see the
 # included LICENSE file, or visit one of the above pages for details.
 #
-""" ``dvr_scan.platform`` Module
+"""``dvr_scan.platform`` Module
 
-This file contains all platform/library/OS-specific compatibility fixes,
-intended to improve the systems that are able to run DVR-Scan, and allow
-for maintaining backwards compatibility with existing libraries going forwards.
+Contains platform, library, or OS-specific compatibility helpers.
 """
 
 import logging
+import sys
 
 import cv2
 
@@ -55,3 +54,18 @@ def get_min_screen_bounds():
     except ImportError:
         pass
     return None
+
+
+def init_logger(quiet_mode: bool, log_level: int = logging.INFO):
+    """Initializes Python logger named 'dvr_scan' for use by the CLI and API."""
+    logger = logging.getLogger('dvr_scan')
+    logger.setLevel(log_level)
+    if quiet_mode:
+        for handler in logger.handlers:
+            logger.removeHandler(handler)
+        return
+    handler = logging.StreamHandler(stream=sys.stdout)
+    handler.setLevel(log_level)
+    handler.setFormatter(logging.Formatter(fmt='[DVR-Scan] %(message)s'))
+    logger.addHandler(handler)
+    return logger

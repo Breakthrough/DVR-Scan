@@ -20,10 +20,9 @@ import sys
 
 from scenedetect import VideoOpenFailure
 
-from dvr_scan import init_logger
 from dvr_scan.cli import get_cli_parser
 from dvr_scan.scanner import ScanContext
-from dvr_scan.platform import cnt_is_available, cuda_mog_is_available
+from dvr_scan.platform import cnt_is_available, cuda_mog_is_available, init_logger
 
 
 def validate_cli_args(args, logger):

@@ -43,4 +43,4 @@ DVR-Scan uses the following third-party libraries:
  * FFmpeg [Copyright (C) 2001, Fabrice Bellard]
  * CUDA [Copyright (C) 2020, Nvidia Corporation]
 
-This software uses the following third-party libraries. By downloading, copying, installing, distributing, or using this software, you agree to the terms outlined in the LICENSE-THIRDPARTY file included in DVR-Scan distributions. A copy of this file can be obtained from the source code on Github: [github.com/Breakthrough/DVR-Scan](https://github.com/Breakthrough/DVR-Scan).
+See the LICENSE-THIRDPARTY file included with this distribution ([link](https://github.com/Breakthrough/DVR-Scan)), or run DVR-Scan with the `-L`/`--license` option for the terms under which these components are redistributed. By downloading, copying, or using this software, you agree to the terms of this license, and those under the "Ancillary Software Licenses" section.

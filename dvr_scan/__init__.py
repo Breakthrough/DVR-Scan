@@ -22,71 +22,45 @@ modules are organized as follows:
     Application logic + motion detection algorithm (ScanContext)
 """
 
-import logging
 import os
 import sys
+import pkgutil
 
-# On Windows, make sure we include any required DLL paths.
-if os.name == 'nt':
-    # If we're running a frozen version of the app, the EXE path should include all required DLLs.
-    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
-        os.add_dll_directory(os.path.abspath(os.path.dirname(sys.executable)))
-    # If CUDA is installed, include those DLLs in the search paths.
-    if 'CUDA_PATH' in os.environ and os.path.exists(os.environ['CUDA_PATH']):
-        os.add_dll_directory(os.path.abspath(os.path.join(os.environ['CUDA_PATH'], 'bin')))
-
-# OpenCV is a required package, but we don't have it as an explicit dependency since we
-# need to support both opencv-python and opencv-python-headless. Include some additional
-# context with the exception if this is the case.
-try:
-    import cv2 as _
-except ModuleNotFoundError as ex:
-    raise ModuleNotFoundError(
-        "OpenCV could not be found, try installing opencv-python:\n\npip install opencv-python",
-        name='cv2',
-    ) from ex
+# Handle loading OpenCV.
+# This **MUST** be first.
+import dvr_scan.opencv_loader as _
 
 # Top-level imports for easier access from the dvr_scan module.
+from dvr_scan.platform import init_logger
 from dvr_scan.scanner import ScanContext
 
 # Used for module/distribution identification.
 __version__ = 'v1.5.dev0'
 
-# About & copyright message string shown for the -v/--version CLI argument.
-ABOUT_STRING = """-----------------------------------------------
-DVR-Scan %s
------------------------------------------------
-Copyright (C) 2016-2022 Brandon Castellano
-< https://github.com/Breakthrough/DVR-Scan >
 
-This DVR-Scan is licensed under the BSD 2-Clause license; see the
-included LICENSE file, or visit the above link for details. This
-software uses the following third-party components; see the included
-LICENSE-THIRDPARTY file for details.
-
- NumPy:  Copyright (C) 2005-2022, Numpy Developers.
- OpenCV: Copyright (C) 2022, OpenCV Team.
- FFmpeg: Copyright (C) 2001, Fabrice Bellard.
- CUDA:   Copyright (C) 2020, Nvidia Corporation.
-
-THIS SOFTWARE CONTAINS SOURCE CODE AS PROVIDED BY NVIDIA CORPORATION.
-THE SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, EXPRESS OR IMPLIED.
-""" % __version__
-
-
-def init_logger(quiet_mode: bool, log_level: int = logging.INFO):
-    """Initializes the Python logger named 'dvr_scan'."""
-    logger = logging.getLogger('dvr_scan')
-    logger.setLevel(log_level)
-    if quiet_mode:
-        for handler in logger.handlers:
-            logger.removeHandler(handler)
-        return
-    handler = logging.StreamHandler(stream=sys.stdout)
-    handler.setLevel(log_level)
-    handler.setFormatter(logging.Formatter(fmt='[DVR-Scan] %(message)s'))
-    logger.addHandler(handler)
-    return logger
+def get_license_info() -> str:
+    """Get license/copyright information for the package or standalone executable."""
+    try:
+        # If we're running a frozen/standalone executable distribution, make sure we include
+        # the license information for the third-party components we redistribute.
+        if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+            app_folder = os.path.abspath(os.path.dirname(sys.executable))
+            license_files = ['LICENSE', 'LICENSE-THIRDPARTY']
+            license_text = '\n'.join([
+                open(os.path.join(app_folder, license_file), 'rb').read().decode('ascii', 'ignore')
+                for license_file in license_files
+            ])
+        # Use the LICENSE file included with the package distribution.
+        else:
+            license_text = pkgutil.get_data(__name__, "LICENSE").decode('ascii', 'ignore')
+        return license_text
+    # During development this is normal since the package paths won't be correct.
+    except FileNotFoundError:
+        pass
+    return ('[DVR-Scan] Error: Missing LICENSE files.\n'
+            'See the following URL for license/copyright information:\n'
+            ' < https://dvr-scan.readthedocs.io/en/latest/copyright >\n')
 
 
+# Initialize logger.
 init_logger(quiet_mode=True)
