@@ -531,5 +531,6 @@ def get_cli_parser():
 
     # TODO(v1.5): Add a mode that can dump frame scores (-s/--stats), and another mode
     # that can dump the resulting frames after processing (-d/--dump-motion OUT.avi).
-    # Might also be helpful to overlay the frame score when using -d.
+    # Might also be helpful to overlay the frame score when using -d. Multiply the motion
+    # mask against the input image.
     return parser

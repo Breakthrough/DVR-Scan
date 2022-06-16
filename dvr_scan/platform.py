@@ -31,14 +31,6 @@ def get_tqdm():
     return None
 
 
-def cnt_is_available():
-    return hasattr(cv2, 'bgsegm') and hasattr(cv2.bgsegm, 'createBackgroundSubtractorCNT')
-
-
-def cuda_mog_is_available():
-    return hasattr(cv2, 'cuda') and hasattr(cv2.cuda, 'createBackgroundSubtractorMOG2')
-
-
 def get_min_screen_bounds():
     """ Safely attempts to get the minimum screen resolution of all monitors
     using the `screeninfo` package. Returns the minimum of all monitor's heights

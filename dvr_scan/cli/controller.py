@@ -21,8 +21,8 @@ import sys
 from scenedetect import VideoOpenFailure
 
 from dvr_scan.cli import get_cli_parser
-from dvr_scan.scanner import ScanContext
-from dvr_scan.platform import cnt_is_available, cuda_mog_is_available, init_logger
+from dvr_scan.scanner import DetectorType, ScanContext
+from dvr_scan.platform import init_logger
 
 
 def validate_cli_args(args, logger):
@@ -36,6 +36,11 @@ def validate_cli_args(args, logger):
         args.output += '.avi'
     if args.kernel_size < 0:
         args.kernel_size = None
+    try:
+        args.bg_subtractor = DetectorType[args.bg_subtractor.upper()]
+    except KeyError:
+        logger.error('Error: Unknown background subtraction type: %s', args.bg_subtractor)
+        return False, None
     return True, args
 
 
@@ -52,21 +57,14 @@ def run_dvr_scan():
     logger = init_logger(args.quiet_mode)
     # Validate arguments and then continue.
     validated, args = validate_cli_args(args, logger)
-
     if not validated:
         return 1
-
     try:
-        if args.bg_subtractor == 'cnt' and not cnt_is_available():
-            logger.error(
-                'Method CNT not available with this verison of OpenCV. If you installed OpenCV from'
-                ' pip, try installing `opencv-contrib-python`.')
-            sys.exit(1)
 
-        if args.bg_subtractor == 'mog_cuda' and not cuda_mog_is_available():
+        if not args.bg_subtractor.value.is_available():
             logger.error(
-                'This version of OpenCV was built without CUDA support. If you installed OpenCV'
-                ' from pip, you must uninstall it and manually build OpenCV with CUDA support.')
+                'Method %s is not available. To enable it, install a version of'
+                ' the OpenCV package `cv2` that includes it.', args.bg_subtractor.name)
             sys.exit(1)
 
         sctx = ScanContext(
@@ -107,7 +105,7 @@ def run_dvr_scan():
             duration=args.duration,
         )
 
-        sctx.scan_motion(args.bg_subtractor)
+        sctx.scan_motion(detector_type=args.bg_subtractor)
 
     except VideoOpenFailure as ex:
         # Error information is logged in ScanContext when this exception is raised.

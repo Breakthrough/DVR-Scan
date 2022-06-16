@@ -16,8 +16,8 @@
 # pylint: disable=redefined-outer-name
 
 import pytest
-from dvr_scan.scanner import ScanContext
-from dvr_scan.platform import cnt_is_available, cuda_mog_is_available
+from dvr_scan.scanner import DetectorType, ScanContext
+from dvr_scan.motion_detector import MotionDetectorCNT, MotionDetectorCudaMOG2
 
 # ROI within the frame used for the test case (see traffic_camera.txt for details).
 TRAFFIC_CAMERA_ROI = [631, 532, 210, 127]
@@ -60,7 +60,7 @@ CORRUPT_VIDEO_EVENTS = [
 
 
 def test_scan_context(traffic_camera_video):
-    """ Test basic functionality of ScanContext with default parameters. """
+    """Test functionality of ScanContext with default parameters (DetectorType.MOG)."""
 
     sctx = ScanContext([traffic_camera_video])
     sctx.set_detection_params(roi=TRAFFIC_CAMERA_ROI)
@@ -76,15 +76,15 @@ def test_scan_context(traffic_camera_video):
     # TODO: Add check for duration (should be end - start + 1).
 
 
-@pytest.mark.skipif(not cuda_mog_is_available(), reason="CUDA module not available.")
+@pytest.mark.skipif(not MotionDetectorCudaMOG2.is_available(), reason="CUDA module not available.")
 def test_scan_context_cuda(traffic_camera_video):
-    """ Test basic functionality of ScanContext with the CUDA MOG2. """
+    """ Test functionality of ScanContext with the DetectorType.MOG_CUDA. """
 
     sctx = ScanContext([traffic_camera_video])
     sctx.set_detection_params(roi=TRAFFIC_CAMERA_ROI)
     sctx.set_event_params(min_event_len=4, time_pre_event=0)
 
-    event_list = sctx.scan_motion(method='mog_cuda')
+    event_list = sctx.scan_motion(detector_type=DetectorType.MOG_CUDA)
 
     assert len(event_list) == len(TRAFFIC_CAMERA_EVENTS)
     # Remove duration, check start/end times.
@@ -97,7 +97,7 @@ def test_scan_context_cuda(traffic_camera_video):
             (i, CUDA_EVENT_TOLERANCE, str(event_list[i]), str(TRAFFIC_CAMERA_EVENTS[i])))
 
 
-@pytest.mark.skipif(not cnt_is_available(), reason="CNT algorithm not available.")
+@pytest.mark.skipif(not MotionDetectorCNT.is_available(), reason="CNT algorithm not available.")
 def test_scan_context_cnt(traffic_camera_video):
     """ Test basic functionality of ScanContext using the CNT algorithm. """
 
@@ -105,7 +105,7 @@ def test_scan_context_cnt(traffic_camera_video):
     sctx.set_detection_params(roi=TRAFFIC_CAMERA_ROI)
     sctx.set_event_params(min_event_len=3, time_pre_event=0)
 
-    event_list = sctx.scan_motion(method='cnt')
+    event_list = sctx.scan_motion(DetectorType.CNT)
 
     assert len(event_list) == len(TRAFFIC_CAMERA_EVENTS_CNT)
     # Remove duration, check start/end times.

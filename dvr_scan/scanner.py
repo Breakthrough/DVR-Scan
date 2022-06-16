@@ -15,8 +15,8 @@ This module contains the ScanContext class, which implements the
 DVR-Scan program logic, as well as the motion detection algorithm.
 """
 
+from enum import Enum
 import logging
-import math
 import os
 import os.path
 import time
@@ -28,34 +28,34 @@ from scenedetect import FrameTimecode, VideoStream, VideoOpenFailure
 
 from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
 from dvr_scan.platform import get_min_screen_bounds, get_tqdm
+from dvr_scan.motion_detector import (
+    MotionDetectorMOG2,
+    MotionDetectorCNT,
+    MotionDetectorCudaMOG2,
+)
+
+logger = logging.getLogger('dvr_scan')
 
 DEFAULT_VIDEOWRITER_CODEC = cv2.VideoWriter_fourcc('X', 'V', 'I', 'D')
 
+class DetectorType(Enum):
+    MOG = MotionDetectorMOG2
+    CNT = MotionDetectorCNT
+    MOG_CUDA = MotionDetectorCudaMOG2
 
-def create_kernel(frame_width: int,
-                  kernel_size: Optional[int] = None,
-                  downscale_factor: int = 1) -> numpy.ndarray:
-    """ Creates a numpy array to use as a kernel for a morphological filter. If kernel_size is
-    None, the value is calculated automatically based on the video resolution. If downscale_factor
-    is set, the resulting kernel size will be reduced accordingly. """
-    assert kernel_size is None or kernel_size >= 3
-    if kernel_size is None: # Auto-set based on video resolution
-        video_width = frame_width / float(downscale_factor)
-        if video_width >= 1920:
-            kernel_size = 7
-        elif video_width >= 1280:
-            kernel_size = 5
-        else:
-            kernel_size = 3
-    elif downscale_factor > 1:
-                            # Correct kernel size for downscale factor
-        new_factor = kernel_size / downscale_factor
-        if new_factor > 3:
-            new_factor = math.floor(new_factor)
-            if new_factor % 2 == 0:
-                new_factor -= 1
-        kernel_size = new_factor if new_factor > 3 else 3
-    return numpy.ones((kernel_size, kernel_size), numpy.uint8)
+
+def _scale_kernel_size(kernel_size: int, downscale_factor: int):
+    corrected_size = round(kernel_size / float(downscale_factor))
+    if corrected_size % 2 == 0:
+        corrected_size -= 1
+    return min(corrected_size, 3)
+
+
+# TODO(#75): See if this needs to be tweaked for the CNT algorithm.
+def _recommended_kernel_size(frame_width: int, downscale_factor: int) -> int:
+    corrected_width = round(frame_width / float(downscale_factor))
+    return 7 if corrected_width >= 1920 else 5 if corrected_width >= 1280 else 3
+
 
 
 class ScanContext(object):
@@ -178,9 +178,9 @@ class ScanContext(object):
 
     def set_detection_params(self,
                              threshold: float = 0.15,
-                             kernel_size: int = None,
+                             kernel_size: Optional[int] = None,
                              downscale_factor: int = 1,
-                             roi: List[int] = None):
+                             roi: Optional[List[int]] = None):
         """ Sets motion detection parameters.
 
         Arguments:
@@ -441,18 +441,11 @@ class ScanContext(object):
         if not self._bounding_box is None and not bounding_box is None:
             self._bounding_box.draw(frame, bounding_box)
 
-    # TODO(v1.5): Replace string with a typed enumeration.
     def scan_motion(
-            self, method: str = 'mog') -> List[Tuple[FrameTimecode, FrameTimecode, FrameTimecode]]:
+        self,
+        detector_type: DetectorType = DetectorType.MOG,
+    ) -> List[Tuple[FrameTimecode, FrameTimecode, FrameTimecode]]:
         """ Performs motion analysis on the ScanContext's input video(s). """
-        use_cuda = False
-        if method.lower() == 'cnt':
-            bg_subtractor = cv2.bgsegm.createBackgroundSubtractorCNT()
-        elif method.lower() == 'mog_cuda':
-            use_cuda = True
-            bg_subtractor = cv2.cuda.createBackgroundSubtractorMOG2(detectShadows=False)
-        else:
-            bg_subtractor = cv2.createBackgroundSubtractorMOG2(detectShadows=False)
         buffered_frames = []
         event_window = []
         self.event_list = []
@@ -476,14 +469,20 @@ class ScanContext(object):
         if not self._select_roi():
             return
 
+        # Initialize overlays.
         if self._bounding_box:
             self._bounding_box.set_corrections(
                 downscale_factor=self._downscale_factor, roi=self._roi, frame_skip=self._frame_skip)
 
-        # Kernel size to use with morphological filter for noise reduction.
-        kernel = create_kernel(self._video_resolution[0], self._kernel_size, self._downscale_factor)
-        if use_cuda:
-            morph_filter = cv2.cuda.createMorphologyFilter(cv2.MORPH_OPEN, cv2.CV_8UC1, kernel)
+        # Calculate size of noise reduction kernel.
+        if self._kernel_size is None:
+            kernel_size = _recommended_kernel_size(self._video_resolution[0], self._downscale_factor)
+        else:
+            kernel_size = _scale_kernel_size(self._kernel_size, self._downscale_factor)
+
+        # Create motion detector.
+        logger.debug('Using detector %s with params: kernel_size = %d', detector_type.name, kernel_size)
+        motion_detector = detector_type.value(kernel_size=kernel_size)
 
         # Correct pre/post and minimum event lengths to account for frame skip factor.
         post_event_len = self._post_event_len.frame_num // (self._frame_skip + 1)
@@ -536,24 +535,9 @@ class ScanContext(object):
             if self._downscale_factor > 1:
                 frame_rgb = frame_rgb[::self._downscale_factor, ::self._downscale_factor, :]
 
-            if use_cuda:
-                stream = cv2.cuda_Stream()
-                frame_rgb_dev = cv2.cuda_GpuMat()
-                frame_rgb_dev.upload(frame_rgb, stream=stream)
-                frame_gray_dev = cv2.cuda.cvtColor(frame_rgb_dev, cv2.COLOR_BGR2GRAY, stream=stream)
-                frame_mask_dev = bg_subtractor.apply(frame_gray_dev, -1, stream=stream)
-                frame_filt_dev = morph_filter.apply(frame_mask_dev, stream=stream)
-                frame_filt = frame_filt_dev.download(stream=stream)
-                stream.waitForCompletion()
-                frame_score = cv2.sumElems(frame_filt)[0] / float(
-                    frame_filt.shape[0] * frame_filt.shape[1])
-            else:
-                # Process frame and calculate score (relative amount of motion).
-                frame_gray = cv2.cvtColor(frame_rgb, cv2.COLOR_BGR2GRAY)
-                frame_mask = bg_subtractor.apply(frame_gray)
-                frame_filt = cv2.morphologyEx(frame_mask, cv2.MORPH_OPEN, kernel)
-                frame_score = cv2.sumElems(frame_filt)[0] / float(
-                    frame_filt.shape[0] * frame_filt.shape[1])
+            frame_filt = motion_detector.apply(frame_rgb)
+            frame_score = cv2.sumElems(frame_filt)[0] / float(
+                frame_filt.shape[0] * frame_filt.shape[1])
             above_threshold = frame_score >= self._threshold
             # Always assign the first frame a score of 0 since some subtractors will output a mask
             # indicating motion on every pixel of the first frame.
