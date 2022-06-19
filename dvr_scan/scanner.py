@@ -38,6 +38,7 @@ logger = logging.getLogger('dvr_scan')
 
 DEFAULT_VIDEOWRITER_CODEC = cv2.VideoWriter_fourcc('X', 'V', 'I', 'D')
 
+
 class DetectorType(Enum):
     MOG = MotionDetectorMOG2
     CNT = MotionDetectorCNT
@@ -55,7 +56,6 @@ def _scale_kernel_size(kernel_size: int, downscale_factor: int):
 def _recommended_kernel_size(frame_width: int, downscale_factor: int) -> int:
     corrected_width = round(frame_width / float(downscale_factor))
     return 7 if corrected_width >= 1920 else 5 if corrected_width >= 1280 else 3
-
 
 
 class ScanContext(object):
@@ -476,12 +476,14 @@ class ScanContext(object):
 
         # Calculate size of noise reduction kernel.
         if self._kernel_size is None:
-            kernel_size = _recommended_kernel_size(self._video_resolution[0], self._downscale_factor)
+            kernel_size = _recommended_kernel_size(self._video_resolution[0],
+                                                   self._downscale_factor)
         else:
             kernel_size = _scale_kernel_size(self._kernel_size, self._downscale_factor)
 
         # Create motion detector.
-        logger.debug('Using detector %s with params: kernel_size = %d', detector_type.name, kernel_size)
+        logger.debug('Using detector %s with params: kernel_size = %d', detector_type.name,
+                     kernel_size)
         motion_detector = detector_type.value(kernel_size=kernel_size)
 
         # Correct pre/post and minimum event lengths to account for frame skip factor.

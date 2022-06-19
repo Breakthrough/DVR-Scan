@@ -42,8 +42,7 @@ class MotionDetector(ABC):
 
 
 class MotionDetectorMOG2(MotionDetector):
-    """Provides a consistent interface for calculating a mask of areas within each video
-    frame containing any motion."""
+    """MOG2 background subtractor."""
 
     def __init__(
         self,
@@ -72,6 +71,7 @@ class MotionDetectorMOG2(MotionDetector):
 
 
 class MotionDetectorCNT(MotionDetectorMOG2):
+    """CNT background subtractor."""
 
     def __init__(
         self,
@@ -96,6 +96,7 @@ class MotionDetectorCNT(MotionDetectorMOG2):
 
 
 class MotionDetectorCudaMOG2(MotionDetectorMOG2):
+    """CUDA-accelerated MOG2 background subtractor."""
 
     def __init__(
         self,
