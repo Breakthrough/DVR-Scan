@@ -110,7 +110,6 @@ class ScanContext(object):
         self._encode_thread_exception = None
 
         self.event_list = []
-        self._video_writer = None # Current cv2.VideoWriter for video export
         self._in_motion_event = False
 
         self._show_progress = show_progress
@@ -430,7 +429,7 @@ class ScanContext(object):
                 return False
             # Unscale coordinates if we downscaled the image.
             if scale_factor:
-                roi = [int(x * scale_factor) for x in roi]
+                roi = [round(x * scale_factor) for x in roi]
             self._roi = roi
         if self._roi:
             self._logger.info("ROI selected (x,y,w,h): %s", str(self._roi))
@@ -445,29 +444,9 @@ class ScanContext(object):
                 output_prefix = output_prefix[:dot_index]
             self._output_prefix = output_prefix
 
-    def _init_video_writer(self, event_id: int):
-        """ Create a new self._video_writer that will write frames to the correct output location.
-
-        Precondition: self._video_writer must be None already. """
-        assert self._video_writer is None
-        output_path = (
-            self._comp_file if self._comp_file else '%s.DSME_%04d.avi' %
-            (self._output_prefix, event_id))
-        # Ensure the target folder exists before attempting to write the video.
-        if self._comp_file:
-            output_folder = os.path.split(os.path.abspath(output_path))[0]
-            os.makedirs(output_folder, exist_ok=True)
-        effective_framerate = (
-            self._video_fps if self._frame_skip < 1 else self._video_fps / (1 + self._frame_skip))
-        self._video_writer = cv2.VideoWriter(output_path, self._fourcc, effective_framerate,
-                                             self._video_resolution)
-
-    def _draw_overlays(self, frame: numpy.ndarray, frame_pos: FrameTimecode,
-                       bounding_box: Tuple[int, int, int, int]):
-        if not self._timecode_overlay is None:
-            self._timecode_overlay.draw(frame=frame, text=frame_pos.get_timecode())
-        if not self._bounding_box is None and not bounding_box is None:
-            self._bounding_box.draw(frame, bounding_box)
+    def stop(self):
+        """Stop the current scan_motion call. This is the only thread-safe public method."""
+        self._stop.set()
 
     def scan_motion(
         self,
@@ -499,6 +478,8 @@ class ScanContext(object):
             return
 
         # Initialize overlays.
+        if self._roi is not None:
+            assert len(self._roi) == 4 and all([isinstance(coord, int) for coord in self._roi])
         if self._bounding_box:
             self._bounding_box.set_corrections(
                 downscale_factor=self._downscale_factor, roi=self._roi, frame_skip=self._frame_skip)
@@ -509,6 +490,7 @@ class ScanContext(object):
                                                    self._downscale_factor)
         else:
             kernel_size = _scale_kernel_size(self._kernel_size, self._downscale_factor)
+        assert kernel_size >= 1 and kernel_size % 2 == 1
 
         # Create motion detector.
         logger.debug('Using detector %s with params: kernel_size = %d', detector_type.name,
@@ -561,15 +543,13 @@ class ScanContext(object):
             frame_rgb_origin = frame.frame_rgb
             # Cut frame to selected sub-set if ROI area provided.
             if self._roi:
-                frame.frame_rgb = frame.frame_rgb[int(self._roi[1]):int(self._roi[1] +
-                                                                        self._roi[3]),
-                                                  int(self._roi[0]):int(self._roi[0] +
-                                                                        self._roi[2])]
+                frame.frame_rgb = frame.frame_rgb[self._roi[1]:self._roi[1] + self._roi[3],
+                                                  self._roi[0]:self._roi[0] + self._roi[2]]
             # Apply downscaling factor if provided.
             if self._downscale_factor > 1:
                 frame.frame_rgb = frame.frame_rgb[::self._downscale_factor, ::self
                                                   ._downscale_factor, :]
-
+            # Apply motion detector, calculate motion amount/score normalized by frame size.
             frame_filt = motion_detector.apply(frame.frame_rgb)
             frame_score = cv2.sumElems(frame_filt)[0] / float(
                 frame_filt.shape[0] * frame_filt.shape[1])
@@ -588,11 +568,17 @@ class ScanContext(object):
                     self._bounding_box.update(frame_filt)
                     if above_threshold else self._bounding_box.clear())
 
+            # Last frame was part of a motion event, or still within the post-event window.
             if in_motion_event:
-                end_of_event = False
+                # If this frame still has motion, reset the post-event window.
                 if above_threshold:
                     num_frames_post_event = 0
                     last_frame_above_threshold = frame.timecode.frame_num
+                # Otherwise, we wait until the post-event window has passed before ending
+                # this motion event and start looking for a new one.
+                #
+                # TODO(#72): We should wait until the max of *both* the pre-event and post-
+                # event windows have passed. Right now we just consider the post-event window.
                 else:
                     num_frames_post_event += 1
                     if num_frames_post_event >= post_event_len:
@@ -605,26 +591,29 @@ class ScanContext(object):
                             self._frame_skip, self._video_fps)
                         # The duration, however, should include the PTS of the end frame.
                         event_duration = FrameTimecode(
-                            (frame.timecode.frame_num + 1) - event_start.frame_num, self._video_fps)
+                            (event_end.frame_num + 1) - event_start.frame_num, self._video_fps)
                         self.event_list.append((event_start, event_end, event_duration))
-                        end_of_event = True
+                # Send frame to encode thread.
                 if not self._scan_only:
                     encode_queue.put(
                         EncodeFrame(
                             frame_rgb=frame_rgb_origin,
                             timecode=frame.timecode,
                             bounding_box=bounding_box,
-                            end_of_event=end_of_event))
-
+                            end_of_event=not in_motion_event,
+                        ))
+            # Not already in a motion event, look for a new one.
             else:
+                # Buffer the required amount of frames and overlay data until we find an event.
                 if not self._scan_only:
-                    # Need to defer overlay drawing.
                     buffered_frames.append(
                         EncodeFrame(
                             frame_rgb=frame_rgb_origin,
                             timecode=frame.timecode,
-                            bounding_box=bounding_box))
+                            bounding_box=bounding_box,
+                        ))
                     buffered_frames = buffered_frames[-buff_len:]
+                # Start a new event once all frames in the event window have motion.
                 if len(event_window) >= min_event_len and all(
                         score >= self._threshold for score in event_window):
                     in_motion_event = True
@@ -634,7 +623,7 @@ class ScanContext(object):
                     shift_amount = min(frames_since_last_event, start_event_shift)
                     shifted_start = max(start_frame, frame.timecode.frame_num + 1 - shift_amount)
                     event_start = FrameTimecode(shifted_start, self._video_fps)
-                    # Send buffered frames to encode queue if required.
+                    # Send buffered frames to encode thread.
                     if not self._scan_only:
                         for encode_frame in buffered_frames:
                             encode_queue.put(encode_frame)
@@ -643,29 +632,28 @@ class ScanContext(object):
             self._frames_processed += 1 + self._frame_skip
             progress_bar.update(1 + self._frame_skip)
 
-        # If we're still in a motion event, we still need to compute the duration
-        # and ending timecode and add it to the event list.
+        # Video ended, finished processing frames. If we're still in a motion event,
+        # compute the duration and ending timecode and add it to the event list.
         if in_motion_event:
             event_end = FrameTimecode(self._curr_pos.frame_num, self._video_fps)
             event_duration = FrameTimecode(self._curr_pos.frame_num - event_start.frame_num,
                                            self._video_fps)
             self.event_list.append((event_start, event_end, event_duration))
-
+        # Close the progress bar before producing any more output.
         if progress_bar is not None:
             progress_bar.close()
-
+        # Wait for decode thread to finish, re-raise any exceptions.
         decode_thread.join()
         if self._decode_thread_exception is not None:
             raise self._decode_thread_exception[1].with_traceback(self._decode_thread_exception[2])
-
+        # Push sentinel to queue, wait for encode thread to finish, and re-raise any exceptions.
         if not self._scan_only:
             encode_queue.put(None)
             encode_thread.join()
             if self._encode_thread_exception is not None:
                 raise self._encode_thread_exception[1].with_traceback(
                     self._encode_thread_exception[2])
-
-        # Allow up to 1 corrupt/failed decoded frame without triggering an error.
+        # Allow up to 1 corrupt/failed decoded frame without displaying an error.
         if self._num_corruptions > 1:
             self._logger.error(
                 "Failed to decode %d frame(s) from video, result may be incorrect. "
@@ -714,10 +702,6 @@ class ScanContext(object):
         if not self._scan_only:
             self._logger.info("Motion events written to disk.")
 
-    def stop(self):
-        """Stop the current scan_motion call. This is the only thread-safe public method."""
-        self._stop.set()
-
     def _decode_thread(self, decode_queue: queue.Queue):
         try:
             while not self._stop.is_set():
@@ -730,7 +714,8 @@ class ScanContext(object):
                 frame_rgb = self._get_next_frame()
                 if frame_rgb is None:
                     break
-                # self._curr_pos points to the time at the end of the current frame
+                # self._curr_pos points to the time at the end of the current frame (i.e. the
+                # first frame has a frame_num of 1), so we correct that for presentation time.
                 presentation_time = FrameTimecode(
                     timecode=self._curr_pos.frame_num - 1, fps=self._video_fps)
                 decode_queue.put(DecodeFrame(frame_rgb, presentation_time))
@@ -744,23 +729,46 @@ class ScanContext(object):
             # Make sure main thread stops processing loop.
             decode_queue.put(None)
 
+    def _init_video_writer(self, event_id: int) -> cv2.VideoWriter:
+        """Create a new cv2.VideoWriter that will write frames to the correct output location."""
+        output_path = (
+            self._comp_file if self._comp_file else '%s.DSME_%04d.avi' %
+            (self._output_prefix, event_id))
+        # Ensure the target folder exists before attempting to write the video.
+        if self._comp_file:
+            output_folder = os.path.split(os.path.abspath(output_path))[0]
+            os.makedirs(output_folder, exist_ok=True)
+        effective_framerate = (
+            self._video_fps if self._frame_skip < 1 else self._video_fps / (1 + self._frame_skip))
+        return cv2.VideoWriter(output_path, self._fourcc, effective_framerate,
+                               self._video_resolution)
+
     def _encode_thread(self, encode_queue: queue.Queue):
         try:
             num_events = 0
+            video_writer = None
             while True:
                 to_encode: Optional[EncodeFrame] = encode_queue.get()
                 if to_encode is None:
-                    if self._video_writer is not None:
-                        self._video_writer.release()
+                    if video_writer is not None:
+                        video_writer.release()
                     return
-                if self._video_writer is None:
+                if video_writer is None:
                     num_events += 1
-                    self._init_video_writer(num_events)
-                self._draw_overlays(to_encode.frame_rgb, to_encode.timecode, to_encode.bounding_box)
-                self._video_writer.write(to_encode.frame_rgb)
+                    video_writer = self._init_video_writer(num_events)
+                # Render all overlays onto frame.
+                if not self._timecode_overlay is None:
+                    self._timecode_overlay.draw(
+                        frame=to_encode.frame_rgb, text=to_encode.timecode.get_timecode())
+                if not self._bounding_box is None and not to_encode.bounding_box is None:
+                    self._bounding_box.draw(to_encode.frame_rgb, to_encode.bounding_box)
+                # Encode and write frame to disk.
+                video_writer.write(to_encode.frame_rgb)
+                # If we're at the end of the event, make sure we start using a new output
+                # unless we're compiling all motion events together.
                 if to_encode.end_of_event and not self._comp_file:
-                    self._video_writer.release()
-                    self._video_writer = None
+                    video_writer.release()
+                    video_writer = None
         # We'll re-raise any exceptions from the main thread.
         # pylint: disable=bare-except
         except:
