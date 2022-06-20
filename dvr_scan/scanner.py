@@ -19,7 +19,10 @@ from enum import Enum
 import logging
 import os
 import os.path
+import queue
+import sys
 import time
+import threading
 from typing import AnyStr, Iterable, List, Optional, Tuple, Union
 
 import cv2
@@ -37,6 +40,10 @@ from dvr_scan.motion_detector import (
 logger = logging.getLogger('dvr_scan')
 
 DEFAULT_VIDEOWRITER_CODEC = cv2.VideoWriter_fourcc('X', 'V', 'I', 'D')
+"""Default codec to use with OpenCV VideoWriter."""
+
+MAX_FRAME_QUEUE_LENGTH: int = 4
+"""Maximum size of the queue of frames waiting to be processed after decoding."""
 
 
 class DetectorType(Enum):
@@ -80,7 +87,9 @@ class ScanContext(object):
         self._logger = logging.getLogger('dvr_scan')
         self._logger.info("Initializing scan context...")
 
-        self.running = True       # Allows asynchronous termination of scanning loop.
+        self._stop = threading.Event()
+        self._decode_thread_exception = None
+
         self.event_list = []
         self._video_writer = None # Current cv2.VideoWriter for video export
         self._in_motion_event = False
@@ -446,6 +455,7 @@ class ScanContext(object):
         detector_type: DetectorType = DetectorType.MOG,
     ) -> List[Tuple[FrameTimecode, FrameTimecode, FrameTimecode]]:
         """ Performs motion analysis on the ScanContext's input video(s). """
+        self._stop.clear()
         buffered_frames = []
         event_window = []
         self.event_list = []
@@ -513,22 +523,19 @@ class ScanContext(object):
 
         progress_bar = self._create_progress_bar(show_progress=self._show_progress)
 
-        while self.running:
-            if self._end_time is not None and self._curr_pos.frame_num >= self._end_time.frame_num:
+        decode_queue = queue.Queue(MAX_FRAME_QUEUE_LENGTH)
+        decode_thread = threading.Thread(
+            target=ScanContext._decode_thread, args=(self, decode_queue), daemon=True)
+        decode_thread.start()
+        frame_rgb: numpy.ndarray = None
+        presentation_time: FrameTimecode = None
+
+        while not self._stop.is_set():
+            frame_rgb, presentation_time = decode_queue.get()
+            if frame_rgb is None and presentation_time is None:
                 break
-            if self._frame_skip > 0:
-                for _ in range(self._frame_skip):
-                    if self._get_next_frame(False) is None:
-                        break
-                    self._frames_processed += 1
-                    progress_bar.update(1)
-            frame_rgb = self._get_next_frame()
-            if frame_rgb is None:
-                break
+            assert frame_rgb is not None
             frame_rgb_origin = frame_rgb
-            # self._curr_pos points to the time at the end of the current frame
-            presentation_time = FrameTimecode(
-                timecode=self._curr_pos.frame_num - 1, fps=self._video_fps)
             # Cut frame to selected sub-set if ROI area provided.
             if self._roi:
                 frame_rgb = frame_rgb[int(self._roi[1]):int(self._roi[1] + self._roi[3]),
@@ -574,7 +581,8 @@ class ScanContext(object):
                             self._frame_skip, self._video_fps)
                         # The duration, however, should include the PTS of the end frame.
                         event_duration = FrameTimecode(
-                            self._curr_pos.frame_num - event_start.frame_num, self._video_fps)
+                            (presentation_time.frame_num + 1) - event_start.frame_num,
+                            self._video_fps)
                         self.event_list.append((event_start, event_end, event_duration))
                         if not self._comp_file and self._video_writer is not None:
                             self._video_writer.release()
@@ -591,7 +599,7 @@ class ScanContext(object):
                     num_frames_post_event = 0
                     frames_since_last_event = presentation_time.frame_num - event_end.frame_num
                     shift_amount = min(frames_since_last_event, start_event_shift)
-                    shifted_start = max(start_frame, self._curr_pos.frame_num - shift_amount)
+                    shifted_start = max(start_frame, presentation_time.frame_num + 1 - shift_amount)
                     event_start = FrameTimecode(shifted_start, self._video_fps)
                     # Open new VideoWriter if needed, write buffered_frames to file.
                     if not self._scan_only:
@@ -602,8 +610,8 @@ class ScanContext(object):
                             self._video_writer.write(frame)
                     buffered_frames = []
 
-            self._frames_processed += 1
-            progress_bar.update(1)
+            self._frames_processed += 1 + self._frame_skip
+            progress_bar.update(1 + self._frame_skip)
 
         # If we're still in a motion event, we still need to compute the duration
         # and ending timecode and add it to the event list.
@@ -626,6 +634,10 @@ class ScanContext(object):
             self._video_writer = None
         if progress_bar is not None:
             progress_bar.close()
+        decode_thread.join()
+
+        if self._decode_thread_exception is not None:
+            raise self._decode_thread_exception[1].with_traceback(self._decode_thread_exception[2])
 
         self._post_scan_motion(processing_start=processing_start)
 
@@ -668,26 +680,32 @@ class ScanContext(object):
         if not self._scan_only:
             self._logger.info("Motion events written to disk.")
 
-    def _on_event_start(self):
-        # Called when past [EVENT_WINDOW] frames are > threshold.
+    def stop(self):
+        """Stop the current scan_motion call. This is the only thread-safe public method."""
+        self._stop.set()
 
-        # Seek to start of the event corrected for the event window and time before.
-        # Then calculate ROIs of all the frames before the current timecode.
+    def _decode_thread(self, decode_queue: queue.Queue):
+        try:
+            while not self._stop.is_set():
+                if self._end_time is not None and self._curr_pos.frame_num >= self._end_time.frame_num:
+                    break
+                if self._frame_skip > 0:
+                    for _ in range(self._frame_skip):
+                        if self._get_next_frame(False) is None:
+                            break
+                frame_rgb = self._get_next_frame()
+                if frame_rgb is None:
+                    break
+                # self._curr_pos points to the time at the end of the current frame
+                presentation_time = FrameTimecode(
+                    timecode=self._curr_pos.frame_num - 1, fps=self._video_fps)
+                decode_queue.put((frame_rgb, presentation_time))
 
-        #@dataclass
-        #class MotionEvent:
-        #    # Start of the motion event, corrected for event window size.
-        #    start: FrameTimecode
-        #    duration: FrameTimecode
-        #    bounding_box: List[Tuple[int, int, int, int]]
-
-        # Finally, make a new method called _new_output_file to init either an
-        # ffmpeg video filter / cut list.
-        pass
-
-    def _on_event_end(self):
-        # Called when max(time_pre_event, time_post_event) frames have passed w/o being above the
-        # thresold. Duration is then the time of the last frame above threshold.
-
-        #self.event_list.append((event_start, event_end, event_duration))
-        pass
+        # We'll re-raise any exceptions from the main thread.
+        # pylint: disable=bare-except
+        except:
+            logger.critical('Fatal error: Exception raised in decode thread.')
+            self._decode_thread_exception = sys.exc_info()
+        finally:
+            # Make sure main thread stops processing loop.
+            decode_queue.put((None, None))

@@ -8,6 +8,7 @@ DVR-Scan Changelog
 
 #### Release Notes
 
+ - Performance improvements on multicore systems
  - The new minimum supported Python version is 3.7,
  - Support for OpenCV 2 has been dropped, new minimum verison is OpenCV 3
  - Add experimental GPU support for CUDA-enabled GPUs
@@ -27,6 +28,7 @@ DVR-Scan Changelog
  * [bugfix] Only get screen resolution when required
  * [api] Remove `dvr_scan.timecode` and `FrameTimecode`, replace with `scenedetect.FrameTimecode`
  * [feature] Experimental support for CUDA MOG2 filter
+ * [feature] Video decoding is now done in a separate thread from the scanning logic resulting in improved performance for multicore machines
 
 #### Known Issues
 
