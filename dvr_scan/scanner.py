@@ -15,6 +15,7 @@ This module contains the ScanContext class, which implements the
 DVR-Scan program logic, as well as the motion detection algorithm.
 """
 
+from dataclasses import dataclass
 from enum import Enum
 import logging
 import os
@@ -42,7 +43,10 @@ logger = logging.getLogger('dvr_scan')
 DEFAULT_VIDEOWRITER_CODEC = cv2.VideoWriter_fourcc('X', 'V', 'I', 'D')
 """Default codec to use with OpenCV VideoWriter."""
 
-MAX_FRAME_QUEUE_LENGTH: int = 4
+MAX_DECODE_QUEUE_SIZE: int = 4
+"""Maximum size of the queue of frames waiting to be processed after decoding."""
+
+MAX_ENCODE_QUEUE_SIZE: int = 4
 """Maximum size of the queue of frames waiting to be processed after decoding."""
 
 
@@ -50,6 +54,20 @@ class DetectorType(Enum):
     MOG = MotionDetectorMOG2
     CNT = MotionDetectorCNT
     MOG_CUDA = MotionDetectorCudaMOG2
+
+
+@dataclass
+class DecodeFrame:
+    frame_rgb: numpy.ndarray
+    timecode: FrameTimecode
+
+
+@dataclass
+class EncodeFrame:
+    frame_rgb: numpy.ndarray
+    timecode: FrameTimecode
+    bounding_box: Tuple[int, int, int, int]
+    end_of_event: bool = False
 
 
 def _scale_kernel_size(kernel_size: int, downscale_factor: int):
@@ -89,6 +107,7 @@ class ScanContext(object):
 
         self._stop = threading.Event()
         self._decode_thread_exception = None
+        self._encode_thread_exception = None
 
         self.event_list = []
         self._video_writer = None # Current cv2.VideoWriter for video export
@@ -426,14 +445,14 @@ class ScanContext(object):
                 output_prefix = output_prefix[:dot_index]
             self._output_prefix = output_prefix
 
-    def _init_video_writer(self):
+    def _init_video_writer(self, event_id: int):
         """ Create a new self._video_writer that will write frames to the correct output location.
 
         Precondition: self._video_writer must be None already. """
         assert self._video_writer is None
         output_path = (
             self._comp_file if self._comp_file else '%s.DSME_%04d.avi' %
-            (self._output_prefix, len(self.event_list)))
+            (self._output_prefix, event_id))
         # Ensure the target folder exists before attempting to write the video.
         if self._comp_file:
             output_folder = os.path.split(os.path.abspath(output_path))[0]
@@ -523,28 +542,35 @@ class ScanContext(object):
 
         progress_bar = self._create_progress_bar(show_progress=self._show_progress)
 
-        decode_queue = queue.Queue(MAX_FRAME_QUEUE_LENGTH)
+        decode_queue = queue.Queue(MAX_DECODE_QUEUE_SIZE)
         decode_thread = threading.Thread(
             target=ScanContext._decode_thread, args=(self, decode_queue), daemon=True)
         decode_thread.start()
-        frame_rgb: numpy.ndarray = None
-        presentation_time: FrameTimecode = None
+
+        if not self._scan_only:
+            encode_queue = queue.Queue(MAX_ENCODE_QUEUE_SIZE)
+            encode_thread = threading.Thread(
+                target=ScanContext._encode_thread, args=(self, encode_queue), daemon=True)
+            encode_thread.start()
 
         while not self._stop.is_set():
-            frame_rgb, presentation_time = decode_queue.get()
-            if frame_rgb is None and presentation_time is None:
+            frame: Optional[DecodeFrame] = decode_queue.get()
+            if frame is None:
                 break
-            assert frame_rgb is not None
-            frame_rgb_origin = frame_rgb
+            assert frame.frame_rgb is not None
+            frame_rgb_origin = frame.frame_rgb
             # Cut frame to selected sub-set if ROI area provided.
             if self._roi:
-                frame_rgb = frame_rgb[int(self._roi[1]):int(self._roi[1] + self._roi[3]),
-                                      int(self._roi[0]):int(self._roi[0] + self._roi[2])]
+                frame.frame_rgb = frame.frame_rgb[int(self._roi[1]):int(self._roi[1] +
+                                                                        self._roi[3]),
+                                                  int(self._roi[0]):int(self._roi[0] +
+                                                                        self._roi[2])]
             # Apply downscaling factor if provided.
             if self._downscale_factor > 1:
-                frame_rgb = frame_rgb[::self._downscale_factor, ::self._downscale_factor, :]
+                frame.frame_rgb = frame.frame_rgb[::self._downscale_factor, ::self
+                                                  ._downscale_factor, :]
 
-            frame_filt = motion_detector.apply(frame_rgb)
+            frame_filt = motion_detector.apply(frame.frame_rgb)
             frame_score = cv2.sumElems(frame_filt)[0] / float(
                 frame_filt.shape[0] * frame_filt.shape[1])
             above_threshold = frame_score >= self._threshold
@@ -563,12 +589,10 @@ class ScanContext(object):
                     if above_threshold else self._bounding_box.clear())
 
             if in_motion_event:
-                if not self._scan_only:
-                    self._draw_overlays(frame_rgb_origin, presentation_time, bounding_box)
-                    self._video_writer.write(frame_rgb_origin)
+                end_of_event = False
                 if above_threshold:
                     num_frames_post_event = 0
-                    last_frame_above_threshold = presentation_time.frame_num
+                    last_frame_above_threshold = frame.timecode.frame_num
                 else:
                     num_frames_post_event += 1
                     if num_frames_post_event >= post_event_len:
@@ -581,34 +605,40 @@ class ScanContext(object):
                             self._frame_skip, self._video_fps)
                         # The duration, however, should include the PTS of the end frame.
                         event_duration = FrameTimecode(
-                            (presentation_time.frame_num + 1) - event_start.frame_num,
-                            self._video_fps)
+                            (frame.timecode.frame_num + 1) - event_start.frame_num, self._video_fps)
                         self.event_list.append((event_start, event_end, event_duration))
-                        if not self._comp_file and self._video_writer is not None:
-                            self._video_writer.release()
-                            self._video_writer = None
+                        end_of_event = True
+                if not self._scan_only:
+                    encode_queue.put(
+                        EncodeFrame(
+                            frame_rgb=frame_rgb_origin,
+                            timecode=frame.timecode,
+                            bounding_box=bounding_box,
+                            end_of_event=end_of_event))
+
             else:
                 if not self._scan_only:
                     # Need to defer overlay drawing.
-                    buffered_frames.append((frame_rgb_origin, presentation_time, bounding_box))
+                    buffered_frames.append(
+                        EncodeFrame(
+                            frame_rgb=frame_rgb_origin,
+                            timecode=frame.timecode,
+                            bounding_box=bounding_box))
                     buffered_frames = buffered_frames[-buff_len:]
                 if len(event_window) >= min_event_len and all(
                         score >= self._threshold for score in event_window):
                     in_motion_event = True
                     event_window = []
                     num_frames_post_event = 0
-                    frames_since_last_event = presentation_time.frame_num - event_end.frame_num
+                    frames_since_last_event = frame.timecode.frame_num - event_end.frame_num
                     shift_amount = min(frames_since_last_event, start_event_shift)
-                    shifted_start = max(start_frame, presentation_time.frame_num + 1 - shift_amount)
+                    shifted_start = max(start_frame, frame.timecode.frame_num + 1 - shift_amount)
                     event_start = FrameTimecode(shifted_start, self._video_fps)
-                    # Open new VideoWriter if needed, write buffered_frames to file.
+                    # Send buffered frames to encode queue if required.
                     if not self._scan_only:
-                        if self._video_writer is None:
-                            self._init_video_writer()
-                        for frame, timecode, bounding_box in buffered_frames:
-                            self._draw_overlays(frame, timecode, bounding_box)
-                            self._video_writer.write(frame)
-                    buffered_frames = []
+                        for encode_frame in buffered_frames:
+                            encode_queue.put(encode_frame)
+                        buffered_frames = []
 
             self._frames_processed += 1 + self._frame_skip
             progress_bar.update(1 + self._frame_skip)
@@ -621,6 +651,20 @@ class ScanContext(object):
                                            self._video_fps)
             self.event_list.append((event_start, event_end, event_duration))
 
+        if progress_bar is not None:
+            progress_bar.close()
+
+        decode_thread.join()
+        if self._decode_thread_exception is not None:
+            raise self._decode_thread_exception[1].with_traceback(self._decode_thread_exception[2])
+
+        if not self._scan_only:
+            encode_queue.put(None)
+            encode_thread.join()
+            if self._encode_thread_exception is not None:
+                raise self._encode_thread_exception[1].with_traceback(
+                    self._encode_thread_exception[2])
+
         # Allow up to 1 corrupt/failed decoded frame without triggering an error.
         if self._num_corruptions > 1:
             self._logger.error(
@@ -628,16 +672,6 @@ class ScanContext(object):
                 "Try re-encoding or remuxing video (e.g. ffmpeg -i video.mp4 -c:v copy out.mp4). "
                 "See https://github.com/Breakthrough/DVR-Scan/issues/62 for details.",
                 self._num_corruptions)
-
-        if self._video_writer is not None:
-            self._video_writer.release()
-            self._video_writer = None
-        if progress_bar is not None:
-            progress_bar.close()
-        decode_thread.join()
-
-        if self._decode_thread_exception is not None:
-            raise self._decode_thread_exception[1].with_traceback(self._decode_thread_exception[2])
 
         self._post_scan_motion(processing_start=processing_start)
 
@@ -699,7 +733,7 @@ class ScanContext(object):
                 # self._curr_pos points to the time at the end of the current frame
                 presentation_time = FrameTimecode(
                     timecode=self._curr_pos.frame_num - 1, fps=self._video_fps)
-                decode_queue.put((frame_rgb, presentation_time))
+                decode_queue.put(DecodeFrame(frame_rgb, presentation_time))
 
         # We'll re-raise any exceptions from the main thread.
         # pylint: disable=bare-except
@@ -708,4 +742,27 @@ class ScanContext(object):
             self._decode_thread_exception = sys.exc_info()
         finally:
             # Make sure main thread stops processing loop.
-            decode_queue.put((None, None))
+            decode_queue.put(None)
+
+    def _encode_thread(self, encode_queue: queue.Queue):
+        try:
+            num_events = 0
+            while True:
+                to_encode: Optional[EncodeFrame] = encode_queue.get()
+                if to_encode is None:
+                    if self._video_writer is not None:
+                        self._video_writer.release()
+                    return
+                if self._video_writer is None:
+                    num_events += 1
+                    self._init_video_writer(num_events)
+                self._draw_overlays(to_encode.frame_rgb, to_encode.timecode, to_encode.bounding_box)
+                self._video_writer.write(to_encode.frame_rgb)
+                if to_encode.end_of_event and not self._comp_file:
+                    self._video_writer.release()
+                    self._video_writer = None
+        # We'll re-raise any exceptions from the main thread.
+        # pylint: disable=bare-except
+        except:
+            logger.critical('Fatal error: Exception raised in encode thread.')
+            self._encode_thread_exception = sys.exc_info()

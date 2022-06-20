@@ -28,7 +28,7 @@ DVR-Scan Changelog
  * [bugfix] Only get screen resolution when required
  * [api] Remove `dvr_scan.timecode` and `FrameTimecode`, replace with `scenedetect.FrameTimecode`
  * [feature] Experimental support for CUDA MOG2 filter
- * [feature] Video decoding is now done in a separate thread from the scanning logic resulting in improved performance for multicore machines
+ * [feature] Video encoding and decoding are now done in parallel with the scanning logic leading to improved performance on most systems
 
 #### Known Issues
 
