@@ -16,8 +16,9 @@ Contains platform, library, or OS-specific compatibility helpers.
 
 import logging
 import sys
+from typing import Optional
 
-import cv2
+from scenedetect.platform import get_and_create_path
 
 
 def get_tqdm():
@@ -48,16 +49,42 @@ def get_min_screen_bounds():
     return None
 
 
-def init_logger(quiet_mode: bool, log_level: int = logging.INFO):
-    """Initializes Python logger named 'dvr_scan' for use by the CLI and API."""
-    logger = logging.getLogger('dvr_scan')
-    logger.setLevel(log_level)
-    if quiet_mode:
-        for handler in logger.handlers:
-            logger.removeHandler(handler)
-        return
-    handler = logging.StreamHandler(stream=sys.stdout)
-    handler.setLevel(log_level)
-    handler.setFormatter(logging.Formatter(fmt='[DVR-Scan] %(message)s'))
-    logger.addHandler(handler)
-    return logger
+##
+## Logging
+##
+
+
+def init_logger(log_level: int = logging.INFO,
+                show_stdout: bool = False,
+                log_file: Optional[str] = None):
+    """Initializes logging for DVR-SCan. The logger instance used is named 'dvr_scan'.
+    By default the logger has no handlers to suppress output. All existing log handlers
+    are replaced every time this function is invoked.
+
+    Arguments:
+        log_level: Verbosity of log messages. Should be one of [logging.INFO, logging.DEBUG,
+            logging.WARNING, logging.ERROR, logging.CRITICAL].
+        show_stdout: If True, add handler to show log messages on stdout (default: False).
+        log_file: If set, add handler to dump log messages to given file path.
+    """
+    # Format of log messages depends on verbosity.
+    format_str = '[DVR-Scan] %(message)s'
+    if log_level == logging.DEBUG:
+        format_str = '%(levelname)s: %(module)s.%(funcName)s(): %(message)s'
+    # Get the named logger and remove any existing handlers.
+    logger_instance = logging.getLogger('dvr_scan')
+    logger_instance.handlers = []
+    logger_instance.setLevel(log_level)
+    # Add stdout handler if required.
+    if show_stdout:
+        handler = logging.StreamHandler(stream=sys.stdout)
+        handler.setLevel(log_level)
+        handler.setFormatter(logging.Formatter(fmt=format_str))
+        logger_instance.addHandler(handler)
+    # Add file handler if required.
+    if log_file:
+        log_file = get_and_create_path(log_file)
+        handler = logging.FileHandler(log_file)
+        handler.setLevel(log_level)
+        handler.setFormatter(logging.Formatter(fmt=format_str))
+        logger_instance.addHandler(handler)

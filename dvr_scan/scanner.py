@@ -95,11 +95,11 @@ class ScanContext(object):
         """ Initializes the ScanContext with the supplied arguments.
 
         Arguments:
-            input_videos (List[str]): List of paths of videos to process.
-            frame_skip (int): Skip every 1 in (frame_skip+1) frames to
-                speed up processing at expense of accuracy (default is 0
-                for no frame skipping).
-            show_progress: Shows a progress bar if tqdm is available.
+            config_file: List of paths of videos to process.
+            input_videos: List of paths of videos to process.
+            frame_skip: Skip every 1 in (frame_skip+1) frames to speed up processing at
+                expense of accuracy (default is 0 for no skipping).
+            show_progress: Show a progress bar if tqdm is available.
         """
 
         self._logger = logging.getLogger('dvr_scan')

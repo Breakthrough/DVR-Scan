@@ -19,6 +19,7 @@ import argparse
 from typing import List, Optional
 
 import dvr_scan
+from dvr_scan.cli.config import ConfigRegistry, CHOICE_MAP, USER_CONFIG_FILE_PATH
 
 # Version string shown for the -v/--version CLI argument.
 VERSION_STRING = """------------------------------------------------
@@ -293,20 +294,38 @@ class AboutAction(argparse.Action):
         parser.exit(message=version)
 
 
-def get_cli_parser():
+def get_cli_parser(user_config: ConfigRegistry):
     """Creates the DVR-Scan argparse command-line interface.
+
+    Arguments:
+        user_config: User configuration file registry.
 
     Returns:
         ArgumentParser object, which parse_args() can be called with.
     """
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    # pylint: disable=protected-access
-    parser._optionals.title = 'arguments'
 
-    parser.add_argument('-v', '--version', action=AboutAction, version=VERSION_STRING)
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        argument_default=argparse.SUPPRESS,
+    )
+
+    if hasattr(parser, '_optionals'):
+        # pylint: disable=protected-access
+        parser._optionals.title = 'arguments'
 
     parser.add_argument(
-        '-L', '--show-license', action=AboutAction, version=dvr_scan.get_license_info())
+        '-v',
+        '--version',
+        action=AboutAction,
+        version=VERSION_STRING,
+    )
+
+    parser.add_argument(
+        '-L',
+        '--show-license',
+        action=AboutAction,
+        version=dvr_scan.get_license_info(),
+    )
 
     parser.add_argument(
         '-i',
@@ -332,6 +351,15 @@ def get_cli_parser():
               ' MUST end with .avi.'))
 
     parser.add_argument(
+        '-c',
+        '--config',
+        metavar='CONFIG_FILE',
+        type=str,
+        help=('Path to config file. If not set, tries to load one from %s' %
+              (USER_CONFIG_FILE_PATH)),
+    )
+
+    parser.add_argument(
         '-b',
         '--bg-subtractor',
         metavar='TYPE',
@@ -353,7 +381,6 @@ def get_cli_parser():
     # Just leave default as XVID, since the other codecs don't seem to be as well supported,
     # and add a config file option to override it instead.
     parser.add_argument(
-        '-c',
         '--codec',
         metavar='FOURCC',
         dest='fourcc_str',
@@ -426,9 +453,18 @@ def get_cli_parser():
         '--quiet',
         dest='quiet_mode',
         action='store_true',
-        default=False,
         help=('Suppress all output except for final comma-separated list of motion events.'
-              ' Useful for computing or piping output directly into other programs/scripts.'))
+              ' Useful for computing or piping output directly into other programs/scripts.%s' %
+              user_config.get_help_string('program', 'quiet_mode')))
+
+    parser.add_argument(
+        '--verbosity',
+        metavar='TYPE',
+        dest='verbosity',
+        type=string_type_check(CHOICE_MAP['program']['verbosity'], False, 'TYPE'),
+        help=('Amount of verbosity to use for log output. Must be one of: %s.%s' %
+              (', '.join(CHOICE_MAP['program']['verbosity']),
+               user_config.get_help_string('program', 'verbosity'))))
 
     parser.add_argument(
         '-st',

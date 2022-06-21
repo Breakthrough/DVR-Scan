@@ -8,16 +8,20 @@ DVR-Scan Changelog
 
 #### Release Notes
 
- - Performance improvements on multicore systems
- - The new minimum supported Python version is 3.7,
- - Support for OpenCV 2 has been dropped, new minimum verison is OpenCV 3
- - Add experimental GPU support for CUDA-enabled GPUs
+ * Performance improvements on multicore systems
+ * Add experimental GPU support for CUDA-enabled GPUs
+ * Configuration files are now supported, see documentation for details (TODO(v1.5))
+     * Can specify config file path with `-c`/`--config`, or create a `dvr-scan.cfg` file in your user config folder
+ * The new minimum supported Python version is 3.7,
+ * Support for OpenCV 2 has been dropped, new minimum verison is OpenCV 3
 
 #### Changelog
 
 **Command-Line Interface:**
 
  * The long form of `-roi` has been renamed to `--region-of-interest` (previously was `--rectangle-of-interest`)
+ * Add support for configuration files
+ * `-c` is now used for `--config`, previously was for `--codec` (there is no short form for `--config` anymore)
  * Experimental CUDA support has been added (set `-b mog_cuda`), requires manual installation of OpenCV compiled with CUDA support
 
 **General:**
@@ -29,6 +33,8 @@ DVR-Scan Changelog
  * [api] Remove `dvr_scan.timecode` and `FrameTimecode`, replace with `scenedetect.FrameTimecode`
  * [feature] Experimental support for CUDA MOG2 filter
  * [feature] Video encoding and decoding are now done in parallel with the scanning logic leading to improved performance on most systems
+ * [TODO(v1.5) - WIP][feature] Configuration file support and new `-c`/`--config` argument to specify path to config files
+     * Breaks existing behavior of `-c` (was previously the shortform of `--codec`)
 
 #### Known Issues
 

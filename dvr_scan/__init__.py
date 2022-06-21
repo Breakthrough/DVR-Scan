@@ -63,4 +63,4 @@ def get_license_info() -> str:
 
 
 # Initialize logger.
-init_logger(quiet_mode=True)
+init_logger(show_stdout=True)
