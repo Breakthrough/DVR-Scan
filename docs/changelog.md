@@ -23,6 +23,7 @@ DVR-Scan Changelog
  * Add support for configuration files
  * `-c` is now used for `--config`, previously was for `--codec` (there is no short form for `--config` anymore)
  * Experimental CUDA support has been added (set `-b mog_cuda`), requires manual installation of OpenCV compiled with CUDA support
+ * Add `--logfile` argument to make capturing program output easier
 
 **General:**
 

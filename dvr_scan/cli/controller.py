@@ -57,9 +57,11 @@ def run_dvr_scan():
     Returns:
         0 on successful termination, non-zero otherwise.
     """
+    args = None
+    config_load_failure = False
+    init_log = []
+
     try:
-        init_failure = False
-        init_log = []
         user_config = ConfigRegistry()
         verbosity = getattr(logging, user_config.get_value('program', 'verbosity').upper())
         init_logger(
@@ -86,6 +88,7 @@ def run_dvr_scan():
         init_logger(
             log_level=verbosity,
             show_stdout=not quiet_mode,
+            log_file=args.logfile if hasattr(args, 'logfile') else None,
         )
         logger.debug("Current configuration:\n%s", str(user_config.config_dict))
         logger.debug('Parsing program options.')
@@ -94,27 +97,24 @@ def run_dvr_scan():
         if not validated:
             return 1
     except ConfigLoadFailure as ex:
-        init_failure = True
+        config_load_failure = True
         init_log += ex.init_log
         if ex.reason is not None:
             init_log += [(logging.ERROR, 'Error: %s' % str(ex.reason).replace('\t', '  '))]
     finally:
-        # Make sure we print the version number even on any kind of init failure.
-        logger.info('DVR-Scan %s', dvr_scan.__version__)
+        if args is not None or (args is None and config_load_failure):
+            # As CLI parsing errors are printed first, we only print the version if the
+            # args were parsed correctly, or if we fail to load the config file.
+            logger.info('DVR-Scan %s', dvr_scan.__version__)
         for (log_level, log_str) in init_log:
             logger.log(log_level, log_str)
-            # We don't raise an exception if the user configuration fails to load, so
-            # we instead look for errors in the init log.
-            if log_level >= logging.ERROR:
-                init_failure = True
-        if init_failure:
+        if config_load_failure:
             logger.critical("Failed to load configuration file.")
-            # We make sure to log any configuration errors above before exiting.
+            # There is nowhere else to propagatge the exception to, and we've already
+            # logged the error information above.
             #pylint: disable=lost-exception
             return 1
-
     try:
-
         if not args.bg_subtractor.value.is_available():
             logger.error(
                 'Method %s is not available. To enable it, install a version of'

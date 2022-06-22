@@ -328,6 +328,34 @@ def get_cli_parser(user_config: ConfigRegistry):
     )
 
     parser.add_argument(
+        '-q',
+        '--quiet',
+        dest='quiet_mode',
+        action='store_true',
+        help=('Suppress all output except for final comma-separated list of motion events.'
+              ' Useful for computing or piping output directly into other programs/scripts.%s' %
+              user_config.get_help_string('program', 'quiet_mode')),
+    )
+
+    parser.add_argument(
+        '--verbosity',
+        metavar='TYPE',
+        dest='verbosity',
+        type=string_type_check(CHOICE_MAP['program']['verbosity'], False, 'TYPE'),
+        help=('Amount of verbosity to use for log output. Must be one of: %s.%s' %
+              (', '.join(CHOICE_MAP['program']['verbosity']),
+               user_config.get_help_string('program', 'verbosity'))),
+    )
+
+    parser.add_argument(
+        '--logfile',
+        metavar='FILE',
+        type=str,
+        help=('Path to log file for writing application output. If FILE already exists, the program'
+              ' output will be appended to the existing contents.'),
+    )
+
+    parser.add_argument(
         '-i',
         '--input',
         metavar='VIDEO_FILE',
@@ -337,7 +365,8 @@ def get_cli_parser(user_config: ConfigRegistry):
         help=('[REQUIRED] Path to input video. May be specified multiple'
               ' times to join several videos with the same resolution'
               ' and framerate. Any output filenames will be generated'
-              ' using the first filename only.'))
+              ' using the first filename only.'),
+    )
 
     parser.add_argument(
         '-o',
@@ -348,7 +377,8 @@ def get_cli_parser(user_config: ConfigRegistry):
               ' file, creating a compilation of only the frames in'
               ' the input video containing motion. By default each'
               ' motion event is written to a separate file. Filename'
-              ' MUST end with .avi.'))
+              ' MUST end with .avi.'),
+    )
 
     parser.add_argument(
         '-c',
@@ -367,7 +397,8 @@ def get_cli_parser(user_config: ConfigRegistry):
         type=string_type_check(['MOG', 'CNT', 'MOG_CUDA'], False, 'TYPE'),
         default='MOG',
         help=('The type of background subtractor to use, must be one of: '
-              ' MOG (default), CNT (parallel), MOG_CUDA (Nvidia GPU).'))
+              ' MOG (default), CNT (parallel), MOG_CUDA (Nvidia GPU).'),
+    )
 
     parser.add_argument(
         '-so',
@@ -375,7 +406,8 @@ def get_cli_parser(user_config: ConfigRegistry):
         dest='scan_only_mode',
         action='store_true',
         default=False,
-        help=('Only perform motion detection (does not write any files to disk).'))
+        help=('Only perform motion detection (does not write any files to disk).'),
+    )
 
     # TODO(v1.5): This needs to be changed to a new -c/--config flag.
     # Just leave default as XVID, since the other codecs don't seem to be as well supported,
@@ -388,7 +420,8 @@ def get_cli_parser(user_config: ConfigRegistry):
         default='XVID',
         help=('The four-letter identifier of the encoder/video codec to use'
               ' when exporting motion events as videos. Possible values'
-              ' are: XVID, MP4V, MP42, H264.'))
+              ' are: XVID, MP4V, MP42, H264.'),
+    )
 
     parser.add_argument(
         '-t',
@@ -401,7 +434,8 @@ def get_cli_parser(user_config: ConfigRegistry):
               ' required to trigger a motion event. Lower values require'
               ' less movement, and are more sensitive to motion. If the threshold'
               ' is too high, some movement in the scene may not be detected,'
-              ' while too low of a threshold can trigger a false motion event.'))
+              ' while too low of a threshold can trigger a false motion event.'),
+    )
 
     parser.add_argument(
         '-k',
@@ -413,7 +447,8 @@ def get_cli_parser(user_config: ConfigRegistry):
         help=('Size in pixels of the noise reduction kernel. Must be an odd'
               ' integer greater than 1, or set to -1 to auto-set based on'
               ' input video resolution (default). If the kernel size is set too'
-              ' large, some movement in the scene may not be detected.'))
+              ' large, some movement in the scene may not be detected.'),
+    )
 
     parser.add_argument(
         '-l',
@@ -424,7 +459,8 @@ def get_cli_parser(user_config: ConfigRegistry):
         default=2,
         help=('Number of frames that must exceed the threshold in a row to trigger'
               ' a new motion event, effectively setting a minimum event length.'
-              ' Can also be specified as a timecode or # of seconds.'))
+              ' Can also be specified as a timecode or # of seconds.'),
+    )
 
     parser.add_argument(
         '-tp',
@@ -436,7 +472,8 @@ def get_cli_parser(user_config: ConfigRegistry):
         help=('Number of frames to include after each motion event ends.'
               ' Any new motion events that occur in this period are'
               ' automatically joined with the current motion event.'
-              ' Can also be specified as a timecode or # of seconds.'))
+              ' Can also be specified as a timecode or # of seconds.'),
+    )
 
     parser.add_argument(
         '-tb',
@@ -446,25 +483,8 @@ def get_cli_parser(user_config: ConfigRegistry):
         type=timecode_type_check('T'),
         default='1.5s',
         help=('Number of frames to include before a motion event is detected.'
-              ' Can also be specified as a timecode or # of seconds.'))
-
-    parser.add_argument(
-        '-q',
-        '--quiet',
-        dest='quiet_mode',
-        action='store_true',
-        help=('Suppress all output except for final comma-separated list of motion events.'
-              ' Useful for computing or piping output directly into other programs/scripts.%s' %
-              user_config.get_help_string('program', 'quiet_mode')))
-
-    parser.add_argument(
-        '--verbosity',
-        metavar='TYPE',
-        dest='verbosity',
-        type=string_type_check(CHOICE_MAP['program']['verbosity'], False, 'TYPE'),
-        help=('Amount of verbosity to use for log output. Must be one of: %s.%s' %
-              (', '.join(CHOICE_MAP['program']['verbosity']),
-               user_config.get_help_string('program', 'verbosity'))))
+              ' Can also be specified as a timecode or # of seconds.'),
+    )
 
     parser.add_argument(
         '-st',
@@ -475,7 +495,8 @@ def get_cli_parser(user_config: ConfigRegistry):
         default=None,
         help=('Time to seek to in video before performing detection. Can be'
               ' given in number of frames (12345), seconds (number followed'
-              ' by s, e.g. 123s or 123.45s), or timecode (HH:MM:SS[.nnn]).'))
+              ' by s, e.g. 123s or 123.45s), or timecode (HH:MM:SS[.nnn]).'),
+    )
 
     parser.add_argument(
         '-dt',
@@ -485,7 +506,8 @@ def get_cli_parser(user_config: ConfigRegistry):
         type=timecode_type_check('time'),
         default=None,
         help=('Length of time in input video to limit motion detection to (see'
-              ' -st for valid timecode formats). Overrides -et.'))
+              ' -st for valid timecode formats). Overrides -et.'),
+    )
 
     parser.add_argument(
         '-et',
@@ -495,7 +517,8 @@ def get_cli_parser(user_config: ConfigRegistry):
         type=timecode_type_check('time'),
         default=None,
         help=('Timecode to stop motion detection at (see -st for valid'
-              'timecode formats).'))
+              'timecode formats).'),
+    )
 
     parser.add_argument(
         '-df',
@@ -507,7 +530,8 @@ def get_cli_parser(user_config: ConfigRegistry):
         help=('Factor to downscale (shrink) video before processing, to'
               ' improve performance. For example, if input video resolution'
               ' is 1024 x 400, and factor=2, each frame is reduced to'
-              ' 1024/2 x 400/2=512 x 200 before processing.'))
+              ' 1024/2 x 400/2=512 x 200 before processing.'),
+    )
 
     parser.add_argument(
         '-fs',
@@ -520,7 +544,8 @@ def get_cli_parser(user_config: ConfigRegistry):
               ' Improves performance, at expense of frame and time accuracy,'
               ' and may increase probability of missing motion events.'
               ' If set, -l, -tb, and -tp will all be scaled relative to the source'
-              ' framerate. Values above 1 or 2 are not recommended.'))
+              ' framerate. Values above 1 or 2 are not recommended.'),
+    )
 
     parser.add_argument(
         '-tc',
@@ -528,7 +553,8 @@ def get_cli_parser(user_config: ConfigRegistry):
         dest='draw_timecode',
         action='store_true',
         default=False,
-        help=('Draw time code of each frame on the top left corner.'))
+        help=('Draw time code of each frame on the top left corner.'),
+    )
 
     parser.add_argument(
         '-roi',
@@ -541,7 +567,8 @@ def get_cli_parser(user_config: ConfigRegistry):
               ' (select with mouse, then press enter).'
               ' Can also specify the window in terms of x/y/w/h.'
               ' Example for pop-up window: dvr-scan -i video.mp4 -roi '
-              ' Example for predefined rectangle: dvr-scan -i video.mp4 -roi 100 110 50 50 '))
+              ' Example for predefined rectangle: dvr-scan -i video.mp4 -roi 100 110 50 50 '),
+    )
 
     parser.add_argument(
         '-bb',
@@ -555,7 +582,8 @@ def get_cli_parser(user_config: ConfigRegistry):
         help=('If set, draws a bounding box around the area where motion was detected. The amount'
               ' of temporal smoothing can be specified in either frames (12345) or seconds (number'
               ' followed by s, e.g. 123s or 123.45s). If omitted, defaults to 0.1s. If set to 0,'
-              ' smoothing is disabled.'))
+              ' smoothing is disabled.'),
+    )
 
     # TODO(v1.5): Add a new -m/--output-mode flag to specify whether to use ffmpeg or the
     # OpenCV VideoWriter for output. Also will need to add some flags to specify the ffmpeg

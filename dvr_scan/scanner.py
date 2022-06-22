@@ -306,7 +306,7 @@ class ScanContext(object):
         be processed, and have the same resolution and framerate. """
         if not len(self._video_paths) > 0:
             raise VideoOpenFailure()
-        for video_path in self._video_paths:
+        for i, video_path in enumerate(self._video_paths):
             cap = cv2.VideoCapture()
             cap.open(video_path)
             video_name = os.path.basename(video_path)
@@ -317,10 +317,10 @@ class ScanContext(object):
                                   " are installed and configured properly.")
                 cap.release()
                 raise VideoOpenFailure()
-            curr_resolution = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
-                               int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+            curr_resolution = (round(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
+                               round(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
             curr_framerate = cap.get(cv2.CAP_PROP_FPS)
-            self._frames_total += int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            self._frames_total += round(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             cap.release()
             if self._video_resolution is None and self._video_fps is None:
                 self._video_resolution = curr_resolution
@@ -336,7 +336,8 @@ class ScanContext(object):
                     "Error: Can't append clip %s, video resolution"
                     " does not match the first input file.", video_name)
                 raise VideoOpenFailure()
-            self._logger.info("Appended video %s.", video_name)
+            if i > 0:
+                self._logger.info("Appended video %s.", video_name)
         # Make sure we initialize defaults.
         self.set_detection_params()
         self.set_event_params()
@@ -418,8 +419,8 @@ class ScanContext(object):
                     factor_h = frame_h / float(max_h)
                     factor_w = frame_w / float(max_w)
                     scale_factor = max(factor_h, factor_w)
-                    new_height = int(frame_h / scale_factor)
-                    new_width = int(frame_w / scale_factor)
+                    new_height = round(frame_h / scale_factor)
+                    new_width = round(frame_w / scale_factor)
                     frame_for_crop = cv2.resize(
                         frame_for_crop, (new_width, new_height), interpolation=cv2.INTER_CUBIC)
             roi = cv2.selectROI("DVR-Scan ROI Selection", frame_for_crop)
