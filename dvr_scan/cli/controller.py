@@ -90,12 +90,6 @@ def run_dvr_scan():
             show_stdout=not quiet_mode,
             log_file=args.logfile if hasattr(args, 'logfile') else None,
         )
-        logger.debug("Current configuration:\n%s", str(user_config.config_dict))
-        logger.debug('Parsing program options.')
-        # Validate arguments and then continue.
-        validated, args = validate_cli_args(args)
-        if not validated:
-            return 1
     except ConfigLoadFailure as ex:
         config_load_failure = True
         init_log += ex.init_log
@@ -114,6 +108,15 @@ def run_dvr_scan():
             # logged the error information above.
             #pylint: disable=lost-exception
             return 1
+
+    if user_config.config_dict:
+        logger.debug("Current configuration:\n%s", str(user_config.config_dict))
+    logger.debug('Parsing program options.')
+    # Validate arguments and then continue.
+    validated, args = validate_cli_args(args)
+    if not validated:
+        return 1
+
     try:
         if not args.bg_subtractor.value.is_available():
             logger.error(

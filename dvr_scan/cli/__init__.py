@@ -25,8 +25,8 @@ from dvr_scan.cli.config import ConfigRegistry, CHOICE_MAP, USER_CONFIG_FILE_PAT
 VERSION_STRING = """------------------------------------------------
 DVR-Scan %s
 ------------------------------------------------
--Copyright (C) 2016-2022 Brandon Castellano
--< https://github.com/Breakthrough/DVR-Scan >
+Copyright (C) 2016-2022 Brandon Castellano
+< https://github.com/Breakthrough/DVR-Scan >
 """ % dvr_scan.__version__
 
 

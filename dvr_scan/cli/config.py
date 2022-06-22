@@ -193,6 +193,7 @@ def _parse_config(config: ConfigParser) -> Tuple[ConfigDict, List[str]]:
 class ConfigLoadFailure(Exception):
 
     def __init__(self, init_log: Tuple[int, str], reason: Optional[Exception] = None):
+        super().__init__()
         self.init_log = init_log
         self.reason = reason
 
@@ -200,12 +201,16 @@ class ConfigLoadFailure(Exception):
 class ConfigRegistry:
 
     def __init__(self, path: Optional[str] = None):
+        """Loads configuration file from given `path`. If `path` is not specified, tries
+        to load from the default location (USER_CONFIG_FILE_PATH).
+
+        Raises:
+            ConfigLoadFailure: The config file being loaded is corrupt or invalid,
+            or `path` was specified but does not exist.
+        """
         self._init_log: List[Tuple[int, str]] = []
         self._config: ConfigDict = {} # Options set in the loaded config file.
-        try:
-            self._load_from_disk(path)
-        except ParsingError as ex:
-            raise ConfigLoadFailure(self._init_log, reason=ex)
+        self._load_from_disk(path)
 
     @property
     def config_dict(self) -> ConfigDict:
@@ -221,23 +226,32 @@ class ConfigRegistry:
     def _log(self, log_level, log_str):
         self._init_log.append((log_level, log_str))
 
-    def _load_from_disk(self, path=None) -> bool:
-        """Tries to find a configuration file and load it."""
-        config = ConfigParser()
-        config_file_path = path if path is not None else USER_CONFIG_FILE_PATH
-        if path is None:
-            self._init_log.append(
-                (logging.INFO, "Loading user config file:\n  %s" % config_file_path))
+    def _load_from_disk(self, path=None):
+        # Validate `path`, or if not provided, use USER_CONFIG_FILE_PATH if it exists.
+        if path:
+            self._init_log.append((logging.INFO, "Loading config from file:\n  %s" % path))
+            if not os.path.exists(path):
+                self._init_log.append((logging.ERROR, "File not found: %s" % (path)))
+                raise ConfigLoadFailure(self._init_log)
         else:
-            self._init_log.append(
-                (logging.INFO, "Loading config from file:\n  %s" % config_file_path))
-        result = config.read(config_file_path)
+            # Gracefully handle the case where there isn't a user config file.
+            if not os.path.exists(USER_CONFIG_FILE_PATH):
+                self._init_log.append((logging.DEBUG, "User config file not found."))
+                return
+            path = USER_CONFIG_FILE_PATH
+            self._init_log.append((logging.INFO, "Loading user config file:\n  %s" % path))
+        # Try to load and parse the config file at `path`.
+        config = ConfigParser()
+        try:
+            result = config.read(path)
+        except ParsingError as ex:
+            raise ConfigLoadFailure(self._init_log, reason=ex)
         if not result:
-            if path is not None and not os.path.exists(config_file_path):
-                self._init_log.append((logging.ERROR, "File not found: %s" % (config_file_path)))
-            else:
-                self._init_log.append((logging.ERROR, "Failed to read config file: unknown error."))
+            error_msg = "Failed to load config file. Check that the file is valid, and can be read."
+            self._init_log.append((logging.ERROR, error_msg))
             raise ConfigLoadFailure(self._init_log)
+        # At this point the config file syntax is correct, but we need to still validate
+        # the parsed options (i.e. that the sections or options have valid values).
         errors = _validate_structure(config)
         if not errors:
             self._config, errors = _parse_config(config)
@@ -247,6 +261,7 @@ class ConfigRegistry:
             raise ConfigLoadFailure(self._init_log)
 
     def is_default(self, section: str, option: str) -> bool:
+        """True if the option is default, i.e. is NOT set by the user."""
         return not (section in self._config and option in self._config[section])
 
     def get_value(self,
@@ -272,8 +287,7 @@ class ConfigRegistry:
                         section: str,
                         option: str,
                         show_default: Optional[bool] = None) -> str:
-        """Get a string to specify for the help text indicating the current section option value,
-        if set, or the default.
+        """Get string for help text including the option's value, if set, otherwise the default.
 
         Arguments:
             section: A section name or, "global" for global options.
