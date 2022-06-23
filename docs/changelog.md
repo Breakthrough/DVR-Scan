@@ -8,8 +8,8 @@ DVR-Scan Changelog
 
 #### Release Notes
 
- * Performance improvements on multicore systems
- * Add experimental GPU support for CUDA-enabled GPUs
+ * Significant performance improvements on multicore systems
+ * Experimental support for Nvidia CUDA-enabled GPUs
  * Configuration files are now supported, see documentation for details (TODO(v1.5))
      * Can specify config file path with `-c`/`--config`, or create a `dvr-scan.cfg` file in your user config folder
  * The new minimum supported Python version is 3.7,
@@ -32,9 +32,9 @@ DVR-Scan Changelog
     * Note that all skipped frames within the event window are included in motion event, thus the calculated start time may be slightly earlier
  * [bugfix] Only get screen resolution when required
  * [api] Remove `dvr_scan.timecode` and `FrameTimecode`, replace with `scenedetect.FrameTimecode`
- * [feature] Experimental support for CUDA MOG2 filter
- * [feature] Video encoding and decoding are now done in parallel with the scanning logic leading to improved performance on most systems
- * [TODO(v1.5) - WIP][feature] Configuration file support and new `-c`/`--config` argument to specify path to config files
+ * [feature] Experimental support for GPU-based CUDA MOG2 filter ([#12](https://github.com/Breakthrough/DVR-Scan/issues/12))
+ * [feature] Video encoding and decoding are now done in parallel with the scanning logic leading to improved performance on most systems ([#52](https://github.com/Breakthrough/DVR-Scan/issues/52))
+ * [TODO(v1.5) - WIP][feature] Configuration file support and new `-c`/`--config` argument to specify path to config files ([#77](https://github.com/Breakthrough/DVR-Scan/issues/77))
      * Breaks existing behavior of `-c` (was previously the shortform of `--codec`)
 
 #### Known Issues

@@ -73,10 +73,16 @@ CONFIG_MAP: ConfigDict = {
         'quiet_mode': False,
         'verbosity': 'info',
     },
-    'motion-detection': {
+    'output': {
+        'opencv_codec': 'XVID',
+    },
+    'detection': {
         'downscale_factor': 0,
         'frame_skip': 0,
-        'bg_subtractor': 'mog',
+        'bg_subtractor': 'MOG',
+        'min_event_length': TimecodeValue(2),
+        'time_before_event': TimecodeValue('1.5s'),
+        'time_post_event': TimecodeValue('2.0s'),
     },
     'overlays': {
         'bounding_box': False,
@@ -91,8 +97,11 @@ CHOICE_MAP: Dict[str, Dict[str, List[str]]] = {
     'program': {
         'verbosity': ['debug', 'info', 'warning', 'error'],
     },
-    'motion-detection': {
-        'bg_subtractor': ['mog', 'cnt', 'mog_cuda'],
+    'output': {
+        'opencv_codec': ['XVID', 'MP4V', 'MP42', 'H264'],
+    },
+    'detection': {
+        'bg_subtractor': ['MOG', 'CNT', 'MOG_CUDA'],
     },
 }
 """Mapping of string options which can only be of a particular set of values. We use a list instead
@@ -179,7 +188,9 @@ def _parse_config(config: ConfigParser) -> Tuple[ConfigDict, List[str]]:
                 if value_type is None:
                     config_value = config.get(section, option).replace('\n', ' ').strip()
                     if section in CHOICE_MAP and option in CHOICE_MAP[section]:
-                        if config_value.lower() not in CHOICE_MAP[section][option]:
+                        if config_value.lower() not in [
+                                choice.lower() for choice in CHOICE_MAP[section][option]
+                        ]:
                             errors.append('Invalid [%s] value for %s: %s. Must be one of: %s.' %
                                           (section, option, config.get(section, option), ', '.join(
                                               choice for choice in CHOICE_MAP[section][option])))

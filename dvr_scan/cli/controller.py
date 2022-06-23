@@ -14,10 +14,12 @@
 This file contains the implementation of the DVR-Scan command-line logic.
 """
 
+import argparse
 import os
 import os.path
 import sys
 import logging
+from typing import Any, Optional, Union
 
 from scenedetect import VideoOpenFailure
 
@@ -29,8 +31,27 @@ from dvr_scan.platform import init_logger
 
 logger = logging.getLogger('dvr_scan')
 
+INIT_FAILURE_EXIT_CODE: int = 1
 
-def validate_cli_args(args):
+
+class ProgramContext:
+
+    def __init__(self, args: argparse.Namespace, config: ConfigRegistry):
+        self._args = args
+        self._config = config
+
+    def get_arg(self, arg: str) -> Optional[Any]:
+        """Get option specified via command line, if any."""
+        return getattr(self._args, arg) if hasattr(self._args, arg) else None
+
+    def get_option(self, section: str, option: str) -> Any:
+        """Get option overriden by command line argument, otherwise specified by config file."""
+        if hasattr(self._args, option):
+            return getattr(self._args, option)
+        return self._config.get_value(section=section, option=option)
+
+
+def _validate_cli_args(args):
     """ Validates command line options, returning a boolean indicating if the validation succeeded,
     and a set of validated options. """
     for file in args.input:
@@ -41,27 +62,16 @@ def validate_cli_args(args):
         args.output += '.avi'
     if args.kernel_size < 0:
         args.kernel_size = None
-    try:
-        args.bg_subtractor = DetectorType[args.bg_subtractor.upper()]
-    except KeyError:
-        logger.error('Error: Unknown background subtraction type: %s', args.bg_subtractor)
-        return False, None
     return True, args
 
 
-def run_dvr_scan():
-    """Entry point for running DVR-Scan.
-
-    Handles high-level interfacing of video IO and motion event detection.
-
-    Returns:
-        0 on successful termination, non-zero otherwise.
-    """
+def _init_dvr_scan() -> Optional[ProgramContext]:
     args = None
     config_load_failure = False
     init_log = []
 
     try:
+        # Try to load the user config file and parse the CLI arguments.
         user_config = ConfigRegistry()
         verbosity = getattr(logging, user_config.get_value('program', 'verbosity').upper())
         init_logger(
@@ -70,26 +80,33 @@ def run_dvr_scan():
         )
         args = get_cli_parser(user_config).parse_args()
 
-        verbosity = args.verbosity if hasattr(args, 'verbosity') else user_config.get_value(
-            'program', 'verbosity')
-        verbosity = getattr(logging, verbosity.upper())
-        quiet_mode = (True if hasattr(args, 'quiet_mode') else user_config.get_value(
-            'program', 'quiet_mode'))
-        if not hasattr(args, 'config') or verbosity == logging.DEBUG:
+        # Always include all log information in debug mode, otherwise if a config file path
+        # was given, suppress the init log since we'll re-init the config registry below.
+        debug_mode = hasattr(args, 'verbosity') and args.verbosity.upper() == 'DEBUG'
+        if not hasattr(args, 'config') or debug_mode:
             init_log += user_config.get_init_log()
+
+        # Re-initialize the config registry if the user specified a config file.
         if hasattr(args, 'config'):
             user_config = ConfigRegistry(args.config)
             init_log += user_config.get_init_log()
 
-        # If verbosity is debug, override -q/--quiet if it was not specified.
-        if verbosity == logging.DEBUG and not hasattr(args, 'quiet_mode'):
-            quiet_mode = False
-        # Re-initialize logger with correct verbosity/quiet_mode setting.
+        # Get final verbosity setting.
+        verbosity = args.verbosity if hasattr(args, 'verbosity') else user_config.get_value(
+            'program', 'verbosity')
+        verbosity = getattr(logging, verbosity.upper())
+        # If verbosity is DEBUG, override the quiet mode option unless -q/--quiet was set.
+        if not hasattr(args, 'quiet_mode'):
+            args.quiet_mode = False if verbosity == logging.DEBUG else user_config.get_value(
+                'program', 'quiet_mode')
+
+        # Re-initialize logger with final quiet mode/verbosity settings.
         init_logger(
             log_level=verbosity,
-            show_stdout=not quiet_mode,
+            show_stdout=not args.quiet_mode,
             log_file=args.logfile if hasattr(args, 'logfile') else None,
         )
+
     except ConfigLoadFailure as ex:
         config_load_failure = True
         init_log += ex.init_log
@@ -107,62 +124,83 @@ def run_dvr_scan():
             # There is nowhere else to propagatge the exception to, and we've already
             # logged the error information above.
             #pylint: disable=lost-exception
-            return 1
+            return None
 
     if user_config.config_dict:
         logger.debug("Current configuration:\n%s", str(user_config.config_dict))
     logger.debug('Parsing program options.')
     # Validate arguments and then continue.
-    validated, args = validate_cli_args(args)
+    validated, args = _validate_cli_args(args)
     if not validated:
-        return 1
+        return None
+
+    return ProgramContext(args=args, config=user_config)
+
+
+def run_dvr_scan():
+    """Entry point for running DVR-Scan.
+
+    Handles high-level interfacing of video IO and motion event detection.
+
+    Returns:
+        0 on successful termination, non-zero otherwise.
+    """
+    context = _init_dvr_scan()
+    if context is None:
+        return INIT_FAILURE_EXIT_CODE
 
     try:
-        if not args.bg_subtractor.value.is_available():
-            logger.error(
-                'Method %s is not available. To enable it, install a version of'
-                ' the OpenCV package `cv2` that includes it.', args.bg_subtractor.name)
-            sys.exit(1)
+        detector_type = context.get_option('detection', 'bg_subtractor')
+        bg_subtractor = DetectorType[detector_type.upper()]
+    except KeyError:
+        logger.error('Error: Unknown background subtraction type: %s', detector_type)
+        return INIT_FAILURE_EXIT_CODE
+    if not bg_subtractor.value.is_available():
+        logger.error(
+            'Method %s is not available. To enable it, install a version of'
+            ' the OpenCV package `cv2` that includes it.', bg_subtractor.name)
+        return INIT_FAILURE_EXIT_CODE
 
+    try:
         sctx = ScanContext(
-            input_videos=args.input,
-            frame_skip=args.frame_skip,
-            show_progress=not quiet_mode,
+            input_videos=context.get_arg('input'),
+            frame_skip=context.get_option('detection', 'frame_skip'),
+            show_progress=not context.get_option('program', 'quiet_mode'),
         )
 
         # Set context properties based on CLI arguments.
 
         sctx.set_output(
-            scan_only=args.scan_only_mode,
-            comp_file=args.output if hasattr(args, 'output') else None,
-            codec=args.fourcc_str,
+            scan_only=context.get_arg('scan_only'),
+            comp_file=context.get_arg('output'),
+            codec=context.get_option('output', 'opencv_codec'),
         )
 
         sctx.set_overlays(
-            draw_timecode=args.draw_timecode,
-            bounding_box_smoothing=args.bounding_box,
+            draw_timecode=context.get_arg('draw_timecode'),
+            bounding_box_smoothing=context.get_arg('bounding_box'),
         )
 
         sctx.set_detection_params(
-            threshold=args.threshold,
-            kernel_size=args.kernel_size,
-            downscale_factor=args.downscale_factor,
-            roi=args.roi,
+            threshold=context.get_arg('threshold'),
+            kernel_size=context.get_arg('kernel_size'),
+            downscale_factor=context.get_option('detection', 'downscale_factor'),
+            roi=context.get_arg('roi'),
         )
 
         sctx.set_event_params(
-            min_event_len=args.min_event_len,
-            time_pre_event=args.time_pre_event,
-            time_post_event=args.time_post_event,
+            min_event_len=context.get_option('detection', 'min_event_length'),
+            time_pre_event=context.get_option('detection', 'time_before_event'),
+            time_post_event=context.get_option('detection', 'time_post_event'),
         )
 
         sctx.set_video_time(
-            start_time=args.start_time,
-            end_time=args.end_time,
-            duration=args.duration,
+            start_time=context.get_arg('start_time'),
+            end_time=context.get_arg('end_time'),
+            duration=context.get_arg('duration'),
         )
 
-        sctx.scan_motion(detector_type=args.bg_subtractor)
+        sctx.scan_motion(detector_type=bg_subtractor)
 
     except VideoOpenFailure as ex:
         # Error information is logged in ScanContext when this exception is raised.

@@ -395,32 +395,29 @@ def get_cli_parser(user_config: ConfigRegistry):
         metavar='TYPE',
         dest='bg_subtractor',
         type=string_type_check(['MOG', 'CNT', 'MOG_CUDA'], False, 'TYPE'),
-        default='MOG',
         help=('The type of background subtractor to use, must be one of: '
-              ' MOG (default), CNT (parallel), MOG_CUDA (Nvidia GPU).'),
+              ' MOG (default), CNT (parallel), MOG_CUDA (Nvidia GPU).%s') %
+        user_config.get_help_string('detection', 'bg_subtractor'),
     )
 
     parser.add_argument(
         '-so',
         '--scan-only',
-        dest='scan_only_mode',
+        dest='scan_only',
         action='store_true',
         default=False,
         help=('Only perform motion detection (does not write any files to disk).'),
     )
 
-    # TODO(v1.5): This needs to be changed to a new -c/--config flag.
-    # Just leave default as XVID, since the other codecs don't seem to be as well supported,
-    # and add a config file option to override it instead.
     parser.add_argument(
         '--codec',
         metavar='FOURCC',
-        dest='fourcc_str',
-        type=string_type_check(['XVID', 'MP4V', 'MP42', 'H264'], False, 'FOURCC'),
-        default='XVID',
+        dest='opencv_codec',
+        type=string_type_check(CHOICE_MAP['output']['opencv_codec'], False, 'FOURCC'),
         help=('The four-letter identifier of the encoder/video codec to use'
-              ' when exporting motion events as videos. Possible values'
-              ' are: XVID, MP4V, MP42, H264.'),
+              ' when exporting motion events using OpenCV. Must be one of: %s.%s' %
+              (', '.join(CHOICE_MAP['output']['opencv_codec']).upper(),
+               user_config.get_help_string('output', 'opencv_codec'))),
     )
 
     parser.add_argument(
@@ -454,12 +451,11 @@ def get_cli_parser(user_config: ConfigRegistry):
         '-l',
         '--min-event-length',
         metavar='T',
-        dest='min_event_len',
+        dest='min_event_length',
         type=timecode_type_check('T'),
-        default=2,
-        help=('Number of frames that must exceed the threshold in a row to trigger'
-              ' a new motion event, effectively setting a minimum event length.'
-              ' Can also be specified as a timecode or # of seconds.'),
+        help=('Amount of time that must contain motion before triggering a new event. Can be'
+              ' specified as frames (123), seconds (12.3s), or timecode (00:00:01).%s' %
+              user_config.get_help_string('detection', 'min_event_length')),
     )
 
     parser.add_argument(
@@ -468,22 +464,21 @@ def get_cli_parser(user_config: ConfigRegistry):
         metavar='T',
         dest='time_post_event',
         type=timecode_type_check('T'),
-        default='2s',
-        help=('Number of frames to include after each motion event ends.'
-              ' Any new motion events that occur in this period are'
-              ' automatically joined with the current motion event.'
-              ' Can also be specified as a timecode or # of seconds.'),
+        help=('Amount of time to include after each event. The event will end once no motion'
+              ' has been detected for this period of time. Can be specified as frames (123),'
+              ' seconds (12.3s), or timecode (00:00:01).%s' %
+              user_config.get_help_string('detection', 'time_post_event')),
     )
 
     parser.add_argument(
         '-tb',
         '--time-before-event',
         metavar='T',
-        dest='time_pre_event',
+        dest='time_before_event',
         type=timecode_type_check('T'),
-        default='1.5s',
-        help=('Number of frames to include before a motion event is detected.'
-              ' Can also be specified as a timecode or # of seconds.'),
+        help=('Maximum amount of time to include before each event. Can be specified as'
+              ' frames (123), seconds (12.3s), or timecode (00:00:01).%s' %
+              user_config.get_help_string('detection', 'time_before_event')),
     )
 
     parser.add_argument(
