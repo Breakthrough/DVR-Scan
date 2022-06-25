@@ -223,22 +223,22 @@ class ScanContext(object):
             downscale_factor (int): Factor to downscale (shrink) video before
                 processing, to improve performance. For example, if input video
                 resolution is 1024 x 400, and factor=2, each frame is reduced to'
-                1024/2 x 400/2=512 x 200 before processing. 1 (the default)
-                indicates no downscaling.
+                1024/2 x 400/2=512 x 200 before processing. 0 or 1 (default)
+                indicate no downscaling.
             roi (List[int]): Rectangle of form [x y w h] representing bounding
                 box of subset of each frame to look at. If an empty list, the ROI
                 is set by popping up a GUI window when scan_motion() is called.
         Raises:
-            ValueError if kernel_size is not odd, downscale_factor < 1, or roi
+            ValueError if kernel_size is not odd, downscale_factor < 0, or roi
             is invalid.
         """
         assert self._video_resolution is not None
 
         self._threshold = threshold
 
-        if downscale_factor < 1:
-            raise ValueError("Error: Downscale factor must be at least 1.")
-        self._downscale_factor = downscale_factor
+        if downscale_factor < 0:
+            raise ValueError("Error: Downscale factor must be positive.")
+        self._downscale_factor = max(downscale_factor, 1)
 
         if not kernel_size is None:
             if kernel_size < 3 or (kernel_size % 2) == 0:
@@ -246,18 +246,12 @@ class ScanContext(object):
         self._kernel_size = kernel_size
 
         # Validate ROI.
-        error_string = ('ROI must be specified as a rectangle of the form (x,y,w,h) or '
-                        'the max window size (w,h).\n  For example: -roi 200 250 50 100')
         if roi is not None:
             if roi:
                 if not all(isinstance(i, int) for i in roi):
-                    roi = [i.replace(',', '') for i in roi]
-                    if any(not i.isdigit() for i in roi):
-                        raise ValueError('Error: Non-numeric character specified in ROI.\n%s' %
-                                         error_string)
-                roi = [int(x) for x in roi]
+                    raise TypeError('Error: Non-integral type found in specified roi.')
                 if any(x < 0 for x in roi):
-                    raise ValueError('Error: value passed to -roi was negative')
+                    raise ValueError('Error: Negative value found in roi.')
                 if len(roi) == 2:
                     self._max_roi_size = roi
                     self._show_roi_window = True
@@ -265,8 +259,8 @@ class ScanContext(object):
                     self._roi = roi
                     self._show_roi_window = False
                 else:
-                    raise ValueError('Error: %s' % error_string)
-            # -roi
+                    raise ValueError('Error: Expected either 2 or 4 elements in roi.')
+            # -roi with no arguments.
             else:
                 self._show_roi_window = True
 
@@ -433,7 +427,13 @@ class ScanContext(object):
                 roi = [round(x * scale_factor) for x in roi]
             self._roi = roi
         if self._roi:
-            self._logger.info("ROI selected (x,y,w,h): %s", str(self._roi))
+            self._logger.info(
+                'ROI set: (x,y)/(w,h) = (%d,%d)/(%d,%d)',
+                self._roi[0],
+                self._roi[1],
+                self._roi[2],
+                self._roi[3],
+            )
         return True
 
     def _set_output_prefix(self, video_path: AnyStr):

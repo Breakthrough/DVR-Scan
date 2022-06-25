@@ -17,15 +17,14 @@ This file contains the implementation of the DVR-Scan command-line logic.
 import argparse
 import os
 import os.path
-import sys
 import logging
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 from scenedetect import VideoOpenFailure
 
 import dvr_scan
 from dvr_scan.cli import get_cli_parser
-from dvr_scan.cli.config import ConfigRegistry, ConfigLoadFailure
+from dvr_scan.cli.config import ConfigRegistry, ConfigLoadFailure, ROIValue
 from dvr_scan.scanner import DetectorType, ScanContext
 from dvr_scan.platform import init_logger
 
@@ -35,6 +34,7 @@ INIT_FAILURE_EXIT_CODE: int = 1
 
 
 class ProgramContext:
+    """Contains the context of DVR-Scan's user options."""
 
     def __init__(self, args: argparse.Namespace, config: ConfigRegistry):
         self._args = args
@@ -42,26 +42,47 @@ class ProgramContext:
 
     def get_arg(self, arg: str) -> Optional[Any]:
         """Get option specified via command line, if any."""
-        return getattr(self._args, arg) if hasattr(self._args, arg) else None
+        arg_name = arg.replace('-', '_')
+        return getattr(self._args, arg_name) if hasattr(self._args, arg_name) else None
 
     def get_option(self, section: str, option: str) -> Any:
-        """Get option overriden by command line argument, otherwise specified by config file."""
-        if hasattr(self._args, option):
-            return getattr(self._args, option)
+        """Get user-specified option based on following resolution order:
+            1. Get option if set on command line.
+            2. Get option if set in the config file being used (either explicit with -c/--config,
+               or the dvr-scan.cfg file in the user's settings folder).
+            3. Get default value.
+        """
+        arg = self.get_arg(option)
+        if arg is not None:
+            return arg
         return self._config.get_value(section=section, option=option)
 
 
 def _validate_cli_args(args):
     """ Validates command line options, returning a boolean indicating if the validation succeeded,
     and a set of validated options. """
+    # -i/--input
     for file in args.input:
         if not os.path.exists(file):
             logger.error("Error: Input file does not exist:\n  %s", file)
             return False, None
+    # -o/--output
     if hasattr(args, 'output') and not '.' in args.output:
         args.output += '.avi'
-    if args.kernel_size < 0:
+    # -k/--kernel-size
+    if hasattr(args, 'kernel_size') and args.kernel_size < 0:
         args.kernel_size = None
+    # -roi/--region-of-interest
+    if hasattr(args, 'region_of_interest') and args.region_of_interest:
+        original_roi = args.region_of_interest
+        try:
+            args.region_of_interest = ROIValue(value=' '.join(original_roi), allow_point=True).value
+        except ValueError:
+            logger.error(
+                'Error: Invalid value for ROI: %s. ROI must be specified as a rectangle of'
+                ' the form `x,y,w,h` or the max window size `w,h` (commas/spaces are ignored).'
+                ' For example: -roi 200,250 50,100', ' '.join(original_roi))
+            return False, None
     return True, args
 
 
@@ -76,7 +97,7 @@ def _init_dvr_scan() -> Optional[ProgramContext]:
         verbosity = getattr(logging, user_config.get_value('program', 'verbosity').upper())
         init_logger(
             log_level=verbosity,
-            show_stdout=not user_config.get_value('program', 'quiet_mode'),
+            show_stdout=not user_config.get_value('program', 'quiet-mode'),
         )
         args = get_cli_parser(user_config).parse_args()
 
@@ -96,9 +117,9 @@ def _init_dvr_scan() -> Optional[ProgramContext]:
             'program', 'verbosity')
         verbosity = getattr(logging, verbosity.upper())
         # If verbosity is DEBUG, override the quiet mode option unless -q/--quiet was set.
-        if not hasattr(args, 'quiet_mode'):
+        if not hasattr(args, 'quiet-mode'):
             args.quiet_mode = False if verbosity == logging.DEBUG else user_config.get_value(
-                'program', 'quiet_mode')
+                'program', 'quiet-mode')
 
         # Re-initialize logger with final quiet mode/verbosity settings.
         init_logger(
@@ -150,7 +171,7 @@ def run_dvr_scan():
         return INIT_FAILURE_EXIT_CODE
 
     try:
-        detector_type = context.get_option('detection', 'bg_subtractor')
+        detector_type = context.get_option('detection', 'bg-subtractor')
         bg_subtractor = DetectorType[detector_type.upper()]
     except KeyError:
         logger.error('Error: Unknown background subtraction type: %s', detector_type)
@@ -164,8 +185,8 @@ def run_dvr_scan():
     try:
         sctx = ScanContext(
             input_videos=context.get_arg('input'),
-            frame_skip=context.get_option('detection', 'frame_skip'),
-            show_progress=not context.get_option('program', 'quiet_mode'),
+            frame_skip=context.get_option('detection', 'frame-skip'),
+            show_progress=not context.get_option('program', 'quiet-mode'),
         )
 
         # Set context properties based on CLI arguments.
@@ -173,30 +194,30 @@ def run_dvr_scan():
         sctx.set_output(
             scan_only=context.get_arg('scan_only'),
             comp_file=context.get_arg('output'),
-            codec=context.get_option('output', 'opencv_codec'),
+            codec=context.get_option('program', 'opencv-codec'),
         )
 
         sctx.set_overlays(
-            draw_timecode=context.get_arg('draw_timecode'),
-            bounding_box_smoothing=context.get_arg('bounding_box'),
+            draw_timecode=context.get_arg('draw-timecode'),
+            bounding_box_smoothing=context.get_arg('bounding-box'),
         )
 
         sctx.set_detection_params(
-            threshold=context.get_arg('threshold'),
-            kernel_size=context.get_arg('kernel_size'),
-            downscale_factor=context.get_option('detection', 'downscale_factor'),
-            roi=context.get_arg('roi'),
+            threshold=context.get_option('detection', 'threshold'),
+            kernel_size=context.get_option('detection', 'kernel-size'),
+            downscale_factor=context.get_option('detection', 'downscale-factor'),
+            roi=context.get_option('detection', 'region-of-interest'),
         )
 
         sctx.set_event_params(
-            min_event_len=context.get_option('detection', 'min_event_length'),
-            time_pre_event=context.get_option('detection', 'time_before_event'),
-            time_post_event=context.get_option('detection', 'time_post_event'),
+            min_event_len=context.get_option('detection', 'min-event-length'),
+            time_pre_event=context.get_option('detection', 'time-before-event'),
+            time_post_event=context.get_option('detection', 'time-post-event'),
         )
 
         sctx.set_video_time(
-            start_time=context.get_arg('start_time'),
-            end_time=context.get_arg('end_time'),
+            start_time=context.get_arg('start-time'),
+            end_time=context.get_arg('end-time'),
             duration=context.get_arg('duration'),
         )
 
