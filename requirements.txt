@@ -1,6 +1,7 @@
 #
 # DVR-Scan Python Requirements
 #
+platformdirs
 pytest
 numpy
 opencv-python

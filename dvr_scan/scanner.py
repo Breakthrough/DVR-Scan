@@ -283,8 +283,7 @@ class ScanContext(object):
         if duration is not None:
             duration = FrameTimecode(duration, self._video_fps)
             if self._start_time is not None:
-                self._end_time = FrameTimecode(self._start_time.frame_num + duration.frame_num,
-                                               self._video_fps)
+                self._end_time = self._start_time + duration.frame_num
             else:
                 self._end_time = duration
         elif end_time is not None:
@@ -347,7 +346,7 @@ class ScanContext(object):
                     ret_val = self._cap.grab()
                     frame = True
                 if ret_val:
-                    self._curr_pos.frame_num += 1
+                    self._curr_pos += 1
                     return frame
                 elif self._frames_total > 0 and self._curr_pos.frame_num >= self._frames_total:
                     break
@@ -494,15 +493,16 @@ class ScanContext(object):
         motion_detector = detector_type.value(kernel_size=kernel_size)
 
         # Correct pre/post and minimum event lengths to account for frame skip factor.
-        post_event_len = self._post_event_len.frame_num // (self._frame_skip + 1)
-        pre_event_len = self._pre_event_len.frame_num // (self._frame_skip + 1)
+        post_event_len: int = self._post_event_len.frame_num // (self._frame_skip + 1)
+        pre_event_len: int = self._pre_event_len.frame_num // (self._frame_skip + 1)
         # min_event_len must be at least 1
-        min_event_len = max(self._min_event_len.frame_num // (self._frame_skip + 1), 1)
+        min_event_len: int = max(self._min_event_len.frame_num // (self._frame_skip + 1), 1)
         # Ensure that we include the exact amount of time specified in `-tb`/`--time-before` when
-        # shifting the event start time, but instead of using `-l`/`--min-event-len` directly,
-        # we need to compensate for rounding errors when we corrected it for frame skip (since this
-        # affects the number of frames we consider for the actual motion event).
-        start_event_shift = self._pre_event_len.frame_num + min_event_len * (self._frame_skip + 1)
+        # shifting the event start time. Instead of using `-l`/`--min-event-len` directly, we
+        # need to compensate for rounding errors when we corrected it for frame skip. This is
+        # important as this affects the number of frames we consider for the actual motion event.
+        start_event_shift: int = (
+            self._pre_event_len.frame_num + min_event_len * (self._frame_skip + 1))
 
         # Length of buffer we require in memory to keep track of all frames required for -l and -tb.
         buff_len = pre_event_len + min_event_len
@@ -701,7 +701,7 @@ class ScanContext(object):
     def _decode_thread(self, decode_queue: queue.Queue):
         try:
             while not self._stop.is_set():
-                if self._end_time is not None and self._curr_pos.frame_num >= self._end_time.frame_num:
+                if self._end_time is not None and self._curr_pos >= self._end_time:
                     break
                 if self._frame_skip > 0:
                     for _ in range(self._frame_skip):

@@ -209,9 +209,10 @@ def run_dvr_scan():
             )
 
         bounding_box = None
-        if context.get_arg('bounding-box') is not None or context.get_option(
-                'overlays', 'bounding-box'):
-            if context.get_arg('bounding-box') is not False:
+        # None if -bb was not set, False if -bb was provided without any args, otherwise smooth time.
+        bounding_box_arg = context.get_arg('bounding-box')
+        if bounding_box_arg is not None or context.get_option('overlays', 'bounding-box'):
+            if bounding_box_arg is not None and bounding_box_arg is not False:
                 smoothing_time = FrameTimecode(context.get_arg('bounding-box'), sctx.framerate)
             else:
                 smoothing_time = FrameTimecode(

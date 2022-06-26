@@ -22,9 +22,9 @@ import logging
 import os
 import os.path
 from configparser import ConfigParser, ParsingError
-from typing import AnyStr, Dict, List, Optional, Tuple, Union
+from typing import Any, AnyStr, Dict, List, Optional, Tuple, Union
 
-from appdirs import user_config_dir
+from platformdirs import user_config_dir
 
 from scenedetect.frame_timecode import FrameTimecode
 
@@ -32,10 +32,15 @@ from scenedetect.frame_timecode import FrameTimecode
 class ValidatedValue(ABC):
     """Used to represent configuration values that must be validated against constraints."""
 
+    @property
+    @abstractmethod
+    def value(self) -> Any:
+        """Get the value after validation."""
+        raise NotImplementedError()
+
     @staticmethod
     @abstractmethod
-    def from_config(config: ConfigParser, section: str, option: str,
-                    default: 'ValidatedValue') -> 'ValidatedValue':
+    def from_config(config_value: str, default: 'ValidatedValue') -> 'ValidatedValue':
         """Validate and get the user-specified configuration option.
 
         Raises:
@@ -53,12 +58,18 @@ class OptionParseFailure(Exception):
 
 
 class TimecodeValue(ValidatedValue):
-    """Validator for timecode values in frames (1234), seconds (123.4s), or HH:MM:SS."""
+    """Validator for timecode values in frames (1234), seconds (123.4s), or HH:MM:SS.
 
-    def __init__(self, value: Union[int, str]):
-        self.value = value
+    Stores value in original representation."""
+
+    def __init__(self, value: Union[int, float, str]):
         # Ensure value is a valid timecode.
         FrameTimecode(timecode=value, fps=100.0)
+        self._value = value
+
+    @property
+    def value(self) -> Union[int, float, str]:
+        return self._value
 
     def __repr__(self) -> str:
         return str(self.value)
@@ -67,29 +78,44 @@ class TimecodeValue(ValidatedValue):
         return str(self.value)
 
     @staticmethod
-    def from_config(config: ConfigParser, section: str, option: str,
-                    default: 'TimecodeValue') -> 'TimecodeValue':
-        raw_value = config.get(section, option).replace('\n', ' ').strip()
+    def from_config(config_value: str, default: 'TimecodeValue') -> 'TimecodeValue':
         try:
-            return TimecodeValue(raw_value)
+            return TimecodeValue(config_value)
         except ValueError as ex:
             raise OptionParseFailure(
-                'Invalid [%s] value for %s: %s is not a valid timecode. Timecodes'
-                ' must be in frames (1234), seconds (123.4s), or HH:MM:SS'
-                ' (00:02:03.400).' % (section, option, raw_value)) from ex
+                'Timecodes must be in frames (1234), seconds (123.4s), or HH:MM:SS (00:02:03.400).'
+            ) from ex
 
 
 class RangeValue(ValidatedValue):
     """Validator for int/float ranges. `min_val` and `max_val` are inclusive."""
 
-    def __init__(self, value: Union[int, float], min_val: Union[int, float], max_val: Union[int,
-                                                                                            float]):
-        self.value = value
+    def __init__(
+        self,
+        value: Union[int, float],
+        min_val: Union[int, float],
+        max_val: Union[int, float],
+    ):
         if value < min_val or value > max_val:
             # min and max are inclusive.
             raise ValueError()
-        self.min_val = min_val
-        self.max_val = max_val
+        self._value = value
+        self._min_val = min_val
+        self._max_val = max_val
+
+    @property
+    def value(self) -> Union[int, float]:
+        return self._value
+
+    @property
+    def min_val(self) -> Union[int, float]:
+        """Minimum value of the range."""
+        return self._min_val
+
+    @property
+    def max_val(self) -> Union[int, float]:
+        """Maximum value of the range."""
+        return self._max_val
 
     def __repr__(self) -> str:
         return str(self.value)
@@ -98,30 +124,36 @@ class RangeValue(ValidatedValue):
         return str(self.value)
 
     @staticmethod
-    def from_config(config: ConfigParser, section: str, option: str,
-                    default: 'RangeValue') -> 'RangeValue':
-
-        raw_value = (
-            config.getint(section, option) if isinstance(default.value, int) else config.getfloat(
-                section, option))
+    def from_config(config_value: str, default: 'RangeValue') -> 'RangeValue':
         try:
-            return RangeValue(raw_value, default.min_val, default.max_val)
+            return RangeValue(
+                value=int(config_value) if isinstance(default.value, int) else float(config_value),
+                min_val=default.min_val,
+                max_val=default.max_val,
+            )
         except ValueError as ex:
-            raise OptionParseFailure(
-                'Invalid [%s] value for %s: %s. Value must be between %s and %s.' %
-                ((section, option, raw_value, default.min_val, default.max_val))) from ex
+            raise OptionParseFailure('Value must be between %s and %s.' %
+                                     (default.min_val, default.max_val)) from ex
 
 
 class KernelSizeValue(ValidatedValue):
     """Validator for kernel sizes (odd integer > 1, or -1 for auto size)."""
 
     def __init__(self, value: int = -1):
-        self.value = value
-        if self.value == -1:
+        if value == -1:
             # Downscale factor of -1 maps to None internally for auto downscale.
-            self.value = None
-        elif value % 2 == 0:
+            value = None
+        elif value < 0:
+            # Disallow other negative values.
             raise ValueError()
+        elif value % 2 == 0:
+            # Disallow even values.
+            raise ValueError()
+        self._value = value
+
+    @property
+    def value(self) -> int:
+        return self._value
 
     def __repr__(self) -> str:
         return str(self.value)
@@ -132,15 +164,13 @@ class KernelSizeValue(ValidatedValue):
         return str(self.value)
 
     @staticmethod
-    def from_config(config: ConfigParser, section: str, option: str,
-                    default: 'KernelSizeValue') -> 'KernelSizeValue':
-        raw_value = config.getint(section, option)
+    def from_config(config_value: str, default: 'KernelSizeValue') -> 'KernelSizeValue':
         try:
-            return KernelSizeValue(raw_value)
+            return KernelSizeValue(int(config_value))
         except ValueError as ex:
             raise OptionParseFailure(
-                'Invalid [%s] value for %s: %s. Value must be an odd integer greater than 1, or -1 for auto kernel size.'
-                % ((section, option, raw_value))) from ex
+                'Value must be an odd integer greater than 1, or set to -1 for auto kernel size.'
+            ) from ex
 
 
 class ROIValue(ValidatedValue):
@@ -160,9 +190,13 @@ class ROIValue(ValidatedValue):
             if not (len(values) in valid_lengths and all([val.isdigit() for val in values])
                     and all([int(val) >= 0 for val in values])):
                 raise ValueError()
-            self.value = [int(val) for val in values]
+            self._value = [int(val) for val in values]
         else:
-            self.value = None
+            self._value = None
+
+    @property
+    def value(self) -> Optional[List[int]]:
+        return self._value
 
     def __repr__(self) -> str:
         return str(self.value)
@@ -173,16 +207,12 @@ class ROIValue(ValidatedValue):
         return str(self.value)
 
     @staticmethod
-    def from_config(config: ConfigParser, section: str, option: str,
-                    default: 'ROIValue') -> 'ROIValue':
-        raw_value = config.get(section, option)
+    def from_config(config_value: str, default: 'ROIValue') -> 'ROIValue':
         try:
-            return ROIValue(raw_value)
+            return ROIValue(config_value)
         except ValueError as ex:
-            raise OptionParseFailure(
-                'Invalid [%s] value for %s: %s. ROI must be four positive integers of the form'
-                ' (x,y)/(w,h). Brackets, commas, slashes, and spaces are optional.' %
-                ((section, option, raw_value))) from ex
+            raise OptionParseFailure('ROI must be four positive integers of the form (x,y)/(w,h).'
+                                     ' Brackets, commas, slashes, and spaces are optional.') from ex
 
 
 class RGBValue(ValidatedValue):
@@ -216,29 +246,34 @@ class RGBValue(ValidatedValue):
         if value < 0x000000 or value > 0xFFFFFF:
             raise ValueError('RGB value must be between 0x000000 and 0xFFFFFF.')
         # Convert into tuple of (R, G, B)
-        self.value = (
+        self._value = (
             (value & 0xFF0000) >> 16,
             (value & 0x00FF00) >> 8,
             (value & 0x0000FF),
         )
 
+    @property
+    def value(self) -> Tuple[int, int, int]:
+        return self._value
+
+    @property
+    def value_as_int(self) -> int:
+        """Return value in integral (binary) form as opposed to tuple of R,G,B."""
+        return int(self.value[0]) << 16 | int(self.value[1]) << 8 | int(self.value[2])
+
     def __repr__(self) -> str:
         return str(self.value)
 
     def __str__(self) -> str:
-        return '0x%06x' % self.value
+        return '0x%06x' % self.value_as_int
 
     @staticmethod
-    def from_config(config: ConfigParser, section: str, option: str,
-                    default: 'RGBValue') -> 'RGBValue':
-        raw_value = config.get(section, option)
+    def from_config(config_value: str, default: 'RGBValue') -> 'RGBValue':
         try:
-            return RGBValue(raw_value)
+            return RGBValue(config_value)
         except ValueError as ex:
             raise OptionParseFailure(
-                'Invalid [%s] value for %s: %s. Color must be three positive integers of'
-                ' the form (255, 255, 255) or in hex (0xFFFFFF).' %
-                ((section, option, raw_value))) from ex
+                'Color values must be in hex (0xFFFFFF) or R,G,B (255,255,255).') from ex
 
 
 ConfigValue = Union[bool, int, float, str]
@@ -343,24 +378,21 @@ def _parse_config(config: ConfigParser) -> Tuple[ConfigDict, List[str]]:
                         out_map[section][option] = config.getfloat(section, option)
                         continue
                 except ValueError as _:
-                    errors.append('Invalid [%s] value for %s: %s is not a valid %s.' %
+                    errors.append('Invalid config for [%s] %s:\n  %s\nValue is not a valid %s.' %
                                   (section, option, config.get(section, option), value_type))
                     continue
 
                 # Handle custom validation types.
+                config_value = config.get(section, option)
                 default = CONFIG_MAP[section][option]
                 option_type = type(default)
                 if issubclass(option_type, ValidatedValue):
                     try:
-                        new_value = option_type.from_config(
-                            config=config,
-                            section=section,
-                            option=option,
-                            default=default,
-                        )
-                        out_map[section][option] = new_value
+                        out_map[section][option] = option_type.from_config(
+                            config_value=config_value, default=default)
                     except OptionParseFailure as ex:
-                        errors.append(ex.error)
+                        errors.append('Invalid config for [%s] %s:\n  %s\n%s' %
+                                      (section, option, config_value, ex.error))
                     continue
 
                 # If we didn't process the value as a given type, handle it as a string. We also
@@ -371,7 +403,7 @@ def _parse_config(config: ConfigParser) -> Tuple[ConfigDict, List[str]]:
                         if config_value.lower() not in [
                                 choice.lower() for choice in CHOICE_MAP[section][option]
                         ]:
-                            errors.append('Invalid [%s] value for %s: %s. Must be one of: %s.' %
+                            errors.append('Invalid config for [%s] %s:\n  %s\nMust be one of: %s.' %
                                           (section, option, config.get(section, option), ', '.join(
                                               choice for choice in CHOICE_MAP[section][option])))
                             continue
@@ -382,6 +414,7 @@ def _parse_config(config: ConfigParser) -> Tuple[ConfigDict, List[str]]:
 
 
 class ConfigLoadFailure(Exception):
+    """Raised when a user-specified configuration file fails to be loaded or validated."""
 
     def __init__(self, init_log: Tuple[int, str], reason: Optional[Exception] = None):
         super().__init__()
@@ -390,6 +423,8 @@ class ConfigLoadFailure(Exception):
 
 
 class ConfigRegistry:
+    """Provides application option values based on either user-specified configuration, or
+    default values specified in the global CONFIG_MAP."""
 
     def __init__(self, path: Optional[str] = None):
         """Loads configuration file from given `path`. If `path` is not specified, tries
@@ -470,8 +505,8 @@ class ConfigRegistry:
             value = CONFIG_MAP[section][option]
             if ignore_default:
                 return None
-        if hasattr(value, 'value'):
-            return value.value
+        if issubclass(type(value), ValidatedValue):
+            return value.value # Extract validated value.
         return value
 
     def get_help_string(self,
