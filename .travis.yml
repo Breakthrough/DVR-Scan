@@ -11,12 +11,12 @@ matrix:
     - os: linux
       dist: bionic
       language: python
-      python: "3.9"
-
+      python: "3.7"
     - os: linux
       dist: bionic
       language: python
-      python: "3.7"
+      python: "3.9"
+
     - os: linux
       dist: focal
       language: python
@@ -39,7 +39,7 @@ install:
   - "python -m build"
 
 script:
- # Unit Tests
+  # Unit Tests
   - python -m pytest tests/
 
   # Test CLI using source code
