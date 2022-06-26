@@ -453,7 +453,7 @@ def get_cli_parser(user_config: ConfigRegistry):
         metavar='T',
         dest='min_event_length',
         type=timecode_type_check('T'),
-        help=('Amount of time that must contain motion before triggering a new event. Can be'
+        help=('Length of time that must contain motion before triggering a new event. Can be'
               ' specified as frames (123), seconds (12.3s), or timecode (00:00:01).%s' %
               user_config.get_help_string('detection', 'min-event-length')),
     )
@@ -464,8 +464,8 @@ def get_cli_parser(user_config: ConfigRegistry):
         metavar='T',
         dest='time_post_event',
         type=timecode_type_check('T'),
-        help=('Amount of time to include after each event. The event will end once no motion'
-              ' has been detected for this period of time. Can be specified as frames (123),'
+        help=('Maximum amount of time to include after each event. The event will end once no'
+              ' motion has been detected for this period of time. Can be specified as frames (123),'
               ' seconds (12.3s), or timecode (00:00:01).%s' %
               user_config.get_help_string('detection', 'time-post-event')),
     )
@@ -547,8 +547,8 @@ def get_cli_parser(user_config: ConfigRegistry):
         '--time-code',
         dest='draw_timecode',
         action='store_true',
-        default=False,
-        help=('Draw time code of each frame on the top left corner.'),
+        help=('Draw time code of each frame on the top left corner.%s' %
+              user_config.get_help_string('overlays', 'timecode', show_default=False)),
     )
 
     parser.add_argument(
@@ -569,12 +569,12 @@ def get_cli_parser(user_config: ConfigRegistry):
         dest='bounding_box',
         type=timecode_type_check('smooth_time'),
         nargs='?',
-        default=None,
-        const='0.1s',
+        const=False,
         help=('If set, draws a bounding box around the area where motion was detected. The amount'
               ' of temporal smoothing can be specified in either frames (12345) or seconds (number'
               ' followed by s, e.g. 123s or 123.45s). If omitted, defaults to 0.1s. If set to 0,'
-              ' smoothing is disabled.'),
+              ' smoothing is disabled.%s' %
+              (user_config.get_help_string('overlays', 'bounding-box', show_default=False))),
     )
 
     # TODO(v1.6): Add a new -m/--output-mode flag to specify whether to use ffmpeg or the

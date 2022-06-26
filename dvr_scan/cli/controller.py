@@ -20,11 +20,12 @@ import os.path
 import logging
 from typing import Any, Optional
 
-from scenedetect import VideoOpenFailure
+from scenedetect import FrameTimecode, VideoOpenFailure
 
 import dvr_scan
 from dvr_scan.cli import get_cli_parser
 from dvr_scan.cli.config import ConfigRegistry, ConfigLoadFailure, ROIValue
+from dvr_scan.overlays import TextOverlay, BoundingBoxOverlay
 from dvr_scan.scanner import DetectorType, ScanContext
 from dvr_scan.platform import init_logger
 
@@ -197,9 +198,34 @@ def run_dvr_scan():
             codec=context.get_option('program', 'opencv-codec'),
         )
 
+        timecode_overlay = None
+        if context.get_arg('draw-timecode') or context.get_option('overlays', 'timecode'):
+            timecode_overlay = TextOverlay(
+                font_scale=context.get_option('overlays', 'timecode-font-scale'),
+                margin=context.get_option('overlays', 'timecode-margin'),
+                thickness=context.get_option('overlays', 'timecode-font-thickness'),
+                color=context.get_option('overlays', 'timecode-font-color'),
+                bg_color=context.get_option('overlays', 'timecode-bg-color'),
+            )
+
+        bounding_box = None
+        if context.get_arg('bounding-box') is not None or context.get_option(
+                'overlays', 'bounding-box'):
+            if context.get_arg('bounding-box') is not False:
+                smoothing_time = FrameTimecode(context.get_arg('bounding-box'), sctx.framerate)
+            else:
+                smoothing_time = FrameTimecode(
+                    context.get_option('overlays', 'bounding-box-smooth-time'), sctx.framerate)
+            bounding_box = BoundingBoxOverlay(
+                min_size_ratio=context.get_option('overlays', 'bounding-box-min-size'),
+                thickness_ratio=context.get_option('overlays', 'bounding-box-thickness'),
+                color=context.get_option('overlays', 'bounding-box-color'),
+                smoothing=smoothing_time.frame_num,
+            )
+
         sctx.set_overlays(
-            draw_timecode=context.get_arg('draw-timecode'),
-            bounding_box_smoothing=context.get_arg('bounding-box'),
+            timecode_overlay=timecode_overlay,
+            bounding_box=bounding_box,
         )
 
         sctx.set_detection_params(

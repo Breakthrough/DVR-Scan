@@ -30,7 +30,7 @@ class TextOverlay(object):
                  font: int = cv2.FONT_HERSHEY_SIMPLEX,
                  font_scale: float = 1.0,
                  margin: int = 5,
-                 thickness: float = 2,
+                 thickness: int = 2,
                  color: Tuple[int, int, int] = (255, 255, 255),
                  bg_color: Tuple[int, int, int] = (0, 0, 0)):
         """Initialize a TextOverlay with the given parameters.

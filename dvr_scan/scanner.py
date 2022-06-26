@@ -156,6 +156,10 @@ class ScanContext(object):
 
         self._load_input_videos()
 
+    @property
+    def framerate(self) -> float:
+        return self._video_fps
+
     def set_output(self, scan_only: bool = True, comp_file: AnyStr = None, codec: str = 'XVID'):
         """ Sets the path and encoder codec to use when exporting videos.
 
@@ -181,8 +185,8 @@ class ScanContext(object):
         self._fourcc = cv2.VideoWriter_fourcc(*codec.upper())
 
     def set_overlays(self,
-                     draw_timecode: bool = False,
-                     bounding_box_smoothing: Optional[Union[int, str, float]] = None):
+                     timecode_overlay: Optional[TextOverlay] = None,
+                     bounding_box: Optional[BoundingBoxOverlay] = None):
         """ Sets options to use if/when drawing overlays on the resulting frames.
 
         Arguments:
@@ -190,18 +194,9 @@ class ScanContext(object):
             bounding_box_smoothing: Value to use for temporal smoothing (in time) for drawing a
                 bounding box containing all detected motion in each frame. If None, no box will
                 be drawn. If <= 1, smoothing will be disabled.
-
-        Raises:
-            ValueError if codec is not four characters.
         """
-        self._timecode_overlay = TextOverlay() if draw_timecode else None
-
-        if bounding_box_smoothing is not None:
-            smoothing_amount = FrameTimecode(bounding_box_smoothing, self._video_fps)
-            self._bounding_box = BoundingBoxOverlay(smoothing=smoothing_amount.frame_num)
-
-        else:
-            self._bounding_box = None
+        self._timecode_overlay = timecode_overlay
+        self._bounding_box = bounding_box
 
     def set_detection_params(self,
                              threshold: float = 0.15,
@@ -725,6 +720,7 @@ class ScanContext(object):
         # pylint: disable=bare-except
         except:
             logger.critical('Fatal error: Exception raised in decode thread.')
+            logger.debug(sys.exc_info())
             self._decode_thread_exception = sys.exc_info()
         finally:
             # Make sure main thread stops processing loop.
@@ -771,7 +767,10 @@ class ScanContext(object):
                     video_writer.release()
                     video_writer = None
         # We'll re-raise any exceptions from the main thread.
+        # TODO: Need to properly signal failures, right now the program hangs when this happens.
         # pylint: disable=bare-except
         except:
             logger.critical('Fatal error: Exception raised in encode thread.')
+            logger.debug(sys.exc_info())
             self._encode_thread_exception = sys.exc_info()
+            raise

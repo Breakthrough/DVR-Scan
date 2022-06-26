@@ -151,7 +151,8 @@ class ROIValue(ValidatedValue):
 
     def __init__(self, value: Optional[str] = None, allow_point: bool = False):
         if value is not None:
-            values = ROIValue.parse_raw(value)
+            translation_table = str.maketrans({char: ' ' for char in ROIValue._IGNORE_CHARS})
+            values = value.translate(translation_table).split()
             valid_lengths = (
                 2,
                 4,
@@ -162,11 +163,6 @@ class ROIValue(ValidatedValue):
             self.value = [int(val) for val in values]
         else:
             self.value = None
-
-    @staticmethod
-    def parse_raw(value: str) -> List[int]:
-        translation_table = str.maketrans({char: ' ' for char in ROIValue._IGNORE_CHARS})
-        return value.translate(translation_table).split()
 
     def __repr__(self) -> str:
         return str(self.value)
@@ -186,6 +182,62 @@ class ROIValue(ValidatedValue):
             raise OptionParseFailure(
                 'Invalid [%s] value for %s: %s. ROI must be four positive integers of the form'
                 ' (x,y)/(w,h). Brackets, commas, slashes, and spaces are optional.' %
+                ((section, option, raw_value))) from ex
+
+
+class RGBValue(ValidatedValue):
+    """Validator for RGB values of the form (255, 255, 255) or 0xFFFFFF."""
+
+    _IGNORE_CHARS = [',', '/', '(', ')']
+    """Characters to ignore."""
+
+    def __init__(self, value: Union[int, str]):
+        # If not an int, convert to one.
+        # First try to convert values of the form 'ffffff'.
+        if not isinstance(value, int) and len(value) == 6:
+            try:
+                new_value = int(value, base=16)
+                value = new_value
+            except ValueError:
+                # Continue trying to process it like the remaining types.
+                pass
+        # Next try to convert values of the form '0xffffff'.
+        if not isinstance(value, int) and value[0:2] in ('0x', '0X'):
+            value = int(value, base=16)
+        # Finally try to process in the form '(255, 255, 255)'.
+        if not isinstance(value, int):
+            translation_table = str.maketrans({char: ' ' for char in RGBValue._IGNORE_CHARS})
+            values = value.translate(translation_table).split()
+            if not (len(values) == 3 and all([val.isdigit() for val in values])
+                    and all([int(val) >= 0 for val in values])):
+                raise ValueError()
+            value = int(values[0]) << 16 | int(values[1]) << 8 | int(values[2])
+        assert isinstance(value, int)
+        if value < 0x000000 or value > 0xFFFFFF:
+            raise ValueError('RGB value must be between 0x000000 and 0xFFFFFF.')
+        # Convert into tuple of (R, G, B)
+        self.value = (
+            (value & 0xFF0000) >> 16,
+            (value & 0x00FF00) >> 8,
+            (value & 0x0000FF),
+        )
+
+    def __repr__(self) -> str:
+        return str(self.value)
+
+    def __str__(self) -> str:
+        return '0x%06x' % self.value
+
+    @staticmethod
+    def from_config(config: ConfigParser, section: str, option: str,
+                    default: 'RGBValue') -> 'RGBValue':
+        raw_value = config.get(section, option)
+        try:
+            return RGBValue(raw_value)
+        except ValueError as ex:
+            raise OptionParseFailure(
+                'Invalid [%s] value for %s: %s. Color must be three positive integers of'
+                ' the form (255, 255, 255) or in hex (0xFFFFFF).' %
                 ((section, option, raw_value))) from ex
 
 
@@ -215,8 +267,17 @@ CONFIG_MAP: ConfigDict = {
         'time-post-event': TimecodeValue('2.0s'),
     },
     'overlays': {
+        'timecode': False,
+        'timecode-margin': 5,
+        'timecode-font-scale': 1.0,
+        'timecode-font-thickness': 2,
+        'timecode-font-color': RGBValue(0xFFFFFF),
+        'timecode-bg-color': RGBValue(0x000000),
         'bounding-box': False,
-        'bounding-box-smooth-time': TimecodeValue(0.1),
+        'bounding-box-smooth-time': TimecodeValue('0.1s'),
+        'bounding-box-color': RGBValue(0xFF0000),
+        'bounding-box-thickness': 0.0032,
+        'bounding-box-min-size': 0.032,
     },
 }
 """Mapping of valid configuration file parameters and their default values or placeholders.
