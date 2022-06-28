@@ -340,7 +340,6 @@ def get_cli_parser(user_config: ConfigRegistry):
     parser.add_argument(
         '--verbosity',
         metavar='type',
-        dest='verbosity',
         type=string_type_check(CHOICE_MAP['program']['verbosity'], False, 'TYPE'),
         help=('Amount of verbosity to use for log output. Must be one of: %s.%s' %
               (', '.join(CHOICE_MAP['program']['verbosity']),
@@ -393,7 +392,6 @@ def get_cli_parser(user_config: ConfigRegistry):
         '-b',
         '--bg-subtractor',
         metavar='type',
-        dest='bg_subtractor',
         type=string_type_check(['MOG', 'CNT', 'MOG_CUDA'], False, 'type'),
         help=('The type of background subtractor to use, must be one of: '
               ' MOG (default), CNT (parallel), MOG_CUDA (Nvidia GPU).%s') %
@@ -403,7 +401,6 @@ def get_cli_parser(user_config: ConfigRegistry):
     parser.add_argument(
         '-so',
         '--scan-only',
-        dest='scan_only',
         action='store_true',
         default=False,
         help=('Only perform motion detection (does not write any files to disk).'),
@@ -424,7 +421,6 @@ def get_cli_parser(user_config: ConfigRegistry):
         '-t',
         '--threshold',
         metavar='value',
-        dest='threshold',
         type=float_type_check(0.0, None, 'value'),
         help=('Threshold value representing the amount of motion in a frame'
               ' required to trigger a motion event. Lower values require'
@@ -438,7 +434,6 @@ def get_cli_parser(user_config: ConfigRegistry):
         '-k',
         '--kernel-size',
         metavar='N',
-        dest='kernel_size',
         type=odd_int_type_check(3, None, 'N', True),
         help=('Size in pixels of the noise reduction kernel. Must be an odd'
               ' integer greater than 1, or set to -1 to auto-set based on'
@@ -451,7 +446,6 @@ def get_cli_parser(user_config: ConfigRegistry):
         '-l',
         '--min-event-length',
         metavar='T',
-        dest='min_event_length',
         type=timecode_type_check('T'),
         help=('Length of time that must contain motion before triggering a new event. Can be'
               ' specified as frames (123), seconds (12.3s), or timecode (00:00:01).%s' %
@@ -462,7 +456,6 @@ def get_cli_parser(user_config: ConfigRegistry):
         '-tp',
         '--time-post-event',
         metavar='T',
-        dest='time_post_event',
         type=timecode_type_check('T'),
         help=('Maximum amount of time to include after each event. The event will end once no'
               ' motion has been detected for this period of time. Can be specified as frames (123),'
@@ -474,7 +467,6 @@ def get_cli_parser(user_config: ConfigRegistry):
         '-tb',
         '--time-before-event',
         metavar='T',
-        dest='time_before_event',
         type=timecode_type_check('T'),
         help=('Maximum amount of time to include before each event. Can be specified as'
               ' frames (123), seconds (12.3s), or timecode (00:00:01).%s' %
@@ -485,7 +477,6 @@ def get_cli_parser(user_config: ConfigRegistry):
         '-st',
         '--start-time',
         metavar='time',
-        dest='start_time',
         type=timecode_type_check('time'),
         default=None,
         help=('Time to seek to in video before performing detection. Can be'
@@ -497,7 +488,6 @@ def get_cli_parser(user_config: ConfigRegistry):
         '-dt',
         '--duration',
         metavar='time',
-        dest='duration',
         type=timecode_type_check('time'),
         default=None,
         help=('Length of time in input video to limit motion detection to (see'
@@ -508,7 +498,6 @@ def get_cli_parser(user_config: ConfigRegistry):
         '-et',
         '--end-time',
         metavar='time',
-        dest='end_time',
         type=timecode_type_check('time'),
         default=None,
         help=('Timecode to stop motion detection at (see -st for valid'
@@ -519,7 +508,6 @@ def get_cli_parser(user_config: ConfigRegistry):
         '-df',
         '--downscale-factor',
         metavar='factor',
-        dest='downscale_factor',
         type=int_type_check(0, None, 'factor'),
         help=('Integer factor to downscale (shrink) video before processing, to'
               ' improve performance. For example, if input video resolution'
@@ -532,7 +520,6 @@ def get_cli_parser(user_config: ConfigRegistry):
         '-fs',
         '--frame-skip',
         metavar='num_frames',
-        dest='frame_skip',
         type=int_type_check(0, None, 'num_frames'),
         help=('Number of frames to skip after processing a given frame.'
               ' Improves performance, at expense of frame and time accuracy,'
@@ -554,7 +541,6 @@ def get_cli_parser(user_config: ConfigRegistry):
     parser.add_argument(
         '-roi',
         '--region-of-interest',
-        dest='region_of_interest',
         metavar='x0 y0 w h',
         nargs='*',
         help=('Limit detection to specified region. Can specify as -roi to show popup window,'
@@ -566,7 +552,6 @@ def get_cli_parser(user_config: ConfigRegistry):
         '-bb',
         '--bounding-box',
         metavar='smooth_time',
-        dest='bounding_box',
         type=timecode_type_check('smooth_time'),
         nargs='?',
         const=False,
@@ -575,6 +560,15 @@ def get_cli_parser(user_config: ConfigRegistry):
               ' followed by s, e.g. 123s or 123.45s). If omitted, defaults to 0.1s. If set to 0,'
               ' smoothing is disabled.%s' %
               (user_config.get_help_string('overlays', 'bounding-box', show_default=False))),
+    )
+
+    parser.add_argument(
+        '-mo',
+        '--mask-output',
+        metavar='video.avi',
+        type=str,
+        help=('If specified, writes a video containing the motion mask for fine tuning or other'
+              ' analysis. A configuration file can be used to customize the mask output.'),
     )
 
     # TODO(v1.6): Add a new -m/--output-mode flag to specify whether to use ffmpeg or the

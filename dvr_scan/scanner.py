@@ -70,6 +70,12 @@ class EncodeFrame:
     end_of_event: bool = False
 
 
+@dataclass
+class MaskFrame:
+    motion_mask: numpy.ndarray
+    # TODO: Add options to overlay timecode, overlay frame score, and mix original with mask.
+
+
 def _scale_kernel_size(kernel_size: int, downscale_factor: int):
     corrected_size = round(kernel_size / float(downscale_factor))
     if corrected_size % 2 == 0:
@@ -119,6 +125,7 @@ class ScanContext(object):
         # Output Parameters (set_output)
         self._scan_only = True                   # -so/--scan-only
         self._comp_file = None                   # -o/--output
+        self._mask_file = None                   # -mo/--mask-output
         self._fourcc = DEFAULT_VIDEOWRITER_CODEC # -c/--codec
         self._output_prefix = ''
 
@@ -160,7 +167,11 @@ class ScanContext(object):
     def framerate(self) -> float:
         return self._video_fps
 
-    def set_output(self, scan_only: bool = True, comp_file: AnyStr = None, codec: str = 'XVID'):
+    def set_output(self,
+                   scan_only: bool = True,
+                   comp_file: AnyStr = None,
+                   mask_file: AnyStr = None,
+                   opencv_fourcc: str = 'XVID'):
         """ Sets the path and encoder codec to use when exporting videos.
 
         Arguments:
@@ -171,18 +182,19 @@ class ScanContext(object):
             comp_file (str): If set, represents the path that all
                 concatenated motion events will be written to.
                 If None, each motion event will be saved as a separate file.
-            codec (str): The four-letter identifier of the encoder/video
-                codec to use when exporting motion events as videos.
-                Possible values are: XVID, MP4V, MP42, H264.
+            opencv_fourcc (str): The four-letter identifier of the encoder/video
+                codec to use when encoding videos with OpenCV. Possible values are:
+                XVID, MP4V, MP42, H264.
 
         Raises:
             ValueError if codec is not four characters.
         """
         self._scan_only = scan_only
         self._comp_file = comp_file
-        if len(codec) != 4:
+        self._mask_file = mask_file
+        if len(opencv_fourcc) != 4:
             raise ValueError("codec must be exactly four (4) characters")
-        self._fourcc = cv2.VideoWriter_fourcc(*codec.upper())
+        self._fourcc = cv2.VideoWriter_fourcc(*opencv_fourcc.upper())
 
     def set_overlays(self,
                      timecode_overlay: Optional[TextOverlay] = None,
@@ -525,7 +537,8 @@ class ScanContext(object):
             target=ScanContext._decode_thread, args=(self, decode_queue), daemon=True)
         decode_thread.start()
 
-        if not self._scan_only:
+        encode_thread = None
+        if not self._scan_only or self._mask_file is not None:
             encode_queue = queue.Queue(MAX_ENCODE_QUEUE_SIZE)
             encode_thread = threading.Thread(
                 target=ScanContext._encode_thread, args=(self, encode_queue), daemon=True)
@@ -546,9 +559,9 @@ class ScanContext(object):
                 frame.frame_rgb = frame.frame_rgb[::self._downscale_factor, ::self
                                                   ._downscale_factor, :]
             # Apply motion detector, calculate motion amount/score normalized by frame size.
-            frame_filt = motion_detector.apply(frame.frame_rgb)
-            frame_score = cv2.sumElems(frame_filt)[0] / float(
-                frame_filt.shape[0] * frame_filt.shape[1])
+            motion_mask = motion_detector.apply(frame.frame_rgb)
+            frame_score = cv2.sumElems(motion_mask)[0] / float(
+                motion_mask.shape[0] * motion_mask.shape[1])
             above_threshold = frame_score >= self._threshold
             # Always assign the first frame a score of 0 since some subtractors will output a mask
             # indicating motion on every pixel of the first frame.
@@ -561,8 +574,11 @@ class ScanContext(object):
             bounding_box = None
             if self._bounding_box:
                 bounding_box = (
-                    self._bounding_box.update(frame_filt)
+                    self._bounding_box.update(motion_mask)
                     if above_threshold else self._bounding_box.clear())
+
+            if self._mask_file:
+                encode_queue.put(MaskFrame(motion_mask=motion_mask,))
 
             # Last frame was part of a motion event, or still within the post-event window.
             if in_motion_event:
@@ -590,7 +606,7 @@ class ScanContext(object):
                             (event_end.frame_num + 1) - event_start.frame_num, self._video_fps)
                         self.event_list.append((event_start, event_end, event_duration))
                 # Send frame to encode thread.
-                if not self._scan_only:
+                if encode_thread is not None:
                     encode_queue.put(
                         EncodeFrame(
                             frame_rgb=frame_rgb_origin,
@@ -601,7 +617,7 @@ class ScanContext(object):
             # Not already in a motion event, look for a new one.
             else:
                 # Buffer the required amount of frames and overlay data until we find an event.
-                if not self._scan_only:
+                if encode_thread is not None:
                     buffered_frames.append(
                         EncodeFrame(
                             frame_rgb=frame_rgb_origin,
@@ -620,7 +636,7 @@ class ScanContext(object):
                     shifted_start = max(start_frame, frame.timecode.frame_num + 1 - shift_amount)
                     event_start = FrameTimecode(shifted_start, self._video_fps)
                     # Send buffered frames to encode thread.
-                    if not self._scan_only:
+                    if encode_thread is not None:
                         for encode_frame in buffered_frames:
                             encode_queue.put(encode_frame)
                         buffered_frames = []
@@ -726,46 +742,51 @@ class ScanContext(object):
             # Make sure main thread stops processing loop.
             decode_queue.put(None)
 
-    def _init_video_writer(self, event_id: int) -> cv2.VideoWriter:
-        """Create a new cv2.VideoWriter that will write frames to the correct output location."""
-        output_path = (
-            self._comp_file if self._comp_file else '%s.DSME_%04d.avi' %
-            (self._output_prefix, event_id))
-        # Ensure the target folder exists before attempting to write the video.
-        if self._comp_file:
-            output_folder = os.path.split(os.path.abspath(output_path))[0]
-            os.makedirs(output_folder, exist_ok=True)
+    def _init_video_writer(self, path: str, frame_size: Tuple[int, int]) -> cv2.VideoWriter:
+        """Create a new cv2.VideoWriter using the correct framerate."""
+        output_folder = os.path.split(os.path.abspath(path))[0]
+        os.makedirs(output_folder, exist_ok=True)
         effective_framerate = (
             self._video_fps if self._frame_skip < 1 else self._video_fps / (1 + self._frame_skip))
-        return cv2.VideoWriter(output_path, self._fourcc, effective_framerate,
-                               self._video_resolution)
+        return cv2.VideoWriter(path, self._fourcc, effective_framerate, frame_size)
 
     def _encode_thread(self, encode_queue: queue.Queue):
+        video_writer: Optional[cv2.VideoWriter] = None
+        mask_writer: Optional[cv2.VideoWriter] = None
         try:
             num_events = 0
-            video_writer = None
             while True:
-                to_encode: Optional[EncodeFrame] = encode_queue.get()
+                to_encode: Optional[Union[EncodeFrame, MaskFrame]] = encode_queue.get()
                 if to_encode is None:
-                    if video_writer is not None:
+                    break
+                if isinstance(to_encode, EncodeFrame):
+                    if video_writer is None:
+                        num_events += 1
+                        output_path = (
+                            self._comp_file if self._comp_file else '%s.DSME_%04d.avi' %
+                            (self._output_prefix, num_events))
+                        resolution = (to_encode.frame_rgb.shape[1], to_encode.frame_rgb.shape[0])
+                        video_writer = self._init_video_writer(output_path, resolution)
+                    # Render all overlays onto frame.
+                    if not self._timecode_overlay is None:
+                        self._timecode_overlay.draw(
+                            frame=to_encode.frame_rgb, text=to_encode.timecode.get_timecode())
+                    if not self._bounding_box is None and not to_encode.bounding_box is None:
+                        self._bounding_box.draw(to_encode.frame_rgb, to_encode.bounding_box)
+                    # Encode and write frame to disk.
+                    video_writer.write(to_encode.frame_rgb)
+                    # If we're at the end of the event, make sure we start using a new output
+                    # unless we're compiling all motion events together.
+                    if to_encode.end_of_event and not self._comp_file:
                         video_writer.release()
-                    return
-                if video_writer is None:
-                    num_events += 1
-                    video_writer = self._init_video_writer(num_events)
-                # Render all overlays onto frame.
-                if not self._timecode_overlay is None:
-                    self._timecode_overlay.draw(
-                        frame=to_encode.frame_rgb, text=to_encode.timecode.get_timecode())
-                if not self._bounding_box is None and not to_encode.bounding_box is None:
-                    self._bounding_box.draw(to_encode.frame_rgb, to_encode.bounding_box)
-                # Encode and write frame to disk.
-                video_writer.write(to_encode.frame_rgb)
-                # If we're at the end of the event, make sure we start using a new output
-                # unless we're compiling all motion events together.
-                if to_encode.end_of_event and not self._comp_file:
-                    video_writer.release()
-                    video_writer = None
+                        video_writer = None
+                elif isinstance(to_encode, MaskFrame):
+                    if mask_writer is None:
+                        resolution = to_encode.motion_mask.shape[1], to_encode.motion_mask.shape[0]
+                        mask_writer = self._init_video_writer(self._mask_file, resolution)
+                    out_frame = cv2.cvtColor(to_encode.motion_mask, cv2.COLOR_GRAY2BGR)
+                    mask_writer.write(out_frame)
+
         # We'll re-raise any exceptions from the main thread.
         # TODO: Need to properly signal failures, right now the program hangs when this happens.
         # pylint: disable=bare-except
@@ -774,3 +795,8 @@ class ScanContext(object):
             logger.debug(sys.exc_info())
             self._encode_thread_exception = sys.exc_info()
             raise
+        finally:
+            if video_writer is not None:
+                video_writer.release()
+            if mask_writer is not None:
+                mask_writer.release()

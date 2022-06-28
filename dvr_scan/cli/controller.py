@@ -195,7 +195,8 @@ def run_dvr_scan():
         sctx.set_output(
             scan_only=context.get_arg('scan_only'),
             comp_file=context.get_arg('output'),
-            codec=context.get_option('program', 'opencv-codec'),
+            mask_file=context.get_arg('mask_output'),
+            opencv_fourcc=context.get_option('program', 'opencv-codec'),
         )
 
         timecode_overlay = None
