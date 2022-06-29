@@ -80,7 +80,7 @@ def _scale_kernel_size(kernel_size: int, downscale_factor: int):
     corrected_size = round(kernel_size / float(downscale_factor))
     if corrected_size % 2 == 0:
         corrected_size -= 1
-    return min(corrected_size, 3)
+    return max(corrected_size, 3)
 
 
 # TODO(#75): See if this needs to be tweaked for the CNT algorithm.
@@ -606,7 +606,7 @@ class ScanContext(object):
                             (event_end.frame_num + 1) - event_start.frame_num, self._video_fps)
                         self.event_list.append((event_start, event_end, event_duration))
                 # Send frame to encode thread.
-                if encode_thread is not None:
+                if not self._scan_only:
                     encode_queue.put(
                         EncodeFrame(
                             frame_rgb=frame_rgb_origin,
@@ -617,7 +617,7 @@ class ScanContext(object):
             # Not already in a motion event, look for a new one.
             else:
                 # Buffer the required amount of frames and overlay data until we find an event.
-                if encode_thread is not None:
+                if not self._scan_only:
                     buffered_frames.append(
                         EncodeFrame(
                             frame_rgb=frame_rgb_origin,

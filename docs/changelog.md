@@ -34,8 +34,10 @@ DVR-Scan Changelog
  * [api] Remove `dvr_scan.timecode` and `FrameTimecode`, replace with `scenedetect.FrameTimecode`
  * [feature] Experimental support for GPU-based CUDA MOG2 filter ([#12](https://github.com/Breakthrough/DVR-Scan/issues/12))
  * [feature] Video encoding and decoding are now done in parallel with the scanning logic leading to improved performance on most systems ([#52](https://github.com/Breakthrough/DVR-Scan/issues/52))
- * [TODO(v1.5) - WIP][feature] Configuration file support and new `-c`/`--config` argument to specify path to config files ([#77](https://github.com/Breakthrough/DVR-Scan/issues/77))
+ * [feature] Configuration file support and new `-c`/`--config` argument to specify path to config files ([#77](https://github.com/Breakthrough/DVR-Scan/issues/77))
      * Breaks existing behavior of `-c` (was previously the shortform of `--codec`)
+ * [feature] Add support for exporting motion masks via `-mo`/`--mask-output` argument
+     * Useful for detailed analysis or tuning of detection parameters
 
 #### Known Issues
 
