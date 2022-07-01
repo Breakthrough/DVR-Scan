@@ -15,6 +15,7 @@ This file contains the implementation of the DVR-Scan command-line logic.
 """
 
 import argparse
+import glob
 import os
 import os.path
 import logging
@@ -63,10 +64,16 @@ def _validate_cli_args(args):
     """ Validates command line options, returning a boolean indicating if the validation succeeded,
     and a set of validated options. """
     # -i/--input
-    for file in args.input:
-        if not os.path.exists(file):
-            logger.error("Error: Input file does not exist:\n  %s", file)
-            return False, None
+    # Each entry in args.input is a list of paths or globs we need to expand and combine.
+    input_files = []
+    for files in args.input:
+        for file in files:
+            expanded = glob.glob(file)
+            if not expanded:
+                logger.error("Error: Input file does not exist:\n  %s", file)
+                return False, None
+            input_files += expanded
+    args.input = input_files
     # -o/--output
     if hasattr(args, 'output') and not '.' in args.output:
         args.output += '.avi'

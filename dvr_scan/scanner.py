@@ -227,11 +227,13 @@ class ScanContext(object):
         if len(opencv_fourcc) != 4:
             raise ValueError("codec must be exactly FOUR (4) characters")
         if not isinstance(output_mode, OutputMode):
-            output_mode = OutputMode[output_mode.upper()]
-        if len(self._video_paths) > 1 and output_mode != OutputMode.OPENCV:
-            raise ValueError("input concatenation is only supported using output mode OPENCV")
+            output_mode = OutputMode[output_mode.upper().replace('-', '_')]
+        if len(self._video_paths) > 1 and output_mode not in (OutputMode.SCAN_ONLY,
+                                                              OutputMode.OPENCV):
+            raise ValueError(
+                "input concatenation is only supported in `scan-only` or `opencv` mode.")
         if comp_file is not None and output_mode != OutputMode.OPENCV:
-            raise ValueError("output concatenation is only supported using output mode OPENCV")
+            raise ValueError("output concatenation is only supported using output mode `opencv`")
         self._comp_file = comp_file
         self._mask_file = mask_file
         self._output_mode = (

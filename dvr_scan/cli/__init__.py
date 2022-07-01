@@ -342,11 +342,11 @@ def get_cli_parser(user_config: ConfigRegistry):
         metavar='video_file',
         required=True,
         type=str,
+        nargs='+',
         action='append',
-        help=('[REQUIRED] Path to input video. May be specified multiple'
-              ' times to join several videos with the same resolution'
-              ' and framerate. Any output filenames will be generated'
-              ' using the first filename only.'),
+        help=('[REQUIRED] Path to input video. May specify multiple inputs with the same'
+              ' resolution and framerate, or by specifying a wildcard/glob. Output'
+              ' filenames are generated using the first video name only.'),
     )
 
     parser.add_argument(

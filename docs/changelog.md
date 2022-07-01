@@ -9,7 +9,8 @@ DVR-Scan Changelog
 #### Release Notes
 
  * Significant performance improvements on multicore systems
- * Allow use of ffmpeg for output, including codec-copy mode
+ * Support wildcards/globs as inputs for scanning entire folders (`-i folder/*.mp4`)
+ * Allow use of ffmpeg for better output quality (`-m ffmpeg`) or codec-copying mode (`-m copy`)
  * Configuration files are now supported, see documentation for details (TODO(v1.5))
      * Can specify config file path with `-c`/`--config`, or create a `dvr-scan.cfg` file in your user config folder
  * Experimental CUDA support has been added (set `-b mog_cuda`), requires manual installation of OpenCV compiled with CUDA support
@@ -26,6 +27,9 @@ DVR-Scan Changelog
     * `-m`/`--output-mode` - specify output mode (one of: `opencv`, `ffmpeg`, `copy`)
     * `-mo`/`--mask-output` - path to write motion mask for analysis
     * `--verbosity` and `--logfile` - control output verbosity and path to save output
+ * The format of `-i`/`--input` has changed to better support processing multiple videos and directories:
+    * Globs/wildcards are now supported (either pre or post shell expansion)
+    * Multiple input files can now be specified as `-i file1.mp4 file2.mp4 file3.mp4` (previously, `-i` was specified multiple times)
  * Long form of `-roi` has been renamed to `--region-of-interest` (previously was `--rectangle-of-interest`)
  * `-c` is now used for `--config`, previously was for `--codec` (there is no short form for `--config` anymore)
  * Add experimental `mog_cuda` option for `-b`/`--bg-subtractor`
@@ -42,6 +46,8 @@ DVR-Scan Changelog
      * ffmpeg can be used to generate output videos by specifying `-m ffmpeg`
      * Codec-copy mode, using ffmpeg, can be used by specifying `-m copy`
  * [feature] Add `--verbosity` and `--logfile` arguments to provide more control over program output
+ * [feature] Allow scanning entire folders using wildcards with `-i`/`--input` ([#5](https://github.com/Breakthrough/DVR-Scan/issues/5))
+     * Glob expansion is also performed on each input path directly, so quoted globs also function correctly
  * [bugfix] Fix incorrect results when `-st`/`--start-time` is set
  * [bugfix] Event start times are now correctly calculated when using `-fs`/`--frame-skip` ([#68](https://github.com/Breakthrough/DVR-Scan/issues/68), [#70](https://github.com/Breakthrough/DVR-Scan/issues/70))
     * Note that all skipped frames within the event window are included in motion event, thus the calculated start time may be slightly earlier
