@@ -205,9 +205,11 @@ class ScanContext(object):
         """ Sets the path and encoder codec to use when exporting videos.
 
         Arguments:
-            comp_file: If set, represents the path that all
-                concatenated motion events will be written to.
-                If None, each motion event will be saved as a separate file.
+            output_dir: If set, folder where output files will be written to.
+                If empty string, output will be the current working directory.
+            comp_file: If set, represents path to single video that all motion events will
+                be written to. Otherwise each motion event will be saved as a separate file
+                based on the (first) input video filename.
             output_mode: The mode to use when generating/encoding the output file. Certain
                 features may not be compatible with all ouptut modes.
             opencv_fourcc: The four-letter identifier of the encoder/video
@@ -219,11 +221,17 @@ class ScanContext(object):
         Raises:
             ValueError:
              - codec is not four characters
-             - comp_file is set and output_mode is not OutputMode.OPENCV
+             - comp_file is set but output_mode is not OutputMode.OPENCV
+             - output_dir is set but either comp_file or mask_file are absolute paths
              - multiple input videos and output_mode is not OutputMode.OPENCV
             KeyError:
              - output_mode does not exist in OutputMode
         """
+        if output_dir:
+            if comp_file and os.path.isabs(comp_file):
+                raise ValueError("output file cannot be absolute path if output directory is set!")
+            if mask_file and os.path.isabs(mask_file):
+                raise ValueError("mask file cannot be absolute path if output directory is set!")
         if len(opencv_fourcc) != 4:
             raise ValueError("codec must be exactly FOUR (4) characters")
         if not isinstance(output_mode, OutputMode):
