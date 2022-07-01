@@ -9,9 +9,10 @@ DVR-Scan Changelog
 #### Release Notes
 
  * Significant performance improvements on multicore systems
- * Experimental support for Nvidia CUDA-enabled GPUs
+ * Allow use of ffmpeg for output, including codec-copy mode
  * Configuration files are now supported, see documentation for details (TODO(v1.5))
      * Can specify config file path with `-c`/`--config`, or create a `dvr-scan.cfg` file in your user config folder
+ * Experimental CUDA support has been added (set `-b mog_cuda`), requires manual installation of OpenCV compiled with CUDA support
  * The new minimum supported Python version is 3.7,
  * Support for OpenCV 2 has been dropped, new minimum verison is OpenCV 3
 
@@ -19,25 +20,32 @@ DVR-Scan Changelog
 
 **Command-Line Interface:**
 
- * The long form of `-roi` has been renamed to `--region-of-interest` (previously was `--rectangle-of-interest`)
- * Add support for configuration files
+ * New features/arguments (see below for more details):
+    * `-c`/`--config` - specify path to config file
+    * `-m`/`--mode` - specify output mode (one of: `opencv`, `ffmpeg`, `copy`)
+    * `-mo`/`--mask-output` - path to write motion mask for analysis
+    * `--verbosity` and `--logfile` - control output verbosity and path to save output
+ * Long form of `-roi` has been renamed to `--region-of-interest` (previously was `--rectangle-of-interest`)
  * `-c` is now used for `--config`, previously was for `--codec` (there is no short form for `--config` anymore)
- * Experimental CUDA support has been added (set `-b mog_cuda`), requires manual installation of OpenCV compiled with CUDA support
- * Add `--logfile` argument to make capturing program output easier
+ * Add experimental `mog_cuda` option for `-b`/`--bg-subtractor`
 
 **General:**
 
+ * [feature] Configuration file support and new `-c`/`--config` argument to specify path to config files ([#77](https://github.com/Breakthrough/DVR-Scan/issues/77))
+     * Breaks existing behavior of `-c` (was previously the shortform of `--codec`)
+ * [feature] Add support for multiple output modes via `-m`/`--output-mode` argument ([#27](https://github.com/Breakthrough/DVR-Scan/issues/27), [#42](https://github.com/Breakthrough/DVR-Scan/issues/42))
+ * [feature] Experimental support for GPU-based CUDA MOG2 filter ([#12](https://github.com/Breakthrough/DVR-Scan/issues/12))
+ * [feature] Video encoding and decoding are now done in parallel with the scanning logic leading to improved performance on most systems ([#52](https://github.com/Breakthrough/DVR-Scan/issues/52))
+ * [feature] Add support for exporting motion masks via `-mo`/`--mask-output` argument
+     * Useful for detailed analysis or tuning of detection parameters
+     * ffmpeg can be used to generate output videos by specifying `-m ffmpeg`
+     * Codec-copy mode, using ffmpeg, can be used by specifying `-m copy`
+ * [feature] Add `--verbosity` and `--logfile` arguments to provide more control over program output
  * [bugfix] Fix incorrect results when `-st`/`--start-time` is set
  * [bugfix] Event start times are now correctly calculated when using `-fs`/`--frame-skip` ([#68](https://github.com/Breakthrough/DVR-Scan/issues/68), [#70](https://github.com/Breakthrough/DVR-Scan/issues/70))
     * Note that all skipped frames within the event window are included in motion event, thus the calculated start time may be slightly earlier
  * [bugfix] Only get screen resolution when required
  * [api] Remove `dvr_scan.timecode` and `FrameTimecode`, replace with `scenedetect.FrameTimecode`
- * [feature] Experimental support for GPU-based CUDA MOG2 filter ([#12](https://github.com/Breakthrough/DVR-Scan/issues/12))
- * [feature] Video encoding and decoding are now done in parallel with the scanning logic leading to improved performance on most systems ([#52](https://github.com/Breakthrough/DVR-Scan/issues/52))
- * [feature] Configuration file support and new `-c`/`--config` argument to specify path to config files ([#77](https://github.com/Breakthrough/DVR-Scan/issues/77))
-     * Breaks existing behavior of `-c` (was previously the shortform of `--codec`)
- * [feature] Add support for exporting motion masks via `-mo`/`--mask-output` argument
-     * Useful for detailed analysis or tuning of detection parameters
 
 #### Known Issues
 

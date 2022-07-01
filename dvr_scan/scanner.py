@@ -24,11 +24,11 @@ import queue
 import sys
 import time
 import threading
-from typing import AnyStr, Iterable, List, Optional, Tuple, Union
+from typing import Any, AnyStr, Iterable, List, Optional, Tuple, Union
 
 import cv2
 import numpy
-from scenedetect import FrameTimecode, VideoStream, VideoOpenFailure
+from scenedetect import FrameTimecode, VideoStream, VideoOpenFailure, split_video_ffmpeg
 
 from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
 from dvr_scan.platform import get_min_screen_bounds, get_tqdm
@@ -40,7 +40,7 @@ from dvr_scan.motion_detector import (
 
 logger = logging.getLogger('dvr_scan')
 
-DEFAULT_VIDEOWRITER_CODEC = cv2.VideoWriter_fourcc('X', 'V', 'I', 'D')
+DEFAULT_VIDEOWRITER_CODEC = 'XVID'
 """Default codec to use with OpenCV VideoWriter."""
 
 MAX_DECODE_QUEUE_SIZE: int = 4
@@ -49,6 +49,15 @@ MAX_DECODE_QUEUE_SIZE: int = 4
 MAX_ENCODE_QUEUE_SIZE: int = 4
 """Maximum size of the queue of frames waiting to be processed after decoding."""
 
+COPY_OUTPUT_ARGS = '-map 0 -c:v copy -c:a copy'
+"""Arguments passed to ffmpeg when using OutputMode.COPY."""
+
+DEFAULT_FFMPEG_OUTPUT_ARGS = '-map 0 -c:v libx264 -preset fast -crf 21 -c:a aac'
+"""Default arguments passed to ffmpeg when using OutputMode.COPY."""
+
+OUTPUT_FILE_TEMPLATE = '{VIDEO_NAME}.DSME_{EVENT_NUMBER}.{EXTENSION}'
+"""Template to use for generating output files."""
+
 
 class DetectorType(Enum):
     MOG = MotionDetectorMOG2
@@ -56,14 +65,21 @@ class DetectorType(Enum):
     MOG_CUDA = MotionDetectorCudaMOG2
 
 
+class OutputMode(Enum):
+    SCAN_ONLY = 1
+    OPENCV = 2
+    COPY = 3
+    FFMPEG = 4
+
+
 @dataclass
-class DecodeFrame:
+class DecodeEvent:
     frame_rgb: numpy.ndarray
     timecode: FrameTimecode
 
 
 @dataclass
-class EncodeFrame:
+class EncodeEvent:
     frame_rgb: numpy.ndarray
     timecode: FrameTimecode
     bounding_box: Tuple[int, int, int, int]
@@ -71,9 +87,16 @@ class EncodeFrame:
 
 
 @dataclass
-class MaskFrame:
+class FfmpegEvent:
+    start_time: FrameTimecode
+    end_time: FrameTimecode
+
+
+@dataclass
+class MaskEvent:
     motion_mask: numpy.ndarray
-    # TODO: Add options to overlay timecode, overlay frame score, and mix original with mask.
+    # TODO: Add options to overlay timecode, overlay frame score, bounding box,
+    # and option to blend original frame with mask.
 
 
 def _scale_kernel_size(kernel_size: int, downscale_factor: int):
@@ -123,11 +146,11 @@ class ScanContext(object):
         self._num_corruptions = 0 # The number of times we failed to read a frame
 
         # Output Parameters (set_output)
-        self._scan_only = True                   # -so/--scan-only
-        self._comp_file = None                   # -o/--output
-        self._mask_file = None                   # -mo/--mask-output
-        self._fourcc = DEFAULT_VIDEOWRITER_CODEC # -c/--codec
-        self._output_prefix = ''
+        self._comp_file: Optional[AnyStr] = None       # -o/--output
+        self._mask_file: Optional[AnyStr] = None       # -mo/--mask-output
+        self._fourcc: Any = None                       # -c/--codec
+        self._output_mode: OutputMode = None           # -m/--mode / -so/--scan-only
+        self._ffmpeg_output_args: Optional[str] = None # output args for OutputMode.FFMPEG
 
         # Overlay Parameters (set_overlays)
         self._timecode_overlay = None # -tc/--time-code, None or TextOverlay
@@ -160,6 +183,8 @@ class ScanContext(object):
         self._video_fps = None
         self._frames_total = 0
         self._frames_processed = 0
+        self._first_input_path: AnyStr = '' # path of first input video
+        self._output_prefix: AnyStr = ''    # path of the input video minus extension
 
         self._load_input_videos()
 
@@ -167,34 +192,46 @@ class ScanContext(object):
     def framerate(self) -> float:
         return self._video_fps
 
-    def set_output(self,
-                   scan_only: bool = True,
-                   comp_file: AnyStr = None,
-                   mask_file: AnyStr = None,
-                   opencv_fourcc: str = 'XVID'):
+    def set_output(
+        self,
+        comp_file: AnyStr = None,
+        mask_file: AnyStr = None,
+        output_mode: Union[OutputMode, str] = OutputMode.SCAN_ONLY,
+        opencv_fourcc: str = DEFAULT_VIDEOWRITER_CODEC,
+        ffmpeg_output_args: str = DEFAULT_FFMPEG_OUTPUT_ARGS,
+    ):
         """ Sets the path and encoder codec to use when exporting videos.
 
         Arguments:
-            scan_only (bool): If True, only scans input for motion, but
-                does not write any video(s) to disk.  In this case,
-                comp_file and codec are ignored. Note that the default
-                value here is the opposite of the CLI default.
-            comp_file (str): If set, represents the path that all
+            comp_file: If set, represents the path that all
                 concatenated motion events will be written to.
                 If None, each motion event will be saved as a separate file.
-            opencv_fourcc (str): The four-letter identifier of the encoder/video
-                codec to use when encoding videos with OpenCV. Possible values are:
+            output_mode: The mode to use when generating/encoding the output file. Certain
+                features may not be compatible with all ouptut modes.
+            opencv_fourcc: The four-letter identifier of the encoder/video
+                codec to use when output_mode is OutputMode.OPENCV. Possible values are:
                 XVID, MP4V, MP42, H264.
+            ffmpeg_out_args: Arguments to pass to ffmpeg for the output video. Only used if
+                output_mode is OutputMode.FFMPEG.
 
         Raises:
-            ValueError if codec is not four characters.
+            ValueError:
+             - codec is not four characters
+             - comp_file is set and output_mode is not OutputMode.OPENCV
+             - multiple input videos and output_mode is not OutputMode.OPENCV
         """
-        self._scan_only = scan_only
+        if len(opencv_fourcc) != 4:
+            raise ValueError("codec must be exactly FOUR (4) characters")
+        if len(self._video_paths) > 1 and output_mode != OutputMode.OPENCV:
+            raise ValueError("input concatenation is only supported using output mode OPENCV")
+        if comp_file is not None and output_mode != OutputMode.OPENCV:
+            raise ValueError("output concatenation is only supported using output mode OPENCV")
         self._comp_file = comp_file
         self._mask_file = mask_file
-        if len(opencv_fourcc) != 4:
-            raise ValueError("codec must be exactly four (4) characters")
+        self._output_mode = (
+            output_mode if isinstance(output_mode, OutputMode) else OutputMode[output_mode.upper()])
         self._fourcc = cv2.VideoWriter_fourcc(*opencv_fourcc.upper())
+        self._ffmpeg_output_args = ffmpeg_output_args
 
     def set_overlays(self,
                      timecode_overlay: Optional[TextOverlay] = None,
@@ -442,8 +479,9 @@ class ScanContext(object):
             )
         return True
 
-    def _set_output_prefix(self, video_path: AnyStr):
+    def _set_paths(self, video_path: AnyStr):
         self._output_prefix = ''
+        self._first_input_path = video_path
         if not self._comp_file:
             output_prefix = os.path.basename(video_path)
             dot_index = output_prefix.rfind('.')
@@ -454,6 +492,7 @@ class ScanContext(object):
     def stop(self):
         """Stop the current scan_motion call. This is the only thread-safe public method."""
         self._stop.set()
+        self._logger.debug("Stop event set.")
 
     def scan_motion(
         self,
@@ -466,7 +505,7 @@ class ScanContext(object):
         self.event_list = []
         num_frames_post_event = 0
         event_start = None
-        self._set_output_prefix(self._video_paths[0])
+        self._set_paths(self._video_paths[0])
 
         self._curr_pos = FrameTimecode(0, self._video_fps)
         in_motion_event = False
@@ -538,14 +577,14 @@ class ScanContext(object):
         decode_thread.start()
 
         encode_thread = None
-        if not self._scan_only or self._mask_file is not None:
+        if self._output_mode != OutputMode.SCAN_ONLY or self._mask_file is not None:
             encode_queue = queue.Queue(MAX_ENCODE_QUEUE_SIZE)
             encode_thread = threading.Thread(
                 target=ScanContext._encode_thread, args=(self, encode_queue), daemon=True)
             encode_thread.start()
 
         while not self._stop.is_set():
-            frame: Optional[DecodeFrame] = decode_queue.get()
+            frame: Optional[DecodeEvent] = decode_queue.get()
             if frame is None:
                 break
             assert frame.frame_rgb is not None
@@ -578,7 +617,7 @@ class ScanContext(object):
                     if above_threshold else self._bounding_box.clear())
 
             if self._mask_file:
-                encode_queue.put(MaskFrame(motion_mask=motion_mask,))
+                encode_queue.put(MaskEvent(motion_mask=motion_mask,))
 
             # Last frame was part of a motion event, or still within the post-event window.
             if in_motion_event:
@@ -605,10 +644,14 @@ class ScanContext(object):
                         event_duration = FrameTimecode(
                             (event_end.frame_num + 1) - event_start.frame_num, self._video_fps)
                         self.event_list.append((event_start, event_end, event_duration))
+                        if self._output_mode in (OutputMode.FFMPEG, OutputMode.COPY):
+                            encode_queue.put(
+                                FfmpegEvent(start_time=event_start, end_time=event_end))
+
                 # Send frame to encode thread.
-                if not self._scan_only:
+                if self._output_mode == OutputMode.OPENCV:
                     encode_queue.put(
-                        EncodeFrame(
+                        EncodeEvent(
                             frame_rgb=frame_rgb_origin,
                             timecode=frame.timecode,
                             bounding_box=bounding_box,
@@ -617,9 +660,9 @@ class ScanContext(object):
             # Not already in a motion event, look for a new one.
             else:
                 # Buffer the required amount of frames and overlay data until we find an event.
-                if not self._scan_only:
+                if self._output_mode == OutputMode.OPENCV:
                     buffered_frames.append(
-                        EncodeFrame(
+                        EncodeEvent(
                             frame_rgb=frame_rgb_origin,
                             timecode=frame.timecode,
                             bounding_box=bounding_box,
@@ -636,7 +679,7 @@ class ScanContext(object):
                     shifted_start = max(start_frame, frame.timecode.frame_num + 1 - shift_amount)
                     event_start = FrameTimecode(shifted_start, self._video_fps)
                     # Send buffered frames to encode thread.
-                    if encode_thread is not None:
+                    if self._output_mode == OutputMode.OPENCV:
                         for encode_frame in buffered_frames:
                             encode_queue.put(encode_frame)
                         buffered_frames = []
@@ -646,20 +689,24 @@ class ScanContext(object):
 
         # Video ended, finished processing frames. If we're still in a motion event,
         # compute the duration and ending timecode and add it to the event list.
-        if in_motion_event:
+        if in_motion_event and not self._stop.is_set():
             event_end = FrameTimecode(self._curr_pos.frame_num, self._video_fps)
             event_duration = FrameTimecode(self._curr_pos.frame_num - event_start.frame_num,
                                            self._video_fps)
             self.event_list.append((event_start, event_end, event_duration))
+            if self._output_mode in (OutputMode.FFMPEG, OutputMode.COPY):
+                encode_queue.put(FfmpegEvent(start_time=event_start, end_time=event_end))
         # Close the progress bar before producing any more output.
         if progress_bar is not None:
             progress_bar.close()
-        # Wait for decode thread to finish, re-raise any exceptions.
+        # Unblock any remaining puts, wait for decode thread to finish, and re-raise any exceptions.
+        while not decode_queue.empty():
+            _ = decode_queue.get_nowait()
         decode_thread.join()
         if self._decode_thread_exception is not None:
             raise self._decode_thread_exception[1].with_traceback(self._decode_thread_exception[2])
         # Push sentinel to queue, wait for encode thread to finish, and re-raise any exceptions.
-        if not self._scan_only:
+        if encode_thread is not None:
             encode_queue.put(None)
             encode_thread.join()
             if self._encode_thread_exception is not None:
@@ -711,7 +758,7 @@ class ScanContext(object):
                 timecode_list.append(event_end.get_timecode())
             print("[DVR-Scan] Comma-separated timecode values:\n%s" % (','.join(timecode_list)))
 
-        if not self._scan_only:
+        if self._output_mode != OutputMode.SCAN_ONLY:
             self._logger.info("Motion events written to disk.")
 
     def _decode_thread(self, decode_queue: queue.Queue):
@@ -730,7 +777,7 @@ class ScanContext(object):
                 # first frame has a frame_num of 1), so we correct that for presentation time.
                 presentation_time = FrameTimecode(
                     timecode=self._curr_pos.frame_num - 1, fps=self._video_fps)
-                decode_queue.put(DecodeFrame(frame_rgb, presentation_time))
+                decode_queue.put(DecodeEvent(frame_rgb, presentation_time))
 
         # We'll re-raise any exceptions from the main thread.
         # pylint: disable=bare-except
@@ -756,36 +803,68 @@ class ScanContext(object):
         try:
             num_events = 0
             while True:
-                to_encode: Optional[Union[EncodeFrame, MaskFrame]] = encode_queue.get()
-                if to_encode is None:
+                event: Optional[Union[EncodeEvent, MaskEvent]] = encode_queue.get()
+                if event is None:
                     break
-                if isinstance(to_encode, EncodeFrame):
+                if isinstance(event, EncodeEvent):
                     if video_writer is None:
                         num_events += 1
                         output_path = (
-                            self._comp_file if self._comp_file else '%s.DSME_%04d.avi' %
-                            (self._output_prefix, num_events))
-                        resolution = (to_encode.frame_rgb.shape[1], to_encode.frame_rgb.shape[0])
+                            self._comp_file if self._comp_file else OUTPUT_FILE_TEMPLATE.format(
+                                VIDEO_NAME=self._output_prefix,
+                                EVENT_NUMBER='%04d' % num_events,
+                                EXTENSION='avi',
+                            ))
+                        resolution = (event.frame_rgb.shape[1], event.frame_rgb.shape[0])
                         video_writer = self._init_video_writer(output_path, resolution)
                     # Render all overlays onto frame.
                     if not self._timecode_overlay is None:
                         self._timecode_overlay.draw(
-                            frame=to_encode.frame_rgb, text=to_encode.timecode.get_timecode())
-                    if not self._bounding_box is None and not to_encode.bounding_box is None:
-                        self._bounding_box.draw(to_encode.frame_rgb, to_encode.bounding_box)
+                            frame=event.frame_rgb, text=event.timecode.get_timecode())
+                    if not self._bounding_box is None and not event.bounding_box is None:
+                        self._bounding_box.draw(event.frame_rgb, event.bounding_box)
                     # Encode and write frame to disk.
-                    video_writer.write(to_encode.frame_rgb)
+                    video_writer.write(event.frame_rgb)
                     # If we're at the end of the event, make sure we start using a new output
                     # unless we're compiling all motion events together.
-                    if to_encode.end_of_event and not self._comp_file:
+                    if event.end_of_event and not self._comp_file:
                         video_writer.release()
                         video_writer = None
-                elif isinstance(to_encode, MaskFrame):
+                elif isinstance(event, MaskEvent):
                     if mask_writer is None:
-                        resolution = to_encode.motion_mask.shape[1], to_encode.motion_mask.shape[0]
+                        resolution = event.motion_mask.shape[1], event.motion_mask.shape[0]
                         mask_writer = self._init_video_writer(self._mask_file, resolution)
-                    out_frame = cv2.cvtColor(to_encode.motion_mask, cv2.COLOR_GRAY2BGR)
+                    out_frame = cv2.cvtColor(event.motion_mask, cv2.COLOR_GRAY2BGR)
                     mask_writer.write(out_frame)
+                elif isinstance(event, FfmpegEvent):
+                    assert self._output_mode in (OutputMode.FFMPEG, OutputMode.COPY)
+                    num_events += 1
+                    output_args = (
+                        self._ffmpeg_output_args
+                        if self._output_mode == OutputMode.FFMPEG else COPY_OUTPUT_ARGS)
+                    output_path = (
+                        self._comp_file if self._comp_file else OUTPUT_FILE_TEMPLATE.format(
+                            VIDEO_NAME=self._output_prefix,
+                            EVENT_NUMBER='%04d' % num_events,
+                            EXTENSION='mp4',
+                        ))
+                    # TODO(v1.5): Add config option to allow showing ffmpeg output, and disable
+                    # the progress bar when set. Do this automatically in debug mode.
+
+                    # TODO(v1.6): Don't use this wrapper and instead just invoke ffmpeg directly
+                    # so that the output can be displayed in the main thread if encoding fails.
+                    # We should also stop processing once the video splitting fails.
+                    exit_code = split_video_ffmpeg(
+                        input_video_path=self._first_input_path,
+                        scene_list=[(event.start_time, event.end_time)],
+                        output_file_template=output_path,
+                        arg_override=output_args,
+                        show_output=False,
+                        show_progress=False,
+                    )
+                    if exit_code != 0:
+                        self._stop.set()
+                        self._logger.debug("Ffmpeg exited with code: %d", exit_code)
 
         # We'll re-raise any exceptions from the main thread.
         # TODO: Need to properly signal failures, right now the program hangs when this happens.
@@ -800,3 +879,6 @@ class ScanContext(object):
                 video_writer.release()
             if mask_writer is not None:
                 mask_writer.release()
+            # Make sure we unblock any waiting puts.
+            while not encode_queue.empty():
+                _ = encode_queue.get_nowait()

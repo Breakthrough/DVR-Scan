@@ -26,7 +26,7 @@ import dvr_scan
 from dvr_scan.cli import get_cli_parser
 from dvr_scan.cli.config import ConfigRegistry, ConfigLoadFailure, ROIValue
 from dvr_scan.overlays import TextOverlay, BoundingBoxOverlay
-from dvr_scan.scanner import DetectorType, ScanContext
+from dvr_scan.scanner import DetectorType, OutputMode, ScanContext
 from dvr_scan.platform import init_logger
 
 logger = logging.getLogger('dvr_scan')
@@ -170,7 +170,7 @@ def run_dvr_scan():
     context = _init_dvr_scan()
     if context is None:
         return INIT_FAILURE_EXIT_CODE
-
+    # Validate that the specified motion detector is available on this system.
     try:
         detector_type = context.get_option('detection', 'bg-subtractor')
         bg_subtractor = DetectorType[detector_type.upper()]
@@ -183,6 +183,9 @@ def run_dvr_scan():
             ' the OpenCV package `cv2` that includes it.', bg_subtractor.name)
         return INIT_FAILURE_EXIT_CODE
 
+    # TODO(v1.5): If the specified output mode is not available on the system, display
+    # a more graceful error message.
+
     try:
         sctx = ScanContext(
             input_videos=context.get_arg('input'),
@@ -191,12 +194,13 @@ def run_dvr_scan():
         )
 
         # Set context properties based on CLI arguments.
-
         sctx.set_output(
-            scan_only=context.get_arg('scan_only'),
             comp_file=context.get_arg('output'),
             mask_file=context.get_arg('mask_output'),
+            output_mode=(OutputMode.SCAN_ONLY if context.get_arg('scan_only') else
+                         context.get_option('program', 'output-mode')),
             opencv_fourcc=context.get_option('program', 'opencv-codec'),
+            ffmpeg_output_args=context.get_option('program', 'ffmpeg-output-args'),
         )
 
         timecode_overlay = None

@@ -25,8 +25,9 @@ from configparser import ConfigParser, ParsingError
 from typing import Any, AnyStr, Dict, List, Optional, Tuple, Union
 
 from platformdirs import user_config_dir
-
 from scenedetect.frame_timecode import FrameTimecode
+
+from dvr_scan.scanner import DEFAULT_FFMPEG_OUTPUT_ARGS
 
 
 class ValidatedValue(ABC):
@@ -286,7 +287,9 @@ USER_CONFIG_FILE_PATH: AnyStr = os.path.join(_CONFIG_FILE_DIR, _CONFIG_FILE_NAME
 
 CONFIG_MAP: ConfigDict = {
     'program': {
+        'ffmpeg-output-args': DEFAULT_FFMPEG_OUTPUT_ARGS,
         'opencv-codec': 'XVID',
+        'output-mode': 'opencv',
         'quiet-mode': False,
         'verbosity': 'info',
     },
@@ -322,8 +325,9 @@ certain string options are stored in `CHOICE_MAP`."""
 # TODO: This should be a validator.
 CHOICE_MAP: Dict[str, Dict[str, List[str]]] = {
     'program': {
-        'verbosity': ['debug', 'info', 'warning', 'error'],
         'opencv-codec': ['XVID', 'MP4V', 'MP42', 'H264'],
+        'output-mode': ['scan_only', 'opencv', 'copy', 'ffmpeg'],
+        'verbosity': ['debug', 'info', 'warning', 'error'],
     },
     'detection': {
         'bg-subtractor': ['MOG', 'CNT', 'MOG_CUDA'],

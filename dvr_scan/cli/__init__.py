@@ -340,7 +340,7 @@ def get_cli_parser(user_config: ConfigRegistry):
     parser.add_argument(
         '--verbosity',
         metavar='type',
-        type=string_type_check(CHOICE_MAP['program']['verbosity'], False, 'TYPE'),
+        type=string_type_check(CHOICE_MAP['program']['verbosity'], False, 'type'),
         help=('Amount of verbosity to use for log output. Must be one of: %s.%s' %
               (', '.join(CHOICE_MAP['program']['verbosity']),
                user_config.get_help_string('program', 'verbosity'))),
@@ -403,7 +403,8 @@ def get_cli_parser(user_config: ConfigRegistry):
         '--scan-only',
         action='store_true',
         default=False,
-        help=('Only perform motion detection (does not write any files to disk).'),
+        help=('Only perform motion detection (does not write any files to disk).'
+              ' If set, -m/--output-mode is ignored.'),
     )
 
     parser.add_argument(
@@ -565,18 +566,34 @@ def get_cli_parser(user_config: ConfigRegistry):
     parser.add_argument(
         '-mo',
         '--mask-output',
-        metavar='video.avi',
+        metavar='motion_mask.avi',
         type=str,
-        help=('If specified, writes a video containing the motion mask for fine tuning or other'
-              ' analysis. A configuration file can be used to customize the mask output.'),
+        help=('If specified, writes a video containing the motion mask. Can be used for '
+              ' tuning detection parameters or other analysis.'),
     )
 
-    # TODO(v1.6): Add a new -m/--output-mode flag to specify whether to use ffmpeg or the
-    # OpenCV VideoWriter for output. Also will need to add some flags to specify the ffmpeg
-    # arguments, and a new flag called --keep-temp-files for how concatenation has to work.
+    parser.add_argument(
+        '-m',
+        '--output-mode',
+        metavar='mode',
+        type=string_type_check(CHOICE_MAP['program']['output-mode'], False, 'mode'),
+        help=('Set mode for generating output files. Certain features may not work with '
+              ' all output modes.'),
+    )
+
+    # TODO(v1.5): Add -a/--ffmpeg-output-args to override encoder settings when -m=ffmpeg is used.
+
+    # TODO(v1.6): Support concatenation.
+    #parser.add_argument(
+    #    '--keep-temp-files',
+    #    action='store_true',
+    #    help=('Keep any temporary files the specified output mode generates.%s' %
+    #          user_config.get_help_string('program', 'keep-temp-files', show_default=False)),
+    #)
 
     # TODO(v1.6): Add a mode that can dump frame scores (-s/--stats), and another mode
     # that can dump the resulting frames after processing (-d/--dump-motion OUT.avi).
     # Might also be helpful to overlay the frame score when using -d. Multiply the motion
     # mask against the input image.
+
     return parser
