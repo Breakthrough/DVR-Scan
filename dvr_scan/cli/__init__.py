@@ -29,6 +29,15 @@ Copyright (C) 2016-2022 Brandon Castellano
 < https://github.com/Breakthrough/DVR-Scan >
 """ % dvr_scan.__version__
 
+# In the CLI, -so/--scan-only is a different flag than -m/--mode, whereas in the
+# config file they are the same option. Therefore, we remove the scan only choice
+# from the -m/--mode selection in the CLI.
+SCAN_ONLY_MODE = 'scan_only'
+assert SCAN_ONLY_MODE in CHOICE_MAP['program']['output-mode']
+VALID_OUTPUT_MODES = [
+    mode for mode in CHOICE_MAP['program']['output-mode'] if mode != SCAN_ONLY_MODE
+]
+
 
 def timecode_type_check(metavar: Optional[str] = None):
     """ Creates an argparse type for a user-inputted timecode.
@@ -328,33 +337,6 @@ def get_cli_parser(user_config: ConfigRegistry):
     )
 
     parser.add_argument(
-        '-q',
-        '--quiet',
-        dest='quiet_mode',
-        action='store_true',
-        help=('Suppress all output except for final comma-separated list of motion events.'
-              ' Useful for computing or piping output directly into other programs/scripts.%s' %
-              user_config.get_help_string('program', 'quiet-mode')),
-    )
-
-    parser.add_argument(
-        '--verbosity',
-        metavar='type',
-        type=string_type_check(CHOICE_MAP['program']['verbosity'], False, 'type'),
-        help=('Amount of verbosity to use for log output. Must be one of: %s.%s' %
-              (', '.join(CHOICE_MAP['program']['verbosity']),
-               user_config.get_help_string('program', 'verbosity'))),
-    )
-
-    parser.add_argument(
-        '--logfile',
-        metavar='file',
-        type=str,
-        help=('Path to log file for writing application output. If FILE already exists, the program'
-              ' output will be appended to the existing contents.'),
-    )
-
-    parser.add_argument(
         '-i',
         '--input',
         metavar='video_file',
@@ -368,6 +350,16 @@ def get_cli_parser(user_config: ConfigRegistry):
     )
 
     parser.add_argument(
+        '-d',
+        '--output-dir',
+        metavar='path',
+        type=str,
+        help=('If specified, write output files in the given directory. If path does not'
+              ' exist, it  will be created. If unset, output files are written to the'
+              ' current working directory.'),
+    )
+
+    parser.add_argument(
         '-o',
         '--output',
         metavar='video.avi',
@@ -376,7 +368,27 @@ def get_cli_parser(user_config: ConfigRegistry):
               ' file, creating a compilation of only the frames in'
               ' the input video containing motion. By default each'
               ' motion event is written to a separate file. Filename'
-              ' MUST end with .avi.'),
+              ' MUST end with .avi. Only supported in output mode OPENCV.'),
+    )
+
+    parser.add_argument(
+        '-m',
+        '--output-mode',
+        metavar='mode',
+        type=string_type_check(VALID_OUTPUT_MODES, False, 'mode'),
+        help=(
+            'Set mode for generating output files. Certain features may not work with '
+            ' all output modes. Must be one of: %s.%s' %
+            (', '.join(VALID_OUTPUT_MODES), user_config.get_help_string('program', 'output-mode'))),
+    )
+
+    parser.add_argument(
+        '-so',
+        '--scan-only',
+        action='store_true',
+        default=False,
+        help=('Only perform motion detection (does not write any files to disk).'
+              ' If set, -m/--output-mode is ignored.'),
     )
 
     parser.add_argument(
@@ -396,26 +408,6 @@ def get_cli_parser(user_config: ConfigRegistry):
         help=('The type of background subtractor to use, must be one of: '
               ' MOG (default), CNT (parallel), MOG_CUDA (Nvidia GPU).%s') %
         user_config.get_help_string('detection', 'bg-subtractor'),
-    )
-
-    parser.add_argument(
-        '-so',
-        '--scan-only',
-        action='store_true',
-        default=False,
-        help=('Only perform motion detection (does not write any files to disk).'
-              ' If set, -m/--output-mode is ignored.'),
-    )
-
-    parser.add_argument(
-        '--codec',
-        metavar='fourcc',
-        dest='opencv_codec',
-        type=string_type_check(CHOICE_MAP['program']['opencv-codec'], False, 'fourcc'),
-        help=('The four-letter identifier of the encoder/video codec to use'
-              ' when exporting motion events using OpenCV. Must be one of: %s.%s' %
-              (', '.join(CHOICE_MAP['program']['opencv-codec']).upper(),
-               user_config.get_help_string('program', 'opencv-codec'))),
     )
 
     parser.add_argument(
@@ -491,8 +483,8 @@ def get_cli_parser(user_config: ConfigRegistry):
         metavar='time',
         type=timecode_type_check('time'),
         default=None,
-        help=('Length of time in input video to limit motion detection to (see'
-              ' -st for valid timecode formats). Overrides -et.'),
+        help=('Duration to limit motion detection to (see -st for valid timecode formats).'
+              ' Overrides -et.'),
     )
 
     parser.add_argument(
@@ -501,42 +493,7 @@ def get_cli_parser(user_config: ConfigRegistry):
         metavar='time',
         type=timecode_type_check('time'),
         default=None,
-        help=('Timecode to stop motion detection at (see -st for valid'
-              'timecode formats).'),
-    )
-
-    parser.add_argument(
-        '-df',
-        '--downscale-factor',
-        metavar='factor',
-        type=int_type_check(0, None, 'factor'),
-        help=('Integer factor to downscale (shrink) video before processing, to'
-              ' improve performance. For example, if input video resolution'
-              ' is 1024 x 400, and factor=2, each frame is reduced to'
-              ' 1024/2 x 400/2=512 x 200 before processing.%s' %
-              (user_config.get_help_string('detection', 'downscale-factor'))),
-    )
-
-    parser.add_argument(
-        '-fs',
-        '--frame-skip',
-        metavar='num_frames',
-        type=int_type_check(0, None, 'num_frames'),
-        help=('Number of frames to skip after processing a given frame.'
-              ' Improves performance, at expense of frame and time accuracy,'
-              ' and may increase probability of missing motion events.'
-              ' If set, -l, -tb, and -tp will all be scaled relative to the source'
-              ' framerate. Values above 1 or 2 are not recommended.%s' %
-              (user_config.get_help_string('detection', 'frame-skip'))),
-    )
-
-    parser.add_argument(
-        '-tc',
-        '--time-code',
-        dest='draw_timecode',
-        action='store_true',
-        help=('Draw time code of each frame on the top left corner.%s' %
-              user_config.get_help_string('overlays', 'timecode', show_default=False)),
+        help=('Timecode to stop motion detection at (see -st for valid timecode formats).'),
     )
 
     parser.add_argument(
@@ -564,6 +521,15 @@ def get_cli_parser(user_config: ConfigRegistry):
     )
 
     parser.add_argument(
+        '-tc',
+        '--time-code',
+        dest='draw_timecode',
+        action='store_true',
+        help=('Draw time code of each frame on the top left corner.%s' %
+              user_config.get_help_string('overlays', 'timecode', show_default=False)),
+    )
+
+    parser.add_argument(
         '-mo',
         '--mask-output',
         metavar='motion_mask.avi',
@@ -573,12 +539,67 @@ def get_cli_parser(user_config: ConfigRegistry):
     )
 
     parser.add_argument(
-        '-m',
-        '--output-mode',
-        metavar='mode',
-        type=string_type_check(CHOICE_MAP['program']['output-mode'], False, 'mode'),
-        help=('Set mode for generating output files. Certain features may not work with '
-              ' all output modes.'),
+        '-df',
+        '--downscale-factor',
+        metavar='factor',
+        type=int_type_check(0, None, 'factor'),
+        help=('Integer factor to downscale (shrink) video before processing, to'
+              ' improve performance. For example, if input video resolution'
+              ' is 1024 x 400, and factor=2, each frame is reduced to'
+              ' 1024/2 x 400/2=512 x 200 before processing.%s' %
+              (user_config.get_help_string('detection', 'downscale-factor'))),
+    )
+
+    parser.add_argument(
+        '-fs',
+        '--frame-skip',
+        metavar='num_frames',
+        type=int_type_check(0, None, 'num_frames'),
+        help=('Number of frames to skip after processing a given frame.'
+              ' Improves performance, at expense of frame and time accuracy,'
+              ' and may increase probability of missing motion events.'
+              ' If set, -l, -tb, and -tp will all be scaled relative to the source'
+              ' framerate. Values above 1 or 2 are not recommended.%s' %
+              (user_config.get_help_string('detection', 'frame-skip'))),
+    )
+    parser.add_argument(
+        '-q',
+        '--quiet',
+        dest='quiet_mode',
+        action='store_true',
+        help=('Suppress all output except for final comma-separated list of motion events.'
+              ' Useful for computing or piping output directly into other programs/scripts.%s' %
+              user_config.get_help_string('program', 'quiet-mode')),
+    )
+
+    # Options that only take long-form.
+
+    parser.add_argument(
+        '--codec',
+        metavar='fourcc',
+        dest='opencv_codec',
+        type=string_type_check(CHOICE_MAP['program']['opencv-codec'], False, 'fourcc'),
+        help=('The four-letter identifier of the encoder/video codec to use with OpenCV.'
+              ' Prefer using `-m ffmpeg` with a config file instead. Must be one of: %s.%s' %
+              (', '.join(CHOICE_MAP['program']['opencv-codec']).upper(),
+               user_config.get_help_string('program', 'opencv-codec'))),
+    )
+
+    parser.add_argument(
+        '--logfile',
+        metavar='file',
+        type=str,
+        help=('Path to log file for writing application output. If FILE already exists, the program'
+              ' output will be appended to the existing contents.'),
+    )
+
+    parser.add_argument(
+        '--verbosity',
+        metavar='type',
+        type=string_type_check(CHOICE_MAP['program']['verbosity'], False, 'type'),
+        help=('Amount of verbosity to use for log output. Must be one of: %s.%s' %
+              (', '.join(CHOICE_MAP['program']['verbosity']),
+               user_config.get_help_string('program', 'verbosity'))),
     )
 
     # TODO(v1.5): Add -a/--ffmpeg-output-args to override encoder settings when -m=ffmpeg is used.

@@ -289,6 +289,7 @@ CONFIG_MAP: ConfigDict = {
     'program': {
         'ffmpeg-output-args': DEFAULT_FFMPEG_OUTPUT_ARGS,
         'opencv-codec': 'XVID',
+        'output-dir': '',
         'output-mode': 'opencv',
         'quiet-mode': False,
         'verbosity': 'info',

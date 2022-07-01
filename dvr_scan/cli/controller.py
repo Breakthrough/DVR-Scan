@@ -201,6 +201,7 @@ def run_dvr_scan():
                          context.get_option('program', 'output-mode')),
             opencv_fourcc=context.get_option('program', 'opencv-codec'),
             ffmpeg_output_args=context.get_option('program', 'ffmpeg-output-args'),
+            output_dir=context.get_option('program', 'output-dir'),
         )
 
         timecode_overlay = None

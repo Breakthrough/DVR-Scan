@@ -22,7 +22,8 @@ DVR-Scan Changelog
 
  * New features/arguments (see below for more details):
     * `-c`/`--config` - specify path to config file
-    * `-m`/`--mode` - specify output mode (one of: `opencv`, `ffmpeg`, `copy`)
+    * `-d`/`--output-dir` - specify directory to write output files (default is working directory)
+    * `-m`/`--output-mode` - specify output mode (one of: `opencv`, `ffmpeg`, `copy`)
     * `-mo`/`--mask-output` - path to write motion mask for analysis
     * `--verbosity` and `--logfile` - control output verbosity and path to save output
  * Long form of `-roi` has been renamed to `--region-of-interest` (previously was `--rectangle-of-interest`)

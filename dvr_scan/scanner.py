@@ -151,6 +151,7 @@ class ScanContext(object):
         self._fourcc: Any = None                       # -c/--codec
         self._output_mode: OutputMode = None           # -m/--mode / -so/--scan-only
         self._ffmpeg_output_args: Optional[str] = None # output args for OutputMode.FFMPEG
+        self._output_dir: AnyStr = ''                  # -d/--directory
 
         # Overlay Parameters (set_overlays)
         self._timecode_overlay = None # -tc/--time-code, None or TextOverlay
@@ -194,8 +195,9 @@ class ScanContext(object):
 
     def set_output(
         self,
-        comp_file: AnyStr = None,
-        mask_file: AnyStr = None,
+        output_dir: AnyStr = '',
+        comp_file: Optional[AnyStr] = None,
+        mask_file: Optional[AnyStr] = None,
         output_mode: Union[OutputMode, str] = OutputMode.SCAN_ONLY,
         opencv_fourcc: str = DEFAULT_VIDEOWRITER_CODEC,
         ffmpeg_output_args: str = DEFAULT_FFMPEG_OUTPUT_ARGS,
@@ -219,9 +221,13 @@ class ScanContext(object):
              - codec is not four characters
              - comp_file is set and output_mode is not OutputMode.OPENCV
              - multiple input videos and output_mode is not OutputMode.OPENCV
+            KeyError:
+             - output_mode does not exist in OutputMode
         """
         if len(opencv_fourcc) != 4:
             raise ValueError("codec must be exactly FOUR (4) characters")
+        if not isinstance(output_mode, OutputMode):
+            output_mode = OutputMode[output_mode.upper()]
         if len(self._video_paths) > 1 and output_mode != OutputMode.OPENCV:
             raise ValueError("input concatenation is only supported using output mode OPENCV")
         if comp_file is not None and output_mode != OutputMode.OPENCV:
@@ -232,6 +238,10 @@ class ScanContext(object):
             output_mode if isinstance(output_mode, OutputMode) else OutputMode[output_mode.upper()])
         self._fourcc = cv2.VideoWriter_fourcc(*opencv_fourcc.upper())
         self._ffmpeg_output_args = ffmpeg_output_args
+        # If an output directory is defined, ensure the directory exists.
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
+        self._output_dir = output_dir
 
     def set_overlays(self,
                      timecode_overlay: Optional[TextOverlay] = None,
@@ -789,10 +799,10 @@ class ScanContext(object):
             # Make sure main thread stops processing loop.
             decode_queue.put(None)
 
-    def _init_video_writer(self, path: str, frame_size: Tuple[int, int]) -> cv2.VideoWriter:
+    def _init_video_writer(self, path: AnyStr, frame_size: Tuple[int, int]) -> cv2.VideoWriter:
         """Create a new cv2.VideoWriter using the correct framerate."""
-        output_folder = os.path.split(os.path.abspath(path))[0]
-        os.makedirs(output_folder, exist_ok=True)
+        if self._output_dir:
+            path = os.path.join(self._output_dir, path)
         effective_framerate = (
             self._video_fps if self._frame_skip < 1 else self._video_fps / (1 + self._frame_skip))
         return cv2.VideoWriter(path, self._fourcc, effective_framerate, frame_size)
@@ -848,6 +858,8 @@ class ScanContext(object):
                             EVENT_NUMBER='%04d' % num_events,
                             EXTENSION='mp4',
                         ))
+                    if self._output_dir:
+                        output_path = os.path.join(self._output_dir, output_path)
                     # TODO(v1.5): Add config option to allow showing ffmpeg output, and disable
                     # the progress bar when set. Do this automatically in debug mode.
 
