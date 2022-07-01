@@ -27,9 +27,7 @@ DVR-Scan Changelog
     * `-m`/`--output-mode` - specify output mode (one of: `opencv`, `ffmpeg`, `copy`)
     * `-mo`/`--mask-output` - path to write motion mask for analysis
     * `--verbosity` and `--logfile` - control output verbosity and path to save output
- * The format of `-i`/`--input` has changed to better support processing multiple videos and directories:
-    * Globs/wildcards are now supported (either pre or post shell expansion)
-    * Multiple input files can now be specified as `-i file1.mp4 file2.mp4 file3.mp4` (previously, `-i` was specified multiple times)
+ * `-i`/`--input` now supports globs/wildcards to scan entire folders, e.g. `-i folder/*.mp4`
  * Long form of `-roi` has been renamed to `--region-of-interest` (previously was `--rectangle-of-interest`)
  * `-c` is now used for `--config`, previously was for `--codec` (there is no short form for `--config` anymore)
  * Add experimental `mog_cuda` option for `-b`/`--bg-subtractor`
@@ -57,6 +55,8 @@ DVR-Scan Changelog
 #### Known Issues
 
  * Variable framerate videos (VFR) are not fully supported, and will yield incorrect timestamps ([#20](https://github.com/Breakthrough/DVR-Scan/issues/20))
+ * Video output when using frame skip and `-m opencv` (default output mode) will result in frames missing from the exported videos ([#81](https://github.com/Breakthrough/DVR-Scan/issues/81), can use `-m ffmpeg` or `-m copy` as a workaround)
+ * Multiple input videos are not supported yet when using `-m ffmpeg` or `-m copy` ([#86](https://github.com/Breakthrough/DVR-Scan/issues/86))
 
 
 ## DVR-Scan 1.4
