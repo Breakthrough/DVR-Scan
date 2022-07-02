@@ -269,7 +269,7 @@ class LicenseAction(argparse.Action):
                  version=None,
                  dest=argparse.SUPPRESS,
                  default=argparse.SUPPRESS,
-                 help="show version number and license/copyright information"):
+                 help="show copyright information"):
         super(LicenseAction, self).__init__(
             option_strings=option_strings, dest=dest, default=default, nargs=0, help=help)
         self.version = version
@@ -282,7 +282,7 @@ class LicenseAction(argparse.Action):
 
 
 # pylint: disable=too-few-public-methods
-class AboutAction(argparse.Action):
+class VersionAction(argparse.Action):
     """argparse Action for displaying DVR-Scan version."""
 
     # pylint: disable=redefined-builtin, too-many-arguments
@@ -291,8 +291,8 @@ class AboutAction(argparse.Action):
                  version=None,
                  dest=argparse.SUPPRESS,
                  default=argparse.SUPPRESS,
-                 help="show version number and license/copyright information"):
-        super(AboutAction, self).__init__(
+                 help="show version number"):
+        super(VersionAction, self).__init__(
             option_strings=option_strings, dest=dest, default=default, nargs=0, help=help)
         self.version = version
 
@@ -325,14 +325,14 @@ def get_cli_parser(user_config: ConfigRegistry):
     parser.add_argument(
         '-v',
         '--version',
-        action=AboutAction,
+        action=VersionAction,
         version=VERSION_STRING,
     )
 
     parser.add_argument(
         '-L',
         '--license',
-        action=AboutAction,
+        action=LicenseAction,
         version=dvr_scan.get_license_info(),
     )
 
@@ -426,8 +426,8 @@ def get_cli_parser(user_config: ConfigRegistry):
     parser.add_argument(
         '-k',
         '--kernel-size',
-        metavar='N',
-        type=odd_int_type_check(3, None, 'N', True),
+        metavar='size',
+        type=odd_int_type_check(3, None, 'size', True),
         help=('Size in pixels of the noise reduction kernel. Must be an odd'
               ' integer greater than 1, or set to -1 to auto-set based on'
               ' input video resolution (default). If the kernel size is set too'
@@ -438,32 +438,32 @@ def get_cli_parser(user_config: ConfigRegistry):
     parser.add_argument(
         '-l',
         '--min-event-length',
-        metavar='T',
-        type=timecode_type_check('T'),
+        metavar='time',
+        type=timecode_type_check('time'),
         help=('Length of time that must contain motion before triggering a new event. Can be'
               ' specified as frames (123), seconds (12.3s), or timecode (00:00:01).%s' %
               user_config.get_help_string('detection', 'min-event-length')),
     )
 
     parser.add_argument(
+        '-tb',
+        '--time-before-event',
+        metavar='time',
+        type=timecode_type_check('time'),
+        help=('Maximum amount of time to include before each event. Can be specified as'
+              ' frames (123), seconds (12.3s), or timecode (00:00:01).%s' %
+              user_config.get_help_string('detection', 'time-before-event')),
+    )
+
+    parser.add_argument(
         '-tp',
         '--time-post-event',
-        metavar='T',
-        type=timecode_type_check('T'),
+        metavar='time',
+        type=timecode_type_check('time'),
         help=('Maximum amount of time to include after each event. The event will end once no'
               ' motion has been detected for this period of time. Can be specified as frames (123),'
               ' seconds (12.3s), or timecode (00:00:01).%s' %
               user_config.get_help_string('detection', 'time-post-event')),
-    )
-
-    parser.add_argument(
-        '-tb',
-        '--time-before-event',
-        metavar='T',
-        type=timecode_type_check('T'),
-        help=('Maximum amount of time to include before each event. Can be specified as'
-              ' frames (123), seconds (12.3s), or timecode (00:00:01).%s' %
-              user_config.get_help_string('detection', 'time-before-event')),
     )
 
     parser.add_argument(
