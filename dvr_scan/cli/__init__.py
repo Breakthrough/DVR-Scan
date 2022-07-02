@@ -33,10 +33,8 @@ Copyright (C) 2016-2022 Brandon Castellano
 # config file they are the same option. Therefore, we remove the scan only choice
 # from the -m/--mode selection in the CLI.
 SCAN_ONLY_MODE = 'scan_only'
-assert SCAN_ONLY_MODE in CHOICE_MAP['program']['output-mode']
-VALID_OUTPUT_MODES = [
-    mode for mode in CHOICE_MAP['program']['output-mode'] if mode != SCAN_ONLY_MODE
-]
+assert SCAN_ONLY_MODE in CHOICE_MAP['output-mode']
+VALID_OUTPUT_MODES = [mode for mode in CHOICE_MAP['output-mode'] if mode != SCAN_ONLY_MODE]
 
 
 def timecode_type_check(metavar: Optional[str] = None):
@@ -376,10 +374,9 @@ def get_cli_parser(user_config: ConfigRegistry):
         '--output-mode',
         metavar='mode',
         type=string_type_check(VALID_OUTPUT_MODES, False, 'mode'),
-        help=(
-            'Set mode for generating output files. Certain features may not work with '
-            ' all output modes. Must be one of: %s.%s' %
-            (', '.join(VALID_OUTPUT_MODES), user_config.get_help_string('program', 'output-mode'))),
+        help=('Set mode for generating output files. Certain features may not work with '
+              ' all output modes. Must be one of: %s.%s' %
+              (', '.join(VALID_OUTPUT_MODES), user_config.get_help_string('output-mode'))),
     )
 
     parser.add_argument(
@@ -407,7 +404,7 @@ def get_cli_parser(user_config: ConfigRegistry):
         type=string_type_check(['MOG', 'CNT', 'MOG_CUDA'], False, 'type'),
         help=('The type of background subtractor to use, must be one of: '
               ' MOG (default), CNT (parallel), MOG_CUDA (Nvidia GPU).%s') %
-        user_config.get_help_string('detection', 'bg-subtractor'),
+        user_config.get_help_string('bg-subtractor'),
     )
 
     parser.add_argument(
@@ -415,12 +412,11 @@ def get_cli_parser(user_config: ConfigRegistry):
         '--threshold',
         metavar='value',
         type=float_type_check(0.0, None, 'value'),
-        help=('Threshold value representing the amount of motion in a frame'
-              ' required to trigger a motion event. Lower values require'
-              ' less movement, and are more sensitive to motion. If the threshold'
-              ' is too high, some movement in the scene may not be detected,'
-              ' while too low of a threshold can trigger a false motion event.%s' %
-              (user_config.get_help_string('detection', 'threshold'))),
+        help=('Threshold representing amount of motion in a frame required to trigger'
+              ' motion events. Lower values are more sensitive to motion. If too high,'
+              ' some movement in the scene may not be detected, while too low of a'
+              ' threshold can result in false detections.%s' %
+              (user_config.get_help_string('threshold'))),
     )
 
     parser.add_argument(
@@ -432,7 +428,7 @@ def get_cli_parser(user_config: ConfigRegistry):
               ' integer greater than 1, or set to -1 to auto-set based on'
               ' input video resolution (default). If the kernel size is set too'
               ' large, some movement in the scene may not be detected.%s' %
-              (user_config.get_help_string('detection', 'kernel-size'))),
+              (user_config.get_help_string('kernel-size'))),
     )
 
     parser.add_argument(
@@ -442,7 +438,7 @@ def get_cli_parser(user_config: ConfigRegistry):
         type=timecode_type_check('time'),
         help=('Length of time that must contain motion before triggering a new event. Can be'
               ' specified as frames (123), seconds (12.3s), or timecode (00:00:01).%s' %
-              user_config.get_help_string('detection', 'min-event-length')),
+              user_config.get_help_string('min-event-length')),
     )
 
     parser.add_argument(
@@ -452,7 +448,7 @@ def get_cli_parser(user_config: ConfigRegistry):
         type=timecode_type_check('time'),
         help=('Maximum amount of time to include before each event. Can be specified as'
               ' frames (123), seconds (12.3s), or timecode (00:00:01).%s' %
-              user_config.get_help_string('detection', 'time-before-event')),
+              user_config.get_help_string('time-before-event')),
     )
 
     parser.add_argument(
@@ -463,7 +459,7 @@ def get_cli_parser(user_config: ConfigRegistry):
         help=('Maximum amount of time to include after each event. The event will end once no'
               ' motion has been detected for this period of time. Can be specified as frames (123),'
               ' seconds (12.3s), or timecode (00:00:01).%s' %
-              user_config.get_help_string('detection', 'time-post-event')),
+              user_config.get_help_string('time-post-event')),
     )
 
     parser.add_argument(
@@ -503,7 +499,7 @@ def get_cli_parser(user_config: ConfigRegistry):
         nargs='*',
         help=('Limit detection to specified region. Can specify as -roi to show popup window,'
               ' or specify the region in the form -roi x,y w,h (e.g. -roi 100 200 50 50)%s' %
-              (user_config.get_help_string('detection', 'region-of-interest', show_default=False))),
+              (user_config.get_help_string('region-of-interest', show_default=False))),
     )
 
     parser.add_argument(
@@ -517,7 +513,7 @@ def get_cli_parser(user_config: ConfigRegistry):
               ' of temporal smoothing can be specified in either frames (12345) or seconds (number'
               ' followed by s, e.g. 123s or 123.45s). If omitted, defaults to 0.1s. If set to 0,'
               ' smoothing is disabled.%s' %
-              (user_config.get_help_string('overlays', 'bounding-box', show_default=False))),
+              (user_config.get_help_string('bounding-box', show_default=False))),
     )
 
     parser.add_argument(
@@ -526,7 +522,7 @@ def get_cli_parser(user_config: ConfigRegistry):
         dest='draw_timecode',
         action='store_true',
         help=('Draw time code of each frame on the top left corner.%s' %
-              user_config.get_help_string('overlays', 'timecode', show_default=False)),
+              user_config.get_help_string('timecode', show_default=False)),
     )
 
     parser.add_argument(
@@ -547,7 +543,7 @@ def get_cli_parser(user_config: ConfigRegistry):
               ' improve performance. For example, if input video resolution'
               ' is 1024 x 400, and factor=2, each frame is reduced to'
               ' 1024/2 x 400/2=512 x 200 before processing.%s' %
-              (user_config.get_help_string('detection', 'downscale-factor'))),
+              (user_config.get_help_string('downscale-factor'))),
     )
 
     parser.add_argument(
@@ -560,7 +556,7 @@ def get_cli_parser(user_config: ConfigRegistry):
               ' and may increase probability of missing motion events.'
               ' If set, -l, -tb, and -tp will all be scaled relative to the source'
               ' framerate. Values above 1 or 2 are not recommended.%s' %
-              (user_config.get_help_string('detection', 'frame-skip'))),
+              (user_config.get_help_string('frame-skip'))),
     )
     parser.add_argument(
         '-q',
@@ -569,7 +565,7 @@ def get_cli_parser(user_config: ConfigRegistry):
         action='store_true',
         help=('Suppress all output except for final comma-separated list of motion events.'
               ' Useful for computing or piping output directly into other programs/scripts.%s' %
-              user_config.get_help_string('program', 'quiet-mode')),
+              user_config.get_help_string('quiet-mode')),
     )
 
     # Options that only take long-form.
@@ -578,11 +574,11 @@ def get_cli_parser(user_config: ConfigRegistry):
         '--codec',
         metavar='fourcc',
         dest='opencv_codec',
-        type=string_type_check(CHOICE_MAP['program']['opencv-codec'], False, 'fourcc'),
+        type=string_type_check(CHOICE_MAP['opencv-codec'], False, 'fourcc'),
         help=('The four-letter identifier of the encoder/video codec to use with OpenCV.'
               ' Prefer using `-m ffmpeg` with a config file instead. Must be one of: %s.%s' %
-              (', '.join(CHOICE_MAP['program']['opencv-codec']).upper(),
-               user_config.get_help_string('program', 'opencv-codec'))),
+              (', '.join(CHOICE_MAP['opencv-codec']).upper(),
+               user_config.get_help_string('opencv-codec'))),
     )
 
     parser.add_argument(
@@ -596,10 +592,9 @@ def get_cli_parser(user_config: ConfigRegistry):
     parser.add_argument(
         '--verbosity',
         metavar='type',
-        type=string_type_check(CHOICE_MAP['program']['verbosity'], False, 'type'),
+        type=string_type_check(CHOICE_MAP['verbosity'], False, 'type'),
         help=('Amount of verbosity to use for log output. Must be one of: %s.%s' %
-              (', '.join(CHOICE_MAP['program']['verbosity']),
-               user_config.get_help_string('program', 'verbosity'))),
+              (', '.join(CHOICE_MAP['verbosity']), user_config.get_help_string('verbosity'))),
     )
 
     # TODO(v1.5): Add -a/--ffmpeg-output-args to override encoder settings when -m=ffmpeg is used.
@@ -609,7 +604,7 @@ def get_cli_parser(user_config: ConfigRegistry):
     #    '--keep-temp-files',
     #    action='store_true',
     #    help=('Keep any temporary files the specified output mode generates.%s' %
-    #          user_config.get_help_string('program', 'keep-temp-files', show_default=False)),
+    #          user_config.get_help_string('keep-temp-files', show_default=False)),
     #)
 
     # TODO(v1.6): Add a mode that can dump frame scores (-s/--stats), and another mode

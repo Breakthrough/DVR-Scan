@@ -46,17 +46,17 @@ class ProgramSettings:
         arg_name = arg.replace('-', '_')
         return getattr(self._args, arg_name) if hasattr(self._args, arg_name) else None
 
-    def get(self, section: str, option: str) -> Any:
+    def get(self, option: str, arg: Optional[str] = None) -> Any:
         """Get setting based on following resolution order:
             1. Argument specified via command line.
             2. Option set in the active config file (either explicit with -c/--config, or
                the dvr-scan.cfg file in the user's settings folder).
             3. Default value specified in the config map (`dvr_scan.cli.config.CONFIG_MAP`).
         """
-        arg = self.get_arg(option)
-        if arg is not None:
-            return arg
-        return self._config.get_value(section=section, option=option)
+        arg_val = self.get_arg(option if arg is None else arg)
+        if arg_val is not None:
+            return arg_val
+        return self._config.get_value(option)
 
 
 def _preprocess_args(args):
@@ -102,10 +102,10 @@ def _init_dvr_scan() -> Optional[ProgramSettings]:
     try:
         # Try to load the user config file and parse the CLI arguments.
         user_config = ConfigRegistry()
-        verbosity = getattr(logging, user_config.get_value('program', 'verbosity').upper())
+        verbosity = getattr(logging, user_config.get_value('verbosity').upper())
         init_logger(
             log_level=verbosity,
-            show_stdout=not user_config.get_value('program', 'quiet-mode'),
+            show_stdout=not user_config.get_value('quiet-mode'),
         )
         args = get_cli_parser(user_config).parse_args()
 
@@ -181,7 +181,7 @@ def run_dvr_scan():
 
     # Validate that the specified motion detector is available on this system.
     try:
-        detector_type = settings.get('detection', 'bg-subtractor')
+        detector_type = settings.get('bg-subtractor')
         bg_subtractor = DetectorType[detector_type.upper()]
     except KeyError:
         logger.error('Error: Unknown background subtraction type: %s', detector_type)
@@ -199,8 +199,8 @@ def run_dvr_scan():
         # Create ScanContext using the
         sctx = ScanContext(
             input_videos=settings.get_arg('input'),
-            frame_skip=settings.get('detection', 'frame-skip'),
-            show_progress=not settings.get('program', 'quiet-mode'),
+            frame_skip=settings.get('frame-skip'),
+            show_progress=not settings.get('quiet-mode'),
         )
 
         # Set context properties based on CLI arguments.
@@ -210,34 +210,35 @@ def run_dvr_scan():
             mask_file=settings.get_arg('mask_output'),
             output_mode=(OutputMode.SCAN_ONLY if settings.get_arg('scan_only') else settings.get(
                 'program', 'output-mode')),
-            opencv_fourcc=settings.get('program', 'opencv-codec'),
-            ffmpeg_output_args=settings.get('program', 'ffmpeg-output-args'),
-            output_dir=settings.get('program', 'output-dir'),
+            opencv_fourcc=settings.get('opencv-codec'),
+            ffmpeg_output_args=settings.get('ffmpeg-output-args'),
+            output_dir=settings.get('output-dir'),
         )
 
         timecode_overlay = None
-        if settings.get_arg('draw-timecode') or settings.get('overlays', 'timecode'):
+        if settings.get_arg('draw-timecode') or settings.get('timecode'):
             timecode_overlay = TextOverlay(
-                font_scale=settings.get('overlays', 'timecode-font-scale'),
-                margin=settings.get('overlays', 'timecode-margin'),
-                thickness=settings.get('overlays', 'timecode-font-thickness'),
-                color=settings.get('overlays', 'timecode-font-color'),
-                bg_color=settings.get('overlays', 'timecode-bg-color'),
+                font_scale=settings.get('timecode-font-scale'),
+                margin=settings.get('timecode-margin'),
+                thickness=settings.get('timecode-font-thickness'),
+                color=settings.get('timecode-font-color'),
+                bg_color=settings.get('timecode-bg-color'),
             )
 
         bounding_box = None
-        # None if -bb was not set, False if -bb was provided without any args, otherwise smooth time.
+        # bounding_box_arg will be None if -bb was not set, False if -bb was set without any args,
+        # otherwise it represents the desired smooth time.
         bounding_box_arg = settings.get_arg('bounding-box')
-        if bounding_box_arg is not None or settings.get('overlays', 'bounding-box'):
+        if bounding_box_arg is not None or settings.get('bounding-box'):
             if bounding_box_arg is not None and bounding_box_arg is not False:
-                smoothing_time = FrameTimecode(settings.get_arg('bounding-box'), sctx.framerate)
+                smoothing_time = FrameTimecode(bounding_box_arg, sctx.framerate)
             else:
                 smoothing_time = FrameTimecode(
-                    settings.get('overlays', 'bounding-box-smooth-time'), sctx.framerate)
+                    settings.get('bounding-box-smooth-time'), sctx.framerate)
             bounding_box = BoundingBoxOverlay(
-                min_size_ratio=settings.get('overlays', 'bounding-box-min-size'),
-                thickness_ratio=settings.get('overlays', 'bounding-box-thickness'),
-                color=settings.get('overlays', 'bounding-box-color'),
+                min_size_ratio=settings.get('bounding-box-min-size'),
+                thickness_ratio=settings.get('bounding-box-thickness'),
+                color=settings.get('bounding-box-color'),
                 smoothing=smoothing_time.frame_num,
             )
 
@@ -247,16 +248,16 @@ def run_dvr_scan():
         )
 
         sctx.set_detection_params(
-            threshold=settings.get('detection', 'threshold'),
-            kernel_size=settings.get('detection', 'kernel-size'),
-            downscale_factor=settings.get('detection', 'downscale-factor'),
-            roi=settings.get('detection', 'region-of-interest'),
+            threshold=settings.get('threshold'),
+            kernel_size=settings.get('kernel-size'),
+            downscale_factor=settings.get('downscale-factor'),
+            roi=settings.get('region-of-interest'),
         )
 
         sctx.set_event_params(
-            min_event_len=settings.get('detection', 'min-event-length'),
-            time_pre_event=settings.get('detection', 'time-before-event'),
-            time_post_event=settings.get('detection', 'time-post-event'),
+            min_event_len=settings.get('min-event-length'),
+            time_pre_event=settings.get('time-before-event'),
+            time_post_event=settings.get('time-post-event'),
         )
 
         sctx.set_video_time(

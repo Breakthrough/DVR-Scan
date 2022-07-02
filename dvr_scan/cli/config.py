@@ -12,7 +12,7 @@
 #
 """``dvr_scan.cli.config`` Module
 
-Handles loading configuration files from disk and validating each section. Only validation
+Handles loading configuration files from disk and validating each setting. Only validation
 of the config file schema and data types are performed. Constants/defaults are also defined
 here where possible and re-used by the CLI so that there is one source of truth.
 """
@@ -21,7 +21,7 @@ from abc import ABC, abstractmethod
 import logging
 import os
 import os.path
-from configparser import ConfigParser, ParsingError
+from configparser import ConfigParser, ParsingError, DEFAULTSECT
 from typing import Any, AnyStr, Dict, List, Optional, Tuple, Union
 
 from platformdirs import user_config_dir
@@ -278,7 +278,7 @@ class RGBValue(ValidatedValue):
 
 
 ConfigValue = Union[bool, int, float, str]
-ConfigDict = Dict[str, Dict[str, ConfigValue]]
+ConfigDict = Dict[str, ConfigValue]
 
 _CONFIG_FILE_NAME: AnyStr = 'dvr-scan.cfg'
 _CONFIG_FILE_DIR: AnyStr = user_config_dir("DVR-Scan", False)
@@ -286,53 +286,48 @@ _CONFIG_FILE_DIR: AnyStr = user_config_dir("DVR-Scan", False)
 USER_CONFIG_FILE_PATH: AnyStr = os.path.join(_CONFIG_FILE_DIR, _CONFIG_FILE_NAME)
 
 CONFIG_MAP: ConfigDict = {
-    'program': {
-        'ffmpeg-output-args': DEFAULT_FFMPEG_OUTPUT_ARGS,
-        'opencv-codec': 'XVID',
-        'output-dir': '',
-        'output-mode': 'opencv',
-        'quiet-mode': False,
-        'verbosity': 'info',
-    },
-    'detection': {
-        'bg-subtractor': 'MOG',
-        'downscale-factor': 0,
-        'frame-skip': 0,
-        'kernel-size': KernelSizeValue(),
-        'min-event-length': TimecodeValue(2),
-        'region-of-interest': ROIValue(),
-        'threshold': 0.15,
-        'time-before-event': TimecodeValue('1.5s'),
-        'time-post-event': TimecodeValue('2.0s'),
-    },
-    'overlays': {
-        'timecode': False,
-        'timecode-margin': 5,
-        'timecode-font-scale': 1.0,
-        'timecode-font-thickness': 2,
-        'timecode-font-color': RGBValue(0xFFFFFF),
-        'timecode-bg-color': RGBValue(0x000000),
-        'bounding-box': False,
-        'bounding-box-smooth-time': TimecodeValue('0.1s'),
-        'bounding-box-color': RGBValue(0xFF0000),
-        'bounding-box-thickness': 0.0032,
-        'bounding-box-min-size': 0.032,
-    },
+                                                         # General Options
+    'quiet-mode': False,
+    'verbosity': 'info',
+                                                         # Input/Output
+    'output-dir': '',
+    'output-mode': 'opencv',
+    'ffmpeg-output-args': DEFAULT_FFMPEG_OUTPUT_ARGS,
+    'opencv-codec': 'XVID',
+                                                         # Motion Events
+    'min-event-length': TimecodeValue(2),
+    'time-before-event': TimecodeValue('1.5s'),
+    'time-post-event': TimecodeValue('2.0s'),
+                                                         # Detection Parameters
+    'bg-subtractor': 'MOG',
+    'threshold': 0.15,
+    'kernel-size': KernelSizeValue(),
+    'downscale-factor': 0,
+    'region-of-interest': ROIValue(),
+    'frame-skip': 0,
+                                                         # Overlays
+    'timecode': False,
+    'timecode-margin': 5,
+    'timecode-font-scale': 1.0,
+    'timecode-font-thickness': 2,
+    'timecode-font-color': RGBValue(0xFFFFFF),
+    'timecode-bg-color': RGBValue(0x000000),
+    'bounding-box': False,
+    'bounding-box-smooth-time': TimecodeValue('0.1s'),
+    'bounding-box-color': RGBValue(0xFF0000),
+    'bounding-box-thickness': 0.0032,
+    'bounding-box-min-size': 0.032,
 }
 """Mapping of valid configuration file parameters and their default values or placeholders.
 The types of these values are used when decoding the configuration file. Valid choices for
 certain string options are stored in `CHOICE_MAP`."""
 
 # TODO: This should be a validator.
-CHOICE_MAP: Dict[str, Dict[str, List[str]]] = {
-    'program': {
-        'opencv-codec': ['XVID', 'MP4V', 'MP42', 'H264'],
-        'output-mode': ['scan_only', 'opencv', 'copy', 'ffmpeg'],
-        'verbosity': ['debug', 'info', 'warning', 'error'],
-    },
-    'detection': {
-        'bg-subtractor': ['MOG', 'CNT', 'MOG_CUDA'],
-    },
+CHOICE_MAP: Dict[str, List[str]] = {
+    'opencv-codec': ['XVID', 'MP4V', 'MP42', 'H264'],
+    'output-mode': ['scan_only', 'opencv', 'copy', 'ffmpeg'],
+    'verbosity': ['debug', 'info', 'warning', 'error'],
+    'bg-subtractor': ['MOG', 'CNT', 'MOG_CUDA'],
 }
 """Mapping of string options which can only be of a particular set of values. We use a list instead
 of a set to preserve order when generating error contexts. Values are case-insensitive, and must be
@@ -340,19 +335,15 @@ in lowercase in this map."""
 
 
 def _validate_structure(config: ConfigParser) -> List[str]:
-    """Validates the layout of the section/option mapping.
+    """Validates the layout of the option mapping.
 
     Returns:
         List of any parsing errors in human-readable form.
     """
     errors: List[str] = []
-    for section in config.sections():
-        if not section in CONFIG_MAP.keys():
-            errors.append('Unsupported config section: [%s]' % (section))
-            continue
-        for (option_name, _) in config.items(section):
-            if not option_name in CONFIG_MAP[section].keys():
-                errors.append('Unsupported config option in [%s]: %s' % (section, option_name))
+    for (option_name, _) in config.items(DEFAULTSECT):
+        if not option_name in CONFIG_MAP:
+            errors.append('Unsupported config option: %s' % (option_name))
     return errors
 
 
@@ -364,56 +355,61 @@ def _parse_config(config: ConfigParser) -> Tuple[ConfigDict, List[str]]:
     """
     out_map: ConfigDict = {}
     errors: List[str] = []
-    for section in CONFIG_MAP:
-        out_map[section] = {}
-        for option in CONFIG_MAP[section]:
-            if section in config and option in config[section]:
+    sections = config.sections()
+    if sections:
+        errors.append(
+            'Invalid config file: must not contain any sections, found:\n  %s' %
+            (', '.join(['[%s]' % section for section in sections if section != DEFAULTSECT])))
+        return out_map, errors
+
+    for option in CONFIG_MAP:
+        if option in config[DEFAULTSECT]:
+            try:
+                value_type = None
+                if isinstance(CONFIG_MAP[option], bool):
+                    value_type = 'yes/no value'
+                    out_map[option] = config.getboolean(DEFAULTSECT, option)
+                    continue
+                elif isinstance(CONFIG_MAP[option], int):
+                    value_type = 'integer'
+                    out_map[option] = config.getint(DEFAULTSECT, option)
+                    continue
+                elif isinstance(CONFIG_MAP[option], float):
+                    value_type = 'number'
+                    out_map[option] = config.getfloat(DEFAULTSECT, option)
+                    continue
+            except ValueError as _:
+                errors.append('Invalid setting for %s:\n  %s\nValue is not a valid %s.' %
+                              (option, config.get(DEFAULTSECT, option), value_type))
+                continue
+
+            # Handle custom validation types.
+            config_value = config.get(DEFAULTSECT, option)
+            default = CONFIG_MAP[option]
+            option_type = type(default)
+            if issubclass(option_type, ValidatedValue):
                 try:
-                    value_type = None
-                    if isinstance(CONFIG_MAP[section][option], bool):
-                        value_type = 'yes/no value'
-                        out_map[section][option] = config.getboolean(section, option)
-                        continue
-                    elif isinstance(CONFIG_MAP[section][option], int):
-                        value_type = 'integer'
-                        out_map[section][option] = config.getint(section, option)
-                        continue
-                    elif isinstance(CONFIG_MAP[section][option], float):
-                        value_type = 'number'
-                        out_map[section][option] = config.getfloat(section, option)
-                        continue
-                except ValueError as _:
-                    errors.append('Invalid config for [%s] %s:\n  %s\nValue is not a valid %s.' %
-                                  (section, option, config.get(section, option), value_type))
-                    continue
+                    out_map[option] = option_type.from_config(
+                        config_value=config_value, default=default)
+                except OptionParseFailure as ex:
+                    errors.append('Invalid setting for %s:\n  %s\n%s' %
+                                  (option, config_value, ex.error))
+                continue
 
-                # Handle custom validation types.
-                config_value = config.get(section, option)
-                default = CONFIG_MAP[section][option]
-                option_type = type(default)
-                if issubclass(option_type, ValidatedValue):
-                    try:
-                        out_map[section][option] = option_type.from_config(
-                            config_value=config_value, default=default)
-                    except OptionParseFailure as ex:
-                        errors.append('Invalid config for [%s] %s:\n  %s\n%s' %
-                                      (section, option, config_value, ex.error))
-                    continue
-
-                # If we didn't process the value as a given type, handle it as a string. We also
-                # replace newlines with spaces, and strip any remaining leading/trailing whitespace.
-                if value_type is None:
-                    config_value = config.get(section, option).replace('\n', ' ').strip()
-                    if section in CHOICE_MAP and option in CHOICE_MAP[section]:
-                        if config_value.lower() not in [
-                                choice.lower() for choice in CHOICE_MAP[section][option]
-                        ]:
-                            errors.append('Invalid config for [%s] %s:\n  %s\nMust be one of: %s.' %
-                                          (section, option, config.get(section, option), ', '.join(
-                                              choice for choice in CHOICE_MAP[section][option])))
-                            continue
-                    out_map[section][option] = config_value
-                    continue
+            # If we didn't process the value as a given type, handle it as a string. We also
+            # replace newlines with spaces, and strip any remaining leading/trailing whitespace.
+            if value_type is None:
+                config_value = config.get(DEFAULTSECT, option).replace('\n', ' ').strip()
+                if option in CHOICE_MAP:
+                    if config_value.lower() not in [
+                            choice.lower() for choice in CHOICE_MAP[option]
+                    ]:
+                        errors.append('Invalid setting for %s:\n  %s\nMust be one of: %s.' %
+                                      (option, config.get(DEFAULTSECT, option), ', '.join(
+                                          choice for choice in CHOICE_MAP[option])))
+                        continue
+                out_map[option] = config_value
+                continue
 
     return (out_map, errors)
 
@@ -445,7 +441,7 @@ class ConfigRegistry:
 
     @property
     def config_dict(self) -> ConfigDict:
-        """Current configuration options that are set for each section."""
+        """Current configuration options that are set for each setting."""
         return self._config
 
     def get_init_log(self):
@@ -474,15 +470,14 @@ class ConfigRegistry:
         # Try to load and parse the config file at `path`.
         config = ConfigParser()
         try:
-            result = config.read(path)
+            config_file_contents = '[%s]\n%s' % (DEFAULTSECT, open(path, 'r').read())
+            config.read_string(config_file_contents, source=path)
         except ParsingError as ex:
             raise ConfigLoadFailure(self._init_log, reason=ex)
-        if not result:
-            error_msg = "Failed to load config file. Check that the file is valid, and can be read."
-            self._init_log.append((logging.ERROR, error_msg))
-            raise ConfigLoadFailure(self._init_log)
+        except OSError as ex:
+            raise ConfigLoadFailure(self._init_log, reason=ex)
         # At this point the config file syntax is correct, but we need to still validate
-        # the parsed options (i.e. that the sections or options have valid values).
+        # the parsed options (i.e. that the options have valid values).
         errors = _validate_structure(config)
         if not errors:
             self._config, errors = _parse_config(config)
@@ -491,50 +486,45 @@ class ConfigRegistry:
                 self._init_log.append((logging.ERROR, log_str))
             raise ConfigLoadFailure(self._init_log)
 
-    def is_default(self, section: str, option: str) -> bool:
+    def is_default(self, option: str) -> bool:
         """True if the option is default, i.e. is NOT set by the user."""
-        return not (section in self._config and option in self._config[section])
+        return not option in self._config
 
     def get_value(self,
-                  section: str,
                   option: str,
                   override: Optional[ConfigValue] = None,
                   ignore_default: bool = False) -> ConfigValue:
-        """Get the current setting or default value of the specified section option."""
-        assert section in CONFIG_MAP and option in CONFIG_MAP[section]
+        """Get the current setting or default value of the specified option."""
+        assert option in CONFIG_MAP
         if override is not None:
             return override
-        if section in self._config and option in self._config[section]:
-            value = self._config[section][option]
+        if option in self._config:
+            value = self._config[option]
         else:
-            value = CONFIG_MAP[section][option]
+            value = CONFIG_MAP[option]
             if ignore_default:
                 return None
         if issubclass(type(value), ValidatedValue):
             return value.value # Extract validated value.
         return value
 
-    def get_help_string(self,
-                        section: str,
-                        option: str,
-                        show_default: Optional[bool] = None) -> str:
+    def get_help_string(self, option: str, show_default: Optional[bool] = None) -> str:
         """Get string for help text including the option's value, if set, otherwise the default.
 
         Arguments:
-            section: A section name or, "global" for global options.
-            option: Command-line option to set within `section`.
+            option: Command-line option whose name matches an entry in CONFIG_MAP.
             show_default: Always show default value. If None, only shows default value
                 if the type is not a flag (boolean). It will still be displayed if set.
         """
-        assert section in CONFIG_MAP and option in CONFIG_MAP[section]
-        is_flag = isinstance(CONFIG_MAP[section][option], bool)
-        if section in self._config and option in self._config[section]:
+        assert option in CONFIG_MAP
+        is_flag = isinstance(CONFIG_MAP[option], bool)
+        if option in self._config:
             if is_flag:
-                value_str = 'on' if self._config[section][option] else 'off'
+                value_str = 'on' if self._config[option] else 'off'
             else:
-                value_str = str(self._config[section][option])
+                value_str = str(self._config[option])
             return ' [setting: %s]' % (value_str)
         if show_default is False or (show_default is None and is_flag
-                                     and CONFIG_MAP[section][option] is False):
+                                     and CONFIG_MAP[option] is False):
             return ''
-        return ' [default: %s]' % (str(CONFIG_MAP[section][option]))
+        return ' [default: %s]' % (str(CONFIG_MAP[option]))
