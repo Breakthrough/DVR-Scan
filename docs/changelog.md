@@ -11,7 +11,7 @@ DVR-Scan Changelog
  * Significant performance improvements on multicore systems
  * Support wildcards/globs as inputs for scanning entire folders (`-i folder/*.mp4`)
  * Allow use of ffmpeg for better output quality (`-m ffmpeg`) or codec-copying mode (`-m copy`)
- * Configuration files are now supported, see documentation for details (TODO(v1.5))
+ * Configuration files are now supported, [see documentation for details](https://dvr-scan.readthedocs.io/en/v1.5/guide/config_file/)
      * Can specify config file path with `-c`/`--config`, or create a `dvr-scan.cfg` file in your user config folder
  * Experimental CUDA support has been added (set `-b mog_cuda`), requires manual installation of OpenCV compiled with CUDA support
  * The new minimum supported Python version is 3.7,
