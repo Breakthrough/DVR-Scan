@@ -604,6 +604,7 @@ class ScanContext(object):
             encode_thread.start()
 
         while not self._stop.is_set():
+            # Keep polling decode queue until it's empty (signaled via None).
             frame: Optional[DecodeEvent] = decode_queue.get()
             if frame is None:
                 break
@@ -636,7 +637,7 @@ class ScanContext(object):
                     self._bounding_box.update(motion_mask)
                     if above_threshold else self._bounding_box.clear())
 
-            if self._mask_file:
+            if self._mask_file and not self._stop.is_set():
                 encode_queue.put(MaskEvent(motion_mask=motion_mask,))
 
             # Last frame was part of a motion event, or still within the post-event window.
@@ -701,6 +702,12 @@ class ScanContext(object):
                     # Send buffered frames to encode thread.
                     if self._output_mode == OutputMode.OPENCV:
                         for encode_frame in buffered_frames:
+                            # We have to be careful here. Since we're putting multiple items
+                            # into the queue, we have to keep making sure the encode thread
+                            # is running. Otherwise, the queue will never empty we will block
+                            # indefinitely here waiting for a spot.
+                            if self._stop.is_set():
+                                break
                             encode_queue.put(encode_frame)
                         buffered_frames = []
 
@@ -722,6 +729,7 @@ class ScanContext(object):
         # Unblock any remaining puts, wait for decode thread to finish, and re-raise any exceptions.
         while not decode_queue.empty():
             _ = decode_queue.get_nowait()
+
         decode_thread.join()
         if self._decode_thread_exception is not None:
             raise self._decode_thread_exception[1].with_traceback(self._decode_thread_exception[2])
@@ -797,11 +805,13 @@ class ScanContext(object):
                 # first frame has a frame_num of 1), so we correct that for presentation time.
                 presentation_time = FrameTimecode(
                     timecode=self._curr_pos.frame_num - 1, fps=self._video_fps)
-                decode_queue.put(DecodeEvent(frame_rgb, presentation_time))
+                if not self._stop.is_set():
+                    decode_queue.put(DecodeEvent(frame_rgb, presentation_time))
 
         # We'll re-raise any exceptions from the main thread.
         # pylint: disable=bare-except
         except:
+            self._stop.set()
             logger.critical('Fatal error: Exception raised in decode thread.')
             logger.debug(sys.exc_info())
             self._decode_thread_exception = sys.exc_info()
@@ -889,18 +899,17 @@ class ScanContext(object):
                         self._logger.debug("Ffmpeg exited with code: %d", exit_code)
 
         # We'll re-raise any exceptions from the main thread.
-        # TODO: Need to properly signal failures, right now the program hangs when this happens.
         # pylint: disable=bare-except
         except:
+            self._stop.set()
             logger.critical('Fatal error: Exception raised in encode thread.')
             logger.debug(sys.exc_info())
             self._encode_thread_exception = sys.exc_info()
-            raise
         finally:
             if video_writer is not None:
                 video_writer.release()
             if mask_writer is not None:
                 mask_writer.release()
-            # Make sure we unblock any waiting puts.
+            # Unblock any waiting puts if we stopped early.
             while not encode_queue.empty():
                 _ = encode_queue.get_nowait()
