@@ -9,7 +9,11 @@ This FAQ is a supplement to the user guide, and is intended to help solve the mo
 
 ### How can I scan all files in a folder?
 
-[See this comment](https://github.com/Breakthrough/DVR-Scan/issues/5#issuecomment-599140476) for how to run DVR-Scan on all files in a folder. You can use [a similar for loop in bash](https://github.com/Breakthrough/DVR-Scan/issues/5#issuecomment-633199185).
+You can use a wildcard in the input path to select multiple videos:
+
+    dvr-scan -i folder/*.mp4
+
+Note that multiple input videos are not supported when `-m`/`--mode` is set to `ffmpeg` or `copy`.
 
 
 ----------------------------------------------------------
@@ -17,7 +21,7 @@ This FAQ is a supplement to the user guide, and is intended to help solve the mo
 
 ### How can I improve the performance of DVR-Scan?
 
-On the Getting Started & Examples page, see the [Performance section](examples.md#performance) under Motion Detection Parameters.  Additional performance improvements are being worked on for future versions (parallel processing, utilization of GPU, etc...).
+Adjusting [motion detection parameters](options.md#detection-parameters) can have a large effect on performance. Setting the output mode `-m`/`--mode` to either `ffmpeg` or `copy` can also improve performance compared to the default (`opencv`).
 
 
 ----------------------------------------------------------
@@ -25,11 +29,17 @@ On the Getting Started & Examples page, see the [Performance section](examples.m
 
 ### How can I join/concatenate two or more video files for processing?
 
-If you have a series of video clips from the same source, you can append subsequent video clips to the DVR-Scan input by including another `-i` flag for each file.  For example, to process three videos sequentially:
+If you have a series of video clips from the same source, you can append subsequent video clips to the DVR-Scan input by including multiple files after `-i`.  For example:
 
-    dvr-scan -i first_video.mp4 -i second_video.mp4 -i third_video.mp4
+    dvr-scan -i video0000.mp4 video0001.mp4 video0002.mp4
 
-The videos are processed in the same order as they appear in the command.  Note that each clip specified by `-i` must have the same resolution and framerate.
+You can also use wildcards in the input path:
+
+    dvr-scan -i video*.mp4
+
+Each video **must** have the same resolution and framerate. Videos are processed in the same order as they appear in the command, and extracted events will use the first video's filename as a template.
+
+Multiple input videos are not supported when output mode `-m`/`--mode` is set to either `ffmpeg` or `copy`.
 
 
 ----------------------------------------------------------
@@ -37,9 +47,9 @@ The videos are processed in the same order as they appear in the command.  Note 
 
 ### How can I fix a video that's corrupted, shows the wrong duration, or won't let me seek/fast-forward?
 
-Video files with corrupted/malformed headers can sometimes be fixed by re-muxing them into a new container.  One tool you can use for this is `mkvtoolnix` (cross platform), using `mkvmerge` or the GUI to add the video and save it into a new `.mkv` file.
+Video files with corrupted/malformed headers can sometimes be fixed by re-muxing them into a new container.  This can be done using either `ffmpeg` or `mkvmerge` (both tools support codec copying mode).
 
-If all is successful, the output video should be roughly the same size as the original, and playback fine in most media players.  Specifically, it should also report the video's length accurately, and allow seeking throughout the video.
+If the process is successful, the output video should be roughly the same size as the original, and playback fine in most media players.  Specifically, it should also report the video's length accurately, and allow seeking throughout the video.
 
 
 ----------------------------------------------------------
@@ -67,7 +77,7 @@ The most important thing to keep in mind is the `-v` flag, which specifies the l
 
 ### What if my video is larger than my monitor resolution?
 
-As of DVR-Scan v1.4, you can either manually specify the max width/height (e.g. `-roi 1920 1080`), or if the `screeninfo` package is installed, the window will be sized to the minimum monitor size.
+As of DVR-Scan v1.4, you can either manually specify the max width/height when using the `-roi` option (e.g. `-roi 1920 1080`).  Additionally, if using a Windows build, or if the `screeninfo` package is installed, the window will be sized to fit within the smallest monitor automatically.
 
 
 ----------------------------------------------------------

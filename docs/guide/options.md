@@ -50,7 +50,7 @@ This page lists all DVR-Scan command line options grouped by functionality. Note
 
 All time values can be given as a timecode (`HH:MM:SS` or `HH:MM:SS.nnn`), in seconds as a number followed by `s` (`123s` or `123.45s`), or as number of frames (e.g. `1234`).
 
- * `-l time`, `--min-event-length time`: Length of time that must contain motion before triggering a new event.
+ * `-l time`, `--min-event-length time`: Amount of time/frames that must have a motion score above the threshold setting before triggering a new event.
 
  * `-tb time`, `--time-before-event time`: Maximum amount of time to include before each event.
 
@@ -64,9 +64,9 @@ All time values can be given as a timecode (`HH:MM:SS` or `HH:MM:SS.nnn`), in se
     * `MOG_CUDA`: [Nvidia CUDA-based version of MOG2](https://docs.opencv.org/3.4/df/d23/classcv_1_1cuda_1_1BackgroundSubtractorMOG2.html).
     * `CNT`: [CNT Background Subtractor](https://docs.opencv.org/3.4/de/dca/classcv_1_1bgsegm_1_1BackgroundSubtractorCNT.html), faster than `MOG` but uses different method, so may need to adjust threshold/kernel size.
 
- * `-t value`, `--threshold value`: Threshold value representing the minimum amount of motion in a frame for it to be considered as an event. Lower values are more sensitive to motion, requiring less movement. If the threshold is too high, some movement in the scene may not be detected, while too low of a threshold can trigger false detections.
+ * `-t value`, `--threshold value`: Threshold representing the minimum amount of motion a frame must have to trigger an event. Lower values are more sensitive to motion, requiring less movement. If the threshold is too high, some movement in the scene may not be detected, while too low of a threshold can trigger false detections.
 
- * `-k size`, `--kernel-size size`: Size in pixels of the noise reduction kernel. Must be an odd integer greater than 1, or set to -1 to auto-set based on input video resolution (default). If the kernel size is set too large, some movement in the  scene may not be detected.
+ * `-k size`, `--kernel-size size`: Size in pixels of the noise reduction kernel. Must be an odd integer at least 3 or greater. Can also be -1 to auto-set based on input video resolution (default). If kernel size is too large, some movement in the scene may not be detected.
 
 When modifying these parameters, it can be useful to generate a motion mask (`-m`/`--mask-output`) to verify what DVR-Scan calculates internally when looking for motion events.
 
