@@ -18,8 +18,8 @@ The following options control terminal output:
 
  * `-q`, `--quiet`: Suppress all console output except for final cutting list.
 
- * `--verbosity`: Set verbosity of output messages, must be one of: `debug`, `info`, `warning`, `error`.
-<br/>Default: `--verbosity info`
+ * `--verbosity`: Set verbosity of output messages, must be one of: (`debug`, `info`, `warning`, `error`).
+<br/>*Default*: `--verbosity info`
 
 
 ### Input/Output
@@ -33,11 +33,11 @@ The following options control terminal output:
  * `-d path`, `--output-dir path`: Write all output files to `path`. If not specified, files are written in the working directory.
  <br/><br/>
 
- * `-m mode`, `--output-mode mode`: Mode to use for saving motion events. Output modes can be customized using a [config file](config_file.md#inputoutput). Current modes include:
+ * `-m mode`, `--output-mode mode`: Mode to use for saving motion events. Must be one of:
 
-    * `opencv` (default): Use OpenCV for saving motion events. Requires outputs to be in .AVI format. Can be configured using the `ffmpeg-output-args` setting in a [config file](config_file.md#inputoutput).
+    * `opencv` (*default*): Use OpenCV for saving motion events. Requires output to be in .AVI format.
 
-    * `ffmpeg`: Use ffmpeg for saving motion events. Ffmpeg encoder args can be set using the `ffmpeg-output-args` [config file option](config_file.md#inputoutput). Does not work with overlays.
+    * `ffmpeg`: Use ffmpeg for saving motion events. Ffmpeg encoder args can be set using a [config file](config_file.md#inputoutput) (option: *ffmpeg-output-args*). Does not work with overlays.
 
     * `copy`: Same as `ffmpeg`, but using stream copying mode (no reencoding). Can potentially create inaccurate events due to keyframe placement.
     <br/><br/>
@@ -71,15 +71,15 @@ For example, to scan the input between 1m30s and 2m:
 All time values can be given as a timecode (`HH:MM:SS` or `HH:MM:SS.nnn`), in seconds as a number followed by `s` (`123s` or `123.45s`), or as number of frames (e.g. `1234`).
 
  * `-l time`, `--min-event-length time`: Amount of time/frames that must have a motion score above the threshold setting before triggering a new event.
-<br/>Default: `--min-event-length 2`
+<br/>*Default*: `--min-event-length 2`
 <br/><br/>
 
  * `-tb time`, `--time-before-event time`: Maximum amount of time to include before each event.
-<br/>Default: `--time-before-event 1.5s`
+<br/>*Default*: `--time-before-event 1.5s`
 <br/><br/>
 
  * `-tp time`, `--time-post-event time`: Maximum amount of time to include after each event. The event will end once no motion has been detected for this period of time.
-<br/>Default: `--time-post-event time 2.0s`
+<br/>*Default*: `--time-post-event time 2.0s`
 
 For example, to save 30 seconds before or after any frame that exceeds the threshold:
 
@@ -92,7 +92,7 @@ When modifying these parameters, it can be useful to generate a motion mask (`-m
 
  * `-b type`, `--bg-subtractor type`: The type of background subtractor to use. Must be one of:
 
-    * `MOG` (default): [MOG2 Background Subtractor](https://docs.opencv.org/3.4/d7/d7b/classcv_1_1BackgroundSubtractorMOG2.html).
+    * `MOG` (*default*): [MOG2 Background Subtractor](https://docs.opencv.org/3.4/d7/d7b/classcv_1_1BackgroundSubtractorMOG2.html).
 
     * `MOG_CUDA`: [Nvidia CUDA-based version of MOG2](https://docs.opencv.org/3.4/df/d23/classcv_1_1cuda_1_1BackgroundSubtractorMOG2.html).
 
@@ -100,11 +100,11 @@ When modifying these parameters, it can be useful to generate a motion mask (`-m
     <br/><br/>
 
  * `-t value`, `--threshold value`: Threshold representing the minimum amount of motion a frame must have to trigger an event. Lower values are more sensitive to motion, requiring less movement. If the threshold is too high, some movement in the scene may not be detected, while too low of a threshold can trigger false detections. May need to be adjusted when modifying other parameters (e.g. `bg-subtractor` or `kernel-size`).
-<br/>Default: `--threshold 0.15`
+<br/>*Default*: `--threshold 0.15`
 <br/><br/>
 
  * `-k size`, `--kernel-size size`: Size in pixels of the noise reduction kernel. Must be an odd integer at least 3 or greater. Can also be -1 to auto-set based on input video resolution (default). If kernel size is too large, some movement in the scene may not be detected. Default values: 7 for 1080p or greater, 5 for 720p, 3 for 480p.
-<br/>Default: `--kernel-size -1`
+<br/>*Default*: `--kernel-size -1`
 
 Detection can be limited to a smaller region of the frame using the `-roi`/`--region-of-interest` flag:
 
@@ -118,7 +118,7 @@ The following options can improve performance, but may reduce detection accuracy
 <br/><br/>
 
  * `-fs num_frames`, `--frame-skip num_frames`: Number of frames to skip after processing a given frame. Improves performance, at expense of frame and time accuracy, and may increase probability of missing motion events. If set, `-l`/`--min-event-length`, `-tb`/`--time-before-event`, and `-tp`/`--time-post-event` will all be scaled relative to the source framerate. Values above 1 or 2 are not recommended.
-<br/><br/>When using the default output mode (`opencv`), skipped frames are not included. Set `-m`/`--mode` to `ffmpeg` or `copy` to include all frames from the input video when writing motion events to disk.
+<br/><br/>When using the default output mode (`opencv`), skipped frames are not included. Set `-m`/`--output-mode` to `ffmpeg` or `copy` to include all frames from the input video when writing motion events to disk.
 <br/><br/>Although adjusted for frame skipping, bounding box smoothing may be inconsistent when using frame skipping. Set `-bb 0` to disable smoothing.
 
 ### Overlays

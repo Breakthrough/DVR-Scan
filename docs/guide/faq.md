@@ -13,7 +13,7 @@ You can use a wildcard in the input path to select multiple videos:
 
     dvr-scan -i folder/*.mp4
 
-Note that multiple input videos are not supported when `-m`/`--mode` is set to `ffmpeg` or `copy`.
+Note that multiple input videos are not supported when `-m`/`--output-mode` is set to `ffmpeg` or `copy`.
 
 
 ----------------------------------------------------------
@@ -21,7 +21,7 @@ Note that multiple input videos are not supported when `-m`/`--mode` is set to `
 
 ### How can I improve the performance of DVR-Scan?
 
-Adjusting [motion detection parameters](options.md#detection-parameters) can have a large effect on performance. Setting the output mode `-m`/`--mode` to either `ffmpeg` or `copy` can also improve performance compared to the default (`opencv`).
+Adjusting [motion detection parameters](options.md#detection-parameters) can have a large effect on performance. Setting the output mode `-m`/`--output-mode` to either `ffmpeg` or `copy` can also improve performance compared to the default (`opencv`).
 
 
 ----------------------------------------------------------
@@ -39,7 +39,7 @@ You can also use wildcards in the input path:
 
 Each video **must** have the same resolution and framerate. Videos are processed in the same order as they appear in the command, and extracted events will use the first video's filename as a template.
 
-Multiple input videos are not supported when output mode `-m`/`--mode` is set to either `ffmpeg` or `copy`.
+Multiple input videos are not supported when output mode `-m`/`--output-mode` is set to either `ffmpeg` or `copy`.
 
 
 ----------------------------------------------------------

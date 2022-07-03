@@ -29,9 +29,9 @@ Copyright (C) 2016-2022 Brandon Castellano
 < https://github.com/Breakthrough/DVR-Scan >
 """ % dvr_scan.__version__
 
-# In the CLI, -so/--scan-only is a different flag than -m/--mode, whereas in the
+# In the CLI, -so/--scan-only is a different flag than -m/--output-mode, whereas in the
 # config file they are the same option. Therefore, we remove the scan only choice
-# from the -m/--mode selection in the CLI.
+# from the -m/--output-mode selection in the CLI.
 SCAN_ONLY_MODE = 'scan_only'
 assert SCAN_ONLY_MODE in CHOICE_MAP['output-mode']
 VALID_OUTPUT_MODES = [mode for mode in CHOICE_MAP['output-mode'] if mode != SCAN_ONLY_MODE]

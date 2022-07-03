@@ -20,7 +20,7 @@ To draw a box around the areas of the frame containing motion:
 
     dvr-scan -i video.mp4 -bb
 
-To use `ffmpeg` to extract motion events, set `-m`/`--mode` to `ffmpeg` (or `copy` to use stream copy mode):
+To use `ffmpeg` to extract motion events, set `-m`/`--output-mode` to `ffmpeg` (or `copy` to use stream copy mode):
 
     dvr-scan -i video.mp4 -m ffmpeg
     dvr-scan -i video.mp4 -m copy

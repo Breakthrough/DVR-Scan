@@ -149,7 +149,7 @@ class ScanContext(object):
         self._comp_file: Optional[AnyStr] = None       # -o/--output
         self._mask_file: Optional[AnyStr] = None       # -mo/--mask-output
         self._fourcc: Any = None                       # opencv-codec
-        self._output_mode: OutputMode = None           # -m/--mode / -so/--scan-only
+        self._output_mode: OutputMode = None           # -m/--output-mode / -so/--scan-only
         self._ffmpeg_output_args: Optional[str] = None # output args for OutputMode.FFMPEG
         self._output_dir: AnyStr = ''                  # -d/--directory
 
