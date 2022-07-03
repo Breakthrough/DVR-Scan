@@ -29,8 +29,9 @@ DVR-Scan Changelog
     * `--verbosity` and `--logfile` - control output verbosity and path to save output
  * `-i`/`--input` now supports globs/wildcards to scan entire folders, e.g. `-i folder/*.mp4`
  * Long form of `-roi` has been renamed to `--region-of-interest` (previously was `--rectangle-of-interest`)
- * `-c` is now used for `--config`, previously was for `--codec` (there is no short form for `--config` anymore)
+ * `-c` is now used for `--config`, previously was for `--codec`
  * Add experimental `mog_cuda` option for `-b`/`--bg-subtractor`
+ * `--codec` has been removed, the value should now be set using a [config file](guide/config_file.md)
 
 **General:**
 

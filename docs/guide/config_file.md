@@ -27,7 +27,7 @@ You can download [a `dvr-scan.cfg` config template](https://github.com/Breakthro
 
 ### General
 
- * `quiet-mode`: Suppress all console output (`yes` or `no`).
+ * `quiet-mode`: Suppress all console output (`yes` or `no`). Only a final comma-separated list of timecodes will be printed if set to `yes`.
 <br/>Default: `quiet-mode = no`
 
  * `verbosity`: Verbosity of console output (`debug`, `info`, `warning`, `error`).

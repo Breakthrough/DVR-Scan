@@ -571,17 +571,6 @@ def get_cli_parser(user_config: ConfigRegistry):
     # Options that only take long-form.
 
     parser.add_argument(
-        '--codec',
-        metavar='fourcc',
-        dest='opencv_codec',
-        type=string_type_check(CHOICE_MAP['opencv-codec'], False, 'fourcc'),
-        help=('The four-letter identifier of the encoder/video codec to use with OpenCV.'
-              ' Prefer using `-m ffmpeg` with a config file instead. Must be one of: %s.%s' %
-              (', '.join(CHOICE_MAP['opencv-codec']).upper(),
-               user_config.get_help_string('opencv-codec'))),
-    )
-
-    parser.add_argument(
         '--logfile',
         metavar='file',
         type=str,

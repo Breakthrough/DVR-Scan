@@ -28,10 +28,10 @@ This page lists all DVR-Scan command line options grouped by functionality. Comm
 
  * `-d path`, `--output-dir path`: Write all output files to `path`. If not specified, files are written in the working directory.
 
- * `-m mode`, `--output-mode mode`: Mode to use for saving motion events. Certain features may not work with all output modes. Current modes include:
-<br/><br/>`opencv` (default): Use OpenCV for saving motion events. Requires outputs to be in .AVI format.
-<br/><br/>`ffmpeg`: Use ffmpeg for saving motion events. Does not work with overlays. Encoder settings can be configured using the `ffmpeg-output-args` setting in a [config file](config_file.md#inputoutput).
-<br/><br/>`copy`: Use ffmpeg for saving motion events, but use stream copying mode (no re-encoding). May not produce exact motion event boundaries due to keyframe placement.
+ * `-m mode`, `--output-mode mode`: Mode to use for saving motion events. Output modes can be customized using a [config file](config_file.md#inputoutput). Current modes include:
+<br/><br/>`opencv` (default): Use OpenCV for saving motion events. Requires outputs to be in .AVI format. Can be configured using the `ffmpeg-output-args` setting in a [config file](config_file.md#inputoutput).
+<br/><br/>`ffmpeg`: Use ffmpeg for saving motion events. Ffmpeg encoder args can be set using the `ffmpeg-output-args` [config file option](config_file.md#inputoutput). Does not work with overlays.
+<br/><br/>`copy`: Same as `ffmpeg`, but using stream copying mode (no reencoding). Can potentially create inaccurate events due to keyframe placement.
 
  * `-o video.avi`, `--output video.avi`: Save all motion events to a single file, instead of the default (one file per event).
 <br/><br/>Only supported with the default output mode `--mode opencv`, and thus requires a `.avi` extension.
@@ -40,10 +40,6 @@ This page lists all DVR-Scan command line options grouped by functionality. Comm
 <br/><br/>Must have `.avi` extension.
 
  * `-so`, `--scan-only`: Do not save/extract events, only perform motion detection and display results.
-
- * `--codec`: The four-letter identifier of the encoder/video codec to use when `-m`/`--mode` is `opencv`
-<br/><br/>Must be one of: `XVID`, `MP4V`, `MP42`, `H264`.
-<br/><br/>Prefer using `-m ffmpeg` with a config file instead.
 
 
 ### Seeking / Duration
