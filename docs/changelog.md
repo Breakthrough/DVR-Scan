@@ -14,8 +14,8 @@ DVR-Scan Changelog
  * Configuration files are now supported, [see documentation for details](https://dvr-scan.readthedocs.io/en/v1.5/guide/config_file/)
      * Can specify config file path with `-c`/`--config`, or create a `dvr-scan.cfg` file in your user config folder
  * Experimental CUDA support has been added (set `-b mog_cuda`), requires manual installation of OpenCV compiled with CUDA support
- * The new minimum supported Python version is 3.7,
- * Support for OpenCV 2 has been dropped, new minimum verison is OpenCV 3
+ * Minimum supported Python version is now 3.7
+ * Minimum supported OpenCV version is now 3.x
 
 #### Changelog
 

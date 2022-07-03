@@ -479,7 +479,7 @@ def get_cli_parser(user_config: ConfigRegistry):
         metavar='time',
         type=timecode_type_check('time'),
         default=None,
-        help=('Duration to limit motion detection to (see -st for valid timecode formats).'
+        help=('Duration stop processing the input after (see -st for valid timecode formats).'
               ' Overrides -et.'),
     )
 
@@ -489,7 +489,7 @@ def get_cli_parser(user_config: ConfigRegistry):
         metavar='time',
         type=timecode_type_check('time'),
         default=None,
-        help=('Timecode to stop motion detection at (see -st for valid timecode formats).'),
+        help=('Timecode to stop processing the input (see -st for valid timecode formats).'),
     )
 
     parser.add_argument(
