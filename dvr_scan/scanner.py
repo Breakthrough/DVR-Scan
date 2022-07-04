@@ -176,7 +176,7 @@ class ScanContext(object):
         self._start_time: FrameTimecode = None             # -st/--start-time
         self._end_time: FrameTimecode = None               # -et/--end-time
 
-        # TODO(v1.5): Put self._cap and video paths in a separate object that handles concatenation.
+        # TODO(v1.6): Put self._cap and video paths in a separate object that handles concatenation.
         # Doesn't need to handle seeking backwards, just forwards.
         self._cap: VideoStream = None
         self._cap_path: AnyStr = None
@@ -248,7 +248,7 @@ class ScanContext(object):
             output_mode if isinstance(output_mode, OutputMode) else OutputMode[output_mode.upper()])
         self._fourcc = cv2.VideoWriter_fourcc(*opencv_fourcc.upper())
         self._ffmpeg_output_args = ffmpeg_output_args
-        # If an output directory is defined, ensure the directory exists.
+        # If an output directory is defined, ensure it exists, and if not, try to create it.
         if output_dir:
             os.makedirs(output_dir, exist_ok=True)
         self._output_dir = output_dir
@@ -435,7 +435,7 @@ class ScanContext(object):
 
         return None
 
-    # TODO(v1.5): Assume tqdm is available now as it is listed as a required package.
+    # TODO(v1.6): Assume tqdm is available now as it is listed as a required package.
     def _create_progress_bar(self, show_progress: bool):
         """Create and return a `tqdm` object. If show_progress is False, a fake is returned."""
         tqdm = None if not show_progress else get_tqdm()
@@ -752,7 +752,7 @@ class ScanContext(object):
 
         return self.event_list
 
-    # TODO(v1.5): Move this into cli.controller and just add a getter for frames_processed.
+    # TODO(v1.6): Move this into cli.controller and just add a getter for frames_processed.
     def _post_scan_motion(self, processing_start: float):
         processing_time = time.time() - processing_start
         processing_rate = float(self._frames_processed) / processing_time
@@ -771,9 +771,11 @@ class ScanContext(object):
                 "-------------------------------------------------------------"
             ]
             output_strs += [
-                "|  Event %4d  |  %s  |  %s  |  %s  |" %
-                (event_num + 1, event_start.get_timecode(precision=1),
-                 event_duration.get_timecode(precision=1), event_end.get_timecode(precision=1))
+                "|  Event %4d  |  %s  |  %s  |  %s  |" % (
+                    event_num + 1,
+                    str(event_start.frame_num),                               #event_start.get_timecode(precision=1),
+                    event_duration.get_timecode(precision=1),
+                    event_end.get_timecode(precision=1))
                 for event_num, (event_start, event_end,
                                 event_duration) in enumerate(self.event_list)
             ]

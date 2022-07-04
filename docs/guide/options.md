@@ -109,7 +109,7 @@ When modifying these parameters, it can be useful to generate a motion mask (`-m
 Detection can be limited to a smaller region of the frame using the `-roi`/`--region-of-interest` flag:
 
  * `-roi`: Show a pop-up window to select a region of interest using the mouse. The first frame will be displayed.
- * `-roi x0,y0 w,h`: Rectangle specified as top-left corner and size. For example, `-roi 50,75 100,150` specifies a 100x150 rectangle with the top left corner at coordinates (50,75). (0,0) is the top-left corner of the video.
+ * `-roi x0, y0 w, h`: Rectangle specified as top-left corner and size. For example, `-roi 50,75, 100,150` specifies a 100x150 rectangle with the top left corner at coordinates (50,75). (0,0) is the top-left corner of the video.
  * `-roi width,height`: Same as `-roi` but shrinks the window to fit within (width x height). Useful for processing videos larger than the monitor resolution.
 
 The following options can improve performance, but may reduce detection accuracy:

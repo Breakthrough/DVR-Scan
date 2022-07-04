@@ -208,8 +208,8 @@ def run_dvr_scan():
         sctx.set_output(
             comp_file=settings.get_arg('output'),
             mask_file=settings.get_arg('mask_output'),
-            output_mode=(OutputMode.SCAN_ONLY if settings.get_arg('scan_only') else settings.get(
-                'program', 'output-mode')),
+            output_mode=(OutputMode.SCAN_ONLY
+                         if settings.get_arg('scan_only') else settings.get('output-mode')),
             opencv_fourcc=settings.get('opencv-codec'),
             ffmpeg_output_args=settings.get('ffmpeg-output-args'),
             output_dir=settings.get('output-dir'),
