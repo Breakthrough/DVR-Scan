@@ -31,7 +31,7 @@ DVR-Scan is available via `pip` as [the `dvr-scan` package](https://pypi.org/pro
 
 Windows builds including Nvidia CUDA® support are experimental and not code signed.
 
-### Python Distribution (All Platforms) &nbsp; <span class="wy-text-neutral"><span class="fa fa-windows"></span> &nbsp; <span class="fa fa-linux"></span> &nbsp; <span class="fa fa-apple"></span></span></h3>
+### Python Distribution (All Platforms) &nbsp; <span class="wy-text-neutral"><span class="fa fa-windows"></span> &nbsp; <span class="fa fa-linux"></span> &nbsp; <span class="fa fa-apple"></span></span>
 
 <div class="important">
 <h4 class="wy-text-neutral"><span class="fa fa-forward wy-text-info"></span> Latest Release: <b class="wy-text-neutral">v1.5-beta</b></h4>
@@ -49,6 +49,6 @@ DVR-Scan can then be installed from the built package using `pip`.
 
 See the section [Installing & Updating](guide/installing.md) for instructions on installing DVR-Scan and the required system dependencies.  The source distribution is the recommended download for Linux and Mac users.  Although source installation is possible on Windows, the installer and portable versions are the recommended downloads for Windows users, as all required dependencies come bundled with these distributions.
 
-## Code Signing Policy
+### Code Signing Policy
 
 Windows EXE/MSI Builds: Free code signing provided by [SignPath.io](https://signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
