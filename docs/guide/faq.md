@@ -4,6 +4,15 @@
 This FAQ is a supplement to the user guide, and is intended to help solve the most common issues you may encounter when using DVR-Scan.  The topics covered on this page range from installation problems to methods for processing corrupted video files.
 
 
+
+----------------------------------------------------------
+
+
+### How can I stop DVR-Scan while running?
+
+Hit Ctrl + C on your keyboard to exit DVR-Scan.
+
+
 ----------------------------------------------------------
 
 

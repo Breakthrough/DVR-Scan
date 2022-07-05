@@ -278,4 +278,8 @@ def run_dvr_scan():
         logger.error(ex)
         return EXIT_ERROR
 
+    except KeyboardInterrupt as ex:
+        logger.debug("KeyboardInterrupt received, quitting.")
+        return EXIT_ERROR
+
     return EXIT_SUCCESS
