@@ -13,7 +13,11 @@ DVR-Scan Changelog
  * Allow use of ffmpeg for better output quality (`-m ffmpeg`) or codec-copying mode (`-m copy`)
  * Configuration files are now supported, [see documentation for details](https://dvr-scan.readthedocs.io/en/v1.5/guide/config_file/)
      * Can specify config file path with `-c`/`--config`, or create a `dvr-scan.cfg` file in your user config folder
- * Experimental CUDA support has been added (set `-b mog_cuda`), requires manual installation of OpenCV compiled with CUDA support
+ * Windows binaries are now signed, thanks [SignPath.io](https://signpath.io/) (certificate by [SignPath Foundation](https://signpath.org/))
+ * Experimental CUDA® support has been added (set `-b mog_cuda`)
+    * If installing via Pip, requires manual installation of OpenCV compiled with CUDA support
+    * If downloading Windows version, make sure to download the GPU-enabled build (`dvr-scan-1.5.dev1-win64-cuda.zip`)
+    * CUDA-enabled builds are not signed currently
  * Minimum supported Python version is now 3.7
  * Minimum supported OpenCV version is now 3.x
 
@@ -22,9 +26,9 @@ DVR-Scan Changelog
 **Command-Line Interface:**
 
  * New features/arguments (see below for more details):
-    * `-c`/`--config` - specify path to config file
-    * `-d`/`--output-dir` - specify directory to write output files (default is working directory)
-    * `-m`/`--output-mode` - specify output mode (one of: `opencv`, `ffmpeg`, `copy`)
+    * `-c`/`--config` - set path to config file
+    * `-d`/`--output-dir` - set directory to write output files (default is working directory)
+    * `-m`/`--output-mode` - set output mode (one of: `opencv`, `ffmpeg`, `copy`)
     * `-mo`/`--mask-output` - path to write motion mask for analysis
     * `--verbosity` and `--logfile` - control output verbosity and path to save output
  * `-i`/`--input` now supports globs/wildcards to scan entire folders, e.g. `-i folder/*.mp4`
