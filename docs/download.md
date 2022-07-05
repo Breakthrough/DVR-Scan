@@ -31,7 +31,7 @@ DVR-Scan is available via `pip` as [the `dvr-scan` package](https://pypi.org/pro
 
 Windows builds including Nvidia CUDA® support are experimental and not code signed.
 
-### Python Distribution (All Platforms) &nbsp; <span class="wy-text-neutral"><span class="fa fa-windows"></span> &nbsp; <span class="fa fa-linux"></span> &nbsp; <span class="fa fa-apple"></span></span>
+### Python Distribution &nbsp; <span class="wy-text-neutral"><span class="fa fa-windows"></span> &nbsp; <span class="fa fa-linux"></span> &nbsp; <span class="fa fa-apple"></span></span>
 
 <div class="important">
 <h4 class="wy-text-neutral"><span class="fa fa-forward wy-text-info"></span> Latest Release: <b class="wy-text-neutral">v1.5-beta</b></h4>
