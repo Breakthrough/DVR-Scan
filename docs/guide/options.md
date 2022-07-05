@@ -81,9 +81,9 @@ All time values can be given as a timecode (`HH:MM:SS` or `HH:MM:SS.nnn`), in se
  * `-tp time`, `--time-post-event time`: Maximum amount of time to include after each event. The event will end once no motion has been detected for this period of time.
 <br/>*Default*: `--time-post-event time 2.0s`
 
-For example, to save 30 seconds before or after any frame that exceeds the threshold:
+For example, to save 10 seconds before or after any frame that exceeds the threshold:
 
-    dvr-scan -i video.mp4 -l 1 -tb 30s -tp 30s
+    dvr-scan -i video.mp4 -l 1 -tb 10s -tp 10s
 
 
 ### Detection Parameters
