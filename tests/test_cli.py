@@ -59,6 +59,7 @@ def test_info_commands():
 
 def test_scan_only(tmp_path):
     """Test -so/--scan-only."""
+    tmp_path = str(tmp_path)                     # Hack for Python 3.7 builder.
     output = subprocess.check_output(
         args=DVR_SCAN_COMMAND + BASE_COMMAND + [
             '--output-dir',
@@ -66,62 +67,67 @@ def test_scan_only(tmp_path):
             '--scan-only',
         ],
         text=True)
-    # Make sure the correct # of events were detected.
+                                                 # Make sure the correct # of events were detected.
     assert 'Detected %d motion events in input.' % (BASE_COMMAND_NUM_EVENTS) in output
-    # Make sure we didn't create a directory since we shouldn't write any files.
+                                                 # Make sure we didn't create a directory since we shouldn't write any files.
     assert len(os.listdir(tmp_path)) == 0
 
 
 def test_mog(tmp_path):
     """Test -b/--bg-subtractor MOG (the default)."""
+    tmp_path = str(tmp_path)                                        # Hack for Python 3.7 builder.
     assert subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND + [
         '--output-dir',
         tmp_path,
     ]) == 0
-    # Make sure the correct # of events were detected.
+                                                                    # Make sure the correct # of events were detected.
     assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS
 
 
 @pytest.mark.skipif(not MotionDetectorCNT.is_available(), reason="CNT not available")
 def test_cnt(tmp_path):
     """Test -b/--bg-subtractor CNT."""
+    tmp_path = str(tmp_path)                                        # Hack for Python 3.7 builder.
     assert subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND + [
         '--output-dir',
         tmp_path,
         '--bg-subtractor',
         'cnt',
     ]) == 0
-    # Make sure the correct # of events were detected.
+                                                                    # Make sure the correct # of events were detected.
     assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS
 
 
 @pytest.mark.skipif(not MotionDetectorCudaMOG2.is_available(), reason="MOG_CUDA not available")
 def test_mog_cuda(tmp_path):
     """Test -b/--bg-subtractor MOG_CUDA."""
+    tmp_path = str(tmp_path)                                        # Hack for Python 3.7 builder.
     assert subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND + [
         '--output-dir',
         tmp_path,
         '--bg-subtractor',
         'mog_cuda',
     ]) == 0
-    # Make sure the correct # of events were detected.
+                                                                    # Make sure the correct # of events were detected.
     assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS
 
 
 def test_overlays(tmp_path):
     """Test overlays -bb/--bounding-box and -tc/--timecode."""
+    tmp_path = str(tmp_path)                                        # Hack for Python 3.7 builder.
     assert subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND + [
         '--output-dir',
         tmp_path,
         '--bounding-box',
         '--time-code',
     ]) == 0
-    # Make sure the correct # of events were detected.
+                                                                    # Make sure the correct # of events were detected.
     assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS
 
 
 def test_mask_output(tmp_path):
     """Test mask output -mo/--mask-output."""
+    tmp_path = str(tmp_path)                                        # Hack for Python 3.7 builder.
     assert subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND + [
         '--output-dir',
         tmp_path,
@@ -129,39 +135,42 @@ def test_mask_output(tmp_path):
         '--mask-output',
         'mask.avi',
     ]) == 0
-    # Make sure only the mask file was created since we also used --scan-only.
+                                                                    # Make sure only the mask file was created since we also used --scan-only.
     assert os.listdir(tmp_path) == ['mask.avi']
 
 
 def test_config_file(tmp_path):
     """Test using a config file to set the same parameters as in BASE_COMMAND."""
+    tmp_path = str(tmp_path)                                             # Hack for Python 3.7 builder.
     cfg_path = os.path.join(tmp_path, 'config.cfg')
     with open(cfg_path, 'w') as f:
         f.write(TEST_CONFIG_FILE)
-    # Only use the input `--input` from BASE_COMMAND.
+                                                                         # Only use the input `--input` from BASE_COMMAND.
     assert subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND[0:2] + [
         '--output-dir',
         tmp_path,
         '--config',
         cfg_path,
     ]) == 0
-    # Make sure the correct # of events were detected (correct for config file).
+                                                                         # Make sure the correct # of events were detected (correct for config file).
     assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS + 1
 
 
 @pytest.mark.skipif(not is_ffmpeg_available(), reason="ffmpeg not available")
 def test_ffmpeg_mode(tmp_path):
     """Test -m/--mode ffmpeg."""
+    tmp_path = str(tmp_path)                                      # Hack for Python 3.7 builder.
     assert subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND +
                            ['--output-dir', tmp_path, '--output-mode', 'ffmpeg']) == 0
-    # Make sure the correct # of events were detected.
+                                                                  # Make sure the correct # of events were detected.
     assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS
 
 
 @pytest.mark.skipif(not is_ffmpeg_available(), reason="ffmpeg not available")
 def test_copy_mode(tmp_path):
     """Test -m/--mode copy."""
+    tmp_path = str(tmp_path)                                      # Hack for Python 3.7 builder.
     assert subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND +
                            ['--output-dir', tmp_path, '--output-mode', 'copy']) == 0
-    # Make sure the correct # of events were detected.
+                                                                  # Make sure the correct # of events were detected.
     assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS
