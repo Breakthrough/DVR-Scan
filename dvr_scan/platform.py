@@ -21,17 +21,6 @@ from typing import Optional
 from scenedetect.platform import get_and_create_path
 
 
-def get_tqdm():
-    """ Safely attempts to import the tqdm module, returning either a
-    reference to the imported module, or None if tqdm was not found."""
-    try:
-        import tqdm
-        return tqdm
-    except ImportError:
-        pass
-    return None
-
-
 def get_min_screen_bounds():
     """ Safely attempts to get the minimum screen resolution of all monitors
     using the `screeninfo` package. Returns the minimum of all monitor's heights

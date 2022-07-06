@@ -54,8 +54,8 @@ DVR-Scan Changelog
  * [bugfix] Fix incorrect results when `-st`/`--start-time` is set
  * [bugfix] Event start times are now correctly calculated when using `-fs`/`--frame-skip` ([#68](https://github.com/Breakthrough/DVR-Scan/issues/68), [#70](https://github.com/Breakthrough/DVR-Scan/issues/70))
     * Note that all skipped frames within the event window are included in motion event, thus the calculated start time may be slightly earlier
- * [bugfix] Only get screen resolution when required
- * [api] Remove `dvr_scan.timecode` and `FrameTimecode`, replace with `scenedetect.FrameTimecode`
+ * [bugfix] Only get screen resolution when required (was causing issues on headless machines)
+ * [bugfix] Fix output messages conflicting with progress bar shown during scanning
 
 #### Known Issues
 

@@ -1,5 +1,4 @@
 
-
 ## Quickstart
 
 The following commands demonstrate some common use cases for DVR-Scan. You can also use `dvr-scan --help` for a complete listing of all options, or see the [Command-Line Reference](options.md). Note that the default program settings can be overriden by [creating a user config file](config_file.md).

@@ -125,7 +125,7 @@ def _init_dvr_scan() -> Optional[ProgramSettings]:
             args.verbosity if hasattr(args, 'verbosity') else user_config.get_value('verbosity'))
         verbosity: int = getattr(logging, verbosity_setting.upper())
         # If verbosity is DEBUG, override the quiet mode option unless -q/--quiet was set.
-        if not hasattr(args, 'quiet-mode'):
+        if not hasattr(args, 'quiet_mode'):
             args.quiet_mode = (False if verbosity == logging.DEBUG else
                                user_config.get_value('quiet-mode'))
 
