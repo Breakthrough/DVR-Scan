@@ -798,7 +798,11 @@ class ScanContext(object):
             for event_start, event_end, _ in self.event_list:
                 timecode_list.append(event_start.get_timecode())
                 timecode_list.append(event_end.get_timecode())
-            print("[DVR-Scan] Comma-separated timecode values:\n%s" % (','.join(timecode_list)))
+            self._logger.info("Comma-separated timecode values:")
+            # Print values regardless of quiet mode or not.
+            # TODO(#78): Fix this output format to be more usable, in the form:
+            # start1-end1[,[+]start2-end2[,[+]start3-end3...]]
+            print(','.join(timecode_list))
 
         if self._output_mode != OutputMode.SCAN_ONLY:
             self._logger.info("Motion events written to disk.")

@@ -49,6 +49,20 @@ min-event-length = 4
 time-before-event = 0
 """
 
+BASE_COMMAND_EVENT_LIST_GOLDEN = """
+-------------------------------------------------------------
+|   Event #    |  Start Time  |   Duration   |   End Time   |
+-------------------------------------------------------------
+|  Event    1  |  00:00:00.4  |  00:00:05.6  |  00:00:05.9  |
+|  Event    2  |  00:00:14.3  |  00:00:05.3  |  00:00:19.6  |
+|  Event    3  |  00:00:21.7  |  00:00:01.4  |  00:00:23.0  |
+-------------------------------------------------------------
+"""[1:]
+
+BASE_COMMAND_TIMECODE_LIST_GOLDEN = """
+00:00:00.360,00:00:05.920,00:00:14.320,00:00:19.600,00:00:21.680,00:00:23.040
+"""[1:]
+
 
 def test_info_commands():
     """Test information commands (e.g. -h/--help)."""
@@ -67,10 +81,28 @@ def test_scan_only(tmp_path):
             '--scan-only',
         ],
         text=True)
-                                                 # Make sure the correct # of events were detected.
+
+    # Make sure the correct # of events were detected.
     assert 'Detected %d motion events in input.' % (BASE_COMMAND_NUM_EVENTS) in output
-                                                 # Make sure we didn't create a directory since we shouldn't write any files.
-    assert len(os.listdir(tmp_path)) == 0
+
+    # Make sure we didn't create a directory since we shouldn't write any files.
+    assert len(os.listdir(tmp_path)) == 0, "Scan-only mode should not create any files."
+    assert BASE_COMMAND_EVENT_LIST_GOLDEN in output, "Output event list does not match test golden."
+    assert BASE_COMMAND_TIMECODE_LIST_GOLDEN in output, "Output timecodes do not match test golden."
+
+
+def test_quiet_mode(tmp_path):
+    """Test -q/--quiet."""
+    tmp_path = str(tmp_path)                     # Hack for Python 3.7 builder.
+    output = subprocess.check_output(
+        args=DVR_SCAN_COMMAND + BASE_COMMAND + [
+            '--output-dir',
+            tmp_path,
+            '--scan-only',
+            '--quiet',
+        ],
+        text=True)
+    assert BASE_COMMAND_TIMECODE_LIST_GOLDEN in output, "Output timecodes do not match test golden."
 
 
 def test_mog(tmp_path):
@@ -80,8 +112,9 @@ def test_mog(tmp_path):
         '--output-dir',
         tmp_path,
     ]) == 0
-                                                                    # Make sure the correct # of events were detected.
-    assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS
+
+    # Make sure the correct # of events were detected.
+    assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS, "Incorrect number of events found."
 
 
 @pytest.mark.skipif(not MotionDetectorCNT.is_available(), reason="CNT not available")
@@ -94,8 +127,7 @@ def test_cnt(tmp_path):
         '--bg-subtractor',
         'cnt',
     ]) == 0
-                                                                    # Make sure the correct # of events were detected.
-    assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS
+    assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS, "Incorrect number of events found."
 
 
 @pytest.mark.skipif(not MotionDetectorCudaMOG2.is_available(), reason="MOG_CUDA not available")
@@ -108,8 +140,7 @@ def test_mog_cuda(tmp_path):
         '--bg-subtractor',
         'mog_cuda',
     ]) == 0
-                                                                    # Make sure the correct # of events were detected.
-    assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS
+    assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS, "Incorrect number of events found."
 
 
 def test_overlays(tmp_path):
@@ -121,8 +152,7 @@ def test_overlays(tmp_path):
         '--bounding-box',
         '--time-code',
     ]) == 0
-                                                                    # Make sure the correct # of events were detected.
-    assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS
+    assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS, "Incorrect number of events found."
 
 
 def test_mask_output(tmp_path):
@@ -135,42 +165,53 @@ def test_mask_output(tmp_path):
         '--mask-output',
         'mask.avi',
     ]) == 0
-                                                                    # Make sure only the mask file was created since we also used --scan-only.
-    assert os.listdir(tmp_path) == ['mask.avi']
+
+    assert os.listdir(tmp_path) == ['mask.avi'], "Only mask file should be created with -so -mo ..."
 
 
 def test_config_file(tmp_path):
     """Test using a config file to set the same parameters as in BASE_COMMAND."""
-    tmp_path = str(tmp_path)                                             # Hack for Python 3.7 builder.
+    tmp_path = str(tmp_path) # Hack for Python 3.7 builder.
     cfg_path = os.path.join(tmp_path, 'config.cfg')
     with open(cfg_path, 'w') as f:
         f.write(TEST_CONFIG_FILE)
-                                                                         # Only use the input `--input` from BASE_COMMAND.
-    assert subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND[0:2] + [
-        '--output-dir',
-        tmp_path,
-        '--config',
-        cfg_path,
-    ]) == 0
-                                                                         # Make sure the correct # of events were detected (correct for config file).
-    assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS + 1
+
+    output = subprocess.check_output(
+        args=DVR_SCAN_COMMAND + BASE_COMMAND[0:2] + [ # Only use the input from BASE_COMMAND.
+            '--output-dir',
+            tmp_path,
+            '--config',
+            cfg_path,
+        ],
+        text=True)
+
+    assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS + 1, "Incorrect amount of files."
+    assert BASE_COMMAND_EVENT_LIST_GOLDEN in output, "Output event list does not match test golden."
+    assert BASE_COMMAND_TIMECODE_LIST_GOLDEN in output, "Output timecodes do not match test golden."
 
 
 @pytest.mark.skipif(not is_ffmpeg_available(), reason="ffmpeg not available")
 def test_ffmpeg_mode(tmp_path):
     """Test -m/--mode ffmpeg."""
-    tmp_path = str(tmp_path)                                      # Hack for Python 3.7 builder.
-    assert subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND +
-                           ['--output-dir', tmp_path, '--output-mode', 'ffmpeg']) == 0
-                                                                  # Make sure the correct # of events were detected.
-    assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS
+    tmp_path = str(tmp_path)                                        # Hack for Python 3.7 builder.
+    assert subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND + [
+        '--output-dir',
+        tmp_path,
+        '--output-mode',
+        'ffmpeg',
+    ]) == 0
+    assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS, "Incorrect number of events found."
+                                                                    # TODO: Open files and validate some frames.
 
 
 @pytest.mark.skipif(not is_ffmpeg_available(), reason="ffmpeg not available")
 def test_copy_mode(tmp_path):
     """Test -m/--mode copy."""
-    tmp_path = str(tmp_path)                                      # Hack for Python 3.7 builder.
-    assert subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND +
-                           ['--output-dir', tmp_path, '--output-mode', 'copy']) == 0
-                                                                  # Make sure the correct # of events were detected.
-    assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS
+    tmp_path = str(tmp_path)                                        # Hack for Python 3.7 builder.
+    assert subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND + [
+        '--output-dir',
+        tmp_path,
+        '--output-mode',
+        'copy',
+    ]) == 0
+    assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS, "Incorrect number of events found."
