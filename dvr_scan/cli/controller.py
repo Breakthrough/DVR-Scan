@@ -271,11 +271,11 @@ def run_dvr_scan():
 
     except VideoOpenFailure as ex:
         # Error information is logged in ScanContext when this exception is raised.
-        logger.error('Failed to load input: %s', ex)
+        logger.error('Failed to load input: %s', str(ex))
         return EXIT_ERROR
 
     except ValueError as ex:
-        logger.error(ex)
+        logger.error('Error: %s', str(ex))
         return EXIT_ERROR
 
     except KeyboardInterrupt as ex:

@@ -28,7 +28,8 @@ from typing import Any, AnyStr, Iterable, List, Optional, Tuple, Union
 
 import cv2
 import numpy
-from scenedetect import FrameTimecode, VideoStream, VideoOpenFailure, split_video_ffmpeg
+from scenedetect import FrameTimecode, VideoStream, VideoOpenFailure
+from scenedetect.video_splitter import split_video_ffmpeg, is_ffmpeg_available
 from tqdm import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
 
@@ -226,6 +227,7 @@ class ScanContext(object):
              - comp_file is set but output_mode is not OutputMode.OPENCV
              - output_dir is set but either comp_file or mask_file are absolute paths
              - multiple input videos and output_mode is not OutputMode.OPENCV
+             - output_mode is OutputMode.FFMPEG or OutputMode.COPY but ffmpeg is not available
             KeyError:
              - output_mode does not exist in OutputMode
         """
@@ -244,10 +246,11 @@ class ScanContext(object):
                 "input concatenation is only supported in `scan-only` or `opencv` mode.")
         if comp_file is not None and output_mode != OutputMode.OPENCV:
             raise ValueError("output concatenation is only supported using output mode `opencv`")
+        if output_mode in (OutputMode.FFMPEG, OutputMode.COPY) and not is_ffmpeg_available():
+            raise ValueError("ffmpeg is required to use output mode FFMPEG/COPY")
         self._comp_file = comp_file
         self._mask_file = mask_file
-        self._output_mode = (
-            output_mode if isinstance(output_mode, OutputMode) else OutputMode[output_mode.upper()])
+        self._output_mode = output_mode
         self._fourcc = cv2.VideoWriter_fourcc(*opencv_fourcc.upper())
         self._ffmpeg_output_args = ffmpeg_output_args
         # If an output directory is defined, ensure it exists, and if not, try to create it.
