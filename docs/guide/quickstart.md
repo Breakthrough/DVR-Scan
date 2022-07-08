@@ -3,11 +3,11 @@
 
 The following commands demonstrate some common use cases for DVR-Scan. You can also use `dvr-scan --help` for a complete listing of all options, or see the [Command-Line Reference](options.md). Note that the default program settings can be overriden by [creating a user config file](config_file.md).
 
-To perform motion detection `video.mp4`, saving each motion event to a separate video in the current working directory:
+To perform motion detection on `video.mp4`, creating a new video for each motion event:
 
     dvr-scan -i video.mp4
 
-To save all output files in to a particular location, use `-d`/`--output-dir`:
+The output will be placed in the current working directory (the location you are running DVR-Scan from). To save all output files in to a particular location, use `-d`/`--output-dir`:
 
     dvr-scan -i video.mp4 -d extracted_events/
 

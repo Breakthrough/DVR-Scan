@@ -14,7 +14,7 @@ DVR-Scan Changelog
  * Configuration files are now supported, [see documentation for details](https://dvr-scan.readthedocs.io/en/v1.5/guide/config_file/)
      * Can specify config file path with `-c`/`--config`, or create a `dvr-scan.cfg` file in your user config folder
  * Windows binaries are now signed, thanks [SignPath.io](https://signpath.io/) (certificate by [SignPath Foundation](https://signpath.org/))
- * Experimental CUDA® support has been added (set `-b mog_cuda`)
+ * Experimental CUDA® support has been added (set `-b MOG2_CUDA`)
     * If installing via Pip, requires manual installation of OpenCV compiled with CUDA support
     * If downloading Windows version, make sure to download the GPU-enabled build (`dvr-scan-1.5.dev1-win64-cuda.zip`)
     * CUDA-enabled builds are not signed currently
@@ -34,7 +34,8 @@ DVR-Scan Changelog
  * `-i`/`--input` now supports globs/wildcards to scan entire folders, e.g. `-i folder/*.mp4`
  * Long form of `-roi` has been renamed to `--region-of-interest` (previously was `--rectangle-of-interest`)
  * `-c` is now used for `--config`, previously was for `--codec`
- * Add experimental `mog_cuda` option for `-b`/`--bg-subtractor`
+ * Add experimental `MOG2_CUDA` option for `-b`/`--bg-subtractor`
+ * Rename existing `MOG` option to `MOG2`
  * `--codec` has been removed, the value should now be set using a [config file](guide/config_file.md)
 
 **General:**
@@ -56,6 +57,7 @@ DVR-Scan Changelog
     * Note that all skipped frames within the event window are included in motion event, thus the calculated start time may be slightly earlier
  * [bugfix] Only get screen resolution when required (was causing issues on headless machines)
  * [bugfix] Fix output messages conflicting with progress bar shown during scanning
+ * [bugfix] Output events now start from 1 to align with the event list
 
 #### Known Issues
 

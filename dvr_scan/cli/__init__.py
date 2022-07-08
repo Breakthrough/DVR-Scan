@@ -401,9 +401,9 @@ def get_cli_parser(user_config: ConfigRegistry):
         '-b',
         '--bg-subtractor',
         metavar='type',
-        type=string_type_check(['MOG', 'CNT', 'MOG_CUDA'], False, 'type'),
+        type=string_type_check(['MOG2', 'CNT', 'MOG2_CUDA'], False, 'type'),
         help=('The type of background subtractor to use, must be one of: '
-              ' MOG (default), CNT (parallel), MOG_CUDA (Nvidia GPU).%s') %
+              ' MOG2 (default), CNT (parallel), MOG2_CUDA (Nvidia GPU).%s') %
         user_config.get_help_string('bg-subtractor'),
     )
 

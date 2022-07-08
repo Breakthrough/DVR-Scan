@@ -299,7 +299,7 @@ CONFIG_MAP: ConfigDict = {
     'time-before-event': TimecodeValue('1.5s'),
     'time-post-event': TimecodeValue('2.0s'),
                                                          # Detection Parameters
-    'bg-subtractor': 'MOG',
+    'bg-subtractor': 'MOG2',
     'threshold': 0.15,
     'kernel-size': KernelSizeValue(),
     'downscale-factor': 0,
@@ -327,7 +327,7 @@ CHOICE_MAP: Dict[str, List[str]] = {
     'opencv-codec': ['XVID', 'MP4V', 'MP42', 'H264'],
     'output-mode': ['scan_only', 'opencv', 'copy', 'ffmpeg'],
     'verbosity': ['debug', 'info', 'warning', 'error'],
-    'bg-subtractor': ['MOG', 'CNT', 'MOG_CUDA'],
+    'bg-subtractor': ['MOG2', 'CNT', 'MOG2_CUDA'],
 }
 """Mapping of string options which can only be of a particular set of values. We use a list instead
 of a set to preserve order when generating error contexts. Values are case-insensitive, and must be

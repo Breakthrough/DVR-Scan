@@ -62,9 +62,9 @@ OUTPUT_FILE_TEMPLATE = '{VIDEO_NAME}.DSME_{EVENT_NUMBER}.{EXTENSION}'
 
 
 class DetectorType(Enum):
-    MOG = MotionDetectorMOG2
+    MOG2 = MotionDetectorMOG2
     CNT = MotionDetectorCNT
-    MOG_CUDA = MotionDetectorCudaMOG2
+    MOG2_CUDA = MotionDetectorCudaMOG2
 
 
 class OutputMode(Enum):
@@ -527,7 +527,7 @@ class ScanContext(object):
 
     def scan_motion(
         self,
-        detector_type: DetectorType = DetectorType.MOG,
+        detector_type: DetectorType = DetectorType.MOG2,
     ) -> List[Tuple[FrameTimecode, FrameTimecode, FrameTimecode]]:
         """ Performs motion analysis on the ScanContext's input video(s). """
         self._stop.clear()

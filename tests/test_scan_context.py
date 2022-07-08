@@ -60,7 +60,7 @@ CORRUPT_VIDEO_EVENTS = [
 
 
 def test_scan_context(traffic_camera_video):
-    """Test functionality of ScanContext with default parameters (DetectorType.MOG)."""
+    """Test functionality of ScanContext with default parameters (DetectorType.MOG2)."""
 
     sctx = ScanContext([traffic_camera_video])
     sctx.set_detection_params(roi=TRAFFIC_CAMERA_ROI)
@@ -78,13 +78,13 @@ def test_scan_context(traffic_camera_video):
 
 @pytest.mark.skipif(not MotionDetectorCudaMOG2.is_available(), reason="CUDA module not available.")
 def test_scan_context_cuda(traffic_camera_video):
-    """ Test functionality of ScanContext with the DetectorType.MOG_CUDA. """
+    """ Test functionality of ScanContext with the DetectorType.MOG2_CUDA. """
 
     sctx = ScanContext([traffic_camera_video])
     sctx.set_detection_params(roi=TRAFFIC_CAMERA_ROI)
     sctx.set_event_params(min_event_len=4, time_pre_event=0)
 
-    event_list = sctx.scan_motion(detector_type=DetectorType.MOG_CUDA)
+    event_list = sctx.scan_motion(detector_type=DetectorType.MOG2_CUDA)
 
     assert len(event_list) == len(TRAFFIC_CAMERA_EVENTS)
     # Remove duration, check start/end times.

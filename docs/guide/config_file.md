@@ -76,8 +76,8 @@ All time values can be given as a timecode: (`HH:MM:SS` or `HH:MM:SS.nnn`), in s
 See the [detection parameters section on the previous page](options.md#detection-parameters) for a more comprehensive description of each option.
 
  * <b><pre>bg-subtractor</pre></b>
-    Type of background subtraction to use: (`MOG`, `CNT`, `MOG_CUDA`).
-    <br/>*Default*: `bg-subtractor = MOG`
+    Type of background subtraction to use: (`MOG2`, `CNT`, `MOG2_CUDA`).
+    <br/>*Default*: `bg-subtractor = MOG2`
 
 
  * <b><pre>threshold</pre></b>

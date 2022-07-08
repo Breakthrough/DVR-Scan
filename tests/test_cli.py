@@ -28,7 +28,6 @@ from scenedetect.video_splitter import is_ffmpeg_available
 from dvr_scan.motion_detector import MotionDetectorCNT, MotionDetectorCudaMOG2
 
 DVR_SCAN_COMMAND: List[str] = 'python -m dvr_scan'.split(' ')
-ALL_BG_SUBTRACTORS: List[str] = ['mog', 'mog_cuda', 'cnt']
 BASE_OUTPUT_NAME: str = 'traffic_camera'
 # Should yield 3 events with all detector types.
 BASE_COMMAND = [
@@ -105,8 +104,8 @@ def test_quiet_mode(tmp_path):
     assert BASE_COMMAND_TIMECODE_LIST_GOLDEN in output, "Output timecodes do not match test golden."
 
 
-def test_mog(tmp_path):
-    """Test -b/--bg-subtractor MOG (the default)."""
+def test_mog2(tmp_path):
+    """Test -b/--bg-subtractor MOG2 (the default)."""
     tmp_path = str(tmp_path)                                        # Hack for Python 3.7 builder.
     assert subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND + [
         '--output-dir',
@@ -130,15 +129,15 @@ def test_cnt(tmp_path):
     assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS, "Incorrect number of events found."
 
 
-@pytest.mark.skipif(not MotionDetectorCudaMOG2.is_available(), reason="MOG_CUDA not available")
-def test_mog_cuda(tmp_path):
-    """Test -b/--bg-subtractor MOG_CUDA."""
+@pytest.mark.skipif(not MotionDetectorCudaMOG2.is_available(), reason="MOG2_CUDA not available")
+def test_mog2_cuda(tmp_path):
+    """Test -b/--bg-subtractor MOG2_CUDA."""
     tmp_path = str(tmp_path)                                        # Hack for Python 3.7 builder.
     assert subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND + [
         '--output-dir',
         tmp_path,
         '--bg-subtractor',
-        'mog_cuda',
+        'mog2_cuda',
     ]) == 0
     assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS, "Incorrect number of events found."
 
