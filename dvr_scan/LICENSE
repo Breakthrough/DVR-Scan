@@ -34,16 +34,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   Ancillary Software Licenses
 -----------------------------------------------------------------------
 
-DVR-Scan uses the following third-party components:
+DVR-Scan uses the following third-party software components:
 
 > NumPy [Copyright (C) 2005-2022, Numpy Developers]
 > OpenCV [Copyright (C) 2022, OpenCV Team]
 > FFmpeg [Copyright (C) 2001, Fabrice Bellard]
 > CUDA [Copyright (C) 2020, Nvidia Corporation]
 
-Python distributions do not directly include any of these components,
-however certain binary distributions do. See LICENSE-THIRDPARTY file
-included with this distribution, or run DVR-Scan with the -L/--license
-option for the terms under which these components are redistributed.
-By downloading, copying, or using this software, you agree to the terms
-of this license and all third-party licenses.
+Some binary distributions may redistribute these components. See the
+included LICENSE-THIRDPARTY file for details. By downloading, copying,
+or using this software, you agree to the terms of this license and all
+third-party software licenses.
