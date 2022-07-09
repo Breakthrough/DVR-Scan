@@ -9,23 +9,24 @@
 # PySceneDetect is licensed under the BSD 2-Clause License; see the
 # included LICENSE file, or visit one of the above pages for details.
 #
-"""DVR-Scan CLI Tests"""
+"""DVR-Scan CLI Tests
 
-# Standard project pylint disables for unit tests using pytest.
-# pylint: disable=no-self-use, protected-access, multiple-statements, invalid-name
-# pylint: disable=redefined-outer-name, wrong-import-order, unused-import, ungrouped-imports
-
-# Import the OpenCV loader first as PySceneDetect tries to import it.
-from dvr_scan import opencv_loader
+Tests high level usage of the DVR-Scan command line interface.
+"""
 
 import os
 import subprocess
 from typing import List
 
 import pytest
+# We need to import the OpenCV loader before PySceneDetect as the latter imports OpenCV.
+# pylint: disable=wrong-import-order, unused-import, ungrouped-imports
+from dvr_scan import opencv_loader as _
 from scenedetect.video_splitter import is_ffmpeg_available
 
 from dvr_scan.motion_detector import MotionDetectorCNT, MotionDetectorCudaMOG2
+
+# TODO: Open extracted motion events and validate the actual frames.
 
 DVR_SCAN_COMMAND: List[str] = 'python -m dvr_scan'.split(' ')
 BASE_OUTPUT_NAME: str = 'traffic_camera'
@@ -172,8 +173,8 @@ def test_config_file(tmp_path):
     """Test using a config file to set the same parameters as in BASE_COMMAND."""
     tmp_path = str(tmp_path) # Hack for Python 3.7 builder.
     cfg_path = os.path.join(tmp_path, 'config.cfg')
-    with open(cfg_path, 'w') as f:
-        f.write(TEST_CONFIG_FILE)
+    with open(cfg_path, 'w') as file:
+        file.write(TEST_CONFIG_FILE)
 
     output = subprocess.check_output(
         args=DVR_SCAN_COMMAND + BASE_COMMAND[0:2] + [ # Only use the input from BASE_COMMAND.
@@ -200,7 +201,6 @@ def test_ffmpeg_mode(tmp_path):
         'ffmpeg',
     ]) == 0
     assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS, "Incorrect number of events found."
-                                                                    # TODO: Open files and validate some frames.
 
 
 @pytest.mark.skipif(not is_ffmpeg_available(), reason="ffmpeg not available")

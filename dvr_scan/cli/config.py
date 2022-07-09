@@ -27,7 +27,7 @@ from typing import Any, AnyStr, Dict, List, Optional, Tuple, Union
 from platformdirs import user_config_dir
 from scenedetect.frame_timecode import FrameTimecode
 
-from dvr_scan.scanner import DEFAULT_FFMPEG_OUTPUT_ARGS
+from dvr_scan.scanner import DEFAULT_FFMPEG_INPUT_ARGS, DEFAULT_FFMPEG_OUTPUT_ARGS
 
 
 class ValidatedValue(ABC):
@@ -180,14 +180,11 @@ class ROIValue(ValidatedValue):
     _IGNORE_CHARS = [',', '/', '(', ')']
     """Characters to ignore."""
 
-    def __init__(self, value: Optional[str] = None, allow_point: bool = False):
+    def __init__(self, value: Optional[str] = None, allow_size: bool = False):
         if value is not None:
             translation_table = str.maketrans({char: ' ' for char in ROIValue._IGNORE_CHARS})
             values = value.translate(translation_table).split()
-            valid_lengths = (
-                2,
-                4,
-            ) if allow_point else (4,)
+            valid_lengths = (2, 4) if allow_size else (4,)
             if not (len(values) in valid_lengths and all([val.isdigit() for val in values])
                     and all([int(val) >= 0 for val in values])):
                 raise ValueError()
@@ -292,6 +289,7 @@ CONFIG_MAP: ConfigDict = {
                                                          # Input/Output
     'output-dir': '',
     'output-mode': 'opencv',
+    'ffmpeg-input-args': DEFAULT_FFMPEG_INPUT_ARGS,
     'ffmpeg-output-args': DEFAULT_FFMPEG_OUTPUT_ARGS,
     'opencv-codec': 'XVID',
                                                          # Motion Events

@@ -15,8 +15,14 @@ Contains platform, library, or OS-specific compatibility helpers.
 """
 
 import logging
+import subprocess
 import sys
-from typing import Optional
+from typing import AnyStr, Optional
+
+try:
+    import screeninfo
+except ImportError:
+    screeninfo = None
 
 from scenedetect.platform import get_and_create_path
 
@@ -25,22 +31,31 @@ def get_min_screen_bounds():
     """ Safely attempts to get the minimum screen resolution of all monitors
     using the `screeninfo` package. Returns the minimum of all monitor's heights
     and widths with 10% padding."""
-    try:
-        import screeninfo
+    if screeninfo is not None:
         try:
             monitors = screeninfo.get_monitors()
             return (int(0.9 * min(m.height for m in monitors)),
                     int(0.9 * min(m.width for m in monitors)))
         except screeninfo.common.ScreenInfoError as ex:
-            logging.getLogger('dvr_scan').warning("Unable to get screen resolution: %s", ex)
-    except ImportError:
-        pass
+            pass
+    logging.getLogger('dvr_scan').warning("Unable to get screen resolution: %s", ex)
     return None
 
 
-##
-## Logging
-##
+def is_ffmpeg_available(ffmpeg_path: AnyStr = 'ffmpeg'):
+    """ Is ffmpeg Available: Gracefully checks if ffmpeg command is available.
+
+    Returns:
+        True if `ffmpeg` can be invoked, False otherwise.
+    """
+    ret_val = None
+    try:
+        ret_val = subprocess.call([ffmpeg_path, '-v', 'quiet'])
+    except OSError:
+        return False
+    if ret_val is not None and ret_val != 1:
+        return False
+    return True
 
 
 def init_logger(log_level: int = logging.INFO,

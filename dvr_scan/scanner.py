@@ -21,6 +21,7 @@ import logging
 import os
 import os.path
 import queue
+import subprocess
 import sys
 import time
 import threading
@@ -28,13 +29,13 @@ from typing import Any, AnyStr, Iterable, List, Optional, Tuple, Union
 
 import cv2
 import numpy
-from scenedetect import FrameTimecode, VideoStream, VideoOpenFailure
-from scenedetect.video_splitter import split_video_ffmpeg, is_ffmpeg_available
+from scenedetect import FrameTimecode, VideoOpenFailure
+
 from tqdm import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
 
 from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
-from dvr_scan.platform import get_min_screen_bounds
+from dvr_scan.platform import get_min_screen_bounds, is_ffmpeg_available
 from dvr_scan.motion_detector import (
     MotionDetectorMOG2,
     MotionDetectorCNT,
@@ -50,16 +51,22 @@ MAX_DECODE_QUEUE_SIZE: int = 4
 """Maximum size of the queue of frames waiting to be processed after decoding."""
 
 MAX_ENCODE_QUEUE_SIZE: int = 4
-"""Maximum size of the queue of frames waiting to be processed after decoding."""
+"""Maximum size of the queue of encode events waiting to be processed."""
 
-COPY_OUTPUT_ARGS = '-map 0 -c:v copy -c:a copy'
-"""Arguments passed to ffmpeg when using OutputMode.COPY."""
+DEFAULT_FFMPEG_INPUT_ARGS = '-v error'
+"""Args to add before the input when calling ffmpeg in OutputMode.FFMPEG or OutputMode.COPY."""
 
-DEFAULT_FFMPEG_OUTPUT_ARGS = '-map 0 -c:v libx264 -preset fast -crf 21 -c:a aac'
+DEFAULT_FFMPEG_OUTPUT_ARGS = '-map 0 -c:v libx264 -preset fast -crf 21 -c:a aac -sn'
 """Default arguments passed to ffmpeg when using OutputMode.COPY."""
+
+COPY_MODE_OUTPUT_ARGS = '-map 0 -c:v copy -c:a copy -sn'
+"""Arguments passed to ffmpeg when using OutputMode.COPY."""
 
 OUTPUT_FILE_TEMPLATE = '{VIDEO_NAME}.DSME_{EVENT_NUMBER}.{EXTENSION}'
 """Template to use for generating output files."""
+
+PROGRESS_BAR_DESCRIPTION = 'Detected: %d | Progress'
+"""Template to use for progress bar."""
 
 
 class DetectorType(Enum):
@@ -115,6 +122,56 @@ def _recommended_kernel_size(frame_width: int, downscale_factor: int) -> int:
     return 7 if corrected_width >= 1920 else 5 if corrected_width >= 1280 else 3
 
 
+def _extract_event_ffmpeg(
+    input_path: AnyStr,
+    output_path: AnyStr,
+    event_start: FrameTimecode,
+    event_end: FrameTimecode,
+    ffmpeg_input_args: str,
+    ffmpeg_out_args: str,
+    log_args: bool = False,
+) -> bool:
+
+    args: List[str] = [
+        'ffmpeg',
+        '-y',
+        '-nostdin',
+        *ffmpeg_input_args.split(' '),
+        '-ss',
+        str(event_start.get_timecode()),
+        '-i',
+        input_path,
+        '-t',
+        str((event_end - event_start).get_timecode()),
+        *ffmpeg_out_args.split(' '),
+        output_path,
+    ]
+    # Log the arguments we're passing to ffmpeg.
+    if logger.getEffectiveLevel() == logging.DEBUG:
+        logger.debug('Running ffmpeg, args:\n  %s', ' '.join(args))
+    elif log_args:
+        logger.info('%s', ' '.join(args))
+    # Invoke the command and capture the output (exception is raised on non-zero return code).
+    output: str = subprocess.check_output(
+        args=args,
+        text=True,
+        stderr=subprocess.STDOUT,
+    )
+    # Log any output we get from the ffmpeg process.
+    if output:
+        verbosity = logging.INFO
+        # Upgrade verbosity depending on specified ffmpeg verbosity (if any).
+        if any(['-v %s' % v in ffmpeg_input_args for v in ['panic', 'fatal', 'error']]):
+            verbosity = logging.ERROR
+        elif '-v warning' in ffmpeg_input_args:
+            verbosity = logging.WARNING
+        logger.log(
+            verbosity,
+            'ffmpeg output:\n\n%s',
+            output,
+        )
+
+
 class ScanContext(object):
     """ The ScanContext object represents the DVR-Scan program state,
     which includes application initialization, handling the options,
@@ -153,6 +210,7 @@ class ScanContext(object):
         self._mask_file: Optional[AnyStr] = None       # -mo/--mask-output
         self._fourcc: Any = None                       # opencv-codec
         self._output_mode: OutputMode = None           # -m/--output-mode / -so/--scan-only
+        self._ffmpeg_input_args: Optional[str] = None  # input args for OutputMode.FFMPEG/COPY
         self._ffmpeg_output_args: Optional[str] = None # output args for OutputMode.FFMPEG
         self._output_dir: AnyStr = ''                  # -d/--directory
 
@@ -181,7 +239,7 @@ class ScanContext(object):
 
         # TODO(v1.6): Put self._cap and video paths in a separate object that handles concatenation.
         # Doesn't need to handle seeking backwards, just forwards.
-        self._cap: VideoStream = None
+        self._cap = None
         self._cap_path: AnyStr = None
         self._video_resolution = None
         self._video_fps = None
@@ -203,6 +261,7 @@ class ScanContext(object):
         mask_file: Optional[AnyStr] = None,
         output_mode: Union[OutputMode, str] = OutputMode.SCAN_ONLY,
         opencv_fourcc: str = DEFAULT_VIDEOWRITER_CODEC,
+        ffmpeg_input_args: str = DEFAULT_FFMPEG_INPUT_ARGS,
         ffmpeg_output_args: str = DEFAULT_FFMPEG_OUTPUT_ARGS,
     ):
         """ Sets the path and encoder codec to use when exporting videos.
@@ -218,7 +277,9 @@ class ScanContext(object):
             opencv_fourcc: The four-letter identifier of the encoder/video
                 codec to use when output_mode is OutputMode.OPENCV. Possible values are:
                 XVID, MP4V, MP42, H264.
-            ffmpeg_out_args: Arguments to pass to ffmpeg for the output video. Only used if
+            ffmpeg_input_args: Arguments to pass to ffmpeg before the input video. Only used
+                when output_mode is OutputMode.FFMPEG or OutputMode.COPY.
+            ffmpeg_out_args: Arguments to pass to ffmpeg for the output video. Only used when
                 output_mode is OutputMode.FFMPEG.
 
         Raises:
@@ -252,6 +313,7 @@ class ScanContext(object):
         self._mask_file = mask_file
         self._output_mode = output_mode
         self._fourcc = cv2.VideoWriter_fourcc(*opencv_fourcc.upper())
+        self._ffmpeg_input_args = ffmpeg_input_args
         self._ffmpeg_output_args = ffmpeg_output_args
         # If an output directory is defined, ensure it exists, and if not, try to create it.
         if output_dir:
@@ -452,7 +514,9 @@ class ScanContext(object):
             # Correct for current seek position.
             num_frames = max(0, num_frames - self._curr_pos.frame_num)
             return (tqdm(
-                total=num_frames, unit=' frames', desc="[DVR-Scan] Processed",
+                total=num_frames,
+                unit=' frames',
+                desc=PROGRESS_BAR_DESCRIPTION % 0,
                 dynamic_ncols=True), logging_redirect_tqdm(loggers=[logger]))
 
         class NullProgressBar(object):
@@ -462,6 +526,9 @@ class ScanContext(object):
                 """ No-op. """
 
             def close(self):
+                """ No-op. """
+
+            def set_description(self, _):
                 """ No-op. """
 
         class NullContextManager(object):
@@ -707,6 +774,8 @@ class ScanContext(object):
                     if len(event_window) >= min_event_len and all(
                             score >= self._threshold for score in event_window):
                         in_motion_event = True
+                        progress_bar.set_description(PROGRESS_BAR_DESCRIPTION %
+                                                     (1 + len(self.event_list)))
                         event_window = []
                         num_frames_post_event = 0
                         frames_since_last_event = frame.timecode.frame_num - event_end.frame_num
@@ -728,6 +797,7 @@ class ScanContext(object):
 
                 self._frames_processed += 1 + self._frame_skip
                 progress_bar.update(1 + self._frame_skip)
+                #progress_bar.set_description('awd')
 
             # Close the progress bar before producing any more output.
             if progress_bar is not None:
@@ -742,15 +812,14 @@ class ScanContext(object):
                 self.event_list.append((event_start, event_end, event_duration))
                 if self._output_mode in (OutputMode.FFMPEG, OutputMode.COPY):
                     encode_queue.put(FfmpegEvent(start_time=event_start, end_time=event_end))
-            # Unblock any remaining puts, wait for decode thread to finish, and re-raise any exceptions.
+            # Unblock any remaining puts, wait for decode thread, and re-raise any exceptions.
             while not decode_queue.empty():
                 _ = decode_queue.get_nowait()
-
             decode_thread.join()
             if self._decode_thread_exception is not None:
                 raise self._decode_thread_exception[1].with_traceback(
                     self._decode_thread_exception[2])
-            # Push sentinel to queue, wait for encode thread to finish, and re-raise any exceptions.
+            # Push sentinel to queue, wait for encode thread, and re-raise any exceptions.
             if encode_thread is not None:
                 encode_queue.put(None)
                 encode_thread.join()
@@ -892,7 +961,7 @@ class ScanContext(object):
                     num_events += 1
                     output_args = (
                         self._ffmpeg_output_args
-                        if self._output_mode == OutputMode.FFMPEG else COPY_OUTPUT_ARGS)
+                        if self._output_mode == OutputMode.FFMPEG else COPY_MODE_OUTPUT_ARGS)
                     output_path = (
                         self._comp_file if self._comp_file else OUTPUT_FILE_TEMPLATE.format(
                             VIDEO_NAME=self._output_prefix,
@@ -901,23 +970,21 @@ class ScanContext(object):
                         ))
                     if self._output_dir:
                         output_path = os.path.join(self._output_dir, output_path)
-                    # TODO(v1.5): Add config option to allow showing ffmpeg output, and disable
-                    # the progress bar when set. Do this automatically in debug mode.
 
-                    # TODO(v1.6): Don't use this wrapper and instead just invoke ffmpeg directly
-                    # so that the output can be displayed in the main thread if encoding fails.
-                    # We should also stop processing once the video splitting fails.
-                    exit_code = split_video_ffmpeg(
-                        input_video_path=self._first_input_path,
-                        scene_list=[(event.start_time, event.end_time)],
-                        output_file_template=output_path,
-                        arg_override=output_args,
-                        show_output=False,
-                        show_progress=False,
+                    log_args = False
+                    if num_events == 1:
+                        logger.info('Splitting events using ffmpeg, first event:')
+                        # Only log the first set of args to reduce spam.
+                        log_args = True
+                    _extract_event_ffmpeg(
+                        input_path=self._first_input_path,
+                        output_path=output_path,
+                        event_start=event.start_time,
+                        event_end=event.end_time,
+                        ffmpeg_input_args=self._ffmpeg_input_args,
+                        ffmpeg_out_args=output_args,
+                        log_args=log_args,
                     )
-                    if exit_code != 0:
-                        self._stop.set()
-                        self._logger.debug("Ffmpeg exited with code: %d", exit_code)
 
         # We'll re-raise any exceptions from the main thread.
         # pylint: disable=bare-except

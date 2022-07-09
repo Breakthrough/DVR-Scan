@@ -58,6 +58,7 @@ DVR-Scan Changelog
  * [bugfix] Only get screen resolution when required (was causing issues on headless machines)
  * [bugfix] Fix output messages conflicting with progress bar shown during scanning
  * [bugfix] Output events now start from 1 to align with the event list
+ * [enhancement] Progress bar now indicates how many events have been detected so far
 
 #### Known Issues
 

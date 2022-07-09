@@ -17,6 +17,7 @@ This module manages the DVR-Scan program control flow, starting with `run_dvr_sc
 import argparse
 import glob
 import logging
+from subprocess import CalledProcessError
 from typing import Any, Optional
 
 from scenedetect import FrameTimecode, VideoOpenFailure
@@ -83,7 +84,7 @@ def _preprocess_args(args):
     if hasattr(args, 'region_of_interest') and args.region_of_interest:
         original_roi = args.region_of_interest
         try:
-            args.region_of_interest = ROIValue(value=' '.join(original_roi), allow_point=True).value
+            args.region_of_interest = ROIValue(value=' '.join(original_roi), allow_size=True).value
         except ValueError:
             logger.error(
                 'Error: Invalid value for ROI: %s. ROI must be specified as a rectangle of'
@@ -192,9 +193,6 @@ def run_dvr_scan():
             ' the OpenCV package `cv2` that includes it.', bg_subtractor.name)
         return EXIT_ERROR
 
-    # TODO(v1.5): If the specified output mode is not available on the system, display
-    # a more graceful error message.
-
     try:
         # Create ScanContext using the
         sctx = ScanContext(
@@ -211,6 +209,7 @@ def run_dvr_scan():
             output_mode=(OutputMode.SCAN_ONLY
                          if settings.get_arg('scan_only') else settings.get('output-mode')),
             opencv_fourcc=settings.get('opencv-codec'),
+            ffmpeg_input_args=settings.get('ffmpeg-input-args'),
             ffmpeg_output_args=settings.get('ffmpeg-output-args'),
             output_dir=settings.get('output-dir'),
         )
@@ -280,6 +279,15 @@ def run_dvr_scan():
 
     except KeyboardInterrupt as ex:
         logger.debug("KeyboardInterrupt received, quitting.")
+        return EXIT_ERROR
+
+    except CalledProcessError as ex:
+        logger.error(
+            'Failed to run command:\n  %s\nCommand returned %d, output:\n\n%s',
+            ' '.join(ex.cmd),
+            ex.returncode,
+            ex.output,
+        )
         return EXIT_ERROR
 
     return EXIT_SUCCESS

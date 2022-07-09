@@ -9,13 +9,13 @@
 # PySceneDetect is licensed under the BSD 2-Clause License; see the
 # included LICENSE file, or visit one of the above pages for details.
 #
-""" DVR-Scan ScanContext Tests """
+"""DVR-Scan ScanContext Tests
 
-# Standard project pylint disables for unit tests using pytest.
-# pylint: disable=no-self-use, protected-access, multiple-statements, invalid-name
-# pylint: disable=redefined-outer-name
+Validates functionality of the motion scanning context using various parameters.
+"""
 
 import pytest
+
 from dvr_scan.scanner import DetectorType, ScanContext
 from dvr_scan.motion_detector import MotionDetectorCNT, MotionDetectorCudaMOG2
 
@@ -89,12 +89,12 @@ def test_scan_context_cuda(traffic_camera_video):
     assert len(event_list) == len(TRAFFIC_CAMERA_EVENTS)
     # Remove duration, check start/end times.
     event_list = [(event[0].frame_num, event[1].frame_num) for event in event_list]
-    for i in range(len(event_list)):
-        start_matches = abs(event_list[i][0] - TRAFFIC_CAMERA_EVENTS[i][0]) <= CUDA_EVENT_TOLERANCE
-        end_matches = abs(event_list[i][0] - TRAFFIC_CAMERA_EVENTS[i][0]) <= CUDA_EVENT_TOLERANCE
+    for i, event in enumerate(event_list):
+        start_matches = abs(event[0] - TRAFFIC_CAMERA_EVENTS[i][0]) <= CUDA_EVENT_TOLERANCE
+        end_matches = abs(event[0] - TRAFFIC_CAMERA_EVENTS[i][0]) <= CUDA_EVENT_TOLERANCE
         assert start_matches and end_matches, (
             "Event mismatch at index %d with tolerance %d:\n Actual:   %s\n Expected: %s" %
-            (i, CUDA_EVENT_TOLERANCE, str(event_list[i]), str(TRAFFIC_CAMERA_EVENTS[i])))
+            (i, CUDA_EVENT_TOLERANCE, str(event), str(TRAFFIC_CAMERA_EVENTS[i])))
 
 
 @pytest.mark.skipif(not MotionDetectorCNT.is_available(), reason="CNT algorithm not available.")

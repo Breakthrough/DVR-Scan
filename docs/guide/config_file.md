@@ -45,9 +45,13 @@ You can download [a `dvr-scan.cfg` config template](https://github.com/Breakthro
     Method of generating output videos: (`scan_only`, `opencv`, `ffmpeg`, `copy`). Not all features are supported in all modes.
     <br/>*Default*: `output-mode = opencv`
 
+ * <b><pre>ffmpeg-input-args</pre></b>
+    Arguments added before the input to `ffmpeg` when *output-mode* is *ffmpeg* or *copy*). Note that *-y* and *-nostdin* are always added.
+    <br/>*Default*: `ffmpeg-input-args = -v error`
+
  * <b><pre>ffmpeg-output-args</pre></b>
-    Encoder parameters used when generating output files when *output-mode* is *ffmpeg*.
-    <br/>*Default*: `ffmpeg-output-args = -map 0 -c:v libx264 -preset fast -crf 21 -c:a aac`
+    Encoder parameters used when generating output files when *output-mode* is *ffmpeg*. These arguments are added after the input and duration.
+    <br/>*Default*: `ffmpeg-output-args = -map 0 -c:v libx264 -preset fast -crf 21 -c:a aac -sn`
 
  * <b><pre>opencv-fourcc</pre></b>
     Four-letter identifier of the encoder/video codec to use when *output-mode* is *opencv*. Must be one of: (`XVID`, `MP4V`, `MP42`, `H264`).
