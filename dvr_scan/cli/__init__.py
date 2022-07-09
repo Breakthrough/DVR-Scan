@@ -586,7 +586,8 @@ def get_cli_parser(user_config: ConfigRegistry):
               (', '.join(CHOICE_MAP['verbosity']), user_config.get_help_string('verbosity'))),
     )
 
-    # TODO(v1.6): Add -a/--ffmpeg-output-args to override encoder settings when -m=ffmpeg is used.
+    # TODO(v1.6): Add -fi/--ffmpeg-input-args to override encoder settings when -m=ffmpeg is used.
+    # TODO(v1.6): Add -fo/--ffmpeg-output-args to override encoder settings when -m=ffmpeg is used.
 
     # TODO(v1.6): Support both input and output concatenation in ffmpeg mode.
     #parser.add_argument(

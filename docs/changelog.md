@@ -59,6 +59,7 @@ DVR-Scan Changelog
  * [bugfix] Fix output messages conflicting with progress bar shown during scanning
  * [bugfix] Output events now start from 1 to align with the event list
  * [enhancement] Progress bar now indicates how many events have been detected so far
+ * [bugfix] Event end times now include the presentation duration of the last frame
 
 #### Known Issues
 

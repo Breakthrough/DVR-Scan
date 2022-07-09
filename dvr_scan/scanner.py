@@ -105,8 +105,8 @@ class FfmpegEvent:
 @dataclass
 class MaskEvent:
     motion_mask: numpy.ndarray
-    # TODO: Add options to overlay timecode, overlay frame score, bounding box,
-    # and option to blend original frame with mask.
+    # TODO(v1.6): Add options to overlay timecode, overlay frame score, bounding box,
+    # and option to blend original frame with mask. Put in options config file.
 
 
 def _scale_kernel_size(kernel_size: int, downscale_factor: int):
@@ -125,8 +125,8 @@ def _recommended_kernel_size(frame_width: int, downscale_factor: int) -> int:
 def _extract_event_ffmpeg(
     input_path: AnyStr,
     output_path: AnyStr,
-    event_start: FrameTimecode,
-    event_end: FrameTimecode,
+    start_time: FrameTimecode,
+    end_time: FrameTimecode,
     ffmpeg_input_args: str,
     ffmpeg_out_args: str,
     log_args: bool = False,
@@ -138,11 +138,11 @@ def _extract_event_ffmpeg(
         '-nostdin',
         *ffmpeg_input_args.split(' '),
         '-ss',
-        str(event_start.get_timecode()),
+        start_time.get_timecode(),
         '-i',
         input_path,
         '-t',
-        str((event_end - event_start).get_timecode()),
+        (end_time - start_time).get_timecode(),
         *ffmpeg_out_args.split(' '),
         output_path,
     ]
@@ -598,7 +598,7 @@ class ScanContext(object):
     def scan_motion(
         self,
         detector_type: DetectorType = DetectorType.MOG2,
-    ) -> List[Tuple[FrameTimecode, FrameTimecode, FrameTimecode]]:
+    ) -> List[Tuple[FrameTimecode, FrameTimecode]]:
         """ Performs motion analysis on the ScanContext's input video(s). """
         self._stop.clear()
         buffered_frames = []
@@ -739,13 +739,11 @@ class ScanContext(object):
                             # Calculate event end based on the last frame we had with motion plus
                             # the post event length time. We also need to compensate for the number
                             # of frames that we skipped that could have had motion.
+                            # We also add 1 to include the presentation duration of the last frame.
                             event_end = FrameTimecode(
-                                last_frame_above_threshold + self._post_event_len.frame_num +
+                                1 + last_frame_above_threshold + self._post_event_len.frame_num +
                                 self._frame_skip, self._video_fps)
-                            # The duration, however, should include the PTS of the end frame.
-                            event_duration = FrameTimecode(
-                                (event_end.frame_num + 1) - event_start.frame_num, self._video_fps)
-                            self.event_list.append((event_start, event_end, event_duration))
+                            self.event_list.append((event_start, event_end))
                             if self._output_mode in (OutputMode.FFMPEG, OutputMode.COPY):
                                 encode_queue.put(
                                     FfmpegEvent(start_time=event_start, end_time=event_end))
@@ -779,6 +777,7 @@ class ScanContext(object):
                         event_window = []
                         num_frames_post_event = 0
                         frames_since_last_event = frame.timecode.frame_num - event_end.frame_num
+                        last_frame_above_threshold = frame.timecode.frame_num
                         shift_amount = min(frames_since_last_event, start_event_shift)
                         shifted_start = max(start_frame,
                                             frame.timecode.frame_num + 1 - shift_amount)
@@ -797,21 +796,11 @@ class ScanContext(object):
 
                 self._frames_processed += 1 + self._frame_skip
                 progress_bar.update(1 + self._frame_skip)
-                #progress_bar.set_description('awd')
 
             # Close the progress bar before producing any more output.
             if progress_bar is not None:
                 progress_bar.close()
 
-            # Video ended, finished processing frames. If we're still in a motion event,
-            # compute the duration and ending timecode and add it to the event list.
-            if in_motion_event and not self._stop.is_set():
-                event_end = FrameTimecode(self._curr_pos.frame_num, self._video_fps)
-                event_duration = FrameTimecode(self._curr_pos.frame_num - event_start.frame_num,
-                                               self._video_fps)
-                self.event_list.append((event_start, event_end, event_duration))
-                if self._output_mode in (OutputMode.FFMPEG, OutputMode.COPY):
-                    encode_queue.put(FfmpegEvent(start_time=event_start, end_time=event_end))
             # Unblock any remaining puts, wait for decode thread, and re-raise any exceptions.
             while not decode_queue.empty():
                 _ = decode_queue.get_nowait()
@@ -819,6 +808,16 @@ class ScanContext(object):
             if self._decode_thread_exception is not None:
                 raise self._decode_thread_exception[1].with_traceback(
                     self._decode_thread_exception[2])
+
+            # Video ended, finished processing frames. If we're still in a motion event,
+            # compute the duration and ending timecode and add it to the event list.
+            if in_motion_event and not self._stop.is_set():
+                # curr_pos already includes the presentation duration of the frame.
+                event_end = FrameTimecode(self._curr_pos.frame_num, self._video_fps)
+                self.event_list.append((event_start, event_end))
+                if self._output_mode in (OutputMode.FFMPEG, OutputMode.COPY):
+                    encode_queue.put(FfmpegEvent(start_time=event_start, end_time=event_end))
+
             # Push sentinel to queue, wait for encode thread, and re-raise any exceptions.
             if encode_thread is not None:
                 encode_queue.put(None)
@@ -857,17 +856,18 @@ class ScanContext(object):
                 "-------------------------------------------------------------"
             ]
             output_strs += [
-                "|  Event %4d  |  %s  |  %s  |  %s  |" %
-                (event_num + 1, event_start.get_timecode(precision=1),
-                 event_duration.get_timecode(precision=1), event_end.get_timecode(precision=1))
-                for event_num, (event_start, event_end,
-                                event_duration) in enumerate(self.event_list)
+                "|  Event %4d  |  %s  |  %s  |  %s  |" % (
+                    event_num + 1,
+                    event_start.get_timecode(precision=1),
+                    (event_end - event_start).get_timecode(precision=1),
+                    event_end.get_timecode(precision=1),
+                ) for event_num, (event_start, event_end) in enumerate(self.event_list)
             ]
             output_strs += ["-------------------------------------------------------------"]
             self._logger.info("List of motion events:\n%s", '\n'.join(output_strs))
 
             timecode_list = []
-            for event_start, event_end, _ in self.event_list:
+            for event_start, event_end in self.event_list:
                 timecode_list.append(event_start.get_timecode())
                 timecode_list.append(event_end.get_timecode())
             self._logger.info("Comma-separated timecode values:")
@@ -923,7 +923,7 @@ class ScanContext(object):
         try:
             num_events = 0
             while True:
-                event: Optional[Union[EncodeEvent, MaskEvent]] = encode_queue.get()
+                event: Optional[Union[EncodeEvent, MaskEvent, FfmpegEvent]] = encode_queue.get()
                 if event is None:
                     break
                 if isinstance(event, EncodeEvent):
@@ -979,8 +979,8 @@ class ScanContext(object):
                     _extract_event_ffmpeg(
                         input_path=self._first_input_path,
                         output_path=output_path,
-                        event_start=event.start_time,
-                        event_end=event.end_time,
+                        start_time=event.start_time,
+                        end_time=event.end_time,
                         ffmpeg_input_args=self._ffmpeg_input_args,
                         ffmpeg_out_args=output_args,
                         log_args=log_args,
