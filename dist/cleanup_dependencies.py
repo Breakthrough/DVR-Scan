@@ -22,7 +22,6 @@ DIRECTORY_GLOBS = [
 ]
 
 FILE_GLOBS = [
-    '_asyncio.pyd',
     '_bz2.pyd',
     '_decimal.pyd',
     '_elementtree.pyd',
