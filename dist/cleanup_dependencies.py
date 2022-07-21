@@ -6,6 +6,8 @@ import shutil
 BASE_PATH = 'dist/dvr-scan'
 
 DIRECTORY_GLOBS = [
+    'av',
+    'av.libs',
     'altgraph-*.dist-info',
     'certifi',
     'importlib_metadata-*.dist-info',
@@ -28,7 +30,6 @@ FILE_GLOBS = [
     '_hashlib.pyd',
     '_lzma.pyd',
     '_multiprocessing.pyd',
-    '_overlapped.pyd',
     '_tkinter.pyd',
     'd3dcompiler*.dll',
     'kiwisolver.*.pyd',
