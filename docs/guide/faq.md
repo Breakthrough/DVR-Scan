@@ -22,7 +22,7 @@ You can use a wildcard in the input path to select multiple videos:
 
     dvr-scan -i folder/*.mp4
 
-Note that multiple input videos are not supported when `-m`/`--output-mode` is set to `ffmpeg` or `copy`.
+Note that multiple input videos are not supported when `-m`/`--output-mode` is set to `ffmpeg` or `copy`. As a workaround, you can [use ffmpeg to concatenate all input videos](https://trac.ffmpeg.org/wiki/Concatenate) before using DVR-Scan to process them.
 
 
 ----------------------------------------------------------
@@ -48,7 +48,7 @@ You can also use wildcards in the input path:
 
 Each video **must** have the same resolution and framerate. Videos are processed in the same order as they appear in the command, and extracted events will use the first video's filename as a template.
 
-Multiple input videos are not supported when output mode `-m`/`--output-mode` is set to either `ffmpeg` or `copy`.
+Multiple input videos are not supported when output mode `-m`/`--output-mode` is set to either `ffmpeg` or `copy`. As a workaround, you can [use ffmpeg to concatenate all input videos](https://trac.ffmpeg.org/wiki/Concatenate) before using DVR-Scan to process them.
 
 
 ----------------------------------------------------------
@@ -86,7 +86,7 @@ The most important thing to keep in mind is the `-v` flag, which specifies the l
 
 ### What if my video is larger than my monitor resolution?
 
-As of DVR-Scan v1.4, you can either manually specify the max width/height when using the `-roi` option (e.g. `-roi 1920 1080`).  Additionally, if using a Windows build, or if the `screeninfo` package is installed, the window will be sized to fit within the smallest monitor automatically.
+As of DVR-Scan v1.4, you can manually specify the max width/height when using the `-roi` option (e.g. `-roi 1920 1080`).  Additionally, if the `screeninfo` package is installed, the window will be sized to fit within the smallest monitor automatically.
 
 
 ----------------------------------------------------------
@@ -106,6 +106,6 @@ Code changes and pull requests are accepted and welcome, provided that the chang
 
 If you're unable to get DVR-Scan to process any video files, including those available in the examples section, than you are either missing or have an improperly configured software dependency.
 
-This usually happens because DVR-Scan is not able to find the OpenCV FFMPEG DLL, which is required to decode videos.  Try reinstalling OpenCV, ensuring that when finished, all of the compiled `opencv*.dll` binaries can be found somewhere in your system's `%PATH%` environment variable.
+This usually happens because DVR-Scan is not able to find the OpenCV FFMPEG DLL, which is required to decode videos.  Try reinstalling OpenCV, ensuring that when finished, all of the compiled `opencv*.dll` binaries can be found somewhere in your system's `PATH` environment variable.
 
-Windows users can also try downloading a binary/portable distribution, which includes DVR-Scan and all dependencies in a single .ZIP archive.  Note that the portable version can be "installed" after extracting by adding the folder containing `dvr-scan.exe` to your system's `%PATH%` environment variable, allowing you to use the `dvr-scan` command system-wide.
+Windows users can also try downloading a binary/portable distribution, which includes DVR-Scan and all dependencies in a single .ZIP archive.  Note that the portable version can be "installed" after extracting by adding the folder containing `dvr-scan.exe` to your system's `PATH` environment variable, allowing you to use the `dvr-scan` command system-wide.

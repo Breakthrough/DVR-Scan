@@ -22,7 +22,7 @@ bounding-box = yes
 bounding-box-color = 0, 255, 0
 ```
 
-You can download [a `dvr-scan.cfg` config template](https://github.com/Breakthrough/DVR-Scan/blob/v1.5/dvr-scan.cfg) to use as a complete reference.
+You can download [the `dvr-scan.cfg` config template](https://github.com/Breakthrough/DVR-Scan/blob/v1.5/dvr-scan.cfg) to use as a complete reference.
 
 
 ### General
@@ -46,7 +46,7 @@ You can download [a `dvr-scan.cfg` config template](https://github.com/Breakthro
     <br/>*Default*: `output-mode = opencv`
 
  * <b><pre>ffmpeg-input-args</pre></b>
-    Arguments added before the input to `ffmpeg` when *output-mode* is *ffmpeg* or *copy*). Note that *-y* and *-nostdin* are always added.
+    Arguments added before the input to `ffmpeg` when *output-mode* is *ffmpeg* or *copy*. Note that *-y* and *-nostdin* are always added.
     <br/>*Default*: `ffmpeg-input-args = -v error`
 
  * <b><pre>ffmpeg-output-args</pre></b>
@@ -82,7 +82,6 @@ See the [detection parameters section on the previous page](options.md#detection
  * <b><pre>bg-subtractor</pre></b>
     Type of background subtraction to use: (`MOG2`, `CNT`, `MOG2_CUDA`).
     <br/>*Default*: `bg-subtractor = MOG2`
-
 
  * <b><pre>threshold</pre></b>
     Threshold representing amount of motion in a frame (or the ROI, if set) for a motion event to be triggered.
@@ -156,4 +155,4 @@ Color values can be specified as either `(R,G,B)` or in hex as `0xFFFFFF`. Time 
 
  * <b><pre>bounding-box-min-size</pre></b>
     Minimum side length of bounding box, relative to largest edge of input video.
-    <br/>`bounding-box-min-size = 0.032`
+    <br/>*Default*: `bounding-box-min-size = 0.032`

@@ -268,6 +268,8 @@ def run_dvr_scan():
         # Run motion detection.
         sctx.scan_motion(detector_type=bg_subtractor)
 
+    # TODO(#90): Allow the exception to be thrown if verbosity is set to debug.
+
     except VideoOpenFailure as ex:
         # Error information is logged in ScanContext when this exception is raised.
         logger.error('Failed to load input: %s', str(ex))

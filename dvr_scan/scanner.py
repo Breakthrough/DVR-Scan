@@ -522,13 +522,13 @@ class ScanContext(object):
         class NullProgressBar(object):
             """ Acts like a tqdm.tqdm object, but really a no-operation. """
 
-            def update(self, _):
+            def update(self, *args):
                 """ No-op. """
 
             def close(self):
                 """ No-op. """
 
-            def set_description(self, _):
+            def set_description(self, *args, **kwargs):
                 """ No-op. """
 
         class NullContextManager(object):
@@ -743,6 +743,7 @@ class ScanContext(object):
                             event_end = FrameTimecode(
                                 1 + last_frame_above_threshold + self._post_event_len.frame_num +
                                 self._frame_skip, self._video_fps)
+                            assert event_end.frame_num >= event_start.frame_num
                             self.event_list.append((event_start, event_end))
                             if self._output_mode in (OutputMode.FFMPEG, OutputMode.COPY):
                                 encode_queue.put(
@@ -772,8 +773,8 @@ class ScanContext(object):
                     if len(event_window) >= min_event_len and all(
                             score >= self._threshold for score in event_window):
                         in_motion_event = True
-                        progress_bar.set_description(PROGRESS_BAR_DESCRIPTION %
-                                                     (1 + len(self.event_list)))
+                        progress_bar.set_description(
+                            PROGRESS_BAR_DESCRIPTION % (1 + len(self.event_list)), refresh=False)
                         event_window = []
                         num_frames_post_event = 0
                         frames_since_last_event = frame.timecode.frame_num - event_end.frame_num
@@ -893,6 +894,7 @@ class ScanContext(object):
                     break
                 # self._curr_pos points to the time at the end of the current frame (i.e. the
                 # first frame has a frame_num of 1), so we correct that for presentation time.
+                assert self._curr_pos.frame_num > 0
                 presentation_time = FrameTimecode(
                     timecode=self._curr_pos.frame_num - 1, fps=self._video_fps)
                 if not self._stop.is_set():
