@@ -38,9 +38,15 @@ EXIT_ERROR: int = 1
 class ProgramSettings:
     """Contains the active command-line and config file settings."""
 
-    def __init__(self, args: argparse.Namespace, config: ConfigRegistry):
+    def __init__(self, args: argparse.Namespace, config: ConfigRegistry, debug_mode: bool):
         self._args = args
         self._config = config
+        self._debug_mode = debug_mode
+
+    @property
+    def debug_mode(self) -> bool:
+        """If True, re-raises all logged exceptions to provide additional traceback info."""
+        return self._debug_mode
 
     def get_arg(self, arg: str) -> Optional[Any]:
         """Get setting specified via command line argument, if any."""
@@ -99,6 +105,7 @@ def _init_dvr_scan() -> Optional[ProgramSettings]:
     args = None
     config_load_failure = False
     init_log = []
+    debug_mode = False
 
     try:
         # Try to load the user config file and parse the CLI arguments.
@@ -112,7 +119,8 @@ def _init_dvr_scan() -> Optional[ProgramSettings]:
 
         # Always include all log information in debug mode, otherwise if a config file path
         # was given, suppress the init log since we'll re-init the config registry below.
-        debug_mode = hasattr(args, 'verbosity') and args.verbosity.upper() == 'DEBUG'
+        if hasattr(args, 'verbosity') and args.verbosity.upper() == 'DEBUG':
+            debug_mode = True
         if not hasattr(args, 'config') or debug_mode:
             init_log += user_config.get_init_log()
 
@@ -130,7 +138,8 @@ def _init_dvr_scan() -> Optional[ProgramSettings]:
             args.quiet_mode = (False if verbosity == logging.DEBUG else
                                user_config.get_value('quiet-mode'))
 
-        # Re-initialize logger with final quiet mode/verbosity settings.
+        # Re-initialize debug_mode and logger with final quiet mode/verbosity settings.
+        debug_mode = (verbosity == logging.DEBUG)
         init_logger(
             log_level=verbosity,
             show_stdout=not args.quiet_mode,
@@ -164,7 +173,7 @@ def _init_dvr_scan() -> Optional[ProgramSettings]:
     if not validated:
         return None
 
-    return ProgramSettings(args=args, config=user_config)
+    return ProgramSettings(args=args, config=user_config, debug_mode=debug_mode)
 
 
 def run_dvr_scan():
@@ -194,14 +203,16 @@ def run_dvr_scan():
         return EXIT_ERROR
 
     try:
-        # Create ScanContext using the
+
+        #
+        # Create ScanContext and set properties based on current program settings.
+        #
+
         sctx = ScanContext(
             input_videos=settings.get_arg('input'),
             frame_skip=settings.get('frame-skip'),
             show_progress=not settings.get('quiet-mode'),
         )
-
-        # Set context properties based on CLI arguments.
 
         sctx.set_output(
             comp_file=settings.get_arg('output'),
@@ -265,22 +276,30 @@ def run_dvr_scan():
             duration=settings.get_arg('duration'),
         )
 
+        #
         # Run motion detection.
+        #
         sctx.scan_motion(detector_type=bg_subtractor)
 
-    # TODO(#90): Allow the exception to be thrown if verbosity is set to debug.
-
-    except VideoOpenFailure as ex:
-        # Error information is logged in ScanContext when this exception is raised.
-        logger.error('Failed to load input: %s', str(ex))
-        return EXIT_ERROR
+    # Handle any application errors. Exceptions should be re-raised in debug mode for more context.
 
     except ValueError as ex:
         logger.error('Error: %s', str(ex))
+        if settings.debug_mode:
+            raise
+        return EXIT_ERROR
+
+    except VideoOpenFailure as ex:
+        # Error information should be logged by the ScanContext when this exception is raised.
+        logger.error('Failed to load input: %s', str(ex))
+        if settings.debug_mode:
+            raise
         return EXIT_ERROR
 
     except KeyboardInterrupt as ex:
         logger.debug("KeyboardInterrupt received, quitting.")
+        if settings.debug_mode:
+            raise
         return EXIT_ERROR
 
     except CalledProcessError as ex:
@@ -290,6 +309,8 @@ def run_dvr_scan():
             ex.returncode,
             ex.output,
         )
+        if settings.debug_mode:
+            raise
         return EXIT_ERROR
 
     return EXIT_SUCCESS
