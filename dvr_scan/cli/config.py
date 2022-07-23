@@ -282,6 +282,7 @@ _CONFIG_FILE_DIR: AnyStr = user_config_dir("DVR-Scan", False)
 
 USER_CONFIG_FILE_PATH: AnyStr = os.path.join(_CONFIG_FILE_DIR, _CONFIG_FILE_NAME)
 
+# TODO: Replace these default values with those set in dvr_scan.context.
 CONFIG_MAP: ConfigDict = {
                                                          # General Options
     'quiet-mode': False,

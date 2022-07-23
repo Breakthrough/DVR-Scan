@@ -15,6 +15,7 @@ Contains platform, library, or OS-specific compatibility helpers.
 """
 
 import logging
+import os
 import subprocess
 import sys
 from typing import AnyStr, Optional
@@ -92,3 +93,13 @@ def init_logger(log_level: int = logging.INFO,
         handler.setLevel(log_level)
         handler.setFormatter(logging.Formatter(fmt=format_str))
         logger_instance.addHandler(handler)
+
+
+def get_filename(path: AnyStr, include_extension: bool) -> AnyStr:
+    """Get filename of the given path, optionally excluding extension."""
+    filename = os.path.basename(path)
+    if not include_extension:
+        dot_position = filename.rfind('.')
+        if dot_position > 0:
+            filename = filename[:dot_position]
+    return filename
