@@ -739,6 +739,9 @@ class ScanContext:
 
                 bounding_box = None
                 if self._bounding_box:
+                    # TODO: Only call clear() when we exit the current motion event.
+                    # TODO: Include frames below the threshold for smoothing, or push a sentinel
+                    # value to update() to compensate the amount of smoothing accordingly.
                     bounding_box = (
                         self._bounding_box.update(motion_mask)
                         if above_threshold else self._bounding_box.clear())

@@ -49,6 +49,7 @@ min-event-length = 4
 time-before-event = 0
 """
 
+# TODO: Need to generate goldens for CNT/MOG2_CUDA, as their output can differ slightly.
 BASE_COMMAND_EVENT_LIST_GOLDEN = """
 -------------------------------------------------------------
 |   Event #    |  Start Time  |   Duration   |   End Time   |
@@ -69,6 +70,45 @@ def test_info_commands():
     assert subprocess.call(DVR_SCAN_COMMAND + ['--help']) == 0
     assert subprocess.call(DVR_SCAN_COMMAND + ['--version']) == 0
     assert subprocess.call(DVR_SCAN_COMMAND + ['--license']) == 0
+
+
+def test_default(tmp_path):
+    """Test with all default arguments."""
+    tmp_path = str(tmp_path)                     # Hack for Python 3.7 builder.
+    output = subprocess.check_output(
+        args=DVR_SCAN_COMMAND + BASE_COMMAND + [
+            '--output-dir',
+            tmp_path,
+        ], text=True)
+
+    # Make sure the correct # of events were detected.
+    assert 'Detected %d motion events in input.' % (BASE_COMMAND_NUM_EVENTS) in output
+    assert BASE_COMMAND_EVENT_LIST_GOLDEN in output, "Output event list does not match test golden."
+    assert BASE_COMMAND_TIMECODE_LIST_GOLDEN in output, "Output timecodes do not match test golden."
+    # TODO: Check filenames.
+    assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS
+
+
+def test_concatenate(tmp_path):
+    """Test with setting -o/--output to concatenate all events to a single file."""
+    ouptut_file_name = 'motion_events.avi'
+    tmp_path = str(tmp_path)                     # Hack for Python 3.7 builder.
+    output = subprocess.check_output(
+        args=DVR_SCAN_COMMAND + BASE_COMMAND + [
+            '--output-dir',
+            tmp_path,
+            '--output',
+            ouptut_file_name,
+        ],
+        text=True)
+
+    # Make sure the correct # of events were detected.
+    assert 'Detected %d motion events in input.' % (BASE_COMMAND_NUM_EVENTS) in output
+    assert BASE_COMMAND_EVENT_LIST_GOLDEN in output, "Output event list does not match test golden."
+    assert BASE_COMMAND_TIMECODE_LIST_GOLDEN in output, "Output timecodes do not match test golden."
+    generated_files = os.listdir(tmp_path)
+    assert len(generated_files) == 1
+    assert ouptut_file_name in generated_files
 
 
 def test_scan_only(tmp_path):
