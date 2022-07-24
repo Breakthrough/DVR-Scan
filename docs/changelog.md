@@ -4,7 +4,7 @@ DVR-Scan Changelog
 
 ## DVR-Scan 1.5
 
-### 1.5-beta (July 4, 2022) &nbsp;<span class="fa fa-tags"></span>
+### 1.5-beta (July 23, 2022) &nbsp;<span class="fa fa-tags"></span>
 
 #### Release Notes
 
@@ -91,6 +91,8 @@ This release includes fixes for incorrect event start/end times when using frame
 
  * Variable framerate videos (VFR) are not fully supported, and will yield incorrect timestamps ([#20](https://github.com/Breakthrough/DVR-Scan/issues/20))
  * Using `-st`/`--start-time` will yield incorrect results
+ * If a motion event happens to be *exactly* the number of frames specified by `-l`/`--min-event-length`, the end timecode will be displayed incorrectly ([#90](https://github.com/Breakthrough/DVR-Scan/issues/90))
+
 
 
 ### 1.4 (February 8, 2022)
@@ -127,6 +129,7 @@ In addition to several bugfixes, this release of DVR-Scan adds the ability to dr
  * When using `-fs`/`--frame-skip`, event start times do not include all of `-tb`/`--time-before-event` ([#68](https://github.com/Breakthrough/DVR-Scan/issues/68), [#70](https://github.com/Breakthrough/DVR-Scan/issues/70))
  * When using `-bb`/`--bounding-box`, the amount of time covered by `-l`/`--min-event-length` will be missing bounding box overlays ([#31](https://github.com/Breakthrough/DVR-Scan/issues/31))
  * Using `-st`/`--start-time` will yield incorrect results
+ * If a motion event happens to be *exactly* the number of frames specified by `-l`/`--min-event-length`, the end timecode will be displayed incorrectly ([#90](https://github.com/Breakthrough/DVR-Scan/issues/90))
 
 
 ## DVR-Scan 1.3
