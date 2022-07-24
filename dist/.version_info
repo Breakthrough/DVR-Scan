@@ -31,12 +31,12 @@ StringFileInfo(
     u'040904B0',
     [StringStruct(u'CompanyName', u'github.com/Breakthrough'),
     StringStruct(u'FileDescription', u'dvr-scan.readthedocs.io'),
-    StringStruct(u'FileVersion', u'v1.5-dev0'),
+    StringStruct(u'FileVersion', u'v1.5-dev2'),
     StringStruct(u'InternalName', u'DVR-Scan'),
     StringStruct(u'LegalCopyright', u'Copyright © 2022 Brandon Castellano'),
     StringStruct(u'OriginalFilename', u'dvr-scan.exe'),
     StringStruct(u'ProductName', u'DVR-Scan'),
-    StringStruct(u'ProductVersion', u'v1.5-dev0')])
+    StringStruct(u'ProductVersion', u'v1.5-dev2')])
   ]),
 VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
   ]
