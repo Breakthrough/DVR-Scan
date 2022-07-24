@@ -16,11 +16,23 @@ Hit Ctrl + C on your keyboard to exit DVR-Scan.
 ----------------------------------------------------------
 
 
+### Where are motion events (and other output files) saved?
+
+By default, DVR-Scan saves all files in the current working directory (the location you are invoking the `dvr-scan` command from). You can set the output directory with `-d`/`--output-dir`:
+
+    dvr-scan -i video.mp4 -d events_folder/
+
+
+----------------------------------------------------------
+
+
 ### How can I scan all files in a folder?
 
 You can use a wildcard in the input path to select multiple videos:
 
     dvr-scan -i folder/*.mp4
+
+You can also specify multiple input video paths, which will be processed in the order they are specified.
 
 Note that multiple input videos are not supported when `-m`/`--output-mode` is set to `ffmpeg` or `copy`. As a workaround, you can [use ffmpeg to concatenate all input videos](https://trac.ffmpeg.org/wiki/Concatenate) before using DVR-Scan to process them.
 

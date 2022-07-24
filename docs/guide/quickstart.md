@@ -7,7 +7,7 @@ To perform motion detection on `video.mp4`, creating a new video for each motion
 
     dvr-scan -i video.mp4
 
-The output will be placed in the current working directory (the location you are running DVR-Scan from). To save all output files in to a particular location, use `-d`/`--output-dir`:
+The output files will be placed in the current working directory (the location you are running DVR-Scan from). To save all output files in to a particular location, use `-d`/`--output-dir`:
 
     dvr-scan -i video.mp4 -d extracted_events/
 

@@ -27,6 +27,7 @@ from scenedetect.video_stream import VideoOpenFailure
 FRAMERATE_DELTA_TOLERANCE: float = 0.1
 
 
+# TODO: Replace this with the equivalent from PySceneDetect when available.
 class VideoJoiner:
     """Handles concatenating multiple videos together.
 
