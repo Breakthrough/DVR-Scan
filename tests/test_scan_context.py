@@ -163,6 +163,7 @@ def test_post_event_shift_with_frame_skip(traffic_camera_video):
 def test_decode_corrupt_video(corrupt_video):
     """Ensure we can process a video with a single bad frame."""
     sctx = ScanContext([corrupt_video])
+    sctx.set_event_params(min_event_len=2)
     sctx.set_detection_params(roi=CORRUPT_VIDEO_ROI)
     event_list = sctx.scan_motion()
     event_list = [(event[0].frame_num, event[1].frame_num) for event in event_list]

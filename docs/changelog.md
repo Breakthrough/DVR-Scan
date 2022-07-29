@@ -16,7 +16,7 @@ DVR-Scan Changelog
  * Windows binaries are now signed, thanks [SignPath.io](https://signpath.io/) (certificate by [SignPath Foundation](https://signpath.org/))
  * Experimental CUDA® support has been added (set `-b MOG2_CUDA`)
     * If installing via Pip, requires manual installation of OpenCV compiled with CUDA support
-    * If downloading Windows version, make sure to download the GPU-enabled build (`dvr-scan-1.5.dev1-win64-cuda.zip`)
+    * If downloading Windows version, make sure to download the GPU-enabled build (`dvr-scan-1.5.dev2-win64-cuda.zip`)
     * CUDA-enabled builds are not signed currently
  * Minimum supported Python version is now 3.7
  * Minimum supported OpenCV version is now 3.x
@@ -32,6 +32,7 @@ DVR-Scan Changelog
     * `-mo`/`--mask-output` - path to write motion mask for analysis
     * `--verbosity` and `--logfile` - control output verbosity and path to save output
  * `-i`/`--input` now supports globs/wildcards to scan entire folders, e.g. `-i folder/*.mp4`
+ * Change default value for `-l`/`--min-event-length` to 0.1 seconds, previously was 2 frames ([#91](https://github.com/Breakthrough/DVR-Scan/issues/91))
  * Long form of `-roi` has been renamed to `--region-of-interest` (previously was `--rectangle-of-interest`)
  * `-c` is now used for `--config`, previously was for `--codec`
  * Add experimental `MOG2_CUDA` option for `-b`/`--bg-subtractor`
@@ -58,8 +59,9 @@ DVR-Scan Changelog
  * [bugfix] Only get screen resolution when required (was causing issues on headless machines)
  * [bugfix] Fix output messages conflicting with progress bar shown during scanning
  * [bugfix] Output events now start from 1 to align with the event list
- * [enhancement] Progress bar now indicates how many events have been detected so far
  * [bugfix] Event end times now include the presentation duration of the last frame
+ * [enhancement] Progress bar now indicates how many events have been detected so far
+ * [enhancement] Change default value for `min_event_len` to 0.1 seconds, previously was 2 frames ([#91](https://github.com/Breakthrough/DVR-Scan/issues/91))
 
 #### Known Issues
 

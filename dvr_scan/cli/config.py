@@ -294,7 +294,7 @@ CONFIG_MAP: ConfigDict = {
     'ffmpeg-output-args': DEFAULT_FFMPEG_OUTPUT_ARGS,
     'opencv-codec': 'XVID',
                                                          # Motion Events
-    'min-event-length': TimecodeValue(2),
+    'min-event-length': TimecodeValue('0.1s'),
     'time-before-event': TimecodeValue('1.5s'),
     'time-post-event': TimecodeValue('2.0s'),
                                                          # Detection Parameters

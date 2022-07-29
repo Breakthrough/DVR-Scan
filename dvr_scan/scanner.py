@@ -399,9 +399,9 @@ class ScanContext:
                 self._show_roi_window = True
 
     def set_event_params(self,
-                         min_event_len: int = 2,
-                         time_pre_event: Union[int, float, str] = "1.5s",
-                         time_post_event: Union[int, float, str] = "2s"):
+                         min_event_len: Union[int, float, str] = '0.1s',
+                         time_pre_event: Union[int, float, str] = '1.5s',
+                         time_post_event: Union[int, float, str] = '2s'):
         """ Sets motion event parameters. """
         assert self._input.framerate is not None
         self._min_event_len = FrameTimecode(min_event_len, self._input.framerate)
