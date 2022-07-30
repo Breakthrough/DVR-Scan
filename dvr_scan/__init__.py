@@ -1,93 +1,76 @@
 # -*- coding: utf-8 -*-
 #
-#       DVR-Scan: Find & Export Motion Events in Video Footage
+#      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
-#     [  Site: https://github.com/Breakthrough/DVR-Scan/   ]
-#     [  Documentation: http://dvr-scan.readthedocs.org/   ]
+#       [  Site: https://github.com/Breakthrough/DVR-Scan/   ]
+#       [  Documentation: http://dvr-scan.readthedocs.org/   ]
 #
-# This file contains all code for the main `dvr_scan` module.
+# Copyright (C) 2014-2022 Brandon Castellano <http://www.bcastell.com>.
+# PySceneDetect is licensed under the BSD 2-Clause License; see the
+# included LICENSE file, or visit one of the above pages for details.
 #
-# Copyright (C) 2016-2021 Brandon Castellano <http://www.bcastell.com>.
-#
-# DVR-Scan is licensed under the BSD 2-Clause License; see the included
-# LICENSE file or visit one of the following pages for details:
-#  - https://github.com/Breakthrough/DVR-Scan/
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-# IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
-# OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
-# ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-# OTHER DEALINGS IN THE SOFTWARE.
-#
-
-""" ``dvr_scan`` Module
+"""``dvr_scan`` Module
 
 This is the main DVR-Scan module containing all application logic,
 motion detection implementation, and command line processing. The
-modules are organized as follows:
+main modules under `dvr_scan` are organized as follows:
 
-  dvr_scan.cli:
-    Command-line interface (argparse)
+  ``cli``: command-line interface
 
-  dvr_scan.scanner:
-    Application logic + motion detection algorithm (ScanContext)
+  ``scanner``: scans a video for motion and extracts events
+
+  ``motion_detector``: motion detection algorithms
+
+  ``overlays``: overlays which can be drawn when outputting events
+
+There are also a few helper modules:
+
+  ``video_joiner``: concatenates multiple input videos
+
+  ``opencv_loader``: helper for resolving dynamic libraries used by OpenCV
+
+  ``platform``: library/platform specific helpers
 """
 
-# Standard Library Imports
-from __future__ import print_function
-import logging
+import os
 import sys
+import pkgutil
 
-# OpenCV is a required package, but we don't have it as an explicit dependency since we
-# need to support both opencv-python and opencv-python-headless. Include some additional
-# context with the exception if this is the case.
-try:
-    import cv2 as _
-except ModuleNotFoundError as ex:
-    raise ModuleNotFoundError(
-        "OpenCV could not be found, try installing opencv-python:\n\npip install opencv-python",
-        name='cv2',
-    ) from ex
+# Handle loading OpenCV. This **MUST** be first before any other DVR-Scan or third-party
+# packages are imported which might attempt to import the `cv2` module.
+import dvr_scan.opencv_loader as _
 
-# DVR-Scan Library Imports
-from dvr_scan.scanner import ScanContext, VideoLoadFailure
+# Top-level imports for easier access from the dvr_scan module.
+from dvr_scan.platform import init_logger
+from dvr_scan.scanner import ScanContext
+
+# Used for module/distribution identification.
+__version__ = 'v1.5'
 
 
-# Used for module identification and when printing copyright & version info.
-__version__ = 'v1.4.1'
+def get_license_info() -> str:
+    """Get license/copyright information for the package or standalone executable."""
+    try:
+        # If we're running a frozen/standalone executable distribution, make sure we include
+        # the license information for the third-party components we redistribute.
+        if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+            app_folder = os.path.abspath(os.path.dirname(sys.executable))
+            license_files = ['LICENSE', 'LICENSE-THIRDPARTY']
+            license_text = '\n'.join([
+                open(os.path.join(app_folder, license_file), 'rb').read().decode('ascii', 'ignore')
+                for license_file in license_files
+            ])
+        # Use the LICENSE file included with the package distribution.
+        else:
+            license_text = pkgutil.get_data(__name__, "LICENSE").decode('ascii', 'ignore')
+        return license_text
+    # During development this is normal since the package paths won't be correct.
+    except FileNotFoundError:
+        pass
+    return ('[DVR-Scan] Error: Missing LICENSE files.\n'
+            'See the following URL for license/copyright information:\n'
+            ' < https://dvr-scan.readthedocs.io/en/latest/copyright >\n')
 
-# About & copyright message string shown for the -v/--version CLI argument.
-ABOUT_STRING = """-----------------------------------------------
-DVR-Scan %s
------------------------------------------------
-Copyright (C) 2016-2022 Brandon Castellano
-< https://github.com/Breakthrough/DVR-Scan >
 
-This DVR-Scan is licensed under the BSD 2-Clause license; see the
-included LICENSE file, or visit the above link for details. This
-software uses the following third-party components:
-  NumPy: Copyright (C) 2005-2013, Numpy Developers.
- OpenCV: Copyright (C) 2016, Itseez.
-THE SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, EXPRESS OR IMPLIED.
-
-""" % __version__
-
-
-
-def init_logger(quiet_mode, log_level=logging.INFO):
-    """Initializes the Python logger named 'dvr_scan'."""
-    logger = logging.getLogger('dvr_scan')
-    logger.setLevel(log_level)
-    if quiet_mode:
-        for handler in logger.handlers:
-            logger.removeHandler(handler)
-        return
-    handler = logging.StreamHandler(stream=sys.stdout)
-    handler.setLevel(log_level)
-    handler.setFormatter(logging.Formatter(fmt='[DVR-Scan] %(message)s'))
-    logger.addHandler(handler)
-    return logger
-
-init_logger(quiet_mode=True)
+# Initialize logger.
+init_logger(show_stdout=True)

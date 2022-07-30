@@ -1,11 +1,11 @@
 #
 # DVR-Scan Python Requirements
 #
+platformdirs
 pytest
 numpy
-opencv-python<=4.2.0.32; python_version <= "3.5"
-opencv-python; python_version > "3.5"
-opencv-contrib-python<=4.2.0.32; python_version <= "3.5"
-opencv-contrib-python; python_version > "3.5"
+opencv-python
+opencv-contrib-python
+scenedetect
 screeninfo
 tqdm

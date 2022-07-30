@@ -1,7 +1,26 @@
 
-<h2>Frequently Asked Questions (FAQ)</h2>
+## Frequently Asked Questions (FAQ)
 
 This FAQ is a supplement to the user guide, and is intended to help solve the most common issues you may encounter when using DVR-Scan.  The topics covered on this page range from installation problems to methods for processing corrupted video files.
+
+
+
+----------------------------------------------------------
+
+
+### How can I stop DVR-Scan while running?
+
+Hit Ctrl + C on your keyboard to exit DVR-Scan.
+
+
+----------------------------------------------------------
+
+
+### Where are motion events (and other output files) saved?
+
+By default, DVR-Scan saves all files in the current working directory (the location you are invoking the `dvr-scan` command from). You can set the output directory with `-d`/`--output-dir`:
+
+    dvr-scan -i video.mp4 -d events_folder/
 
 
 ----------------------------------------------------------
@@ -9,7 +28,13 @@ This FAQ is a supplement to the user guide, and is intended to help solve the mo
 
 ### How can I scan all files in a folder?
 
-[See this comment](https://github.com/Breakthrough/DVR-Scan/issues/5#issuecomment-599140476) for how to run DVR-Scan on all files in a folder. You can use [a similar for loop in bash](https://github.com/Breakthrough/DVR-Scan/issues/5#issuecomment-633199185).
+You can use a wildcard in the input path to select multiple videos:
+
+    dvr-scan -i folder/*.mp4
+
+You can also specify multiple input video paths, which will be processed in the order they are specified.
+
+Note that multiple input videos are not supported when `-m`/`--output-mode` is set to `ffmpeg` or `copy`. As a workaround, you can [use ffmpeg to concatenate all input videos](https://trac.ffmpeg.org/wiki/Concatenate) before using DVR-Scan to process them.
 
 
 ----------------------------------------------------------
@@ -17,7 +42,7 @@ This FAQ is a supplement to the user guide, and is intended to help solve the mo
 
 ### How can I improve the performance of DVR-Scan?
 
-On the Getting Started & Examples page, see the [Performance section](examples.md#performance) under Motion Detection Parameters.  Additional performance improvements are being worked on for future versions (parallel processing, utilization of GPU, etc...).
+Adjusting [motion detection parameters](options.md#detection-parameters) can have a large effect on performance. Setting the output mode `-m`/`--output-mode` to either `ffmpeg` or `copy` can also improve performance compared to the default (`opencv`).
 
 
 ----------------------------------------------------------
@@ -25,11 +50,17 @@ On the Getting Started & Examples page, see the [Performance section](examples.m
 
 ### How can I join/concatenate two or more video files for processing?
 
-If you have a series of video clips from the same source, you can append subsequent video clips to the DVR-Scan input by including another `-i` flag for each file.  For example, to process three videos sequentially:
+If you have a series of video clips from the same source, you can append subsequent video clips to the DVR-Scan input by including multiple files after `-i`.  For example:
 
-    dvr-scan -i first_video.mp4 -i second_video.mp4 -i third_video.mp4
+    dvr-scan -i video0000.mp4 video0001.mp4 video0002.mp4
 
-The videos are processed in the same order as they appear in the command.  Note that each clip specified by `-i` must have the same resolution and framerate.
+You can also use wildcards in the input path:
+
+    dvr-scan -i video*.mp4
+
+Each video **must** have the same resolution and framerate. Videos are processed in the same order as they appear in the command, and extracted events will use the first video's filename as a template.
+
+Multiple input videos are not supported when output mode `-m`/`--output-mode` is set to either `ffmpeg` or `copy`. As a workaround, you can [use ffmpeg to concatenate all input videos](https://trac.ffmpeg.org/wiki/Concatenate) before using DVR-Scan to process them.
 
 
 ----------------------------------------------------------
@@ -37,9 +68,9 @@ The videos are processed in the same order as they appear in the command.  Note 
 
 ### How can I fix a video that's corrupted, shows the wrong duration, or won't let me seek/fast-forward?
 
-Video files with corrupted/malformed headers can sometimes be fixed by re-muxing them into a new container.  One tool you can use for this is `mkvtoolnix` (cross platform), using `mkvmerge` or the GUI to add the video and save it into a new `.mkv` file.
+Video files with corrupted/malformed headers can sometimes be fixed by re-muxing them into a new container.  This can be done using either `ffmpeg` or `mkvmerge` (both tools support codec copying mode).
 
-If all is successful, the output video should be roughly the same size as the original, and playback fine in most media players.  Specifically, it should also report the video's length accurately, and allow seeking throughout the video.
+If the process is successful, the output video should be roughly the same size as the original, and playback fine in most media players.  Specifically, it should also report the video's length accurately, and allow seeking throughout the video.
 
 
 ----------------------------------------------------------
@@ -67,7 +98,7 @@ The most important thing to keep in mind is the `-v` flag, which specifies the l
 
 ### What if my video is larger than my monitor resolution?
 
-As of DVR-Scan v1.4, you can either manually specify the max width/height (e.g. `-roi 1920 1080`), or if the `screeninfo` package is installed, the window will be sized to the minimum monitor size.
+As of DVR-Scan v1.4, you can manually specify the max width/height when using the `-roi` option (e.g. `-roi 1920 1080`).  Additionally, if the `screeninfo` package is installed, the window will be sized to fit within the smallest monitor automatically.
 
 
 ----------------------------------------------------------
@@ -87,6 +118,6 @@ Code changes and pull requests are accepted and welcome, provided that the chang
 
 If you're unable to get DVR-Scan to process any video files, including those available in the examples section, than you are either missing or have an improperly configured software dependency.
 
-This usually happens because DVR-Scan is not able to find the OpenCV FFMPEG DLL, which is required to decode videos.  Try reinstalling OpenCV, ensuring that when finished, all of the compiled `opencv*.dll` binaries can be found somewhere in your system's `%PATH%` environment variable.
+This usually happens because DVR-Scan is not able to find the OpenCV FFMPEG DLL, which is required to decode videos.  Try reinstalling OpenCV, ensuring that when finished, all of the compiled `opencv*.dll` binaries can be found somewhere in your system's `PATH` environment variable.
 
-Windows users can also try downloading a binary/portable distribution, which includes DVR-Scan and all dependencies in a single .ZIP archive.  Note that the portable version can be "installed" after extracting by adding the folder containing `dvr-scan.exe` to your system's `%PATH%` environment variable, allowing you to use the `dvr-scan` command system-wide.
+Windows users can also try downloading a binary/portable distribution, which includes DVR-Scan and all dependencies in a single .ZIP archive.  Note that the portable version can be "installed" after extracting by adding the folder containing `dvr-scan.exe` to your system's `PATH` environment variable, allowing you to use the `dvr-scan` command system-wide.

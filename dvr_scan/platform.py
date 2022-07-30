@@ -1,85 +1,105 @@
 # -*- coding: utf-8 -*-
 #
-#       DVR-Scan: Find & Export Motion Events in Video Footage
+#      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
-#     [  Site: https://github.com/Breakthrough/DVR-Scan/   ]
-#     [  Documentation: http://dvr-scan.readthedocs.org/   ]
+#       [  Site: https://github.com/Breakthrough/DVR-Scan/   ]
+#       [  Documentation: http://dvr-scan.readthedocs.org/   ]
 #
-# This file contains all platform/library specific code, intended to improve
-# compatibility of DVR-Scan with a wider array of software versions.
+# Copyright (C) 2014-2022 Brandon Castellano <http://www.bcastell.com>.
+# PySceneDetect is licensed under the BSD 2-Clause License; see the
+# included LICENSE file, or visit one of the above pages for details.
 #
-# Copyright (C) 2016-2021 Brandon Castellano <http://www.bcastell.com>.
-#
-# DVR-Scan is licensed under the BSD 2-Clause License; see the included
-# LICENSE file or visit one of the following pages for details:
-#  - https://github.com/Breakthrough/DVR-Scan/
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-# IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
-# OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
-# ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-# OTHER DEALINGS IN THE SOFTWARE.
-#
+"""``dvr_scan.platform`` Module
 
-""" ``dvr_scan.platform`` Module
-
-This file contains all platform/library/OS-specific compatibility fixes,
-intended to improve the systems that are able to run DVR-Scan, and allow
-for maintaining backwards compatibility with existing libraries going forwards.
-
-For OpenCV 2.x, the scenedetect.platform module also makes a copy of the
-OpenCV VideoCapture property constants from the cv2.cv namespace directly
-to the cv2 namespace.  This ensures that the cv2 API is consistent
-with those changes made to it in OpenCV 3.0 and above.
-
-TODO: Replace with PySceneDetect's platform module to reduce code duplication
-across both projects.
+Contains platform, library, or OS-specific compatibility helpers.
 """
 
 import logging
-import cv2
+import os
+import subprocess
+import sys
+from typing import AnyStr, Optional
 
-# Compatibility fix for OpenCV < 3.0
-if cv2.__version__[0] == '2' or not (
-        cv2.__version__[0].isdigit() and int(cv2.__version__[0]) >= 3):
-    cv2.CAP_PROP_FRAME_WIDTH = cv2.cv.CV_CAP_PROP_FRAME_WIDTH
-    cv2.CAP_PROP_FRAME_HEIGHT = cv2.cv.CV_CAP_PROP_FRAME_HEIGHT
-    cv2.CAP_PROP_FPS = cv2.cv.CV_CAP_PROP_FPS
-    cv2.CAP_PROP_POS_MSEC = cv2.cv.CV_CAP_PROP_POS_MSEC
-    cv2.CAP_PROP_POS_FRAMES = cv2.cv.CV_CAP_PROP_POS_FRAMES
-    cv2.CAP_PROP_FRAME_COUNT = cv2.cv.CV_CAP_PROP_FRAME_COUNT
-    cv2.VideoWriter_fourcc = cv2.cv.CV_FOURCC
+try:
+    import screeninfo
+except ImportError:
+    screeninfo = None
 
-def get_tqdm():
-    """ Safely attempts to import the tqdm module, returning either a
-    reference to the imported module, or None if tqdm was not found."""
-    try:
-        import tqdm
-        return tqdm
-    except ImportError:
-        pass
-    return None
+from scenedetect.platform import get_and_create_path
 
-def cnt_is_available():
-    try:
-        return 'createBackgroundSubtractorCNT' in dir(cv2.bgsegm)
-    except AttributeError:
-        return False
 
 def get_min_screen_bounds():
     """ Safely attempts to get the minimum screen resolution of all monitors
     using the `screeninfo` package. Returns the minimum of all monitor's heights
     and widths with 10% padding."""
-    try:
-        import screeninfo
+    if screeninfo is not None:
         try:
             monitors = screeninfo.get_monitors()
             return (int(0.9 * min(m.height for m in monitors)),
                     int(0.9 * min(m.width for m in monitors)))
         except screeninfo.common.ScreenInfoError as ex:
-            logging.getLogger('dvr_scan').warning("Unable to get screen resolution: %s", ex)
-    except ImportError:
-        pass
+            pass
+    logging.getLogger('dvr_scan').warning("Unable to get screen resolution: %s", ex)
     return None
+
+
+def is_ffmpeg_available(ffmpeg_path: AnyStr = 'ffmpeg'):
+    """ Is ffmpeg Available: Gracefully checks if ffmpeg command is available.
+
+    Returns:
+        True if `ffmpeg` can be invoked, False otherwise.
+    """
+    ret_val = None
+    try:
+        ret_val = subprocess.call([ffmpeg_path, '-v', 'quiet'])
+    except OSError:
+        return False
+    if ret_val is not None and ret_val != 1:
+        return False
+    return True
+
+
+def init_logger(log_level: int = logging.INFO,
+                show_stdout: bool = False,
+                log_file: Optional[str] = None):
+    """Initializes logging for DVR-SCan. The logger instance used is named 'dvr_scan'.
+    By default the logger has no handlers to suppress output. All existing log handlers
+    are replaced every time this function is invoked.
+
+    Arguments:
+        log_level: Verbosity of log messages. Should be one of [logging.INFO, logging.DEBUG,
+            logging.WARNING, logging.ERROR, logging.CRITICAL].
+        show_stdout: If True, add handler to show log messages on stdout (default: False).
+        log_file: If set, add handler to dump log messages to given file path.
+    """
+    # Format of log messages depends on verbosity.
+    format_str = '[DVR-Scan] %(message)s'
+    if log_level == logging.DEBUG:
+        format_str = '%(levelname)s: %(module)s.%(funcName)s(): %(message)s'
+    # Get the named logger and remove any existing handlers.
+    logger_instance = logging.getLogger('dvr_scan')
+    logger_instance.handlers = []
+    logger_instance.setLevel(log_level)
+    # Add stdout handler if required.
+    if show_stdout:
+        handler = logging.StreamHandler(stream=sys.stdout)
+        handler.setLevel(log_level)
+        handler.setFormatter(logging.Formatter(fmt=format_str))
+        logger_instance.addHandler(handler)
+    # Add file handler if required.
+    if log_file:
+        log_file = get_and_create_path(log_file)
+        handler = logging.FileHandler(log_file)
+        handler.setLevel(log_level)
+        handler.setFormatter(logging.Formatter(fmt=format_str))
+        logger_instance.addHandler(handler)
+
+
+def get_filename(path: AnyStr, include_extension: bool) -> AnyStr:
+    """Get filename of the given path, optionally excluding extension."""
+    filename = os.path.basename(path)
+    if not include_extension:
+        dot_position = filename.rfind('.')
+        if dot_position > 0:
+            filename = filename[:dot_position]
+    return filename
