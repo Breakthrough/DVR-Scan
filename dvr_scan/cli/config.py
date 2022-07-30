@@ -13,8 +13,10 @@
 """``dvr_scan.cli.config`` Module
 
 Handles loading configuration files from disk and validating each setting. Only validation
-of the config file schema and data types are performed. Constants/defaults are also defined
-here where possible and re-used by the CLI so that there is one source of truth.
+of the config file schema and data types are performed. The constants and default values
+defined here are used by the CLI as well to ensure there is one source of truth. Note that
+the constants defined here for use by the CLI/config file may differ from their equivalents
+in the `dvr_scan` module.
 """
 
 from abc import ABC, abstractmethod

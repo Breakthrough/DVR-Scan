@@ -311,7 +311,7 @@ class ScanContext:
             raise ValueError(
                 "input concatenation is only supported in `scan-only` or `opencv` mode.")
         if comp_file is not None and output_mode != OutputMode.OPENCV:
-            raise ValueError("output concatenation is only supported using output mode `opencv`")
+            raise ValueError("output to single file is only supported with mode `opencv`")
         if output_mode in (OutputMode.FFMPEG, OutputMode.COPY) and not is_ffmpeg_available():
             raise ValueError("ffmpeg is required to use output mode FFMPEG/COPY")
         self._comp_file = comp_file

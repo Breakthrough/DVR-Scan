@@ -17,6 +17,7 @@ This module manages the DVR-Scan program control flow, starting with `run_dvr_sc
 import argparse
 import glob
 import logging
+import os
 from subprocess import CalledProcessError
 from typing import Any, Optional
 
@@ -199,7 +200,10 @@ def run_dvr_scan():
     if not bg_subtractor.value.is_available():
         logger.error(
             'Method %s is not available. To enable it, install a version of'
-            ' the OpenCV package `cv2` that includes it.', bg_subtractor.name)
+            ' the OpenCV package `cv2` that includes support for it%s.', bg_subtractor.name,
+            ', or download the experimental CUDA-enabled build: https://dvr-scan.readthedocs.io/'
+            if 'CUDA' in bg_subtractor.name() and os.name == 'nt' else '')
+
         return EXIT_ERROR
 
     try:

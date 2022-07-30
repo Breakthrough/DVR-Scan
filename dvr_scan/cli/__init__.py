@@ -366,11 +366,9 @@ def get_cli_parser(user_config: ConfigRegistry):
         '--output',
         metavar='video.avi',
         type=str,
-        help=('If specified, all motion events will be written to a single'
-              ' file, creating a compilation of only the frames in'
-              ' the input video containing motion. By default each'
-              ' motion event is written to a separate file. Filename'
-              ' MUST end with .avi. Only supported in output mode OPENCV.'),
+        help=('If specified, all motion events will be written to a single file'
+              ' in order (if not specified, separate files are created for each event).'
+              ' Filename MUST end with .avi. Only supported in output mode OPENCV.'),
     )
 
     parser.add_argument(
@@ -471,7 +469,6 @@ def get_cli_parser(user_config: ConfigRegistry):
         '--start-time',
         metavar='time',
         type=timecode_type_check('time'),
-        default=None,
         help=('Time to seek to in video before performing detection. Can be'
               ' given in number of frames (12345), seconds (number followed'
               ' by s, e.g. 123s or 123.45s), or timecode (HH:MM:SS[.nnn]).'),
@@ -482,7 +479,6 @@ def get_cli_parser(user_config: ConfigRegistry):
         '--duration',
         metavar='time',
         type=timecode_type_check('time'),
-        default=None,
         help=('Duration stop processing the input after (see -st for valid timecode formats).'
               ' Overrides -et.'),
     )
@@ -492,7 +488,6 @@ def get_cli_parser(user_config: ConfigRegistry):
         '--end-time',
         metavar='time',
         type=timecode_type_check('time'),
-        default=None,
         help=('Timecode to stop processing the input (see -st for valid timecode formats).'),
     )
 

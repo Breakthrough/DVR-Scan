@@ -60,6 +60,7 @@ DVR-Scan Changelog
  * [bugfix] Fix output messages conflicting with progress bar shown during scanning
  * [bugfix] Output events now start from 1 to align with the event list
  * [bugfix] Event end times now include the presentation duration of the last frame
+ * [bugfix] Small values for `-l`/`--min-event-length` are now handled correctly, previously would cause an error
  * [enhancement] Progress bar now indicates how many events have been detected so far
  * [enhancement] Change default value for `min_event_len` to 0.1 seconds, previously was 2 frames ([#91](https://github.com/Breakthrough/DVR-Scan/issues/91))
 
