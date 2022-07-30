@@ -9,14 +9,6 @@
 
 ------------------------------------------------
 
-**Beta Release**: Try the upcoming v1.5 beta (or [download a Windows build](http://dvr-scan.readthedocs.io/en/v1.5/download/)):
-
-    pip install dvr-scan[opencv] --upgrade --pre
-
-See [the changelog](https://dvr-scan.readthedocs.io/en/v1.5/changelog/) and [updated docs](https://dvr-scan.readthedocs.io/en/v1.5/guide/quickstart/).
-
-------------------------------------------------
-
 **Quick Install**: Requires Python modules `numpy`, OpenCV `cv2`, and `tqdm` (optional) for displaying progress.  To install DVR-Scan via `pip` with all dependencies:
 
     pip install dvr-scan[opencv] --upgrade

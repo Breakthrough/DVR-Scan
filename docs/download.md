@@ -26,16 +26,16 @@ DVR-Scan is available via `pip` as [the `dvr-scan` package](https://pypi.org/pro
 <div class="important">
 <h3 class="wy-text-neutral"><span class="fa fa-forward wy-text-info"></span> Latest Release: <b class="wy-text-neutral">v1.5</b></h3>
 <h4 class="wy-text-neutral"><span class="fa fa-calendar wy-text-info"></span>&nbsp; Release Date:&nbsp; <b>July 30, 2022</b></h4>
-<a href="https://github.com/Breakthrough/DVR-Scan/releases/download/v1.5-release/dvr-scan-1.5-win64.msi" class="btn btn-info" style="margin-bottom:8px;" role="button"><span class="fa fa-download"></span>&nbsp; <b>Installer MSI</b></a> &nbsp;&nbsp;&nbsp;&nbsp; <a href="https://github.com/Breakthrough/DVR-Scan/releases/download/v1.5-release/dvr-scan-1.5-win64.zip" class="btn btn-info" style="margin-bottom:8px;" role="button"><span class="fa fa-download"></span>&nbsp; <b>Portable ZIP</b></a> &nbsp;&nbsp;&nbsp;&nbsp; <a href="https://github.com/Breakthrough/DVR-Scan/releases/download/v1.5-release/dvr-scan-1.5-win64-cuda.zip" class="btn btn-info" style="margin-bottom:8px;" role="button"><span class="fa fa-download"></span>&nbsp; <b>Portable + Nvidia CUDA®</b></a> &nbsp;&nbsp;&nbsp;&nbsp; <a href="../guide/quickstart/" class="btn btn-success" style="margin-bottom:8px;" role="button"><span class="fa fa-book"></span>&nbsp; <b>Getting Started</b></a>
+<a href="https://github.com/Breakthrough/DVR-Scan/releases/download/v1.5-release/dvr-scan-1.5-win64.msi" class="btn btn-info" style="margin-bottom:8px;" role="button"><span class="fa fa-download"></span>&nbsp; <b>Installer MSI</b></a> &nbsp;&nbsp;&nbsp;&nbsp; <a href="https://github.com/Breakthrough/DVR-Scan/releases/download/v1.5-release/dvr-scan-1.5-win64.zip" class="btn btn-info" style="margin-bottom:8px;" role="button"><span class="fa fa-download"></span>&nbsp; <b>Portable ZIP</b></a> &nbsp;&nbsp;&nbsp;&nbsp; <a href="https://github.com/Breakthrough/DVR-Scan/releases/download/v1.5-release/dvr-scan-1.5-win64-cuda.zip" class="btn btn-info" style="margin-bottom:8px;" role="button"><span class="fa fa-download"></span>&nbsp; <b>Nvidia CUDA® Build (Experimental)</b></a> &nbsp;&nbsp;&nbsp;&nbsp; <a href="../guide/quickstart/" class="btn btn-success" style="margin-bottom:8px;" role="button"><span class="fa fa-book"></span>&nbsp; <b>Getting Started</b></a>
 </div>
 
-Windows builds including Nvidia CUDA® support are experimental and not code signed.
+Due to a change in the installer format, you must uninstall previous versions of DVR-Scan before installing v1.5.  Windows builds including Nvidia CUDA® support are experimental, and are not code signed.
 
 ### Python Distribution &nbsp; <span class="wy-text-neutral"><span class="fa fa-windows"></span> &nbsp; <span class="fa fa-linux"></span> &nbsp; <span class="fa fa-apple"></span></span>
 
 <div class="important">
 <h4 class="wy-text-neutral"><span class="fa fa-forward wy-text-info"></span> Latest Release: <b class="wy-text-neutral">v1.5</b></h4>
-<h4 class="wy-text-neutral"><span class="fa fa-calendar wy-text-info"></span>&nbsp; Release Date:&nbsp; <b>July 29, 2022</b></h4>
+<h4 class="wy-text-neutral"><span class="fa fa-calendar wy-text-info"></span>&nbsp; Release Date:&nbsp; <b>July 30, 2022</b></h4>
 <a href="https://github.com/Breakthrough/DVR-Scan/releases/download/v1.5-release/dvr_scan-1.5-py3-none-any.whl" class="btn btn-info" style="margin-bottom:8px;" role="button"><span class="fa fa-download"></span>&nbsp; <b>Wheel</b>&nbsp;&nbsp;.whl</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href="https://github.com/Breakthrough/DVR-Scan/releases/download/v1.5-release/dvr-scan-1.5.tar.gz" class="btn btn-info" style="margin-bottom:8px;" role="button"><span class="fa fa-download"></span>&nbsp; <b>Source</b>&nbsp;&nbsp;.tar.gz</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href="../guide/quickstart/" class="btn btn-success" style="margin-bottom:8px;" role="button"><span class="fa fa-book"></span>&nbsp; <b>Getting Started</b></a>
 </div>
 
