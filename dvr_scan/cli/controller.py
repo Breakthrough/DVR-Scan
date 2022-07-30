@@ -202,8 +202,7 @@ def run_dvr_scan():
             'Method %s is not available. To enable it, install a version of'
             ' the OpenCV package `cv2` that includes support for it%s.', bg_subtractor.name,
             ', or download the experimental CUDA-enabled build: https://dvr-scan.readthedocs.io/'
-            if 'CUDA' in bg_subtractor.name() and os.name == 'nt' else '')
-
+            if 'CUDA' in bg_subtractor.name and os.name == 'nt' else '')
         return EXIT_ERROR
 
     try:
