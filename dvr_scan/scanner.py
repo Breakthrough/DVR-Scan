@@ -25,11 +25,11 @@ import subprocess
 import sys
 import time
 import threading
-from typing import Any, AnyStr, Iterable, List, Optional, Tuple, Union
+from typing import Any, AnyStr, List, Optional, Tuple, Union
 
 import cv2
 import numpy
-from scenedetect import FrameTimecode, VideoOpenFailure
+from scenedetect import FrameTimecode
 
 from tqdm import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
@@ -405,9 +405,6 @@ class ScanContext:
         """ Sets motion event parameters. """
         assert self._input.framerate is not None
         self._min_event_len = FrameTimecode(min_event_len, self._input.framerate)
-        # Make sure minimum event length is at least 1.
-        if not self._min_event_len.frame_num >= 1:
-            raise ValueError('min_event_len must be >= 1 frame!')
         self._pre_event_len = FrameTimecode(time_pre_event, self._input.framerate)
         self._post_event_len = FrameTimecode(time_post_event, self._input.framerate)
 
@@ -569,8 +566,9 @@ class ScanContext:
         # Correct pre/post and minimum event lengths to account for frame skip factor.
         post_event_len: int = self._post_event_len.frame_num // (self._frame_skip + 1)
         pre_event_len: int = self._pre_event_len.frame_num // (self._frame_skip + 1)
-        # min_event_len must be at least 1
         min_event_len: int = max(self._min_event_len.frame_num // (self._frame_skip + 1), 1)
+        # Calculations below rely on min_event_len always being >= 1 (cannot be zero)
+        assert min_event_len >= 1, "min_event_len must be at least 1 frame"
         # Ensure that we include the exact amount of time specified in `-tb`/`--time-before` when
         # shifting the event start time. Instead of using `-l`/`--min-event-len` directly, we
         # need to compensate for rounding errors when we corrected it for frame skip. This is

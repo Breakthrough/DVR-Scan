@@ -11,8 +11,12 @@
 #
 """ ``dvr_scan.cli`` Module
 
-This module provides the get_cli_parser() function, which provides
-an argparse-based CLI parser used by the DVR-Scan application.
+This module provides the command-line business logic for the `dvr-scan` command. The entry point
+starts the program by calling :py:func:`dvr_scan.cli.controller.run_dvr_scan`.
+
+Control logic can be found in :py:mod:`dvr_scan.cli.controller` and configuration file parsing
+is defined in :py:mod:`dvr_scan.cli.config`. This main module file defines :py:func:`get_cli_parser`
+which provides an argparse-based CLI used by the DVR-Scan application.
 """
 
 import argparse

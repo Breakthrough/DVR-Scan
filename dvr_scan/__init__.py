@@ -9,25 +9,35 @@
 # PySceneDetect is licensed under the BSD 2-Clause License; see the
 # included LICENSE file, or visit one of the above pages for details.
 #
-""" ``dvr_scan`` Module
+"""``dvr_scan`` Module
 
 This is the main DVR-Scan module containing all application logic,
 motion detection implementation, and command line processing. The
-modules are organized as follows:
+main modules under `dvr_scan` are organized as follows:
 
-  dvr_scan.cli:
-    Command-line interface (argparse)
+  ``cli``: command-line interface
 
-  dvr_scan.scanner:
-    Application logic + motion detection algorithm (ScanContext)
+  ``scanner``: scans a video for motion and extracts events
+
+  ``motion_detector``: motion detection algorithms
+
+  ``overlays``: overlays which can be drawn when outputting events
+
+There are also a few helper modules:
+
+  ``video_joiner``: concatenates multiple input videos
+
+  ``opencv_loader``: helper for resolving dynamic libraries used by OpenCV
+
+  ``platform``: library/platform specific helpers
 """
 
 import os
 import sys
 import pkgutil
 
-# Handle loading OpenCV.
-# This **MUST** be first.
+# Handle loading OpenCV. This **MUST** be first before any other DVR-Scan or third-party
+# packages are imported which might attempt to import the `cv2` module.
 import dvr_scan.opencv_loader as _
 
 # Top-level imports for easier access from the dvr_scan module.
