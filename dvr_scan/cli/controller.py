@@ -300,6 +300,8 @@ def run_dvr_scan():
         return EXIT_ERROR
 
     except KeyboardInterrupt as ex:
+        # TODO(v1.6): Change this to log something with info verbosity so it's clear
+        # to end users why the program terminated.
         logger.debug("KeyboardInterrupt received, quitting.")
         if settings.debug_mode:
             raise
