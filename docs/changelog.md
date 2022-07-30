@@ -4,7 +4,7 @@ DVR-Scan Changelog
 
 ## DVR-Scan 1.5
 
-### 1.5-beta (July 23, 2022) &nbsp;<span class="fa fa-tags"></span>
+### 1.5 (July 30, 2022) &nbsp;<span class="fa fa-tags"></span>
 
 #### Release Notes
 
@@ -14,10 +14,10 @@ DVR-Scan Changelog
  * Configuration files are now supported, [see documentation for details](https://dvr-scan.readthedocs.io/en/v1.5/guide/config_file/)
      * Can specify config file path with `-c`/`--config`, or create a `dvr-scan.cfg` file in your user config folder
  * Windows binaries are now signed, thanks [SignPath.io](https://signpath.io/) (certificate by [SignPath Foundation](https://signpath.org/))
- * Experimental CUDA® support has been added (set `-b MOG2_CUDA`)
-    * If installing via Pip, requires manual installation of OpenCV compiled with CUDA support
-    * If downloading Windows version, make sure to download the GPU-enabled build (`dvr-scan-1.5.dev2-win64-cuda.zip`)
-    * CUDA-enabled builds are not signed currently
+ * Experimental Nvidia CUDA® support has been added (set `-b MOG2_CUDA`)
+    * If installing via `pip`, requires manual installation of OpenCV compiled with CUDA support
+    * If downloading Windows version, make sure to download the GPU-enabled build (`dvr-scan-1.5-win64-cuda.zip`)
+    * CUDA-enabled builds are not code signed, and do not include the `CNT` method
  * Minimum supported Python version is now 3.7
  * Minimum supported OpenCV version is now 3.x
 
