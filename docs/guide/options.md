@@ -24,7 +24,7 @@ The following options control terminal output:
     Suppress all console output except for final cutting list.
 
  * <b><pre>--verbosity</pre></b>
-    Set verbosity of output messages, must be one of: (<b><pre>debug, info, warning, error</pre></b>
+    Set verbosity of output messages, must be one of: <b><pre>debug, info, warning, error</pre></b>
     *Default*: `--verbosity info`
 
 
@@ -97,14 +97,15 @@ When modifying these parameters, it can be useful to generate a motion mask (`-m
 
     * <b><pre>MOG2</pre></b> (*Default*) [MOG2 Background Subtractor](https://docs.opencv.org/3.4/d7/d7b/classcv_1_1BackgroundSubtractorMOG2.html).
 
-    * <b><pre>MOG2_CUDA</pre></b> [Nvidia CUDA-based version of MOG2](https://docs.opencv.org/3.4/df/d23/classcv_1_1cuda_1_1BackgroundSubtractorMOG2.html).
-
     * <b><pre>CNT</pre></b> [CNT Background Subtractor](https://docs.opencv.org/3.4/de/dca/classcv_1_1bgsegm_1_1BackgroundSubtractorCNT.html), faster than `MOG` but uses different method, so may need to adjust threshold/kernel size.
 
- * <b><pre>-t value, --threshold value</pre></b> Threshold representing the minimum amount of motion a frame must have to trigger an event. Lower values are more sensitive to motion, requiring less movement. If the threshold is too high, some movement in the scene may not be detected, while too low of a threshold can trigger false detections. May need to be adjusted when modifying other parameters (e.g. `bg-subtractor` or `kernel-size`).
+    * <b><pre>MOG2_CUDA</pre></b> [Nvidia CUDA-based version of MOG2](https://docs.opencv.org/3.4/df/d23/classcv_1_1cuda_1_1BackgroundSubtractorMOG2.html).
+
+
+ * <b><pre>-t value, --threshold value</pre></b> Threshold representing the minimum amount of motion a frame must have to trigger an event. Lower values are more sensitive, requiring less movement. If the threshold is too high, some movement in the scene may not be detected. Setting the threshold too low can result in false detections. May need to be adjusted when modifying other parameters (e.g. `-b`/`--bg-subtractor` or `-k`/`--kernel-size`).
 <br/>*Default*: `--threshold 0.15`
 
- * <b><pre>-k size, --kernel-size size</pre></b> Size in pixels of the noise reduction kernel. Must be an odd integer at least 3 or greater. Can also be -1 to auto-set based on input video resolution (default). If kernel size is too large, some movement in the scene may not be detected. Default values: 7 for 1080p or greater, 5 for 720p, 3 for 480p.
+ * <b><pre>-k size, --kernel-size size</pre></b> Size in pixels of the noise reduction kernel. Must be an *odd* integer at least 3 or greater. If set to -1 (default), the kernel size will be calculated automatically based on input video resolution. Can be increased to filter out smaller movements from a scene. Default values: 7 for 1080p or greater, 5 for 720p, 3 for 480p.
 <br/>*Default*: `--kernel-size -1`
 
 Detection can be limited to a smaller region of the frame using the `-roi`/`--region-of-interest` flag:
@@ -119,7 +120,7 @@ The following options can improve performance, but may reduce detection accuracy
 
  * <b><pre>-df factor, --downscale-factor factor</pre></b> Integer factor to downscale (shrink) video before processing, to improve performance. For example, if input video resolution is 1024 x 400, and factor=2, each frame is reduced to 1024/2 x 400/2=512 x 200 before processing.
 
- * <b><pre>-fs num_frames, --frame-skip num_frames</pre></b> Number of frames to skip after processing a given frame. Improves performance, at expense of frame and time accuracy, and may increase probability of missing motion events. If set, `-l`/`--min-event-length, -tb`/`--time-before-event`, and `-tp`/`--time-post-event` will all be scaled relative to the source framerate. Values above 1 or 2 are not recommended.
+ * <b><pre>-fs num_frames, --frame-skip num_frames</pre></b> Number of frames to skip after processing a given frame. Improves performance, at expense of frame and time accuracy, and may increase probability of missing motion events. If set, `-l`/`--min-event-length`, `-tb`/`--time-before-event`, and `-tp`/`--time-post-event` will all be scaled relative to the source framerate. Values above 1 or 2 are not recommended.
 <br/><br/>When using the default output mode (`opencv`), skipped frames are not included. Set `-m`/`--output-mode` to `ffmpeg` or `copy` to include all frames from the input video when writing motion events to disk.
 <br/><br/>Although adjusted for frame skipping, bounding box smoothing may be inconsistent when using frame skipping. Set `-bb 0` to disable smoothing.
 

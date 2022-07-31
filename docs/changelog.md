@@ -37,7 +37,7 @@ DVR-Scan Changelog
  * `-c` is now used for `--config`, previously was for `--codec`
  * Add experimental `MOG2_CUDA` option for `-b`/`--bg-subtractor`
  * Rename existing `MOG` option to `MOG2`
- * `--codec` has been removed, the value should now be set using a [config file](guide/config_file.md)
+ * `--codec` has been removed, the value should now be set using a [config file](https://dvr-scan.readthedocs.io/en/v1.5/guide/config_file/)
 
 **General:**
 
@@ -67,10 +67,11 @@ DVR-Scan Changelog
 #### Known Issues
 
  * Variable framerate videos (VFR) are not fully supported, and will yield incorrect timestamps ([#20](https://github.com/Breakthrough/DVR-Scan/issues/20))
- * Video output when using frame skip and `-m opencv` (default output mode) will result in frames missing from the exported videos ([#81](https://github.com/Breakthrough/DVR-Scan/issues/81), can use `-m ffmpeg` or `-m copy` as a workaround)
- * Multiple input videos are not supported yet when using `-m ffmpeg` or `-m copy` ([#86](https://github.com/Breakthrough/DVR-Scan/issues/86))
+ * Video output when using frame skip and `-m opencv` (default output mode) will result in frames missing from the exported videos ([#81](https://github.com/Breakthrough/DVR-Scan/issues/81))
+     * Use `-m ffmpeg` or `-m copy` as a workaround
+ * Multiple input videos are not supported with `-m ffmpeg` or `-m copy` ([#86](https://github.com/Breakthrough/DVR-Scan/issues/86))
+     * Use ffmpeg to [concatenate/merge input videos](https://trac.ffmpeg.org/wiki/Concatenate) before processing as a workaround
  * CUDA builds do not include the `CNT` option for `-b`/`--bg-subtractor`
-
 
 ## DVR-Scan 1.4
 
