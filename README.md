@@ -9,7 +9,7 @@
 
 ------------------------------------------------
 
-**Quick Install**: Requires Python modules `numpy`, OpenCV `cv2`, and `tqdm` (optional) for displaying progress.  To install DVR-Scan via `pip` with all dependencies:
+**Quick Install**:
 
     pip install dvr-scan[opencv] --upgrade
 
