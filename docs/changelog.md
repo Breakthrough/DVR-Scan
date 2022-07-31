@@ -21,25 +21,23 @@ DVR-Scan Changelog
  * Minimum supported Python version is now 3.7
  * Minimum supported OpenCV version is now 3.x
 
-#### Changelog
+#### Command-Line Changes
 
-**Command-Line Interface:**
-
- * New features/arguments (see below for more details):
+ * New options:
     * `-c`/`--config` - set path to config file
     * `-d`/`--output-dir` - set directory to write output files (default is working directory)
     * `-m`/`--output-mode` - set output mode (one of: `opencv`, `ffmpeg`, `copy`)
     * `-mo`/`--mask-output` - path to write motion mask for analysis
     * `--verbosity` and `--logfile` - control output verbosity and path to save output
  * `-i`/`--input` now supports globs/wildcards to scan entire folders, e.g. `-i folder/*.mp4`
- * Change default value for `-l`/`--min-event-length` to 0.1 seconds, previously was 2 frames ([#91](https://github.com/Breakthrough/DVR-Scan/issues/91))
+ * Change default value for `-l`/`--min-event-length` to 0.1 seconds, previously was 2 frames
  * Long form of `-roi` has been renamed to `--region-of-interest` (previously was `--rectangle-of-interest`)
  * `-c` is now used for `--config`, previously was for `--codec`
  * Add experimental `MOG2_CUDA` option for `-b`/`--bg-subtractor`
  * Rename existing `MOG` option to `MOG2`
  * `--codec` has been removed, the value should now be set using a [config file](https://dvr-scan.readthedocs.io/en/v1.5/guide/config_file/)
 
-**General:**
+#### Changelog
 
  * [feature] Configuration file support and new `-c`/`--config` argument to specify path to config files ([#77](https://github.com/Breakthrough/DVR-Scan/issues/77))
      * Breaks existing behavior of `-c` (was previously the shortform of `--codec`)
@@ -72,6 +70,7 @@ DVR-Scan Changelog
  * Multiple input videos are not supported with `-m ffmpeg` or `-m copy` ([#86](https://github.com/Breakthrough/DVR-Scan/issues/86))
      * Use ffmpeg to [concatenate/merge input videos](https://trac.ffmpeg.org/wiki/Concatenate) before processing as a workaround
  * CUDA builds do not include the `CNT` option for `-b`/`--bg-subtractor`
+
 
 ## DVR-Scan 1.4
 
