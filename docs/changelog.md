@@ -4,7 +4,14 @@ DVR-Scan Changelog
 
 ## DVR-Scan 1.5
 
-### 1.5 (July 30, 2022) &nbsp;<span class="fa fa-tags"></span>
+### 1.5.1 (TBD) &nbsp;<span class="fa fa-tags"></span>
+
+#### Release Notes
+
+ * [bugfix] Fix crash when opening multiple input videos ([#95](https://github.com/Breakthrough/DVR-Scan/issues/95))
+ * [bugfix] Fix incorrect warning regarding frame decode failures at end of video
+
+### 1.5 (July 30, 2022)
 
 #### Release Notes
 

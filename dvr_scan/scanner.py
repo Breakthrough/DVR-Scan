@@ -460,11 +460,11 @@ class ScanContext:
             def __enter__(self):
                 """ No-op. """
 
-            #pylint: disable=redefined-builtin
+            # pylint: disable=redefined-builtin
             def __exit__(self, type, value, traceback):
                 """ No-op. """
 
-            #pylint: enable=redefined-builtin
+            # pylint: enable=redefined-builtin
 
         return (NullProgressBar(), NullContextManager())
 
@@ -751,6 +751,9 @@ class ScanContext:
             # Display an error if we got more than one decode failure / corrupt frame.
             # TODO(v1.6): Add a property to get the number of corrupted frames and move this
             # warning into cli.controller.
+            # TODO(v1.5.1): This will also fire if no frames are decoded. Add a check to make sure
+            # the fourCC is valid. Also figure out a better way to handle the case where NO frames
+            # are decoded (rather than reporting X frames failed to decode).
             if self._input.decode_failures > 1:
                 self._logger.error(
                     "Failed to decode %d frame(s) from video, timestamps may be incorrect. Try"
@@ -833,6 +836,7 @@ class ScanContext:
         finally:
             # Make sure main thread stops processing loop.
             decode_queue.put(None)
+        # pylint: enable=bare-except
 
     def _init_video_writer(self, path: AnyStr, frame_size: Tuple[int, int]) -> cv2.VideoWriter:
         """Create a new cv2.VideoWriter using the correct framerate."""
@@ -942,3 +946,4 @@ class ScanContext:
             # Unblock any waiting puts if we stopped early.
             while not encode_queue.empty():
                 _ = encode_queue.get_nowait()
+        # pylint: enable=bare-except

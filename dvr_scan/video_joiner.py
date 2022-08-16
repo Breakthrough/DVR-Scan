@@ -17,7 +17,7 @@ contiguous video file.
 
 import logging
 import os
-from typing import AnyStr, List, Optional, Tuple
+from typing import AnyStr, List, Optional, Tuple, Union
 
 import cv2
 import numpy
@@ -35,8 +35,10 @@ class VideoJoiner:
         VideoOpenFailure: Failed to open a video, or video parameters don't match.
     """
 
-    def __init__(self, paths: List[AnyStr]):
+    def __init__(self, paths: Union[AnyStr, List[AnyStr]]):
         self._logger = logging.getLogger('dvr_scan')
+        if isinstance(paths, (str, bytes)):
+            paths = [paths]
 
         assert paths
         self._paths = paths
@@ -85,6 +87,7 @@ class VideoJoiner:
     def read(self, decode: bool = True, num_retries: int = 5) -> Optional[numpy.ndarray]:
         """Read/decode the next frame."""
         if self._cap:
+            decode_failures = 0
             for _ in range(num_retries + 1):
                 if decode:
                     (ret_val, frame) = self._cap.read()
@@ -93,9 +96,14 @@ class VideoJoiner:
                     frame = True
                 if ret_val:
                     self._position += 1
+                    self._decode_failures += decode_failures
                     return frame
+                else:
+                    decode_failures += 1
                 if self._total_frames > 0 and self._position.frame_num >= self._total_frames:
                     break
+            if round(self._cap.get(cv2.CAP_PROP_POS_FRAMES)) < round(
+                    self._cap.get(cv2.CAP_PROP_FRAME_COUNT)):
                 self._decode_failures += 1
             self._cap.release()
             self._cap = None
@@ -104,7 +112,7 @@ class VideoJoiner:
             self._curr_cap_index += 1
             self._cap = cv2.VideoCapture(self._paths[self._curr_cap_index])
             if self._cap.isOpened():
-                return self._get_next_frame()
+                return self.read(decode=decode, num_retries=num_retries)
             else:
                 self._logger.error("Error: Unable to load video for processing.")
                 raise VideoOpenFailure("Unable to open %s" % self._paths[self._curr_cap_index])
@@ -119,6 +127,7 @@ class VideoJoiner:
                 break
 
     def _load_input_videos(self):
+        unsupported_codec: bool = False
         for i, video_path in enumerate(self._paths):
             cap = cv2.VideoCapture(video_path)
             video_name = os.path.basename(video_path)
@@ -130,7 +139,7 @@ class VideoJoiner:
             resolution = (round(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
                           round(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
             framerate = cap.get(cv2.CAP_PROP_FPS)
-            self._total_frames = round(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            self._total_frames += round(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             # Set the resolution/framerate based on the first video.
             if i == 0:
                 self._cap = cap
@@ -148,3 +157,11 @@ class VideoJoiner:
             if abs(framerate - self._framerate) > FRAMERATE_DELTA_TOLERANCE:
                 self._logger.warning("Warning: framerate does not match first input."
                                      " Timecodes may be incorrect.")
+            if round(cap.get(cv2.CAP_PROP_FOURCC)) == 0:
+                unsupported_codec = True
+
+        if unsupported_codec:
+            self._logger.error(
+                'Unsupported or invalid codec, output may be incorrect. Possible fixes:\n'
+                '  - Re-encode the input video with ffmpeg\n'
+                '  - Update OpenCV (pip install --upgrade opencv-python)')
