@@ -4,12 +4,13 @@ DVR-Scan Changelog
 
 ## DVR-Scan 1.5
 
-### 1.5.1 (TBD) &nbsp;<span class="fa fa-tags"></span>
+### 1.5.1 (August 15, 2022) &nbsp;<span class="fa fa-tags"></span>
 
-#### Release Notes
+#### Changelog
 
  * [bugfix] Fix crash when opening multiple input videos ([#95](https://github.com/Breakthrough/DVR-Scan/issues/95))
  * [bugfix] Fix incorrect warning regarding frame decode failures at end of video
+
 
 ### 1.5 (July 30, 2022)
 
@@ -71,6 +72,7 @@ DVR-Scan Changelog
 
 #### Known Issues
 
+ * Attempting to open multiple input videos will cause DVR-Scan to crash, fixed in v1.5.1 ([#95](https://github.com/Breakthrough/DVR-Scan/issues/95))
  * Variable framerate videos (VFR) are not fully supported, and will yield incorrect timestamps ([#20](https://github.com/Breakthrough/DVR-Scan/issues/20))
  * Video output when using frame skip and `-m opencv` (default output mode) will result in frames missing from the exported videos ([#81](https://github.com/Breakthrough/DVR-Scan/issues/81))
      * Use `-m ffmpeg` or `-m copy` as a workaround
