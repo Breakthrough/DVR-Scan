@@ -22,12 +22,11 @@ class MotionDetector(ABC):
     frame containing any motion."""
 
     @abstractmethod
-    def apply(self, frame: numpy.ndarray, update_model: bool = True) -> numpy.ndarray:
+    def apply(self, frame: numpy.ndarray) -> numpy.ndarray:
         """Apply the background subtractor to the given frame.
 
         Arguments:
             frame: Frame to perform background subtraction on.
-            update_model: If True (default), update the background model.
 
         Returns:
             Mask of areas in the frame containing motion.
@@ -58,6 +57,8 @@ class MotionDetectorMOG2(MotionDetector):
             varThreshold=variance_threshold,
             detectShadows=detect_shadows,
         )
+        # Default shadow value is 127, set to 0 so they are discarded before filtering.
+        self._subtractor.setShadowValue(0)
 
     def apply(self, frame: numpy.ndarray, update_model: bool = True) -> numpy.ndarray:
         frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -113,14 +114,15 @@ class MotionDetectorCudaMOG2(MotionDetectorMOG2):
             varThreshold=variance_threshold,
             detectShadows=detect_shadows,
         )
+        # Default shadow value is 127, set to 0 so they are discarded before filtering.
+        self._subtractor.setShadowValue(0)
 
-    def apply(self, frame: numpy.ndarray, update_model: bool = True) -> numpy.ndarray:
+    def apply(self, frame: numpy.ndarray) -> numpy.ndarray:
         stream = cv2.cuda_Stream()
         frame_rgb_dev = cv2.cuda_GpuMat()
         frame_rgb_dev.upload(frame, stream=stream)
         frame_gray_dev = cv2.cuda.cvtColor(frame_rgb_dev, cv2.COLOR_BGR2GRAY, stream=stream)
-        learning_rate = -1 if update_model else 0
-        frame_mask_dev = self._subtractor.apply(frame_gray_dev, learning_rate, stream=stream)
+        frame_mask_dev = self._subtractor.apply(frame_gray_dev, -1, stream=stream)
         frame_filt_dev = self._filter.apply(frame_mask_dev, stream=stream)
         frame_filt = frame_filt_dev.download(stream=stream)
         stream.waitForCompletion()

@@ -29,7 +29,7 @@ DVR-Scan is available via `pip` as [the `dvr-scan` package](https://pypi.org/pro
 <a href="https://github.com/Breakthrough/DVR-Scan/releases/download/v1.5.1-release/dvr-scan-1.5.1-win64.msi" class="btn btn-info" style="margin-bottom:8px;" role="button"><span class="fa fa-download"></span>&nbsp; <b>Installer MSI</b></a> &nbsp;&nbsp;&nbsp;&nbsp; <a href="https://github.com/Breakthrough/DVR-Scan/releases/download/v1.5.1-release/dvr-scan-1.5.1-win64.zip" class="btn btn-info" style="margin-bottom:8px;" role="button"><span class="fa fa-download"></span>&nbsp; <b>Portable ZIP</b></a> &nbsp;&nbsp;&nbsp;&nbsp; <a href="https://github.com/Breakthrough/DVR-Scan/releases/download/v1.5.1-release/dvr-scan-1.5.1-win64-cuda.zip" class="btn btn-info" style="margin-bottom:8px;" role="button"><span class="fa fa-download"></span>&nbsp; <b>Nvidia CUDA® Build (Experimental)</b></a> &nbsp;&nbsp;&nbsp;&nbsp; <a href="../guide/quickstart/" class="btn btn-success" style="margin-bottom:8px;" role="button"><span class="fa fa-book"></span>&nbsp; <b>Getting Started</b></a>
 </div>
 
-Due to a change in the installer format, you must uninstall previous versions of DVR-Scan before installing v1.5.1.  Windows builds including Nvidia CUDA® support are experimental, and are not code signed.
+Due to a change in the installer format, you must uninstall previous versions of DVR-Scan before installing v1.5.1.  Windows builds including Nvidia CUDA® support require a GTX 900-series or higher GPU.  These builds are still experimental, and are not code signed.
 
 ### Python Distribution &nbsp; <span class="wy-text-neutral"><span class="fa fa-windows"></span> &nbsp; <span class="fa fa-linux"></span> &nbsp; <span class="fa fa-apple"></span></span>
 
