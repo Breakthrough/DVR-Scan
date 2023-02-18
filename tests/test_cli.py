@@ -184,12 +184,13 @@ def test_mog2_cuda(tmp_path):
 
 
 def test_overlays(tmp_path):
-    """Test overlays -bb/--bounding-box and -tc/--timecode."""
+    """Test overlays -bb/--bounding-box, --fm/--frame-metrics, and -tc/--time-code."""
     tmp_path = str(tmp_path)                                        # Hack for Python 3.7 builder.
     assert subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND + [
         '--output-dir',
         tmp_path,
         '--bounding-box',
+        '--frame-metrics',
         '--time-code',
     ]) == 0
     assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS, "Incorrect number of events found."

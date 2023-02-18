@@ -108,31 +108,39 @@ See the [detection parameters section on the previous page](options.md#detection
 
 Color values can be specified as either `(R,G,B)` or in hex as `0xFFFFFF`. Time values can be given in seconds as a number followed by `s` (`123s` or `123.45s`), or as number of frames (e.g. `1234`).
 
-#### Timecode Overlay
+#### Text Overlays
 
- * <b><pre>time-code</pre></b>
-    Enable timecode overlay: (`yes` or `no`).
-    <br/>*Default*: `time-code = no`
+ * <b><pre>timecode</pre></b>
+    Enable timecode overlay: (`yes` or `no`). Draws timecode on top left of each frame.
+    <br/>*Default*: `timecode = no`
 
- * <b><pre>time-code-margin</pre></b>
-    Margin from edge in pixels.
-    <br/>*Default*: `time-code-margin = 5`
+ * <b><pre>framemetrics</pre></b>
+    Enable frame metrics overlay: (`yes` or `no`). Draws frame metrics, including motion score, on top right of each frame.
+    <br/>*Default*: `frame-metrics = no`
 
- * <b><pre>time-code-font-scale</pre></b>
+ * <b><pre>text-border</pre></b>
+    Size of border around text, in pixels.
+    <br/>*Default*: `text-border = 4`
+
+ * <b><pre>text-margin</pre></b>
+    Size of margin around border, in pixels.
+    <br/>*Default*: `text-margin = 4`
+
+ * <b><pre>text-font-scale</pre></b>
     Scale factor for text size.
-    <br/>*Default*: `time-code-font-scale = 2.0`
+    <br/>*Default*: `text-font-scale = 2.0`
 
- * <b><pre>time-code-font-thickness</pre></b>
+ * <b><pre>text-font-thickness</pre></b>
     Thickness of font (integer values only).
-    <br/>*Default*: `time-code-font-thickness = 2`
+    <br/>*Default*: `text-font-thickness = 2`
 
- * <b><pre>time-code-font-color</pre></b>
+ * <b><pre>text-font-color</pre></b>
     Text color.
-    <br/>*Default*: `time-code-font-color = 255, 255, 255`
+    <br/>*Default*: `text-font-color = 255, 255, 255`
 
- * <b><pre>time-code-bg-color</pre></b>
+ * <b><pre>text-bg-color</pre></b>
     Background color.
-    <br/>*Default*: `time-code-bg-color = 0, 0, 0`
+    <br/>*Default*: `text-bg-color = 0, 0, 0`
 
 
 #### Bounding Box Overlay

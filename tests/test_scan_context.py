@@ -73,9 +73,9 @@ def test_scan_context(traffic_camera_video):
 def test_scan_context_cuda(traffic_camera_video):
     """ Test functionality of ScanContext with the DetectorType.MOG2_CUDA. """
     sctx = ScanContext([traffic_camera_video])
-    sctx.set_detection_params(roi=TRAFFIC_CAMERA_ROI)
+    sctx.set_detection_params(detector_type=DetectorType.MOG2_CUDA, roi=TRAFFIC_CAMERA_ROI)
     sctx.set_event_params(min_event_len=4, time_pre_event=0)
-    event_list = sctx.scan_motion(detector_type=DetectorType.MOG2_CUDA)
+    event_list = sctx.scan_motion()
     assert len(event_list) == len(TRAFFIC_CAMERA_EVENTS)
     event_list = [(event[0].frame_num, event[1].frame_num) for event in event_list]
     for i, event in enumerate(event_list):
@@ -90,9 +90,9 @@ def test_scan_context_cuda(traffic_camera_video):
 def test_scan_context_cnt(traffic_camera_video):
     """ Test basic functionality of ScanContext using the CNT algorithm. """
     sctx = ScanContext([traffic_camera_video])
-    sctx.set_detection_params(roi=TRAFFIC_CAMERA_ROI)
+    sctx.set_detection_params(detector_type=DetectorType.CNT, roi=TRAFFIC_CAMERA_ROI)
     sctx.set_event_params(min_event_len=3, time_pre_event=0)
-    event_list = sctx.scan_motion(DetectorType.CNT)
+    event_list = sctx.scan_motion()
     event_list = [(event[0].frame_num, event[1].frame_num) for event in event_list]
     assert event_list == TRAFFIC_CAMERA_EVENTS_CNT
 

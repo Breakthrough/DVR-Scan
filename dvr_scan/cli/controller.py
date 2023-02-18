@@ -219,9 +219,9 @@ def run_dvr_scan():
 
         sctx.set_output(
             comp_file=settings.get_arg('output'),
-            mask_file=settings.get_arg('mask_output'),
+            mask_file=settings.get_arg('mask-output'),
             output_mode=(OutputMode.SCAN_ONLY
-                         if settings.get_arg('scan_only') else settings.get('output-mode')),
+                         if settings.get_arg('scan-only') else settings.get('output-mode')),
             opencv_fourcc=settings.get('opencv-codec'),
             ffmpeg_input_args=settings.get('ffmpeg-input-args'),
             ffmpeg_output_args=settings.get('ffmpeg-output-args'),
@@ -229,13 +229,27 @@ def run_dvr_scan():
         )
 
         timecode_overlay = None
-        if settings.get_arg('draw-timecode') or settings.get('timecode'):
+        if settings.get('time-code'):
             timecode_overlay = TextOverlay(
-                font_scale=settings.get('timecode-font-scale'),
-                margin=settings.get('timecode-margin'),
-                thickness=settings.get('timecode-font-thickness'),
-                color=settings.get('timecode-font-color'),
-                bg_color=settings.get('timecode-bg-color'),
+                font_scale=settings.get('text-font-scale'),
+                margin=settings.get('text-margin'),
+                border=settings.get('text-border'),
+                thickness=settings.get('text-font-thickness'),
+                color=settings.get('text-font-color'),
+                bg_color=settings.get('text-bg-color'),
+                corner=TextOverlay.Corner.TopLeft,
+            )
+
+        metrics_overlay = None
+        if settings.get('frame-metrics'):
+            metrics_overlay = TextOverlay(
+                font_scale=settings.get('text-font-scale'),
+                margin=settings.get('text-margin'),
+                border=settings.get('text-border'),
+                thickness=settings.get('text-font-thickness'),
+                color=settings.get('text-font-color'),
+                bg_color=settings.get('text-bg-color'),
+                corner=TextOverlay.Corner.TopRight,
             )
 
         bounding_box = None
@@ -257,10 +271,12 @@ def run_dvr_scan():
 
         sctx.set_overlays(
             timecode_overlay=timecode_overlay,
+            metrics_overlay=metrics_overlay,
             bounding_box=bounding_box,
         )
 
         sctx.set_detection_params(
+            detector_type=bg_subtractor,
             threshold=settings.get('threshold'),
             kernel_size=settings.get('kernel-size'),
             downscale_factor=settings.get('downscale-factor'),
@@ -282,7 +298,7 @@ def run_dvr_scan():
         #
         # Run motion detection.
         #
-        sctx.scan_motion(detector_type=bg_subtractor)
+        sctx.scan_motion()
 
     # Handle any application errors. Exceptions should be re-raised in debug mode for more context.
 

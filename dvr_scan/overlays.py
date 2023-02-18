@@ -14,6 +14,7 @@
 This module contains various classes used to draw overlays onto video frames.
 """
 
+from enum import Enum
 from typing import Tuple
 
 import cv2
@@ -26,19 +27,26 @@ class TextOverlay(object):
     Text is currently anchored to the top left of the frame.
     """
 
+    class Corner(Enum):
+        TopLeft = 1
+        TopRight = 2
+
     def __init__(self,
                  font: int = cv2.FONT_HERSHEY_SIMPLEX,
                  font_scale: float = 1.0,
-                 margin: int = 5,
+                 margin: int = 4,
+                 border: int = 4,
                  thickness: int = 2,
                  color: Tuple[int, int, int] = (255, 255, 255),
-                 bg_color: Tuple[int, int, int] = (0, 0, 0)):
+                 bg_color: Tuple[int, int, int] = (0, 0, 0),
+                 corner: Corner = Corner.TopLeft):
         """Initialize a TextOverlay with the given parameters.
 
         Arguments:
             font: Any of cv2.FONT_*.
             font_scale: Scale factor passed to OpenCV text rendering functions.
-            margin: Amount of padding added to the edges of the text.
+            margin: Amount of margin from edge of frame.
+            border: Amount of padding added within background box.
             thickness: Thickness of lines used to draw text.
             color: Foreground color of the text.
             bg_color: Background color behind the text, or None for no background.
@@ -46,31 +54,52 @@ class TextOverlay(object):
         self._font = font
         self._font_scale = font_scale
         self._margin = margin
+        self._border = border
         self._thickness = thickness
         self._color = color
         self._bg_color = bg_color
+        assert corner in (TextOverlay.Corner.TopLeft, TextOverlay.Corner.TopRight)
+        self._corner = corner
 
-    def draw(self, frame: numpy.ndarray, text: str, line: int = 0):
+    def draw(self, frame: numpy.ndarray, text: str):
         """Render text onto the given frame.
 
         Arguments:
             frame: Frame to render text onto.
             text: Text to render.
-            line: Offset in terms of lines of text to use for multiline strings.
+            line_spacing: Spacing defined as a ratio of line height.
         """
-        size = cv2.getTextSize(text, self._font, self._font_scale, self._thickness)
 
-        text_width = size[0][0]
-        text_height = size[0][1]
-        line_height = text_height + size[1] + self._margin
+        lines = text.splitlines()
+        sizes = [
+            cv2.getTextSize(text, self._font, self._font_scale, self._thickness) for text in lines
+        ]
+        line_spacing = max(size[0][1] for size in sizes)
+        max_width = max(size[0][0] for size in sizes)
+        total_height = sum(size[0][1] for size in sizes) + (line_spacing * (len(sizes) - 1))
 
-        text_pos = (self._margin, self._margin + size[0][1] + line * line_height)
         if self._bg_color:
-            cv2.rectangle(frame, (self._margin, self._margin),
-                          (self._margin + text_width, self._margin + text_height + 2),
-                          self._bg_color, -1)
-        cv2.putText(frame, text, text_pos, self._font, self._font_scale, self._color,
-                    self._thickness)
+            rect_width = max_width + (2 * self._border)
+            rect_height = total_height + (2 * self._border)
+            if self._corner == TextOverlay.Corner.TopLeft:
+                top_left = (self._margin, self._margin)
+                bottom_right = (self._margin + rect_width, self._margin + rect_height)
+            elif self._corner == TextOverlay.Corner.TopRight:
+                top_left = (max(0, frame.shape[1] - (self._margin + max_width)), self._margin)
+                bottom_right = (max(0, frame.shape[1] - self._margin), self._margin + rect_height)
+            cv2.rectangle(frame, top_left, bottom_right, self._bg_color, -1)
+
+        if self._corner == TextOverlay.Corner.TopLeft:
+            x_offset = self._margin + self._border
+        elif self._corner == TextOverlay.Corner.TopRight:
+            x_offset = max(0, frame.shape[1] - (self._margin + self._border + max_width))
+        y_offset = self._margin + self._border
+
+        for (text, size) in zip(lines, sizes):
+            text_pos = (x_offset, y_offset + size[0][1])
+            cv2.putText(frame, text, text_pos, self._font, self._font_scale, self._color,
+                        self._thickness)
+            y_offset += size[0][1] + line_spacing
 
 
 class BoundingBoxOverlay(object):

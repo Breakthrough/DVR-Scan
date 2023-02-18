@@ -518,10 +518,17 @@ def get_cli_parser(user_config: ConfigRegistry):
     parser.add_argument(
         '-tc',
         '--time-code',
-        dest='draw_timecode',
         action='store_true',
-        help=('Draw time code of each frame on the top left corner.%s' %
-              user_config.get_help_string('timecode', show_default=False)),
+        help=('Draw time code in top left corner of each frame.%s' %
+              user_config.get_help_string('time-code', show_default=False)),
+    )
+
+    parser.add_argument(
+        '-fm',
+        '--frame-metrics',
+        action='store_true',
+        help=('Draw frame metrics in top right corner of each frame.%s' %
+              user_config.get_help_string('frame-metrics', show_default=False)),
     )
 
     parser.add_argument(
@@ -529,9 +536,23 @@ def get_cli_parser(user_config: ConfigRegistry):
         '--mask-output',
         metavar='motion_mask.avi',
         type=str,
-        help=('If specified, writes a video containing the motion mask. Can be used for '
-              ' tuning detection parameters or other analysis.'),
+        help=('Write a video containing the motion mask of each frame. Useful when tuning '
+              'detection parameters.'),
     )
+
+    # TODO(v1.6): Add a mode that can dump frame scores (-s/--stats), and another mode
+    # that can dump the resulting frames after processing (-d/--dump-motion OUT.avi).
+    # Might also be helpful to overlay the frame score when using -d. Multiply the motion
+    # mask against the input image.
+
+    #parser.add_argument(
+    #    '-s',
+    #    '--stats',
+    #    metavar='frame_stats.csv',
+    #    type=str,
+    #    help=('Write a CSV file containing the calculated motion metrics per frame. Useful'
+    #        ' when tuning detection parameters.'),
+    #)
 
     parser.add_argument(
         '-df',
@@ -592,10 +613,5 @@ def get_cli_parser(user_config: ConfigRegistry):
     #    help=('Keep any temporary files the specified output mode generates.%s' %
     #          user_config.get_help_string('keep-temp-files', show_default=False)),
     #)
-
-    # TODO(v1.6): Add a mode that can dump frame scores (-s/--stats), and another mode
-    # that can dump the resulting frames after processing (-d/--dump-motion OUT.avi).
-    # Might also be helpful to overlay the frame score when using -d. Multiply the motion
-    # mask against the input image.
 
     return parser

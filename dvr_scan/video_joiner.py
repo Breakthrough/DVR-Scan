@@ -49,6 +49,8 @@ class VideoJoiner:
         self._framerate: float = None
         self._total_frames: int = 0
         self._decode_failures: int = 0
+        # TODO(v1.6): Add CLI option to override this, and also add some unit tests.
+        self._ignore_corrupt_videos: bool = False
         self._load_input_videos()
         # Initialize position now that the framerate is valid.
         self._position: FrameTimecode = FrameTimecode(0, self.framerate)
@@ -128,25 +130,31 @@ class VideoJoiner:
 
     def _load_input_videos(self):
         unsupported_codec: bool = False
-        for i, video_path in enumerate(self._paths):
+        validated_paths: List[str] = []
+        opened_video: bool = False
+        for video_path in self._paths:
             cap = cv2.VideoCapture(video_path)
             video_name = os.path.basename(video_path)
             if not cap.isOpened():
-                self._logger.error("Error: Couldn't load video %s.", video_name)
+                self._logger.error("Error: Couldn't load video %s", video_name)
+                if self._ignore_corrupt_videos:
+                    continue
                 self._logger.info("Check that the given file is a valid video clip, and ensure all"
                                   " required dependencies are installed and configured properly.")
-                raise VideoOpenFailure("isOpened() returned False for %s!" % video_name)
+                raise VideoOpenFailure("isOpened() returned False for %s!" % video_path)
+            validated_paths.append(video_path)
             resolution = (round(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
                           round(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
             framerate = cap.get(cv2.CAP_PROP_FPS)
             self._total_frames += round(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             # Set the resolution/framerate based on the first video.
-            if i == 0:
+            if not opened_video:
                 self._cap = cap
                 self._resolution = resolution
                 self._framerate = framerate
                 self._logger.info("Opened video %s (%d x %d at %2.3f FPS).", video_name,
                                   resolution[0], resolution[1], framerate)
+                opened_video = True
                 continue
             # Otherwise, validate the appended video's parameters.
             self._logger.info("Appending video %s (%d x %d at %2.3f FPS).", video_name,
@@ -159,6 +167,8 @@ class VideoJoiner:
                                      " Timecodes may be incorrect.")
             if round(cap.get(cv2.CAP_PROP_FOURCC)) == 0:
                 unsupported_codec = True
+
+        self._paths = validated_paths
 
         if unsupported_codec:
             self._logger.error(

@@ -131,7 +131,10 @@ The following options can improve performance, but may reduce detection accuracy
 <br/><br/>The color, thickness, and minimum size can be set with a [config file](config_file.md#bounding-box-overlay).
 
  * <b><pre>-tc, --time-code</pre></b>  Draw time code of each frame on the top left corner.
-<br/><br/>Text properties (e.g. color, font size, margin) can be set with a [config file](config_file.md#timecode-overlay).
+<br/><br/>Text properties (e.g. color, font size, margin) can be set with a [config file](config_file.md#text-overlays).
+
+ * <b><pre>-fm, --frame-metrics</pre></b>  Draw frame metrics, including motion score, on the top right corner.
+<br/><br/>Text properties (e.g. color, font size, margin) can be set with a [config file](config_file.md#text-overlays).
 
 For example, to draw a bounding box and timecode on extracted motion events:
 

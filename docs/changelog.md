@@ -2,6 +2,36 @@
 DVR-Scan Changelog
 ==========================================================
 
+## DVR-Scan 1.6
+
+### 1.6 (In Development)
+
+#### Release Notes
+
+In development.
+
+#### Changelog
+
+**Command-Line Changes**:
+
+ - Add `-fm` / `--frame-metrics` overlay, draws motion score on each frame to help tune [detection parameters](https://dvr-scan.readthedocs.io/en/latest/guide/options/#detection-parameters)
+
+**Config File Changes**:
+
+ - Add `frame-metrics` option to draw per-frame metrics
+ - Options that started with `time-code-` have been renamed to start with `text-`:
+    - `time-code-margin` is now `text-margin`
+    - `time-code-font-scale` is now `text-font-scale`
+    - `time-code-font-thickness` is now `text-font-thickness`
+    - `time-code-font-color` is now `text-font-color`
+    - `time-code-bg-color` is now `text-bg-color`
+
+**General**:
+
+ - [feature] Add ability to draw frame metrics on output for tuning detection parameters
+ - [enhance] Overlays are also drawn on mask output
+
+
 ## DVR-Scan 1.5
 
 ### 1.5.1 (August 15, 2022) &nbsp;<span class="fa fa-tags"></span>

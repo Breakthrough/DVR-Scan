@@ -286,19 +286,23 @@ USER_CONFIG_FILE_PATH: AnyStr = os.path.join(_CONFIG_FILE_DIR, _CONFIG_FILE_NAME
 
 # TODO: Replace these default values with those set in dvr_scan.context.
 CONFIG_MAP: ConfigDict = {
+
                                                          # General Options
     'quiet-mode': False,
     'verbosity': 'info',
+
                                                          # Input/Output
     'output-dir': '',
     'output-mode': 'opencv',
     'ffmpeg-input-args': DEFAULT_FFMPEG_INPUT_ARGS,
     'ffmpeg-output-args': DEFAULT_FFMPEG_OUTPUT_ARGS,
     'opencv-codec': 'XVID',
+
                                                          # Motion Events
     'min-event-length': TimecodeValue('0.1s'),
     'time-before-event': TimecodeValue('1.5s'),
     'time-post-event': TimecodeValue('2.0s'),
+
                                                          # Detection Parameters
     'bg-subtractor': 'MOG2',
     'threshold': 0.15,
@@ -306,13 +310,22 @@ CONFIG_MAP: ConfigDict = {
     'downscale-factor': 0,
     'region-of-interest': ROIValue(),
     'frame-skip': 0,
+
                                                          # Overlays
-    'timecode': False,
-    'timecode-margin': 5,
-    'timecode-font-scale': 1.0,
-    'timecode-font-thickness': 2,
-    'timecode-font-color': RGBValue(0xFFFFFF),
-    'timecode-bg-color': RGBValue(0x000000),
+
+                                                         # Text Overlays
+                                                         # TODO(v1.6): Add ability to use both `time-code` and `timecode` here and on the CLI.
+    'time-code': False,
+    'frame-metrics': False,
+                                                         # TODO(v1.6): Add backwards compatibility with old config files that still use "timecode-*"
+    'text-border': 4,
+    'text-margin': 4,
+    'text-font-scale': 1.0,
+    'text-font-thickness': 2,
+    'text-font-color': RGBValue(0xFFFFFF),
+    'text-bg-color': RGBValue(0x000000),
+
+                                                         # Bounding Box
     'bounding-box': False,
     'bounding-box-smooth-time': TimecodeValue('0.1s'),
     'bounding-box-color': RGBValue(0xFF0000),
