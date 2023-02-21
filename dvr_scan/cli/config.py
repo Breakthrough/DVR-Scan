@@ -149,7 +149,7 @@ class KernelSizeValue(ValidatedValue):
         elif value < 0:
             # Disallow other negative values.
             raise ValueError()
-        elif value % 2 == 0:
+        elif not value in (0, 1) and value % 2 == 0:
             # Disallow even values.
             raise ValueError()
         self._value = value

@@ -425,12 +425,11 @@ def get_cli_parser(user_config: ConfigRegistry):
         '-k',
         '--kernel-size',
         metavar='size',
-        type=odd_int_type_check(3, None, 'size', True),
-        help=('Size in pixels of the noise reduction kernel. Must be an odd'
-              ' integer greater than 1, or set to -1 to auto-set based on'
-              ' input video resolution (default). If the kernel size is set too'
-              ' large, some movement in the scene may not be detected.%s' %
-              (user_config.get_help_string('kernel-size'))),
+        type=odd_int_type_check(min_val=1, max_val=None, metavar='size', allow_zero=True),
+        help=('Size in pixels of the noise reduction kernel. Must be odd integer greater than 1, '
+              'or -1 to auto-set based on video resolution (default). Values of 0 or 1 specify no '
+              'noise reduction. If the kernel size is set too large, some movement in the scene'
+              ' may not be detected.%s' % (user_config.get_help_string('kernel-size'))),
     )
 
     parser.add_argument(

@@ -45,7 +45,7 @@ from dvr_scan.platform import init_logger
 from dvr_scan.scanner import ScanContext
 
 # Used for module/distribution identification.
-__version__ = 'v1.5.1'
+__version__ = 'v1.6-dev0'
 
 
 def get_license_info() -> str:

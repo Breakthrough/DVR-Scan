@@ -123,6 +123,8 @@ class MaskEvent:
 
 
 def _scale_kernel_size(kernel_size: int, downscale_factor: int):
+    if kernel_size in (0, 1):
+        return kernel_size
     corrected_size = round(kernel_size / float(downscale_factor))
     if corrected_size % 2 == 0:
         corrected_size -= 1
@@ -360,10 +362,9 @@ class ScanContext:
                 require less movement, and are more sensitive to motion. If the
                 threshold is too high, some movement in the scene may not be
                 detected, while a threshold too low can trigger a false events.
-            kernel_size: Size in pixels of the noise reduction kernel.
-                Must be an odd integer greater than 1. If None, size will
-                automatically be calculated based on input video resolution.
-                If too large, some movement in the scene may not be detected.
+            kernel_size: Size in pixels of the noise reduction kernel. Must be odd integer greater
+                than 1. Values of 0 or 1 specify no kernel. If None, will be calculated based on
+                input video resolution. If too large, some movement may not be detected.
             downscale_factor: Factor to downscale (shrink) video before
                 processing, to improve performance. For example, if input video
                 resolution is 1024 x 400, and factor=2, each frame is reduced to'
@@ -381,21 +382,21 @@ class ScanContext:
         self._detector_type = detector_type
 
         if downscale_factor < 0:
-            raise ValueError("Error: Downscale factor must be positive.")
+            raise ValueError("Downscale factor must be positive.")
         self._downscale_factor = max(downscale_factor, 1)
 
         if not kernel_size is None:
-            if kernel_size < 3 or (kernel_size % 2) == 0:
-                raise ValueError("Error: kernel_size must be odd number greater than 1, or None")
+            if kernel_size < 0 or (not kernel_size in (0, 1) and kernel_size % 2 == 0):
+                raise ValueError("kernel_size must be odd integer >= 1, zero (0), or None")
         self._kernel_size = kernel_size
 
         # Validate ROI.
         if roi is not None:
             if roi:
                 if not all(isinstance(i, int) for i in roi):
-                    raise TypeError('Error: Non-integral type found in specified roi.')
+                    raise TypeError('Non-integral type found in specified roi.')
                 if any(x < 0 for x in roi):
-                    raise ValueError('Error: Negative value found in roi.')
+                    raise ValueError('Negative value found in roi.')
                 if len(roi) == 2:
                     self._max_roi_size = roi
                     self._show_roi_window = True
@@ -403,7 +404,7 @@ class ScanContext:
                     self._roi = roi
                     self._show_roi_window = False
                 else:
-                    raise ValueError('Error: Expected either 2 or 4 elements in roi.')
+                    raise ValueError('Expected either 2 or 4 elements in roi.')
             # -roi with no arguments.
             else:
                 self._show_roi_window = True
@@ -563,7 +564,6 @@ class ScanContext:
                                                    self._downscale_factor)
         else:
             kernel_size = _scale_kernel_size(self._kernel_size, self._downscale_factor)
-        assert kernel_size >= 1 and kernel_size % 2 == 1
 
         # Create motion detector.
         logger.debug('Using detector %s with params: kernel_size = %d', self._detector_type.name,

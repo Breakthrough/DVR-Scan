@@ -50,8 +50,10 @@ class MotionDetectorMOG2(MotionDetector):
         variance_threshold: int = 16,
         detect_shadows: bool = False,
     ):
-        assert kernel_size % 2 == 1 and kernel_size >= 3
-        self._kernel = numpy.ones((kernel_size, kernel_size), numpy.uint8)
+        if kernel_size < 0 or (kernel_size > 1 and kernel_size % 2 == 0):
+            raise ValueError("kernel_size must be odd integer >= 1 or zero (0)")
+        self._kernel = numpy.ones(
+            (kernel_size, kernel_size), numpy.uint8) if kernel_size > 1 else None
         self._subtractor = cv2.createBackgroundSubtractorMOG2(
             history=history,
             varThreshold=variance_threshold,
@@ -60,10 +62,13 @@ class MotionDetectorMOG2(MotionDetector):
         # Default shadow value is 127, set to 0 so they are discarded before filtering.
         self._subtractor.setShadowValue(0)
 
-    def apply(self, frame: numpy.ndarray, update_model: bool = True) -> numpy.ndarray:
+    def apply(self, frame: numpy.ndarray) -> numpy.ndarray:
         frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         frame_mask = self._subtractor.apply(frame_gray)
-        frame_filt = cv2.morphologyEx(frame_mask, cv2.MORPH_OPEN, self._kernel)
+        if not self._kernel is None:
+            frame_filt = cv2.morphologyEx(frame_mask, cv2.MORPH_OPEN, self._kernel)
+        else:
+            frame_filt = frame_mask
         return frame_filt
 
     @staticmethod
@@ -82,8 +87,10 @@ class MotionDetectorCNT(MotionDetectorMOG2):
         max_pixel_stability: int = 15 * 60,
         is_parallel: bool = True,
     ):
-        assert kernel_size % 2 == 1 and kernel_size >= 3
-        self._kernel = numpy.ones((kernel_size, kernel_size), numpy.uint8)
+        if kernel_size < 0 or (kernel_size > 1 and kernel_size % 2 == 0):
+            raise ValueError("kernel_size must be odd integer >= 1 or zero (0)")
+        self._kernel = numpy.ones(
+            (kernel_size, kernel_size), numpy.uint8) if kernel_size > 1 else None
         self._subtractor = cv2.bgsegm.createBackgroundSubtractorCNT(
             minPixelStability=min_pixel_stability,
             useHistory=use_history,
@@ -106,9 +113,11 @@ class MotionDetectorCudaMOG2(MotionDetectorMOG2):
         variance_threshold: int = 16,
         detect_shadows: bool = False,
     ):
-        assert kernel_size % 2 == 1 and kernel_size >= 3
+        if kernel_size < 0 or (kernel_size > 1 and kernel_size % 2 == 0):
+            raise ValueError("kernel_size must be odd integer >= 1 or zero (0)")
         self._filter = cv2.cuda.createMorphologyFilter(
-            cv2.MORPH_OPEN, cv2.CV_8UC1, numpy.ones((kernel_size, kernel_size), numpy.uint8))
+            cv2.MORPH_OPEN, cv2.CV_8UC1, numpy.ones(
+                (kernel_size, kernel_size), numpy.uint8)) if kernel_size > 1 else None
         self._subtractor = cv2.cuda.createBackgroundSubtractorMOG2(
             history=history,
             varThreshold=variance_threshold,
@@ -123,7 +132,10 @@ class MotionDetectorCudaMOG2(MotionDetectorMOG2):
         frame_rgb_dev.upload(frame, stream=stream)
         frame_gray_dev = cv2.cuda.cvtColor(frame_rgb_dev, cv2.COLOR_BGR2GRAY, stream=stream)
         frame_mask_dev = self._subtractor.apply(frame_gray_dev, -1, stream=stream)
-        frame_filt_dev = self._filter.apply(frame_mask_dev, stream=stream)
+        if not self._filter is None:
+            frame_filt_dev = self._filter.apply(frame_mask_dev, stream=stream)
+        else:
+            frame_filt_dev = frame_mask_dev
         frame_filt = frame_filt_dev.download(stream=stream)
         stream.waitForCompletion()
         return frame_filt

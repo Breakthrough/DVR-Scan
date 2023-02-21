@@ -9,27 +9,19 @@ DVR-Scan Changelog
 #### Release Notes
 
 In development.
-
+z
 #### Changelog
 
-**Command-Line Changes**:
+**General**:
 
- - Add `-fm` / `--frame-metrics` overlay, draws motion score on each frame to help tune [detection parameters](https://dvr-scan.readthedocs.io/en/latest/guide/options/#detection-parameters)
-
-**Config File Changes**:
-
- - Add `frame-metrics` option to draw per-frame metrics
- - Options that started with `time-code-` have been renamed to start with `text-`:
+ - [enhancement] Noise reduction kernel can now be disabled by setting `-k`/`--kernel-size` to `0` or `1` ([#123](https://github.com/Breakthrough/DVR-Scan/issues/123))
+ - [feature] New `-fm` / `--frame-metrics` option draws motion score on each frame to help tune [detection parameters](https://dvr-scan.readthedocs.io/en/latest/guide/options/#detection-parameters)
+ - [other] Config file options that started with `time-code-` have been renamed to start with `text-`, and are now shared between the `time-code` and `frame-metrics` overlays:
     - `time-code-margin` is now `text-margin`
     - `time-code-font-scale` is now `text-font-scale`
     - `time-code-font-thickness` is now `text-font-thickness`
     - `time-code-font-color` is now `text-font-color`
     - `time-code-bg-color` is now `text-bg-color`
-
-**General**:
-
- - [feature] Add ability to draw frame metrics on output for tuning detection parameters
- - [enhance] Overlays are also drawn on mask output
 
 
 ## DVR-Scan 1.5
