@@ -1,0 +1,60 @@
+
+name: Linux Build
+
+on: [pull_request, push]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04, ubuntu-latest]
+        # TODO(#292): Add a Python 3.11 builder once binary wheels of PyAV are available.
+        python-version: ["3.7", "3.8", "3.9", "3.10"]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install Dependencies
+        # TODO: `opencv-python-headless` is pinned for the xenial build. Unpin `opencv-python-headless`
+        # when https://github.com/opencv/opencv/issues/23090 is resolved.
+        # TODO: `setuptools` is pinned for the Python 3.7 builder and can be unpinned when removed.
+        run: |
+          python -m pip install --upgrade pip build wheel virtualenv setuptools==62.3.4
+          pip install opencv-python-headless==4.6.0.66 opencv-contrib-python-headless==4.6.0.66 --only-binary :all:
+          pip install -r requirements_headless.txt
+
+      - name: Build Package
+        run: |
+          python -m build
+          echo "dvr_scan_version=`python -c \"import dvr_scan; print(dvr_scan.__version__[1:].replace('-', '.'))\"`" >> "$GITHUB_ENV"
+
+      - name: Unit Tests
+        run: |
+          python -m pytest tests/
+
+      - name: Smoke Test (Module)
+        run: |
+          python -m dvr_scan -v
+          python -m dvr_scan -i tests/resources/simple_movement.mp4 -so -df 4 -et 100
+          python -m pip uninstall -y dvr-scan
+
+      - name: Smoke Test (Source Dist)
+        run: |
+          python -m pip install dist/dvr-scan-${{ env.dvr_scan_version }}.tar.gz
+          dvr-scan -v
+          dvr-scan -i tests/resources/simple_movement.mp4 -so -df 4 -et 100
+          python -m pip uninstall -y dvr-scan
+
+      - name: Smoke Test (Wheel)
+        run: |
+          python -m pip install dist/dvr_scan-${{ env.dvr_scan_version }}-py3-none-any.whl
+          dvr-scan -v
+          dvr-scan -i tests/resources/simple_movement.mp4 -so -df 4 -et 100
+          python -m pip uninstall -y dvr-scan
