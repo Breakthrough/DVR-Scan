@@ -408,13 +408,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#quickstart" class="md-nav__link">
-    Quickstart
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#dvr-scan-options" class="md-nav__link">
     dvr-scan Options
   </a>
@@ -511,7 +504,7 @@
       
         <li class="md-nav__item">
   <a href="#config-file" class="md-nav__link">
-    Config File 
+    Config File
   </a>
   
     <nav class="md-nav" aria-label="Config File">
@@ -620,25 +613,7 @@
   
 
 <h1 id="documentation"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.4.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M96 0C43 0 0 43 0 96v320c0 53 43 96 96 96h320c17.7 0 32-14.3 32-32s-14.3-32-32-32v-64c17.7 0 32-14.3 32-32V32c0-17.7-14.3-32-32-32H96zm0 384h256v64H96c-17.7 0-32-14.3-32-32s14.3-32 32-32zm32-240c0-8.8 7.2-16 16-16h192c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16zm16 48h192c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16s7.2-16 16-16z"/></svg></span>Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h1>
-<h2 id="quickstart">Quickstart<a class="headerlink" href="#quickstart" title="Permanent link">&para;</a></h2>
-<p>To perform motion detection on <code>video.mp4</code>, creating a new video for each motion event:
-<div class="highlight"><pre><span></span><code>dvr-scan -i video.mp4
-</code></pre></div>
-Output files will be created in the current working directory. To create files in to a particular location, use <a href="#inputoutput"><code>-d [PATH]</code></a>:
-<div class="highlight"><pre><span></span><code>dvr-scan -i video.mp4 -d extracted_events/
-</code></pre></div>
-To only perform detection on part of the frame, use <a href="#region-of-interest-roi"><code>-roi</code></a>:
-<div class="highlight"><pre><span></span><code>dvr-scan -i video.mp4 -roi
-</code></pre></div>
-To <a href="#overlays">draw a box</a> around the areas of the frame containing motion:
-<div class="highlight"><pre><span></span><code>dvr-scan -i video.mp4 -bb
-</code></pre></div>
-To use <code>ffmpeg</code> for extracting motion events, use output mode <a href="#inputoutput"><code>-m ffmpeg</code></a>:
-<div class="highlight"><pre><span></span><code>dvr-scan -i video.mp4 -m ffmpeg
-</code></pre></div></p>
-<p>DVR-Scan options can also be set using a <a href="#config-file">config file</a>.</p>
-<hr />
-<h2 id="dvr-scan-options"><code>dvr-scan</code> Options<a class="headerlink" href="#dvr-scan-options" title="Permanent link">&para;</a></h2>
+<h2 id="dvr-scan-options"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.4.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M9.4 86.6c-12.5-12.5-12.5-32.7 0-45.2s32.8-12.5 45.3 0l192 192c12.5 12.5 12.5 32.8 0 45.3l-192 192c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L178.7 256 9.4 86.6zM256 416h288c17.7 0 32 14.3 32 32s-14.3 32-32 32H256c-17.7 0-32-14.3-32-32s14.3-32 32-32z"/></svg></span><code>dvr-scan</code> Options<a class="headerlink" href="#dvr-scan-options" title="Permanent link">&para;</a></h2>
 <h3 id="general">General<a class="headerlink" href="#general" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
@@ -739,20 +714,26 @@ To use <code>ffmpeg</code> for extracting motion events, use output mode <a href
 <ul>
 <li>
 <p><b><pre>-l time, --min-event-length time</pre></b> Amount of time/frames that must have a motion score above the threshold setting before triggering a new event.
-<br/><em>Default</em>: <code>--min-event-length 2</code></p>
+<span class="dvr-scan-default">
+<div class="highlight"><pre><span></span><code>--min-event-length 2
+</code></pre></div>
+</span></p>
 </li>
 <li>
 <p><b><pre>-tb time, --time-before-event time</pre></b> Maximum amount of time to include before each event.
-<br/><em>Default</em>: <code>--time-before-event 1.5s</code></p>
+<span class="dvr-scan-default">
+<div class="highlight"><pre><span></span><code>--time-before-event 1.5s
+</code></pre></div>
+</span></p>
 </li>
 <li>
 <p><b><pre>-tp time, --time-post-event time</pre></b> Maximum amount of time to include after each event. The event will end once no motion has been detected for this period of time.
-<br/><em>Default</em>: <code>--time-post-event time 2.0s</code></p>
+<span class="dvr-scan-default">
+<div class="highlight"><pre><span></span><code>--time-post-event time 2.0s
+</code></pre></div>
+</span></p>
 </li>
 </ul>
-<p>For example, to save 10 seconds before or after any frame that exceeds the threshold:</p>
-<pre><code>dvr-scan -i video.mp4 -l 1 -tb 10s -tp 10s
-</code></pre>
 <h3 id="detection">Detection<a class="headerlink" href="#detection" title="Permanent link">&para;</a></h3>
 <p>Motion detection can be fine-tuned for specific use cases.  When modifying detection options, it can be useful to generate a motion mask (<code>-mo mask.avi</code>) to visually see how DVR-Scan processes the input.</p>
 <hr />
@@ -772,7 +753,7 @@ To use <code>ffmpeg</code> for extracting motion events, use output mode <a href
 </li>
 </ul>
 <p><span class="dvr-scan-default">
-<div class="highlight"><pre><span></span><code>-b MOG2
+<div class="highlight"><pre><span></span><code>--bg-subtractor MOG2
 </code></pre></div>
 </span></p>
 </li>
@@ -853,7 +834,7 @@ To use <code>ffmpeg</code> for extracting motion events, use output mode <a href
 </li>
 </ul>
 <hr />
-<h2 id="config-file">Config File <span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.4.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M320 464c8.8 0 16-7.2 16-16V160h-80c-17.7 0-32-14.3-32-32V48H64c-8.8 0-16 7.2-16 16v384c0 8.8 7.2 16 16 16h256zM0 64C0 28.7 28.7 0 64 0h165.5c17 0 33.3 6.7 45.3 18.7l90.5 90.5c12 12 18.7 28.3 18.7 45.3V448c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V64z"/></svg></span><a class="headerlink" href="#config-file" title="Permanent link">&para;</a></h2>
+<h2 id="config-file"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.4.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M320 464c8.8 0 16-7.2 16-16V160h-80c-17.7 0-32-14.3-32-32V48H64c-8.8 0-16 7.2-16 16v384c0 8.8 7.2 16 16 16h256zM0 64C0 28.7 28.7 0 64 0h165.5c17 0 33.3 6.7 45.3 18.7l90.5 90.5c12 12 18.7 28.3 18.7 45.3V448c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V64z"/></svg></span>Config File<a class="headerlink" href="#config-file" title="Permanent link">&para;</a></h2>
 <p>Many of DVR-Scan's options and defaults can be set using a config file.  This page describes all possible config options, but you can also download <a href="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.5/dvr-scan.cfg">the <code>dvr-scan.cfg</code> config template</a> as a starting point.</p>
 <p>A config file path can be specified via the <code>-c</code>/<code>--config</code> option. DVR-Scan also looks for a <code>dvr-scan.cfg</code> file in the following locations:</p>
 <ul>
@@ -1001,18 +982,16 @@ bounding-box-color = 0, 255, 0
 <li>
 <p><b><pre>downscale-factor</pre></b>
     Integer factor to shrink video before processing. Values &lt;= 1 imply no downscaling.
-    <br/><em>Default</em>: <code>downscale-factor = 0</code>
-    <span class="dvr-scan-default">
-    <div class="highlight"><pre><span></span><code>bounding-box-thickness = 0.0032
+    <span class="dvr-scan-example">
+    <div class="highlight"><pre><span></span><code>downscale-factor = 2
 </code></pre></div>
     </span></p>
 </li>
 <li>
 <p><b><pre>frame-skip</pre></b>
     Number of frames to skip between processing when looking for motion events.
-    <br/><em>Default</em>: <code>frame-skip = 0</code>
-    <span class="dvr-scan-default">
-    <div class="highlight"><pre><span></span><code>bounding-box-thickness = 0.0032
+    <span class="dvr-scan-example">
+    <div class="highlight"><pre><span></span><code>frame-skip = 1
 </code></pre></div>
     </span></p>
 </li>

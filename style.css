@@ -146,12 +146,30 @@ a .twemoji {
     color: var(--md-primary-fg-color) !important;
 }
 
-.admonition .md-button {
-    margin-bottom: 1em;
-    margin-left: 0.5em;
-    margin-right: 0.5em;
-    text-align: center;
+
+.buttongrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12em, 1fr));
+    gap: 0.5em;
+    width: 100%;
 }
+
+.buttongrid .md-button {
+    padding: 0.5em 0.1em;
+    margin: 0;
+    min-width: 100%;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    text-align: center;
+    letter-spacing: -0.035em;
+}
+
+.buttongrid-download {
+
+    grid-template-columns: repeat(auto-fill, minmax(16em, max-content));
+}
+
 
 .admonition p {
     margin-bottom: 0em !important;
@@ -160,13 +178,6 @@ a .twemoji {
 .admonition-title {
     font-size: 0.8rem;
     font-weight: 500 !important;
-}
-
-
-.md-typeset .admonition.success,
-.md-typeset details.success {
-    border-color: #87A0A0;
-    font-size: 0.9rem;
 }
 
 #download-button {
@@ -288,6 +299,9 @@ a .twemoji {
     margin: 1rem !important;
     font-size: 0.9rem;
     font-weight: 600;
+}
+.python-download code {
+    text-overflow: ellipsis;
 }
 
 .windows-download code {

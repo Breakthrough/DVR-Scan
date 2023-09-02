@@ -478,6 +478,13 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#i-have-another-question" class="md-nav__link">
+    I have another question...
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -526,13 +533,13 @@
 <hr />
 <h3 id="where-is-the-output-saved">Where is the output saved?<a class="headerlink" href="#where-is-the-output-saved" title="Permanent link">&para;</a></h3>
 <p>DVR-Scan saves all files in the current working directory (the location you are invoking the <code>dvr-scan</code> command from). You can override the output directory by setting <a href="../docs/#inputoutput">the <code>-d</code>/<code>--output-dir</code> option</a>:</p>
-<pre><code>dvr-scan -i video.mp4 -d events_folder/
-</code></pre>
+<div class="highlight"><pre><span></span><code>dvr-scan -i video.mp4 -d events_folder/
+</code></pre></div>
 <hr />
 <h3 id="how-can-i-scan-all-videos-in-a-folder">How can I scan all videos in a folder?<a class="headerlink" href="#how-can-i-scan-all-videos-in-a-folder" title="Permanent link">&para;</a></h3>
 <p>You can use a wildcard in the input path to select multiple videos:</p>
-<pre><code>dvr-scan -i folder/*.mp4
-</code></pre>
+<div class="highlight"><pre><span></span><code>dvr-scan -i folder/*.mp4
+</code></pre></div>
 <p>You can also specify multiple input video paths, which will be processed in the order they are specified.</p>
 <p>Note that multiple input videos are not supported when <code>-m</code>/<code>--output-mode</code> is set to <code>ffmpeg</code> or <code>copy</code>. You can use <code>ffmpeg</code> to <a href="https://trac.ffmpeg.org/wiki/Concatenate">concatenate all input videos</a> <em>before</em> using DVR-Scan as a workaround.</p>
 <hr />
@@ -545,11 +552,11 @@
 <hr />
 <h3 id="how-can-i-join-several-videos-together-when-processing">How can I join several videos together when processing?<a class="headerlink" href="#how-can-i-join-several-videos-together-when-processing" title="Permanent link">&para;</a></h3>
 <p>If you have a series of video clips from the same source, you can append subsequent video clips to the DVR-Scan input by including multiple files after <code>-i</code>.  For example:</p>
-<pre><code>dvr-scan -i video0000.mp4 video0001.mp4 video0002.mp4
-</code></pre>
+<div class="highlight"><pre><span></span><code>dvr-scan -i video0000.mp4 video0001.mp4 video0002.mp4
+</code></pre></div>
 <p>You can also use wildcards in the input path:</p>
-<pre><code>dvr-scan -i video*.mp4
-</code></pre>
+<div class="highlight"><pre><span></span><code>dvr-scan -i video*.mp4
+</code></pre></div>
 <p>Each video <strong>must</strong> have the same resolution and framerate. Videos are processed in the same order as they appear in the command, and extracted events will use the first video's filename as a template.</p>
 <p>Multiple input videos are not supported when output mode <code>-m</code>/<code>--output-mode</code> is set to either <code>ffmpeg</code> or <code>copy</code>. As a workaround, you can <a href="https://trac.ffmpeg.org/wiki/Concatenate">use ffmpeg to concatenate all input videos</a> before using DVR-Scan to process them.</p>
 <hr />
@@ -568,6 +575,9 @@
 <hr />
 <h3 id="how-can-i-submit-a-bug-report">How can I submit a bug report?<a class="headerlink" href="#how-can-i-submit-a-bug-report" title="Permanent link">&para;</a></h3>
 <p>Bug reports can be submitted to the <a href="https://github.com/Breakthrough/DVR-Scan/issues" target="_blank" alt="DVR-Scan Issue Tracker ">DVR-Scan issue tracker</a>.  Please provide as much information as possible to help triage the issue you are facing, and upload any sample material with the report when possible.</p>
+<hr />
+<h3 id="i-have-another-question">I have another question...<a class="headerlink" href="#i-have-another-question" title="Permanent link">&para;</a></h3>
+<p>For technical help, you can try <a href="https://github.com/Breakthrough/DVR-Scan/discussions">starting a discussion</a> on Github.</p>
 
 
 
