@@ -1,50 +1,20 @@
+# Build signed releases for DVR-Scan Windows x64
 
-skip_commits:
-  files:
-    - docs/*
-    - '**/*.rst'
-    - '**/*.md'
-
-# We have to disable the `build` command explicitly otherwise the default is
-# MSBuild which assumes this is a Visual Studio project. Python source/binary
-# wheels a Windows .exe are generated below in `install`.
 build: false
+
+branches:
+  only:
+    - main
+    - /releases\/.+/
+    - /v.+-release/
+
+skip_tags: false
+skip_non_tags: true
+
 
 environment:
   matrix:
-    - PYTHON: "C:\\Python37-x64"
-    - PYTHON: "C:\\Python38-x64"
     - PYTHON: "C:\\Python39-x64"
-    - PYTHON: "C:\\Python310-x64"
 
 install:
-  # Setup Python environment and update basic packages.
-  - 'SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%'
-  - python --version
-  - python -m pip install --upgrade pip build wheel virtualenv setuptools
-  # Make sure we get latest binary packages of headless OpenCV.
-  - "python -m pip install opencv-python-headless opencv-contrib-python-headless --only-binary :all:"
-  - python -m pip install -r requirements_headless.txt
-
-  # Build Python package
-  - python -m build
-
-  # TODO: Rename using APPVEYOR_REPO_COMMIT env var and inline Powershell script
-
-test_script:
-  # Unit Tests
-  - pytest
-
-  # Test Python Module
-  - python -m dvr_scan -v
-  - python -m dvr_scan -i tests/resources/simple_movement.mp4 -so -df 4 -et 100
-  # TODO: Test Python Distributions
-  # Wildcard expansion doesn't seem to work with pip here, e.g. the following fails:
-  #- python -m pip install dist\*.whl
-
-artifacts:
-  - path: dist/*.tar.gz
-    name: DVR-Scan-sdist
-
-  - path: dist/*.whl
-    name: DVR-Scan-bdist_wheel
+  - echo TODO

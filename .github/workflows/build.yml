@@ -1,0 +1,65 @@
+
+name: Python Distribution
+
+on: [pull_request, push]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-20.04, ubuntu-latest, windows-latest]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install Dependencies
+
+        # TODO: `setuptools` is pinned for the Python 3.7 builder and can be unpinned when removed.
+        run: |
+          python -m pip install --upgrade pip build wheel virtualenv setuptools==62.3.4
+          pip install opencv-python-headless opencv-contrib-python-headless --only-binary :all:
+          pip install -r requirements_headless.txt
+
+      - name: Unit Tests
+        run: |
+          python -m pytest tests/
+
+      # TODO: Make the version extraction work on powershell so package smoke tests can run on Windows.
+      - name: Build Package
+        if: ${{ matrix.os != 'windows-latest' }}
+        run: |
+          python -m build
+          echo "dvr_scan_version=`python -c \"import dvr_scan; print(dvr_scan.__version__.replace('-', '.'))\"`" >> "$GITHUB_ENV"
+
+      - name: Smoke Test Package (Source Dist)
+        if: ${{ matrix.os != 'windows-latest' }}
+        run: |
+          python -m pip install dist/dvr-scan-${{ env.dvr_scan_version }}.tar.gz
+          python -m dvr_scan -v
+          python -m dvr_scan -i tests/resources/simple_movement.mp4 -so -df 4 -et 100
+          python -m pip uninstall -y dvr-scan
+
+      - name: Smoke Test Package (Wheel)
+        if: ${{ matrix.os != 'windows-latest' }}
+        run: |
+          python -m pip install dist/dvr_scan-${{ env.dvr_scan_version }}-py3-none-any.whl
+          python -m dvr_scan -v
+          python -m dvr_scan -i tests/resources/simple_movement.mp4 -so -df 4 -et 100
+          python -m pip uninstall -y dvr-scan
+
+      - name: Upload Package
+        if: ${{ matrix.python-version == '3.11' && matrix.os == 'ubuntu-latest' }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: dvr-scan-dist
+          path: |
+            dist/*.tar.gz
+            dist/*.whl
