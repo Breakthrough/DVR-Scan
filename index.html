@@ -478,21 +478,17 @@
 <hr />
 <p>DVR-Scan is a command-line application that <strong>automatically detects motion events in video files</strong> (e.g. security camera footage).  DVR-Scan looks for areas in footage containing motion, and saves each event to a separate video clip.  DVR-Scan is free and open-source software, and works on Windows, Linux, and Mac.</p>
 <h2 id="quickstart"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.4.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M320 48a48 48 0 1 0-96 0 48 48 0 1 0 96 0zM125.7 175.5c9.9-9.9 23.4-15.5 37.5-15.5 1.9 0 3.8.1 5.6.3L137.6 254c-9.3 28 1.7 58.8 26.8 74.5l86.2 53.9-25.4 88.8c-4.9 17 5 34.7 22 39.6s34.7-5 39.6-22l28.7-100.4c5.9-20.6-2.6-42.6-20.7-53.9L238 299l30.9-82.4 5.1 12.3c15 35.8 49.9 59.1 88.7 59.1H384c17.7 0 32-14.3 32-32s-14.3-32-32-32h-21.3c-12.9 0-24.6-7.8-29.5-19.7l-6.3-15c-14.6-35.1-44.1-61.9-80.5-73.1l-48.7-15C186.6 97.8 175 96 163.3 96c-31 0-60.8 12.3-82.7 34.3l-23.2 23.1c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l23.1-23.1zM91.2 352H32c-17.7 0-32 14.3-32 32s14.3 32 32 32h69.6c19 0 36.2-11.2 43.9-28.5l11.5-25.9-9.5-6a95.394 95.394 0 0 1-37.9-44.9L91.2 352z"/></svg></span>Quickstart<a class="headerlink" href="#quickstart" title="Permanent link">&para;</a></h2>
-<p>Perform motion detection on <code>video.mp4</code>, creating a new video for each motion event:</p>
+<p>Scan <code>video.mp4</code> (separate clips for each event):</p>
 <pre><code>dvr-scan -i video.mp4
 </code></pre>
-<p>The output files will be placed in the current working directory (the location you are running DVR-Scan from). To save all output files in to a particular location, use <code>-d</code>/<code>--output-dir</code>:</p>
-<pre><code>dvr-scan -i video.mp4 -d extracted_events/
-</code></pre>
-<p>To only perform detection on part of the frame, use the <code>-roi</code> flag:</p>
+<p>Only scan a region of interest (select with mouse):</p>
 <pre><code>dvr-scan -i video.mp4 -roi
 </code></pre>
-<p>To draw a box around the areas of the frame containing motion:</p>
+<p>Draw boxes around motion:</p>
 <pre><code>dvr-scan -i video.mp4 -bb
 </code></pre>
-<p>To use <code>ffmpeg</code> to extract motion events, set <code>-m</code>/<code>--output-mode</code> to <code>ffmpeg</code> (or <code>copy</code> to use stream copy mode):</p>
+<p>Use <code>ffmpeg</code> to extract events:</p>
 <pre><code>dvr-scan -i video.mp4 -m ffmpeg
-dvr-scan -i video.mp4 -m copy
 </code></pre>
 <p>See <a href="docs/">the documentation</a> for a complete list of all command-line and configuration file options which can be set. You can also type <code>dvr-scan --help</code> for an overview of command line options. Some program options can also be set <a href="docs/#config-file">using a config file</a>.</p>
 

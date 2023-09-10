@@ -618,7 +618,7 @@
 <ul>
 <li>
 <p><b><pre>-h, --help</pre></b>
-    Show help message and all options and default values. Will also show any options overriden by your <a href="config_file.md">user config file</a>, if set.</p>
+    Show help message and all options and default values. Will also show any options overriden by your <a href="#config-file">user config file</a>, if set.</p>
 </li>
 <li>
 <p><b><pre>-v, --version</pre></b>
@@ -656,7 +656,7 @@
 </li>
 <li>
 <p><b><pre>-c settings.cfg, --config settings.cfg</pre></b>
-    Path to config file. If not set, tries to load one automatically from the user settings folder. See the <a href="config_file.md">config file documentation</a> for details.</p>
+    Path to config file. If not set, tries to load one automatically from the user settings folder. See the <a href="#config-file">config file documentation</a> for details.</p>
 </li>
 </ul>
 <h4 id="seekingduration">Seeking/Duration<a class="headerlink" href="#seekingduration" title="Permanent link">&para;</a></h4>
@@ -691,7 +691,7 @@
 <p><b><pre style="display:inline;">opencv</pre></b> :&nbsp; Use OpenCV for saving motion events. Requires .AVI output format.</p>
 </li>
 <li>
-<p><b><pre style="display:inline;">ffmpeg</pre></b> :&nbsp; Use ffmpeg for saving motion events. Ffmpeg encoder args can be set using a <a href="config_file.md">config file</a> (see the <code>ffmpeg-input-args</code> and <code>ffmpeg-output-args</code> options).</p>
+<p><b><pre style="display:inline;">ffmpeg</pre></b> :&nbsp; Use ffmpeg for saving motion events. Ffmpeg encoder args can be set using a <a href="#config-file">config file</a> (see the <code>ffmpeg-input-args</code> and <code>ffmpeg-output-args</code> options).</p>
 </li>
 <li>
 <p><b><pre style="display:inline;">copy</pre></b> :&nbsp; Same as <code>ffmpeg</code>, but using stream copying mode (no reencoding). Can potentially create inaccurate events due to keyframe placement.</p>
@@ -826,11 +826,11 @@
 <li>
 <p><b><pre>-bb, --bounding-box</pre></b> Draw a bounding box around the areas where motion is detected.
 <br/>An optional amount of time for temporal smoothing can also be specified (e.g. <code>-bb 0.1s</code>). The default smoothing amount is 0.1 seconds. If set to 0 (<code>-bb 0</code>), smoothing is disabled.
-<br/>The color, thickness, and minimum size can be set with a <a href="config_file.md#bounding-box-overlay">config file</a>.</p>
+<br/>The color, thickness, and minimum size can be set with a <a href="#config-file#bounding-box-overlay">config file</a>.</p>
 </li>
 <li>
 <p><b><pre>-tc, --time-code</pre></b>  Draw time code of each frame on the top left corner.
-<br/>Text properties (e.g. color, font size, margin) can be set with a <a href="config_file.md#timecode-overlay">config file</a>.</p>
+<br/>Text properties (e.g. color, font size, margin) can be set with a <a href="#config-file#timecode-overlay">config file</a>.</p>
 </li>
 </ul>
 <hr />

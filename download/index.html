@@ -393,6 +393,13 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#source-code" class="md-nav__link">
+    Source Code
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -506,16 +513,19 @@
 <p>Nvidia CUDA® builds are available, but still early in development. This version may not be the latest, and should be considered experimental. Not all GPU versions may be supported.</p>
 <div class="admonition cuda-download">
 <p class="admonition-title"><strong>1.5.1</strong><span class="dvr-scan-release-date"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.4.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M256 32c14.2 0 27.3 7.5 34.5 19.8l216 368c7.3 12.4 7.3 27.7.2 40.1S486.3 480 472 480H40c-14.3 0-27.6-7.7-34.7-20.1s-7-27.8.2-40.1l216-368C228.7 39.5 241.8 32 256 32zm0 128c-13.3 0-24 10.7-24 24v112c0 13.3 10.7 24 24 24s24-10.7 24-24V184c0-13.3-10.7-24-24-24zm32 224a32 32 0 1 0-64 0 32 32 0 1 0 64 0z"/></svg></span></span></p>
-<p><div class="buttongrid buttongrid-download"><a class="md-button" href="documentation.md" id="changelog-button"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.4.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M288 0H128c-17.7 0-32 14.3-32 32s14.3 32 32 32v132.8c0 11.8-3.3 23.5-9.5 33.5L10.3 406.2C3.6 417.2 0 429.7 0 442.6 0 480.9 31.1 512 69.4 512h309.2c38.3 0 69.4-31.1 69.4-69.4 0-12.8-3.6-25.4-10.3-36.4L329.5 230.4c-6.2-10.1-9.5-21.7-9.5-33.5V64c17.7 0 32-14.3 32-32S337.7 0 320 0h-32zm-96 196.8V64h64v132.8c0 23.7 6.6 46.9 19 67.1l34.5 56.1h-171l34.5-56.1c12.4-20.2 19-43.4 19-67.1z"/></svg></span> &nbsp; CUDA® Build <code>.zip</code></a></div></p>
+<p><div class="buttongrid buttongrid-download"><a class="md-button" href="../docs/" id="changelog-button"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.4.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M288 0H128c-17.7 0-32 14.3-32 32s14.3 32 32 32v132.8c0 11.8-3.3 23.5-9.5 33.5L10.3 406.2C3.6 417.2 0 429.7 0 442.6 0 480.9 31.1 512 69.4 512h309.2c38.3 0 69.4-31.1 69.4-69.4 0-12.8-3.6-25.4-10.3-36.4L329.5 230.4c-6.2-10.1-9.5-21.7-9.5-33.5V64c17.7 0 32-14.3 32-32S337.7 0 320 0h-32zm-96 196.8V64h64v132.8c0 23.7 6.6 46.9 19 67.1l34.5 56.1h-171l34.5-56.1c12.4-20.2 19-43.4 19-67.1z"/></svg></span> &nbsp; CUDA® Build <code>.zip</code></a></div></p>
 </div>
 <p>Make sure to set <code>-b MOG2_CUDA</code> when running DVR-Scan (e.g. <code>dvr-scan -i video.mp4 -b MOG2_CUDA</code>). CUDA builds are done infrequently and may not be up to date.  The Python version of DVR-Scan is compatible with any CUDA® enabled version of the <code>opencv-python</code> module.  You can get better performance or use DVR-Scan on a wider variety of GPUs if you build the module on your system. with the latest SDK version.</p>
+<h2 id="source-code">Source Code<a class="headerlink" href="#source-code" title="Permanent link">&para;</a></h2>
+<p>The source code for <a href="https://github.com/Breakthrough/DVR-Scan">DVR-Scan is available on Github</a>.  The following commands will download the required packages and build DVR-Scan from source:</p>
+<div class="highlight"><pre><span></span><code>python -m pip install --upgrade pip build wheel virtualenv setuptools==62.3.4
+python -m pip install -r requirements.txt
+python -m build
+</code></pre></div>
+<p>Once <code>python -m build</code> succeeds, there will be a Python distribution in the <code>dist/</code> folder which can be installed using <code>pip</code>:</p>
+<div class="highlight"><pre><span></span><code>python -m pip install dist/dvr-scan-1.5.1.tar.gz
+</code></pre></div>
 <!--
--------------------------------
-
-## Source Code
-
-Link to source how to build.
-
 -------------------------------
 
 ## Third-Party
