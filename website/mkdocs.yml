@@ -4,6 +4,7 @@ site_name: "DVR-Scan"
 site_author: "Brandon Castellano"
 docs_dir: "../docs"
 site_dir: "build"
+site_url: !!python/object/apply:os.getenv ["READTHEDOCS_CANONICAL_URL"]
 edit_uri:  "blob/main/website/pages/"
 repo_url: "https://github.com/Breakthrough/DVR-Scan"
 repo_name: "DVR-Scan on Github"
