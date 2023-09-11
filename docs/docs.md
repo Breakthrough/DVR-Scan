@@ -194,14 +194,14 @@ Detection can be limited to a specific region of the frame using the `-roi` flag
 ### Overlays
 
 <!-- SHOW EXAMPLE VIA GIF -->
-!!! note "Overlays are only supported with the default output mode ([`-m opencv`](#inputoutput))."
+!!! note "Overlays are only supported with the default output mode ([`-m opencv`](#output))."
 
  * <b><pre>-bb, --bounding-box</pre></b> Draw a bounding box around the areas where motion is detected.
 <br/>An optional amount of time for temporal smoothing can also be specified (e.g. `-bb 0.1s`). The default smoothing amount is 0.1 seconds. If set to 0 (`-bb 0`), smoothing is disabled.
-<br/>The color, thickness, and minimum size can be set with a [config file](#config-file#bounding-box-overlay).
+<br/>The color, thickness, and minimum size can be set with a [config file](#overlays_1).
 
  * <b><pre>-tc, --time-code</pre></b>  Draw time code of each frame on the top left corner.
-<br/>Text properties (e.g. color, font size, margin) can be set with a [config file](#config-file#timecode-overlay).
+<br/>Text properties (e.g. color, font size, margin) can be set with a [config file](#overlays_1).
 
  * <b><pre>-fm, --frame-metrics</pre></b>  Draw frame metrics, including motion score, on the top right corner.
 <br/>Text properties (e.g. color, font size, margin) can be set with a [config file](config_file.md#text-overlays).
@@ -334,7 +334,7 @@ All time values can be given as a timecode: (`HH:MM:SS` or `HH:MM:SS.nnn`), in s
 
 #### Detection
 
-The following options control motion detection.  A more comprehensive description of each option can be found [under the respective command line options](#detection-options).
+The following options control motion detection.  A more comprehensive description of each option can be found [under the respective command line options](#detection).
 
  * <b><pre>bg-subtractor</pre></b>
     Type of background subtraction to use: (`MOG2`, `CNT`, `MOG2_CUDA`).
