@@ -1,25 +1,43 @@
-# ![DVR-Scan Logo](https://raw.githubusercontent.com/Breakthrough/DVR-Scan/master/docs/img/dvr-scan-logo_small.png)
-:vhs: Tool for extracting scenes with motion from security camera/DVR footage.  Written in Python, depends on OpenCV.
-
-**Latest Release:** [v1.5.1 (August 15, 2022)](http://dvr-scan.readthedocs.io/en/latest/changelog/)
+![DVR-Scan Logo](https://raw.githubusercontent.com/Breakthrough/DVR-Scan/master/docs/img/dvr-scan-logo_small.png)
+:vhs: Find and extract motion events in videos.
 
 ------------------------------------------------
 
-### | [Download](http://dvr-scan.readthedocs.io/en/latest/download/) | [Install Guide](http://dvr-scan.readthedocs.io/en/latest/guide/installing/) | [Getting Started](http://dvr-scan.readthedocs.io/en/latest/guide/examples/) | [FAQ](http://dvr-scan.readthedocs.io/en/latest/faq/) | [Documentation](http://dvr-scan.readthedocs.io/) |
+### Latest Release: v1.5.1 (August 15, 2022)
 
-------------------------------------------------
+**Website**: [dvr-scan.com](https://www.dvr-scan.com)
 
-**Quick Install**:
+**Documentation**: [dvr-scan.com/docs](https://www.dvr-scan.com/docs/)
+
+------------------------------------------------------
+
+DVR-Scan is a command-line application that **automatically detects motion events in video files** (e.g. security camera footage).  DVR-Scan looks for areas in footage containing motion, and saves each event to a separate video clip.  DVR-Scan is free and open-source software, and works on Windows, Linux, and Mac.
+
+## Quick Install
 
     pip install dvr-scan[opencv] --upgrade
 
-Requires ffmpeg for certain features. Windows builds (MSI installer/portable ZIP) can be found on [the download page](http://dvr-scan.readthedocs.io/en/latest/download/).
+Windows builds are also available on [the Downloads page](https://www.dvr-scan.com/download/).
 
-------------------------------------------------
+## Quickstart
 
-**DVR-Scan** is a cross-platform command-line (CLI) application that **automatically detects motion events in video files** (e.g. security camera footage).  In addition to locating both the time and duration of each motion event, DVR-Scan will save the footage of each motion event to a new, separate video clip.  Not only is DVR-Scan free and open-source software (FOSS), written in Python, and based on Numpy and OpenCV, it was built to be extendable and hackable.
+Scan `video.mp4` (separate clips for each event):
 
-For users wanting finer control over the output video encoding method, the default timecode format (`HH:MM:SS.nnnn`) is compatible with most popular video tools, so in most cases the motion events DVR-Scan finds can be simply copied and pasted into another tool of your choice (e.g. `ffmpeg`, `avconv` or the `mkvtoolnix` suite).
+    dvr-scan -i video.mp4
+
+Only scan a region of interest (select with mouse):
+
+    dvr-scan -i video.mp4 -roi
+
+Draw boxes around motion:
+
+    dvr-scan -i video.mp4 -bb
+
+Use `ffmpeg` to extract events:
+
+    dvr-scan -i video.mp4 -m ffmpeg
+
+See [the documentation](docs.md) for a complete list of all command-line and configuration file options which can be set. You can also type `dvr-scan --help` for an overview of command line options. Some program options can also be set [using a config file](docs.md#config-file).
 
 ------------------------------------------------
 

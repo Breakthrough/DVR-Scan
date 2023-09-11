@@ -1,0 +1,78 @@
+# DVR-Scan Website
+# Copyright (C) 2016 Brandon Castellano <http://www.bcastell.com>.
+site_name: "DVR-Scan"
+site_author: "Brandon Castellano"
+docs_dir: "../docs"
+site_dir: "build"
+site_url: !!python/object/apply:os.getenv ["READTHEDOCS_CANONICAL_URL"]
+edit_uri:  "blob/main/website/pages/"
+repo_url: "https://github.com/Breakthrough/DVR-Scan"
+repo_name: "DVR-Scan on Github"
+copyright: 'Copyright &copy; 2016 Brandon Castellano.  All rights reserved.<br /><a href="https://github.com/Breakthrough/DVR-Scan/blob/main/LICENSE" alt="link to LICENSE on Github">Licensed under BSD 2-Clause license.'
+
+theme:
+  name: material
+  custom_dir: overrides
+  favicon: assets/dvr-scan.ico
+  palette:
+    #- scheme: slate
+    #  primary: custom
+    #  toggle:
+    #    icon: material/brightness-4
+    #    name: Switch to light mode
+    - scheme: default
+      primary: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+
+  logo: assets/dvr-scan.png
+  icon:
+    logo: material/magnify-scan
+    repo: fontawesome/brands/github
+    admonition:
+      info: material/check
+  font:
+    text: "Rubik"
+    code: "JetBrains Mono"
+
+# TODO: Figure out how to have both tabs and regular nav at same time.
+# TODO: Why doesn't the nav bar follow your progress on the Documentation page?
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.tabs.sticky
+    - toc.follow
+    - toc.integrate
+    - content.code.copy
+
+
+
+markdown_extensions:
+ - admonition
+ - attr_list
+ - fenced_code
+ - pymdownx.details
+ - pymdownx.tabbed:
+    alternate_style: true
+ - pymdownx.superfences
+ - pymdownx.emoji:
+    emoji_index: !!python/name:materialx.emoji.twemoji
+    emoji_generator: !!python/name:materialx.emoji.to_svg
+ - toc:
+    toc_depth: 6
+    permalink: true
+
+
+
+nav:
+ - 'Home': 'index.md'
+ - 'Download': 'download.md'
+ - 'Changelog': 'changelog.md'
+ - 'Documentation': 'docs.md'
+ - 'FAQ': 'faq.md'
+ - 'Resources': 'resources.md'
+
+extra_css:
+  - style.css

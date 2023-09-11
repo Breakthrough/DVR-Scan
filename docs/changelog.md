@@ -1,6 +1,7 @@
 
-DVR-Scan Changelog
-==========================================================
+# :fontawesome-solid-bars:Changelog
+
+----------------------------------------------------------
 
 ## DVR-Scan 1.6
 
@@ -9,7 +10,7 @@ DVR-Scan Changelog
 #### Release Notes
 
 In development.
-z
+
 #### Changelog
 
 **General**:
@@ -24,15 +25,16 @@ z
     - `time-code-bg-color` is now `text-bg-color`
 
 
+----------------------------------------------------------
+
 ## DVR-Scan 1.5
 
-### 1.5.1 (August 15, 2022) &nbsp;<span class="fa fa-tags"></span>
+### :fontawesome-solid-tags: 1.5.1 (August 15, 2022)
 
 #### Changelog
 
  * [bugfix] Fix crash when opening multiple input videos ([#95](https://github.com/Breakthrough/DVR-Scan/issues/95))
  * [bugfix] Fix incorrect warning regarding frame decode failures at end of video
-
 
 ### 1.5 (July 30, 2022)
 
@@ -41,7 +43,7 @@ z
  * Significant performance improvements on multicore systems
  * Support wildcards/globs as inputs for scanning entire folders (`-i folder/*.mp4`)
  * Allow use of ffmpeg for better output quality (`-m ffmpeg`) or codec-copying mode (`-m copy`)
- * Configuration files are now supported, [see documentation for details](https://dvr-scan.readthedocs.io/en/v1.5/guide/config_file/)
+ * Configuration files are now supported, [see documentation for details](https://www.dvr-scan.com/docs/#config-file)
      * Can specify config file path with `-c`/`--config`, or create a `dvr-scan.cfg` file in your user config folder
  * Windows binaries are now signed, thanks [SignPath.io](https://signpath.io/) (certificate by [SignPath Foundation](https://signpath.org/))
  * Experimental Nvidia CUDA® support has been added (set `-b MOG2_CUDA`)
@@ -65,7 +67,7 @@ z
  * `-c` is now used for `--config`, previously was for `--codec`
  * Add experimental `MOG2_CUDA` option for `-b`/`--bg-subtractor`
  * Rename existing `MOG` option to `MOG2`
- * `--codec` has been removed, the value should now be set using a [config file](https://dvr-scan.readthedocs.io/en/v1.5/guide/config_file/)
+ * `--codec` has been removed, the value should now be set using a [config file](https://www.dvr-scan.com/docs/#config-file)
 
 #### Changelog
 
@@ -102,6 +104,7 @@ z
      * Use ffmpeg to [concatenate/merge input videos](https://trac.ffmpeg.org/wiki/Concatenate) before processing as a workaround
  * CUDA builds do not include the `CNT` option for `-b`/`--bg-subtractor`
 
+----------------------------------------------------------
 
 ## DVR-Scan 1.4
 
@@ -128,7 +131,7 @@ This release includes fixes for incorrect event start/end times when using frame
  * Using `-st`/`--start-time` will yield incorrect results
  * If a motion event happens to be *exactly* the number of frames specified by `-l`/`--min-event-length`, the end timecode will be displayed incorrectly ([#90](https://github.com/Breakthrough/DVR-Scan/issues/90))
 
-
+----------------------------------------------------------
 
 ### 1.4 (February 8, 2022)
 
@@ -166,6 +169,7 @@ In addition to several bugfixes, this release of DVR-Scan adds the ability to dr
  * Using `-st`/`--start-time` will yield incorrect results
  * If a motion event happens to be *exactly* the number of frames specified by `-l`/`--min-event-length`, the end timecode will be displayed incorrectly ([#90](https://github.com/Breakthrough/DVR-Scan/issues/90))
 
+----------------------------------------------------------
 
 ## DVR-Scan 1.3
 
@@ -190,6 +194,7 @@ This version of DVR-Scan includes a new, faster background subtraction algorithm
  * The kernel size must be manually adjusted when using `-df`/`--downscale-factor` ([#46](https://github.com/Breakthrough/DVR-Scan/issues/46))
  * When using `--frame-skip`, the `--min-event-length` parameter must be manually adjusted, and exported clips will have the wrong playback speed
 
+----------------------------------------------------------
 
 ## DVR-Scan 1.2
 
@@ -208,6 +213,7 @@ This version of DVR-Scan includes a new, faster background subtraction algorithm
  * When using the `-o`/`--output` argument, a file is still written to disk even if no motion events are discovered in the input file ([#50](https://github.com/Breakthrough/DVR-Scan/issues/50))
  * Variable framerate videos (VFR) are not fully supported, and will yield incorrect timestamps ([#20](https://github.com/Breakthrough/DVR-Scan/issues/20))
 
+----------------------------------------------------------
 
 ## DVR-Scan 1.1
 
@@ -224,6 +230,7 @@ This version of DVR-Scan includes a new, faster background subtraction algorithm
  * Quiet mode (`-q/--quiet`) does not work correctly
  * Variable framerate videos (VFR) are not fully supported, and will yield incorrect timestamps ([#20](https://github.com/Breakthrough/DVR-Scan/issues/20))
 
+----------------------------------------------------------
 
 ## DVR-Scan 1.0
 

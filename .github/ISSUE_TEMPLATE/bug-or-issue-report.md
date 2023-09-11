@@ -9,9 +9,11 @@ A clear and concise description of what the bug or issue is - in other words, wh
 
 **Required Information:**
 
-Provide a full copy of the command line options you are using, for example:
+Provide a full copy of the command line options you are using, and add `--verbosity debug`, for example:
 
-`dvr-scan -i some_video.mp4 -so -et 00:01:00.000`
+`dvr-scan -i some_video.mp4 -so -et 00:01:00.000 --verbosity debug`
+
+You may also specify a logfile with `--verbosity debug` and attach that.
 
 **Expected Behavior:**
 A clear and concise description of what you *expected* to happen.

@@ -45,7 +45,7 @@ from dvr_scan.platform import init_logger
 from dvr_scan.scanner import ScanContext
 
 # Used for module/distribution identification.
-__version__ = 'v1.6-dev0'
+__version__ = '1.6-dev0'
 
 
 def get_license_info() -> str:
@@ -69,7 +69,7 @@ def get_license_info() -> str:
         pass
     return ('[DVR-Scan] Error: Missing LICENSE files.\n'
             'See the following URL for license/copyright information:\n'
-            ' < https://dvr-scan.readthedocs.io/en/latest/copyright >\n')
+            ' < https://www.dvr-scan.com/resources >\n')
 
 
 # Initialize logger.
