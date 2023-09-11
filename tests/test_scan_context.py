@@ -44,10 +44,8 @@ TRAFFIC_CAMERA_EVENTS_TIME_POST_40 = [
     (542, 576),
 ]
 
-# Even though the first frame contains motion, the first frame we can actually detect it on is
-# the second frame (index 1).
 TRAFFIC_CAMERA_EVENTS_CNT = [
-    (1, 149),
+    (15, 149),
     (364, 491),
     (543, 576),
 ]

@@ -235,6 +235,7 @@ class ScanContext:
         self._roi = None                        # --roi
         self._max_roi_size = None               # --roi
         self._show_roi_window = False
+        self._max_score = 255.0                 # scores greater than this are ignored
 
         # Motion Event Parameters (set_event_params)
         self._min_event_len = None  # -l/--min-event-length
@@ -630,6 +631,8 @@ class ScanContext:
                 motion_mask = motion_detector.apply(frame.frame_rgb)
                 frame_score = cv2.sumElems(motion_mask)[0] / float(
                     motion_mask.shape[0] * motion_mask.shape[1])
+                if frame_score >= self._max_score:
+                    frame_score = 0
                 above_threshold = frame_score >= self._threshold
                 # Always assign the first frame a score of 0 since some subtractors will output a
                 # mask indicating motion on every pixel of the first frame.

@@ -13,8 +13,16 @@ In development.
 
 #### Changelog
 
+**WIP**:
+
+ - [feature] Multiple regions of interest can now be defined
+    - For example: `dvr-scan -i video.mp4 -roi 5 5 20 20 -roi 100 100 20 20`
+ - [general] Move option for limiting ROI window size (`-roi 1920 1080`) to config file (`max-window-size = 1920 1080`)
+
+
 **General**:
 
+ - [bugfix] Fix CNT mode always treating first few frame as having motion [#119](https://github.com/Breakthrough/DVR-Scan/issues/119)
  - [enhancement] Noise reduction kernel can now be disabled by setting `-k`/`--kernel-size` to `0` or `1` ([#123](https://github.com/Breakthrough/DVR-Scan/issues/123))
  - [feature] New `-fm` / `--frame-metrics` option draws motion score on each frame to help tune [detection parameters](https://dvr-scan.readthedocs.io/en/latest/guide/options/#detection-parameters)
  - [other] Config file options that started with `time-code-` have been renamed to start with `text-`, and are now shared between the `time-code` and `frame-metrics` overlays:
