@@ -88,7 +88,6 @@ def timecode_type_check(metavar: Optional[str] = None):
                 secs = float(tc_val[2]) if '.' in tc_val[2] else int(tc_val[2])
                 if (hrs >= 0 and mins >= 0 and secs >= 0 and mins < 60 and secs < 60):
                     valid = True
-                    value = [hrs, mins, secs]
         if not valid:
             raise argparse.ArgumentTypeError(
                 'invalid timecode: %s\n'
@@ -495,6 +494,7 @@ def get_cli_parser(user_config: ConfigRegistry):
         '--region-of-interest',
         metavar='x0 y0 w h',
         nargs='*',
+        action='append',
         help=('Limit detection to specified region. Can specify as -roi to show popup window,'
               ' or specify the region in the form -roi x,y w,h (e.g. -roi 100 200 50 50)%s' %
               (user_config.get_help_string('region-of-interest', show_default=False))),

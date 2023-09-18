@@ -18,10 +18,9 @@ import argparse
 import glob
 import logging
 import os
-from subprocess import CalledProcessError
-from typing import Any, Optional
+import typing as ty
 
-from scenedetect import FrameTimecode, VideoOpenFailure
+from scenedetect import FrameTimecode
 
 import dvr_scan
 from dvr_scan.cli import get_cli_parser
@@ -31,9 +30,6 @@ from dvr_scan.scanner import DetectorType, OutputMode, ScanContext
 from dvr_scan.platform import init_logger
 
 logger = logging.getLogger('dvr_scan')
-
-EXIT_SUCCESS: int = 0
-EXIT_ERROR: int = 1
 
 
 class ProgramSettings:
@@ -49,12 +45,12 @@ class ProgramSettings:
         """If True, re-raises all logged exceptions to provide additional traceback info."""
         return self._debug_mode
 
-    def get_arg(self, arg: str) -> Optional[Any]:
+    def get_arg(self, arg: str) -> ty.Optional[ty.Any]:
         """Get setting specified via command line argument, if any."""
         arg_name = arg.replace('-', '_')
         return getattr(self._args, arg_name) if hasattr(self._args, arg_name) else None
 
-    def get(self, option: str, arg: Optional[str] = None) -> Any:
+    def get(self, option: str, arg: ty.Optional[str] = None) -> ty.Union[str, int, float, bool]:
         """Get setting based on following resolution order:
             1. Argument specified via command line.
             2. Option set in the active config file (either explicit with -c/--config, or
@@ -90,18 +86,21 @@ def _preprocess_args(args):
     # -roi/--region-of-interest
     if hasattr(args, 'region_of_interest') and args.region_of_interest:
         original_roi = args.region_of_interest
+        if len(original_roi) > 1:
+            # TODO(v1.6): Allow multiple ROI flags via command line.
+            raise NotImplementedError()
         try:
-            args.region_of_interest = ROIValue(value=' '.join(original_roi), allow_size=True).value
+            args.region_of_interest = ROIValue(
+                value=' '.join(original_roi[0]), allow_size=True).value
         except ValueError:
             logger.error(
-                'Error: Invalid value for ROI: %s. ROI must be specified as a rectangle of'
-                ' the form `x,y,w,h` or the max window size `w,h` (commas/spaces are ignored).'
-                ' For example: -roi 200,250 50,100', ' '.join(original_roi))
+                'Error: Invalid value for ROI. Must be specified as rectangle of the form x y w h'
+                ' (example: -roi 25 75 200 100).')
             return False, None
     return True, args
 
 
-def _init_dvr_scan() -> Optional[ProgramSettings]:
+def parse_settings(args: ty.List[str] = None) -> ty.Optional[ProgramSettings]:
     """Parse command line options and load config file settings."""
     args = None
     config_load_failure = False
@@ -116,7 +115,7 @@ def _init_dvr_scan() -> Optional[ProgramSettings]:
             log_level=verbosity,
             show_stdout=not user_config.get_value('quiet-mode'),
         )
-        args = get_cli_parser(user_config).parse_args()
+        args = get_cli_parser(user_config).parse_args(args=args)
 
         # Always include all log information in debug mode, otherwise if a config file path
         # was given, suppress the init log since we'll re-init the config registry below.
@@ -174,21 +173,7 @@ def _init_dvr_scan() -> Optional[ProgramSettings]:
     if not validated:
         return None
 
-    return ProgramSettings(args=args, config=user_config, debug_mode=debug_mode)
-
-
-def run_dvr_scan():
-    """Entry point for running DVR-Scan.
-
-    Handles high-level interfacing of video IO and motion event detection.
-
-    Returns:
-        0 on successful termination, non-zero otherwise.
-    """
-    # Parse command-line options and config file settings.
-    settings = _init_dvr_scan()
-    if settings is None:
-        return EXIT_ERROR
+    settings = ProgramSettings(args=args, config=user_config, debug_mode=debug_mode)
 
     # Validate that the specified motion detector is available on this system.
     try:
@@ -196,142 +181,105 @@ def run_dvr_scan():
         bg_subtractor = DetectorType[detector_type.upper()]
     except KeyError:
         logger.error('Error: Unknown background subtraction type: %s', detector_type)
-        return EXIT_ERROR
+        return None
     if not bg_subtractor.value.is_available():
         logger.error(
             'Method %s is not available. To enable it, install a version of'
             ' the OpenCV package `cv2` that includes support for it%s.', bg_subtractor.name,
             ', or download the experimental CUDA-enabled build: https://www.dvr-scan.com/'
             if 'CUDA' in bg_subtractor.name and os.name == 'nt' else '')
-        return EXIT_ERROR
+        return None
 
-    try:
+    return settings
 
-        #
-        # Create ScanContext and set properties based on current program settings.
-        #
 
-        sctx = ScanContext(
-            input_videos=settings.get_arg('input'),
-            frame_skip=settings.get('frame-skip'),
-            show_progress=not settings.get('quiet-mode'),
+# TODO: Along with the TODO ontop of ScanContext, the actual conversion from the ProgramSetting
+# to the option in ScanContext should be done via properties, e.g. make a property in
+# ProgramSettings called 'output_dir' that just returns settings.get('output_dir'). These can then
+# be directly referenced from the ScanContext.
+def create_scan_context(settings: ProgramSettings) -> ScanContext:
+    """Create ScanContext and set properties based on current program settings."""
+    sctx = ScanContext(
+        input_videos=settings.get_arg('input'),
+        frame_skip=settings.get('frame-skip'),
+        show_progress=not settings.get('quiet-mode'),
+    )
+
+    sctx.set_output(
+        comp_file=settings.get_arg('output'),
+        mask_file=settings.get_arg('mask-output'),
+        output_mode=(OutputMode.SCAN_ONLY
+                     if settings.get_arg('scan-only') else settings.get('output-mode')),
+        opencv_fourcc=settings.get('opencv-codec'),
+        ffmpeg_input_args=settings.get('ffmpeg-input-args'),
+        ffmpeg_output_args=settings.get('ffmpeg-output-args'),
+        output_dir=settings.get('output-dir'),
+    )
+
+    timecode_overlay = None
+    if settings.get('time-code'):
+        timecode_overlay = TextOverlay(
+            font_scale=settings.get('text-font-scale'),
+            margin=settings.get('text-margin'),
+            border=settings.get('text-border'),
+            thickness=settings.get('text-font-thickness'),
+            color=settings.get('text-font-color'),
+            bg_color=settings.get('text-bg-color'),
+            corner=TextOverlay.Corner.TopLeft,
         )
 
-        sctx.set_output(
-            comp_file=settings.get_arg('output'),
-            mask_file=settings.get_arg('mask-output'),
-            output_mode=(OutputMode.SCAN_ONLY
-                         if settings.get_arg('scan-only') else settings.get('output-mode')),
-            opencv_fourcc=settings.get('opencv-codec'),
-            ffmpeg_input_args=settings.get('ffmpeg-input-args'),
-            ffmpeg_output_args=settings.get('ffmpeg-output-args'),
-            output_dir=settings.get('output-dir'),
+    metrics_overlay = None
+    if settings.get('frame-metrics'):
+        metrics_overlay = TextOverlay(
+            font_scale=settings.get('text-font-scale'),
+            margin=settings.get('text-margin'),
+            border=settings.get('text-border'),
+            thickness=settings.get('text-font-thickness'),
+            color=settings.get('text-font-color'),
+            bg_color=settings.get('text-bg-color'),
+            corner=TextOverlay.Corner.TopRight,
         )
 
-        timecode_overlay = None
-        if settings.get('time-code'):
-            timecode_overlay = TextOverlay(
-                font_scale=settings.get('text-font-scale'),
-                margin=settings.get('text-margin'),
-                border=settings.get('text-border'),
-                thickness=settings.get('text-font-thickness'),
-                color=settings.get('text-font-color'),
-                bg_color=settings.get('text-bg-color'),
-                corner=TextOverlay.Corner.TopLeft,
-            )
-
-        metrics_overlay = None
-        if settings.get('frame-metrics'):
-            metrics_overlay = TextOverlay(
-                font_scale=settings.get('text-font-scale'),
-                margin=settings.get('text-margin'),
-                border=settings.get('text-border'),
-                thickness=settings.get('text-font-thickness'),
-                color=settings.get('text-font-color'),
-                bg_color=settings.get('text-bg-color'),
-                corner=TextOverlay.Corner.TopRight,
-            )
-
-        bounding_box = None
-        # bounding_box_arg will be None if -bb was not set, False if -bb was set without any args,
-        # otherwise it represents the desired smooth time.
-        bounding_box_arg = settings.get_arg('bounding-box')
-        if bounding_box_arg is not None or settings.get('bounding-box'):
-            if bounding_box_arg is not None and bounding_box_arg is not False:
-                smoothing_time = FrameTimecode(bounding_box_arg, sctx.framerate)
-            else:
-                smoothing_time = FrameTimecode(
-                    settings.get('bounding-box-smooth-time'), sctx.framerate)
-            bounding_box = BoundingBoxOverlay(
-                min_size_ratio=settings.get('bounding-box-min-size'),
-                thickness_ratio=settings.get('bounding-box-thickness'),
-                color=settings.get('bounding-box-color'),
-                smoothing=smoothing_time.frame_num,
-            )
-
-        sctx.set_overlays(
-            timecode_overlay=timecode_overlay,
-            metrics_overlay=metrics_overlay,
-            bounding_box=bounding_box,
+    bounding_box = None
+    # bounding_box_arg will be None if -bb was not set, False if -bb was set without any args,
+    # otherwise it represents the desired smooth time.
+    bounding_box_arg = settings.get_arg('bounding-box')
+    if bounding_box_arg is not None or settings.get('bounding-box'):
+        if bounding_box_arg is not None and bounding_box_arg is not False:
+            smoothing_time = FrameTimecode(bounding_box_arg, sctx.framerate)
+        else:
+            smoothing_time = FrameTimecode(settings.get('bounding-box-smooth-time'), sctx.framerate)
+        bounding_box = BoundingBoxOverlay(
+            min_size_ratio=settings.get('bounding-box-min-size'),
+            thickness_ratio=settings.get('bounding-box-thickness'),
+            color=settings.get('bounding-box-color'),
+            smoothing=smoothing_time.frame_num,
         )
 
-        sctx.set_detection_params(
-            detector_type=bg_subtractor,
-            threshold=settings.get('threshold'),
-            kernel_size=settings.get('kernel-size'),
-            downscale_factor=settings.get('downscale-factor'),
-            roi=settings.get('region-of-interest'),
-        )
+    sctx.set_overlays(
+        timecode_overlay=timecode_overlay,
+        metrics_overlay=metrics_overlay,
+        bounding_box=bounding_box,
+    )
 
-        sctx.set_event_params(
-            min_event_len=settings.get('min-event-length'),
-            time_pre_event=settings.get('time-before-event'),
-            time_post_event=settings.get('time-post-event'),
-        )
+    sctx.set_detection_params(
+        detector_type=DetectorType[settings.get('bg-subtractor').upper()],
+        threshold=settings.get('threshold'),
+        kernel_size=settings.get('kernel-size'),
+        downscale_factor=settings.get('downscale-factor'),
+        roi=settings.get('region-of-interest'),
+    )
 
-        sctx.set_video_time(
-            start_time=settings.get_arg('start-time'),
-            end_time=settings.get_arg('end-time'),
-            duration=settings.get_arg('duration'),
-        )
+    sctx.set_event_params(
+        min_event_len=settings.get('min-event-length'),
+        time_pre_event=settings.get('time-before-event'),
+        time_post_event=settings.get('time-post-event'),
+    )
 
-        #
-        # Run motion detection.
-        #
-        sctx.scan_motion()
+    sctx.set_video_time(
+        start_time=settings.get_arg('start-time'),
+        end_time=settings.get_arg('end-time'),
+        duration=settings.get_arg('duration'),
+    )
 
-    # Handle any application errors. Exceptions should be re-raised in debug mode for more context.
-
-    except ValueError as ex:
-        logger.error('Error: %s', str(ex))
-        if settings.debug_mode:
-            raise
-        return EXIT_ERROR
-
-    except VideoOpenFailure as ex:
-        # Error information should be logged by the ScanContext when this exception is raised.
-        logger.error('Failed to load input: %s', str(ex))
-        if settings.debug_mode:
-            raise
-        return EXIT_ERROR
-
-    except KeyboardInterrupt as ex:
-        # TODO(v1.6): Change this to log something with info verbosity so it's clear
-        # to end users why the program terminated.
-        logger.debug("KeyboardInterrupt received, quitting.")
-        if settings.debug_mode:
-            raise
-        return EXIT_ERROR
-
-    except CalledProcessError as ex:
-        logger.error(
-            'Failed to run command:\n  %s\nCommand returned %d, output:\n\n%s',
-            ' '.join(ex.cmd),
-            ex.returncode,
-            ex.output,
-        )
-        if settings.debug_mode:
-            raise
-        return EXIT_ERROR
-
-    return EXIT_SUCCESS
+    return sctx

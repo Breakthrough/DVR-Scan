@@ -525,10 +525,6 @@ class ScanContext:
         self._stop.set()
         self._logger.debug("Stop event set.")
 
-    # TODO: See comment above ScanContext. This method can be broken down by moving all of the
-    # locals to parameters, and separating out the user-specified options (e.g. moving most of
-    # the current ScanContext parameters to another object, e.g. ScanOptions, and passing that
-    # to scan_motion rather than using setters on the ScanContext itself).
     def scan_motion(self) -> List[Tuple[FrameTimecode, FrameTimecode]]:
         """ Performs motion analysis on the ScanContext's input video(s). """
         self._stop.clear()
@@ -769,7 +765,7 @@ class ScanContext:
             # Display an error if we got more than one decode failure / corrupt frame.
             # TODO(v1.6): Add a property to get the number of corrupted frames and move this
             # warning into cli.controller.
-            # TODO(v1.5.1): This will also fire if no frames are decoded. Add a check to make sure
+            # TODO(v1.6): This will also fire if no frames are decoded. Add a check to make sure
             # the fourCC is valid. Also figure out a better way to handle the case where NO frames
             # are decoded (rather than reporting X frames failed to decode).
             if self._input.decode_failures > 1:
