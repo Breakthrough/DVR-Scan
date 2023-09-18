@@ -390,51 +390,51 @@ Color values can be specified as either `(R,G,B)` or in hex as `0xFFFFFF`. Time 
 
 <h5>Timecode Overlay</h5>
 
- * <b><pre>time-code</pre></b>
+ * <b><pre>timecode</pre></b>
     Enable timecode overlay: (`yes` or `no`).
     <span class="dvr-scan-default">
     ```
-    time-code = no
+    timecode = no
     ```
     </span>
 
- * <b><pre>time-code-margin</pre></b>
+ * <b><pre>timecode-margin</pre></b>
     Margin from edge in pixels.
     <span class="dvr-scan-default">
     ```
-    time-code-margin = 5
+    timecode-margin = 5
     ```
     </span>
 
- * <b><pre>time-code-font-scale</pre></b>
+ * <b><pre>timecode-font-scale</pre></b>
     Scale factor for text size.
     <span class="dvr-scan-default">
     ```
-    time-code-font-scale = 2.0
+    timecode-font-scale = 2.0
     ```
     </span>
 
- * <b><pre>time-code-font-thickness</pre></b>
+ * <b><pre>timecode-font-thickness</pre></b>
     Thickness of font (integer values only).
     <span class="dvr-scan-default">
     ```
-    time-code-font-thickness = 2
+    timecode-font-thickness = 2
     ```
     </span>
 
- * <b><pre>time-code-font-color</pre></b>
+ * <b><pre>timecode-font-color</pre></b>
     Text color specified as `R, G, B`.
     <span class="dvr-scan-default">
     ```
-    time-code-font-color = 255, 255, 255
+    timecode-font-color = 255, 255, 255
     ```
     </span>
 
- * <b><pre>time-code-bg-color</pre></b>
+ * <b><pre>timecode-bg-color</pre></b>
     Background color specified as `R, G, B`.
     <span class="dvr-scan-default">
     ```
-    time-code-bg-color = 0, 0, 0
+    timecode-bg-color = 0, 0, 0
     ```
     </span>
 
