@@ -555,7 +555,8 @@ class ScanContext:
             self._bounding_box.set_corrections(
                 downscale_factor=self._downscale_factor, roi=self._roi, frame_skip=self._frame_skip)
 
-        # Calculate size of noise reduction kernel.
+        # Calculate size of noise reduction kernel. Even if an ROI is set, the auto factor is set
+        # based on the original video's input resolution.
         if self._kernel_size is None:
             kernel_size = _recommended_kernel_size(self._input.resolution[0],
                                                    self._downscale_factor)
@@ -765,7 +766,7 @@ class ScanContext:
             # Display an error if we got more than one decode failure / corrupt frame.
             # TODO(v1.6): Add a property to get the number of corrupted frames and move this
             # warning into cli.controller.
-            # TODO(v1.6): This will also fire if no frames are decoded. Add a check to make sure
+            # TODO: This will also fire if no frames are decoded. Add a check to make sure
             # the fourCC is valid. Also figure out a better way to handle the case where NO frames
             # are decoded (rather than reporting X frames failed to decode).
             if self._input.decode_failures > 1:

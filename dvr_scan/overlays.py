@@ -185,10 +185,10 @@ class BoundingBoxOverlay(object):
         Arguments:
             motion_mask: Greyscale mask where non-zero pixels indicate motion.
         """
-        # TODO: Allow motion mask to be None, and also handle case where motion_mask might be
-        # entirely blank. In both of these cases case, instead of appending a new entry to the
-        # _smoothing_window, we should remove the oldest entry to compensate for the required
-        # smoothing without biasing the box to the top left.
+        # TODO: We can draw boxes around areas of the frame with motion by doing some kind of
+        # contour detection on the motion mask, but that might be computationally expensive. We can
+        # instead darken pixels of the frame without motion, and lighten (or adjust the colours) of
+        # those pixels that do.
         bounding_box = cv2.boundingRect(motion_mask)
         self._smoothing_window.append(bounding_box)
         # Correct smoothing amount for frame skip.

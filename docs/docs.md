@@ -210,7 +210,7 @@ Detection can be limited to a specific region of the frame using the `-roi` flag
 
 ## :fontawesome-regular-file:Config File
 
-Many of DVR-Scan's options and defaults can be set using a config file.  This page describes all possible config options, but you can also download [the `dvr-scan.cfg` config template](https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.5/dvr-scan.cfg) as a starting point.
+Many of DVR-Scan's options and defaults can be set using a config file.  This page describes all possible config options, but you can also download [the `dvr-scan.cfg` config template](https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.6/dvr-scan.cfg) as a starting point.
 
 A config file path can be specified via the `-c`/`--config` option. DVR-Scan also looks for a `dvr-scan.cfg` file in the following locations:
 
@@ -235,7 +235,7 @@ bounding-box-color = 0, 255, 0
 
 ### Template
 
-You can download [the `dvr-scan.cfg` template](https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.5/dvr-scan.cfg) to use as a starting point for creating a config file from scratch.
+You can download [the `dvr-scan.cfg` template](https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.6/dvr-scan.cfg) to use as a starting point for creating a config file from scratch.
 
 ------------------------------------------------
 
@@ -290,11 +290,11 @@ You can download [the `dvr-scan.cfg` template](https://raw.githubusercontent.com
     ```
     </span>
 
- * <b><pre>opencv-fourcc</pre></b>
+ * <b><pre>opencv-codec</pre></b>
     Four-letter identifier of the encoder/video codec to use when *output-mode* is *opencv*. Must be one of: (`XVID`, `MP4V`, `MP42`, `H264`).
     <span class="dvr-scan-default">
     ```
-    opencv-fourcc = XVID
+    opencv-codec = XVID
     ```
     </span>
 
