@@ -110,29 +110,29 @@ Color values can be specified as either `(R,G,B)` or in hex as `0xFFFFFF`. Time 
 
 #### Timecode Overlay
 
- * <b><pre>time-code</pre></b>
+ * <b><pre>timecode</pre></b>
     Enable timecode overlay: (`yes` or `no`).
-    <br/>*Default*: `time-code = no`
+    <br/>*Default*: `timecode = no`
 
- * <b><pre>time-code-margin</pre></b>
+ * <b><pre>timecode-margin</pre></b>
     Margin from edge in pixels.
-    <br/>*Default*: `time-code-margin = 5`
+    <br/>*Default*: `timecode-margin = 5`
 
- * <b><pre>time-code-font-scale</pre></b>
+ * <b><pre>timecode-font-scale</pre></b>
     Scale factor for text size.
-    <br/>*Default*: `time-code-font-scale = 2.0`
+    <br/>*Default*: `timecode-font-scale = 2.0`
 
- * <b><pre>time-code-font-thickness</pre></b>
+ * <b><pre>timecode-font-thickness</pre></b>
     Thickness of font (integer values only).
-    <br/>*Default*: `time-code-font-thickness = 2`
+    <br/>*Default*: `timecode-font-thickness = 2`
 
- * <b><pre>time-code-font-color</pre></b>
+ * <b><pre>timecode-font-color</pre></b>
     Text color.
-    <br/>*Default*: `time-code-font-color = 255, 255, 255`
+    <br/>*Default*: `timecode-font-color = 255, 255, 255`
 
- * <b><pre>time-code-bg-color</pre></b>
+ * <b><pre>timecode-bg-color</pre></b>
     Background color.
-    <br/>*Default*: `time-code-bg-color = 0, 0, 0`
+    <br/>*Default*: `timecode-bg-color = 0, 0, 0`
 
 
 #### Bounding Box Overlay
