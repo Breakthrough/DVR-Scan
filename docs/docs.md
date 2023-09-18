@@ -395,17 +395,17 @@ Color values can be specified as either `(R,G,B)` or in hex as `0xFFFFFF`. Time 
 
  * <b><pre>time-code</pre></b>
     Enable timecode overlay: (`yes` or `no`). Draws timecode on top left of each frame.
-    <span class="dvr-scan-default">
+    <span class="dvr-scan-example">
     ```
-    time-code = no
+    time-code = yes
     ```
     </span>
 
- * <b><pre>framemetrics</pre></b>
+ * <b><pre>frame-metrics</pre></b>
     Enable frame metrics overlay: (`yes` or `no`). Draws frame metrics, including motion score, on top right of each frame.
-    <span class="dvr-scan-default">
+    <span class="dvr-scan-example">
     ```
-    metrics = no
+    frame-metrics = yes
     ```
     </span>
 
@@ -464,9 +464,9 @@ Color values can be specified as either `(R,G,B)` or in hex as `0xFFFFFF`. Time 
 
 * <pre>bounding-box</pre></b>
     Enable bounding box: (`yes` or `no`).
-    <span class="dvr-scan-default">
+    <span class="dvr-scan-example">
     ```
-    bounding-box = no
+    bounding-box = yes
     ```
     </span>
 

@@ -26,7 +26,8 @@ In development.
  - [bugfix] Fix timecode format `HH:MM:SS[.nnn]` being rejected for start/end time ([#141](https://github.com/Breakthrough/DVR-Scan/issues/141))
  - [enhancement] Noise reduction kernel can now be disabled by setting `-k`/`--kernel-size` to `0` or `1` ([#123](https://github.com/Breakthrough/DVR-Scan/issues/123))
  - [feature] New `-fm` / `--frame-metrics` option draws motion score on each frame to help tune [detection parameters](https://dvr-scan.readthedocs.io/en/latest/guide/options/#detection-parameters)
- - [other] Config file options that started with `time-code-` have been renamed to start with `text-`, and are now shared between the `time-code` and `frame-metrics` overlays:
+ - [other] Config option `timecode` has been renamed to `time-code` to match the command-line option
+ - [other] Config options that started with `timecode-` have been renamed to start with `text-`, and are now shared between the `time-code` and `frame-metrics` overlays:
     - `time-code-margin` is now `text-margin`
     - `time-code-font-scale` is now `text-font-scale`
     - `time-code-font-thickness` is now `text-font-thickness`

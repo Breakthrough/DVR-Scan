@@ -31,6 +31,16 @@ from scenedetect.frame_timecode import FrameTimecode
 
 from dvr_scan.scanner import DEFAULT_FFMPEG_INPUT_ARGS, DEFAULT_FFMPEG_OUTPUT_ARGS
 
+# Backwards compatibility for config options that were renamed/replaced.
+DEPRECATED_CONFIG_OPTIONS: Dict[str, str] = {
+    'timecode': 'time-code',
+    'timecode-margin': 'text-margin',
+    'timecode-font-scale': 'text-font-scale',
+    'timecode-font-thickness': 'text-font-thickness',
+    'timecode-font-color': 'text-font-color',
+    'timecode-bg-color': 'text-bg-color',
+}
+
 
 class ValidatedValue(ABC):
     """Used to represent configuration values that must be validated against constraints."""
@@ -314,10 +324,8 @@ CONFIG_MAP: ConfigDict = {
                                                          # Overlays
 
                                                          # Text Overlays
-                                                         # TODO(v1.6): Add ability to use both `time-code` and `timecode` here and on the CLI.
     'time-code': False,
     'frame-metrics': False,
-                                                         # TODO(v1.6): Add backwards compatibility with old config files that still use "timecode-*"
     'text-border': 4,
     'text-margin': 4,
     'text-font-scale': 1.0,
@@ -346,86 +354,6 @@ CHOICE_MAP: Dict[str, List[str]] = {
 """Mapping of string options which can only be of a particular set of values. We use a list instead
 of a set to preserve order when generating error contexts. Values are case-insensitive, and must be
 in lowercase in this map."""
-
-
-def _validate_structure(config: ConfigParser) -> List[str]:
-    """Validates the layout of the option mapping.
-
-    Returns:
-        List of any parsing errors in human-readable form.
-    """
-    errors: List[str] = []
-    for (option_name, _) in config.items(DEFAULTSECT):
-        if not option_name in CONFIG_MAP:
-            errors.append('Unsupported config option: %s' % (option_name))
-    return errors
-
-
-def _parse_config(config: ConfigParser) -> Tuple[ConfigDict, List[str]]:
-    """Process the given configuration into a key-value mapping.
-
-    Returns:
-        Configuration mapping and list of any processing errors in human readable form.
-    """
-    out_map: ConfigDict = {}
-    errors: List[str] = []
-    sections = config.sections()
-    if sections:
-        errors.append(
-            'Invalid config file: must not contain any sections, found:\n  %s' %
-            (', '.join(['[%s]' % section for section in sections if section != DEFAULTSECT])))
-        return out_map, errors
-
-    for option in CONFIG_MAP:
-        if option in config[DEFAULTSECT]:
-            try:
-                value_type = None
-                if isinstance(CONFIG_MAP[option], bool):
-                    value_type = 'yes/no value'
-                    out_map[option] = config.getboolean(DEFAULTSECT, option)
-                    continue
-                elif isinstance(CONFIG_MAP[option], int):
-                    value_type = 'integer'
-                    out_map[option] = config.getint(DEFAULTSECT, option)
-                    continue
-                elif isinstance(CONFIG_MAP[option], float):
-                    value_type = 'number'
-                    out_map[option] = config.getfloat(DEFAULTSECT, option)
-                    continue
-            except ValueError as _:
-                errors.append('Invalid setting for %s:\n  %s\nValue is not a valid %s.' %
-                              (option, config.get(DEFAULTSECT, option), value_type))
-                continue
-
-            # Handle custom validation types.
-            config_value = config.get(DEFAULTSECT, option)
-            default = CONFIG_MAP[option]
-            option_type = type(default)
-            if issubclass(option_type, ValidatedValue):
-                try:
-                    out_map[option] = option_type.from_config(
-                        config_value=config_value, default=default)
-                except OptionParseFailure as ex:
-                    errors.append('Invalid setting for %s:\n  %s\n%s' %
-                                  (option, config_value, ex.error))
-                continue
-
-            # If we didn't process the value as a given type, handle it as a string. We also
-            # replace newlines with spaces, and strip any remaining leading/trailing whitespace.
-            if value_type is None:
-                config_value = config.get(DEFAULTSECT, option).replace('\n', ' ').strip()
-                if option in CHOICE_MAP:
-                    if config_value.lower() not in [
-                            choice.lower() for choice in CHOICE_MAP[option]
-                    ]:
-                        errors.append('Invalid setting for %s:\n  %s\nMust be one of: %s.' %
-                                      (option, config.get(DEFAULTSECT, option), ', '.join(
-                                          choice for choice in CHOICE_MAP[option])))
-                        continue
-                out_map[option] = config_value
-                continue
-
-    return (out_map, errors)
 
 
 class ConfigLoadFailure(Exception):
@@ -458,14 +386,14 @@ class ConfigRegistry:
         """Current configuration options that are set for each setting."""
         return self._config
 
-    def get_init_log(self):
-        """Get initialization log. Consumes the log, so subsequent calls will return None."""
+    def consume_init_log(self):
+        """Consumes initialization log."""
         init_log = self._init_log
         self._init_log = []
         return init_log
 
-    def _log(self, log_level, log_str):
-        self._init_log.append((log_level, log_str))
+    def _log(self, level: int, message: str):
+        self._init_log.append((level, message))
 
     def _load_from_disk(self, path=None):
         # Validate `path`, or if not provided, use USER_CONFIG_FILE_PATH if it exists.
@@ -490,15 +418,96 @@ class ConfigRegistry:
             raise ConfigLoadFailure(self._init_log, reason=ex)
         except OSError as ex:
             raise ConfigLoadFailure(self._init_log, reason=ex)
-        # At this point the config file syntax is correct, but we need to still validate
-        # the parsed options (i.e. that the options have valid values).
-        errors = _validate_structure(config)
-        if not errors:
-            self._config, errors = _parse_config(config)
-        if errors:
-            for log_str in errors:
-                self._init_log.append((logging.ERROR, log_str))
+        self._parse_config(config)
+        if any(level >= logging.ERROR for level, _ in self._init_log):
             raise ConfigLoadFailure(self._init_log)
+
+    def _replace_deprecated_options(self, config: ConfigParser):
+        """Override config options using deprecated keys if a replacement was not specified."""
+        deprecated_options: List[str] = [
+            option for option in config[DEFAULTSECT] if option in DEPRECATED_CONFIG_OPTIONS
+        ]
+        for deprecated in deprecated_options:
+            replacement = DEPRECATED_CONFIG_OPTIONS[deprecated]
+            if replacement in config[DEFAULTSECT]:
+                self._log(
+                    logging.WARNING, 'Warning: deprecated config option %s was overriden by %s.' %
+                    (deprecated, replacement))
+            else:
+                self._log(
+                    logging.WARNING, 'Warning: config option %s is deprecated, use %s instead.' %
+                    (deprecated, replacement))
+                config[DEFAULTSECT][replacement] = config[DEFAULTSECT][deprecated]
+            del config[DEFAULTSECT][deprecated]
+
+    def _parse_config(self,
+                      config: ConfigParser) -> Tuple[Optional[ConfigDict], List[Tuple[int, str]]]:
+        """Process the given configuration into a key-value mapping.
+
+        Returns:
+            Configuration mapping and list of any processing errors in human readable form.
+        """
+        if config.sections():
+            self._log(
+                logging.ERROR, 'Invalid config file: must not contain any sections, found:\n  %s' %
+                (', '.join(['[%s]' % section for section in config.sections()])))
+            return
+
+        self._replace_deprecated_options(config)
+
+        for option in config[DEFAULTSECT]:
+            if not option in CONFIG_MAP:
+                self._log(logging.ERROR, 'Unsupported config option: %s' % (option))
+                continue
+            try:
+                value_type = None
+                if isinstance(CONFIG_MAP[option], bool):
+                    value_type = 'yes/no value'
+                    self._config[option] = config.getboolean(DEFAULTSECT, option)
+                    continue
+                elif isinstance(CONFIG_MAP[option], int):
+                    value_type = 'integer'
+                    self._config[option] = config.getint(DEFAULTSECT, option)
+                    continue
+                elif isinstance(CONFIG_MAP[option], float):
+                    value_type = 'number'
+                    self._config[option] = config.getfloat(DEFAULTSECT, option)
+                    continue
+            except ValueError as _:
+                self._log(
+                    logging.ERROR, 'Invalid setting for %s:\n  %s\nValue is not a valid %s.' %
+                    (option, config.get(DEFAULTSECT, option), value_type))
+                continue
+
+            # Handle custom validation types.
+            config_value = config.get(DEFAULTSECT, option)
+            default = CONFIG_MAP[option]
+            option_type = type(default)
+            if issubclass(option_type, ValidatedValue):
+                try:
+                    self._config[option] = option_type.from_config(
+                        config_value=config_value, default=default)
+                except OptionParseFailure as ex:
+                    self._log(
+                        logging.ERROR,
+                        'Invalid setting for %s:\n  %s\n%s' % (option, config_value, ex.error))
+                continue
+
+            # If we didn't process the value as a given type, handle it as a string. We also
+            # replace newlines with spaces, and strip any remaining leading/trailing whitespace.
+            if value_type is None:
+                config_value = config.get(DEFAULTSECT, option).replace('\n', ' ').strip()
+                if option in CHOICE_MAP:
+                    if config_value.lower() not in [
+                            choice.lower() for choice in CHOICE_MAP[option]
+                    ]:
+                        self._log(
+                            logging.ERROR, 'Invalid setting for %s:\n  %s\nMust be one of: %s.' %
+                            (option, config.get(DEFAULTSECT, option), ', '.join(
+                                choice for choice in CHOICE_MAP[option])))
+                        continue
+                self._config[option] = config_value
+                continue
 
     def is_default(self, option: str) -> bool:
         """True if the option is default, i.e. is NOT set by the user."""

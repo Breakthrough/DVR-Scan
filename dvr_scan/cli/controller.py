@@ -87,8 +87,9 @@ def _preprocess_args(args):
     if hasattr(args, 'region_of_interest') and args.region_of_interest:
         original_roi = args.region_of_interest
         if len(original_roi) > 1:
-            # TODO(v1.6): Allow multiple ROI flags via command line.
-            raise NotImplementedError()
+            # TODO(v1.6): Support multiple ROI windows.
+            logger.error('Error: Multiple ROI windows are under development.')
+            return False, None
         try:
             args.region_of_interest = ROIValue(
                 value=' '.join(original_roi[0]), allow_size=True).value
@@ -122,12 +123,12 @@ def parse_settings(args: ty.List[str] = None) -> ty.Optional[ProgramSettings]:
         if hasattr(args, 'verbosity') and args.verbosity.upper() == 'DEBUG':
             debug_mode = True
         if not hasattr(args, 'config') or debug_mode:
-            init_log += user_config.get_init_log()
+            init_log += user_config.consume_init_log()
 
         # Re-initialize the config registry if the user specified a config file.
         if hasattr(args, 'config'):
             user_config = ConfigRegistry(args.config)
-            init_log += user_config.get_init_log()
+            init_log += user_config.consume_init_log()
 
         # Get final verbosity setting and convert string to the constant in the `logging` module.
         verbosity_setting: str = (

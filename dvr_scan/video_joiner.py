@@ -124,6 +124,7 @@ class VideoJoiner:
         """Seek to the target offset. Only seeking forward is supported (i.e. `target` must be
         greater than the current `position`."""
         # TODO: This should be optimized by actually seeking on the underlying VideoCapture objects.
+        # TODO(v1.6): Consider using a VideoStream from scenedetect if there is only a single video.
         while self.position < target:
             if self.read(decode=False) is None:
                 break
