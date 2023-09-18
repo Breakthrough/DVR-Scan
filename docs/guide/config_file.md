@@ -1,7 +1,7 @@
 
 ## DVR-Scan Configuration File
 
-This page lists all DVR-Scan config options. You can also download [the `dvr-scan.cfg` config template](https://github.com/Breakthrough/DVR-Scan/blob/v1.5/dvr-scan.cfg) which contains every possible configuration option (this file is also included with Python and Windows distributions).
+This page lists all DVR-Scan config options. You can also download [the `dvr-scan.cfg` config template](https://github.com/Breakthrough/DVR-Scan/blob/releases/1.5.1/dvr-scan.cfg) which contains every possible configuration option (this file is also included with Python and Windows distributions).
 
 A config file path can be specified via the -c/--config option. DVR-Scan also looks for a `dvr-scan.cfg` file in the following locations:
 
@@ -22,7 +22,7 @@ bounding-box = yes
 bounding-box-color = 0, 255, 0
 ```
 
-You can download [the `dvr-scan.cfg` config template](https://github.com/Breakthrough/DVR-Scan/blob/v1.5/dvr-scan.cfg) to use as a complete reference.
+You can download [the `dvr-scan.cfg` config template](https://github.com/Breakthrough/DVR-Scan/blob/releases/1.5.1/dvr-scan.cfg) to use as a complete reference.
 
 
 ### General
@@ -53,9 +53,9 @@ You can download [the `dvr-scan.cfg` config template](https://github.com/Breakth
     Encoder parameters used when generating output files when *output-mode* is *ffmpeg*. These arguments are added after the input and duration.
     <br/>*Default*: `ffmpeg-output-args = -map 0 -c:v libx264 -preset fast -crf 21 -c:a aac -sn`
 
- * <b><pre>opencv-fourcc</pre></b>
+ * <b><pre>opencv-codec</pre></b>
     Four-letter identifier of the encoder/video codec to use when *output-mode* is *opencv*. Must be one of: (`XVID`, `MP4V`, `MP42`, `H264`).
-    <br/>*Default*: `opencv-fourcc = XVID`
+    <br/>*Default*: `opencv-codec = XVID`
 
 
 ### Motion Events
