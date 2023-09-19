@@ -226,10 +226,10 @@ Configuration options are set as `option = value`, and lines starting with `#` a
 ```
 # This is an example of a DVR-Scan config file.
 # Lines starting with # are treated as comments.
-output-mode = COPY
-min-event-length = 0.25s
+time-before-event = 0.5s
+time-post-event = 2.0s
 bounding-box = yes
-bounding-box-color = 0, 255, 0
+bounding-box-color = 0xFF0000
 ```
 
 ------------------------------------------------
