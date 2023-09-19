@@ -1,4 +1,4 @@
-![DVR-Scan Logo](https://raw.githubusercontent.com/Breakthrough/DVR-Scan/master/docs/img/dvr-scan-logo_small.png)
+![DVR-Scan Logo](https://raw.githubusercontent.com/Breakthrough/DVR-Scan/main/docs/assets/dvr-scan-logo.png)
 :vhs: Find and extract motion events in videos.
 
 ------------------------------------------------
@@ -20,6 +20,8 @@ DVR-Scan is a command-line application that **automatically detects motion event
 Windows builds are also available on [the Downloads page](https://www.dvr-scan.com/download/).
 
 ## Quickstart
+
+![example](https://raw.githubusercontent.com/Breakthrough/DVR-Scan/main/docs/assets/bounding-box.gif)
 
 Scan `video.mp4` (separate clips for each event):
 
