@@ -4,8 +4,8 @@
 platformdirs
 pytest
 numpy
-opencv-python
-opencv-contrib-python
+opencv-python==4.5.1.48
+opencv-contrib-python==4.5.1.48
 scenedetect
 screeninfo
 tqdm

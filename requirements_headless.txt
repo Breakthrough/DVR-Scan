@@ -3,7 +3,7 @@
 #
 pytest
 numpy
-opencv-python-headless
-opencv-contrib-python-headless
+opencv-python-headless==4.5.1.48
+opencv-contrib-python-headless==4.5.1.48
 scenedetect
 tqdm
