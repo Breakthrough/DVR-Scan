@@ -193,7 +193,8 @@ Detection can be limited to a specific region of the frame using the `-roi` flag
 
 ### Overlays
 
-<!-- SHOW EXAMPLE VIA GIF -->
+<img alt="overlay example" src="assets/bounding-box.gif"/>
+
 !!! note "Overlays are only supported with the default output mode ([`-m opencv`](#output))."
 
  * <b><pre>-bb, --bounding-box</pre></b> Draw a bounding box around the areas where motion is detected.
@@ -391,7 +392,51 @@ The following options control motion detection.  A more comprehensive descriptio
 
 Color values can be specified as either `(R,G,B)` or in hex as `0xFFFFFF`. Time values can be given in seconds as a number followed by `s` (`123s` or `123.45s`), or as number of frames (e.g. `1234`).
 
-<h5>Timecode Overlay</h5>
+<h5>Bounding Box</h5>
+
+* <pre>bounding-box</pre></b>
+    Enable bounding box: (`yes` or `no`).
+    <span class="dvr-scan-example">
+    ```
+    bounding-box = yes
+    ```
+    </span>
+
+* <b><pre>bounding-box-color</pre></b>
+    Box edge color specified as `R, G, B`.
+    <span class="dvr-scan-default">
+    ```
+    bounding-box-color = 255, 0, 0
+    ```
+    </span>
+
+* <b><pre>bounding-box-thickness</pre></b>
+    Thickness of bounding box, relative to largest edge of input video.
+    <span class="dvr-scan-default">
+    ```
+    bounding-box-thickness = 0.0032
+    ```
+    </span>
+
+* <b><pre>bounding-box-smooth-time</pre></b>
+    Amount of temporal smoothing to apply (seconds or frames).
+    <span class="dvr-scan-default">
+    ```
+    bounding-box-smooth-time = 0.1s
+    ```
+    </span>
+
+* <b><pre>bounding-box-min-size</pre></b>
+    Minimum side length of bounding box, relative to largest edge of input video.
+    <span class="dvr-scan-default">
+    ```
+    bounding-box-min-size = 0.032
+    ```
+    </span>
+
+------------------------------------------------
+
+<h5>Text Overlays</h5>
 
  * <b><pre>time-code</pre></b>
     Enable timecode overlay: (`yes` or `no`). Draws timecode on top left of each frame.
@@ -454,50 +499,5 @@ Color values can be specified as either `(R,G,B)` or in hex as `0xFFFFFF`. Time 
     <span class="dvr-scan-default">
     ```
     text-bg-color = 0, 0, 0
-    ```
-    </span>
-
-
-------------------------------------------------
-
-<h5>Bounding Box</h5>
-
-* <pre>bounding-box</pre></b>
-    Enable bounding box: (`yes` or `no`).
-    <span class="dvr-scan-example">
-    ```
-    bounding-box = yes
-    ```
-    </span>
-
-* <b><pre>bounding-box-color</pre></b>
-    Box edge color specified as `R, G, B`.
-    <span class="dvr-scan-default">
-    ```
-    bounding-box-color = 255, 0, 0
-    ```
-    </span>
-
-* <b><pre>bounding-box-thickness</pre></b>
-    Thickness of bounding box, relative to largest edge of input video.
-    <span class="dvr-scan-default">
-    ```
-    bounding-box-thickness = 0.0032
-    ```
-    </span>
-
-* <b><pre>bounding-box-smooth-time</pre></b>
-    Amount of temporal smoothing to apply (seconds or frames).
-    <span class="dvr-scan-default">
-    ```
-    bounding-box-smooth-time = 0.1s
-    ```
-    </span>
-
-* <b><pre>bounding-box-min-size</pre></b>
-    Minimum side length of bounding box, relative to largest edge of input video.
-    <span class="dvr-scan-default">
-    ```
-    bounding-box-min-size = 0.032
     ```
     </span>
