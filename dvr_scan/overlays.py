@@ -133,7 +133,8 @@ class BoundingBoxOverlay(object):
         """
         self._min_size_ratio = min_size_ratio
         self._thickness_ratio = thickness_ratio
-        self._color = color
+        # TODO: Why don't we need to swap colors for the text overlay?
+        self._color = color[::-1]
 
         self._smoothing_amount = max(1, smoothing)
         self._smoothing_window = []

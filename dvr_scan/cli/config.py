@@ -398,17 +398,17 @@ class ConfigRegistry:
     def _load_from_disk(self, path=None):
         # Validate `path`, or if not provided, use USER_CONFIG_FILE_PATH if it exists.
         if path:
-            self._init_log.append((logging.INFO, "Loading config from file:\n  %s" % path))
+            self._log(logging.INFO, "Loading config from file:\n  %s" % path)
             if not os.path.exists(path):
-                self._init_log.append((logging.ERROR, "File not found: %s" % (path)))
+                self._log(logging.ERROR, "File not found: %s" % path)
                 raise ConfigLoadFailure(self._init_log)
         else:
             # Gracefully handle the case where there isn't a user config file.
             if not os.path.exists(USER_CONFIG_FILE_PATH):
-                self._init_log.append((logging.DEBUG, "User config file not found."))
+                self._log(logging.DEBUG, "User config file not found.")
                 return
             path = USER_CONFIG_FILE_PATH
-            self._init_log.append((logging.INFO, "Loading user config file:\n  %s" % path))
+            self._log((logging.INFO, "Loading user config file:\n  %s" % path))
         # Try to load and parse the config file at `path`.
         config = ConfigParser()
         try:

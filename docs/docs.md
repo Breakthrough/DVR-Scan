@@ -193,7 +193,7 @@ Detection can be limited to a specific region of the frame using the `-roi` flag
 
 ### Overlays
 
-<img alt="overlay example" src="assets/bounding-box.gif"/>
+<img alt="overlay example" src="../assets/bounding-box.gif"/>
 
 !!! note "Overlays are only supported with the default output mode ([`-m opencv`](#output))."
 

@@ -21,6 +21,8 @@ DVR-Scan is a command-line application that **automatically detects motion event
 
 ## :fontawesome-solid-person-running:Quickstart
 
+<img alt="overlay example" src="assets/bounding-box.gif"/>
+
 Scan `video.mp4` (separate clips for each event):
 
     dvr-scan -i video.mp4
