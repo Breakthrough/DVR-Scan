@@ -61,8 +61,8 @@ def is_ffmpeg_available(ffmpeg_path: AnyStr = 'ffmpeg'):
 
 def init_logger(log_level: int = logging.INFO,
                 show_stdout: bool = False,
-                log_file: Optional[str] = None):
-    """Initializes logging for DVR-SCan. The logger instance used is named 'dvr_scan'.
+                log_file: Optional[str] = None) -> logging.Logger:
+    """Initializes logging for DVR-Scan. The logger instance used is named 'dvr_scan'.
     By default the logger has no handlers to suppress output. All existing log handlers
     are replaced every time this function is invoked.
 
@@ -77,22 +77,23 @@ def init_logger(log_level: int = logging.INFO,
     if log_level == logging.DEBUG:
         format_str = '%(levelname)s: %(module)s.%(funcName)s(): %(message)s'
     # Get the named logger and remove any existing handlers.
-    logger_instance = logging.getLogger('dvr_scan')
-    logger_instance.handlers = []
-    logger_instance.setLevel(log_level)
+    logger = logging.getLogger('dvr_scan')
+    logger.handlers = []
+    logger.setLevel(log_level)
     # Add stdout handler if required.
     if show_stdout:
         handler = logging.StreamHandler(stream=sys.stdout)
         handler.setLevel(log_level)
         handler.setFormatter(logging.Formatter(fmt=format_str))
-        logger_instance.addHandler(handler)
+        logger.addHandler(handler)
     # Add file handler if required.
     if log_file:
         log_file = get_and_create_path(log_file)
         handler = logging.FileHandler(log_file)
         handler.setLevel(log_level)
         handler.setFormatter(logging.Formatter(fmt=format_str))
-        logger_instance.addHandler(handler)
+        logger.addHandler(handler)
+    return logger
 
 
 def get_filename(path: AnyStr, include_extension: bool) -> AnyStr:

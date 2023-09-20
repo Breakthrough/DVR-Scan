@@ -35,15 +35,9 @@ logger = logging.getLogger('dvr_scan')
 class ProgramSettings:
     """Contains the active command-line and config file settings."""
 
-    def __init__(self, args: argparse.Namespace, config: ConfigRegistry, debug_mode: bool):
+    def __init__(self, args: argparse.Namespace, config: ConfigRegistry):
         self._args = args
         self._config = config
-        self._debug_mode = debug_mode
-
-    @property
-    def debug_mode(self) -> bool:
-        """If True, re-raises all logged exceptions to provide additional traceback info."""
-        return self._debug_mode
 
     def get_arg(self, arg: str) -> ty.Optional[ty.Any]:
         """Get setting specified via command line argument, if any."""
@@ -101,80 +95,81 @@ def _preprocess_args(args):
     return True, args
 
 
+def _init_logging(args: ty.Optional[argparse.ArgumentParser], config: ty.Optional[ProgramSettings]):
+    verbosity = logging.INFO
+    if args is not None and hasattr(args, 'verbosity'):
+        verbosity = getattr(logging, args.verbosity.upper())
+    elif config is not None:
+        verbosity = getattr(logging, config.get_value('verbosity').upper())
+
+    quiet_mode = False
+    if args is not None and hasattr(args, 'quiet_mode'):
+        quiet_mode = args.quiet_mode
+    elif config is not None:
+        quiet_mode = config.get_value('quiet-mode')
+
+    init_logger(
+        log_level=verbosity,
+        show_stdout=not quiet_mode,
+        log_file=args.logfile if hasattr(args, 'logfile') else None,
+    )
+
+
 def parse_settings(args: ty.List[str] = None) -> ty.Optional[ProgramSettings]:
     """Parse command line options and load config file settings."""
-    args = None
-    config_load_failure = False
     init_log = []
+    config_load_error = None
+    failed_to_load_config = False
     debug_mode = False
-
+    config = ConfigRegistry()
+    # Try to load config from user settings folder.
     try:
-        # Try to load the user config file and parse the CLI arguments.
         user_config = ConfigRegistry()
-        verbosity = getattr(logging, user_config.get_value('verbosity').upper())
-        init_logger(
-            log_level=verbosity,
-            show_stdout=not user_config.get_value('quiet-mode'),
-        )
-        args = get_cli_parser(user_config).parse_args(args=args)
-
-        # Always include all log information in debug mode, otherwise if a config file path
-        # was given, suppress the init log since we'll re-init the config registry below.
-        if hasattr(args, 'verbosity') and args.verbosity.upper() == 'DEBUG':
-            debug_mode = True
-        if not hasattr(args, 'config') or debug_mode:
-            init_log += user_config.consume_init_log()
-
-        # Re-initialize the config registry if the user specified a config file.
-        if hasattr(args, 'config'):
-            user_config = ConfigRegistry(args.config)
-            init_log += user_config.consume_init_log()
-
-        # Get final verbosity setting and convert string to the constant in the `logging` module.
-        verbosity_setting: str = (
-            args.verbosity if hasattr(args, 'verbosity') else user_config.get_value('verbosity'))
-        verbosity: int = getattr(logging, verbosity_setting.upper())
-        # If verbosity is DEBUG, override the quiet mode option unless -q/--quiet was set.
-        if not hasattr(args, 'quiet_mode'):
-            args.quiet_mode = (False if verbosity == logging.DEBUG else
-                               user_config.get_value('quiet-mode'))
-
-        # Re-initialize debug_mode and logger with final quiet mode/verbosity settings.
-        debug_mode = (verbosity == logging.DEBUG)
-        init_logger(
-            log_level=verbosity,
-            show_stdout=not args.quiet_mode,
-            log_file=args.logfile if hasattr(args, 'logfile') else None,
-        )
-
+        user_config.load()
+        config = user_config
     except ConfigLoadFailure as ex:
-        config_load_failure = True
+        config_load_error = ex
+    _init_logging(args, config)
+    # Parse CLI args, override config if an override was specified on the command line.
+    try:
+        args = get_cli_parser(config).parse_args(args=args)
+        debug_mode = args.debug
+        _init_logging(args, config)
+        init_log += [(logging.INFO, 'DVR-Scan %s' % dvr_scan.__version__)]
+        if config_load_error and not hasattr(args, 'config'):
+            raise config_load_error
+        if debug_mode:
+            init_log += config.consume_init_log()
+        if hasattr(args, 'config'):
+            config_setting = ConfigRegistry()
+            config_setting.load(args.config)
+            _init_logging(args, config_setting)
+            config = config_setting
+        init_log += config.consume_init_log()
+    except ConfigLoadFailure as ex:
         init_log += ex.init_log
         if ex.reason is not None:
             init_log += [(logging.ERROR, 'Error: %s' % str(ex.reason).replace('\t', '  '))]
+        failed_to_load_config = True
+        config_load_error = ex
     finally:
-        if args is not None or (args is None and config_load_failure):
-            # As CLI parsing errors are printed first, we only print the version if the
-            # args were parsed correctly, or if we fail to load the config file.
-            logger.info('DVR-Scan %s', dvr_scan.__version__)
         for (log_level, log_str) in init_log:
             logger.log(log_level, log_str)
-        if config_load_failure:
-            logger.critical("Failed to load configuration file.")
-            # There is nowhere else to propagatge the exception to, and we've already
-            # logged the error information above.
-            #pylint: disable=lost-exception
+        if failed_to_load_config:
+            logger.critical('Failed to load config file.')
+            logger.debug('Error loading config file:', exc_info=config_load_error)
+            if debug_mode:
+                raise config_load_error
             return None
 
-    if user_config.config_dict:
-        logger.debug("Current configuration:\n%s", str(user_config.config_dict))
-    logger.debug('Parsing program options.')
-    # Validate arguments and then continue.
+    if config.config_dict:
+        logger.debug("Current configuration:\n%s", str(config.config_dict))
+
+    logger.debug('Validating program options.')
     validated, args = _preprocess_args(args)
     if not validated:
         return None
-
-    settings = ProgramSettings(args=args, config=user_config, debug_mode=debug_mode)
+    settings = ProgramSettings(args=args, config=config)
 
     # Validate that the specified motion detector is available on this system.
     try:
@@ -198,8 +193,10 @@ def parse_settings(args: ty.List[str] = None) -> ty.Optional[ProgramSettings]:
 # to the option in ScanContext should be done via properties, e.g. make a property in
 # ProgramSettings called 'output_dir' that just returns settings.get('output_dir'). These can then
 # be directly referenced from the ScanContext.
-def create_scan_context(settings: ProgramSettings) -> ScanContext:
-    """Create ScanContext and set properties based on current program settings."""
+def run_dvr_scan(settings: ProgramSettings) -> ty.List[ty.Tuple[FrameTimecode, FrameTimecode]]:
+    """Run DVR-Scan scanning logic using validated `settings` from `parse_settings()`."""
+
+    logger.info("Initializing scan context...")
     sctx = ScanContext(
         input_videos=settings.get_arg('input'),
         frame_skip=settings.get('frame-skip'),
@@ -283,4 +280,4 @@ def create_scan_context(settings: ProgramSettings) -> ScanContext:
         duration=settings.get_arg('duration'),
     )
 
-    return sctx
+    return sctx.scan_motion()

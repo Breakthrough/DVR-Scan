@@ -140,8 +140,8 @@ class VideoJoiner:
                 self._logger.error("Error: Couldn't load video %s", video_name)
                 if self._ignore_corrupt_videos:
                     continue
-                self._logger.info("Check that the given file is a valid video clip, and ensure all"
-                                  " required dependencies are installed and configured properly.")
+                self._logger.info(
+                    "Check that the file is valid and ensure dependencies are up to date.")
                 raise VideoOpenFailure("isOpened() returned False for %s!" % video_path)
             validated_paths.append(video_path)
             resolution = (round(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),

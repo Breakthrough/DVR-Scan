@@ -206,7 +206,6 @@ class ScanContext:
             show_progress: Show a progress bar using tqdm.
         """
         self._logger = logging.getLogger('dvr_scan')
-        self._logger.info("Initializing scan context...")
 
         self._event_list: List[Tuple[FrameTimecode, FrameTimecode]] = []
         self._frames_processed: int = 0

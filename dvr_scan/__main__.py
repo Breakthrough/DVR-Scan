@@ -18,9 +18,11 @@ import logging
 from subprocess import CalledProcessError
 import sys
 
-from dvr_scan.cli.controller import parse_settings, create_scan_context
+from dvr_scan.cli.controller import parse_settings, run_dvr_scan
+from dvr_scan.cli.config import ConfigLoadFailure
 
 from scenedetect import VideoOpenFailure
+from scenedetect.platform import logging_redirect_tqdm, FakeTqdmLoggingRedirect
 
 EXIT_SUCCESS: int = 0
 EXIT_ERROR: int = 1
@@ -28,47 +30,44 @@ EXIT_ERROR: int = 1
 
 def main():
     """Main entry-point for DVR-Scan."""
-    # Parse command-line options and config file settings.
     settings = parse_settings()
     if settings is None:
         sys.exit(EXIT_ERROR)
-
     logger = logging.getLogger('dvr_scan')
-    try:
-        sctx = create_scan_context(settings)
-        sctx.scan_motion()
-        return
-
-    except ValueError as ex:
-        logger.error('Error: %s', str(ex))
-        if settings.debug_mode:
-            raise
-        sys.exit(EXIT_ERROR)
-
-    except VideoOpenFailure as ex:
-        # Error information should be logged by the ScanContext when this exception is raised.
-        logger.error('Failed to load input: %s', str(ex))
-        if settings.debug_mode:
-            raise
-        sys.exit(EXIT_ERROR)
-
-    except KeyboardInterrupt as ex:
-        # TODO(v1.6): Change this to log something with info verbosity so it's clear
-        # to end users why the program terminated.
-        logger.debug("KeyboardInterrupt received, quitting.")
-        if settings.debug_mode:
-            raise
-        sys.exit(EXIT_ERROR)
-
-    except CalledProcessError as ex:
-        logger.error(
-            'Failed to run command:\n  %s\nCommand returned %d, output:\n\n%s',
-            ' '.join(ex.cmd),
-            ex.returncode,
-            ex.output,
-        )
-        if settings.debug_mode:
-            raise
+    redirect = FakeTqdmLoggingRedirect if settings.get('quiet-mode') else logging_redirect_tqdm
+    debug_mode = settings.get('debug')
+    log_traceback = logging.DEBUG == getattr(logging, settings.get('verbosity').upper())
+    with redirect(loggers=[logger]):
+        try:
+            run_dvr_scan(settings)
+        except ValueError as ex:
+            logger.critical('Error: %s', str(ex), exc_info=log_traceback)
+            if debug_mode:
+                raise
+        except VideoOpenFailure as ex:
+            logger.critical('Failed to load input: %s', str(ex), exc_info=log_traceback)
+            if debug_mode:
+                raise
+        except KeyboardInterrupt as ex:
+            logger.info("Stopping (interrupt received)...", exc_info=log_traceback)
+            if debug_mode:
+                raise
+        except CalledProcessError as ex:
+            logger.error(
+                'Failed to run command:\n  %s\nCommand returned %d, output:\n\n%s',
+                ' '.join(ex.cmd),
+                ex.returncode,
+                ex.output,
+                exc_info=log_traceback,
+            )
+            if debug_mode:
+                raise
+        except:
+            logger.critical('Error during processing:', exc_info=True)
+            if debug_mode:
+                raise
+        else:
+            sys.exit(EXIT_SUCCESS)
         sys.exit(EXIT_ERROR)
 
 

@@ -369,17 +369,9 @@ class ConfigRegistry:
     """Provides application option values based on either user-specified configuration, or
     default values specified in the global CONFIG_MAP."""
 
-    def __init__(self, path: Optional[str] = None):
-        """Loads configuration file from given `path`. If `path` is not specified, tries
-        to load from the default location (USER_CONFIG_FILE_PATH).
-
-        Raises:
-            ConfigLoadFailure: The config file being loaded is corrupt or invalid,
-            or `path` was specified but does not exist.
-        """
+    def __init__(self):
         self._init_log: List[Tuple[int, str]] = []
-        self._config: ConfigDict = {} # Options set in the loaded config file.
-        self._load_from_disk(path)
+        self._config: ConfigDict = {}
 
     @property
     def config_dict(self) -> ConfigDict:
@@ -395,10 +387,17 @@ class ConfigRegistry:
     def _log(self, level: int, message: str):
         self._init_log.append((level, message))
 
-    def _load_from_disk(self, path=None):
+    def load(self, path=None):
+        """Loads configuration file from given `path`. If `path` is not specified, tries
+        to load from the default location (USER_CONFIG_FILE_PATH).
+
+        Raises:
+            ConfigLoadFailure: The config file being loaded is corrupt or invalid,
+            or `path` was specified but does not exist.
+        """
         # Validate `path`, or if not provided, use USER_CONFIG_FILE_PATH if it exists.
         if path:
-            self._log(logging.INFO, "Loading config from file:\n  %s" % path)
+            self._log(logging.INFO, "Loading config from file: %s" % path)
             if not os.path.exists(path):
                 self._log(logging.ERROR, "File not found: %s" % path)
                 raise ConfigLoadFailure(self._init_log)
@@ -408,7 +407,7 @@ class ConfigRegistry:
                 self._log(logging.DEBUG, "User config file not found.")
                 return
             path = USER_CONFIG_FILE_PATH
-            self._log((logging.INFO, "Loading user config file:\n  %s" % path))
+            self._log(logging.INFO, "Loading user config file:\n  %s" % path)
         # Try to load and parse the config file at `path`.
         config = ConfigParser()
         try:
@@ -474,9 +473,9 @@ class ConfigRegistry:
                     self._config[option] = config.getfloat(DEFAULTSECT, option)
                     continue
             except ValueError as _:
-                self._log(
-                    logging.ERROR, 'Invalid setting for %s:\n  %s\nValue is not a valid %s.' %
-                    (option, config.get(DEFAULTSECT, option), value_type))
+                self._log(logging.ERROR,
+                          'Invalid setting for %s. Value is not a valid %s.' % (option, value_type))
+                self._log(logging.DEBUG, '%s = %s' % (option, config.get(DEFAULTSECT, option)))
                 continue
 
             # Handle custom validation types.
@@ -488,9 +487,8 @@ class ConfigRegistry:
                     self._config[option] = option_type.from_config(
                         config_value=config_value, default=default)
                 except OptionParseFailure as ex:
-                    self._log(
-                        logging.ERROR,
-                        'Invalid setting for %s:\n  %s\n%s' % (option, config_value, ex.error))
+                    self._log(logging.ERROR,
+                              'Invalid setting for %s: %s\n%s' % (option, config_value, ex.error))
                 continue
 
             # If we didn't process the value as a given type, handle it as a string. We also

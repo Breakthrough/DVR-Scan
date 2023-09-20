@@ -539,20 +539,6 @@ def get_cli_parser(user_config: ConfigRegistry):
               'detection parameters.'),
     )
 
-    # TODO(v1.6): Add a mode that can dump frame scores (-s/--stats), and another mode
-    # that can dump the resulting frames after processing (-d/--dump-motion OUT.avi).
-    # Might also be helpful to overlay the frame score when using -d. Multiply the motion
-    # mask against the input image.
-
-    #parser.add_argument(
-    #    '-s',
-    #    '--stats',
-    #    metavar='frame_stats.csv',
-    #    type=str,
-    #    help=('Write a CSV file containing the calculated motion metrics per frame. Useful'
-    #        ' when tuning detection parameters.'),
-    #)
-
     parser.add_argument(
         '-df',
         '--downscale-factor',
@@ -605,12 +591,20 @@ def get_cli_parser(user_config: ConfigRegistry):
               (', '.join(CHOICE_MAP['verbosity']), user_config.get_help_string('verbosity'))),
     )
 
-    # TODO(v1.6): Support both input and output concatenation in ffmpeg mode.
-    #parser.add_argument(
-    #    '--keep-temp-files',
-    #    action='store_true',
-    #    help=('Keep any temporary files the specified output mode generates.%s' %
-    #          user_config.get_help_string('keep-temp-files', show_default=False)),
-    #)
+    parser.add_argument(
+        '--debug',
+        action='store_true',
+        help=argparse.SUPPRESS,
+        default=False,
+    )
+
+    # TODO: Support both input and output concatenation in ffmpeg mode. For concatenating events,
+    # we can still encode files for each event, and then join them with ffmpeg's codec copying
+    # mode as a final pass. Can also add a config param to keep the events.
+
+    # TODO: Add a mode that can dump frame scores (-s/--stats), and another mode
+    # that can dump the resulting frames after processing (-d/--dump-motion OUT.avi).
+    # Might also be helpful to overlay the frame score when using -d. Multiply the motion
+    # mask against the input image.
 
     return parser
