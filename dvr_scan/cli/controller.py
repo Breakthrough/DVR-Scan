@@ -18,6 +18,7 @@ import argparse
 import glob
 import logging
 import os
+import time
 import typing as ty
 
 from scenedetect import FrameTimecode
@@ -280,4 +281,44 @@ def run_dvr_scan(settings: ProgramSettings) -> ty.List[ty.Tuple[FrameTimecode, F
         duration=settings.get_arg('duration'),
     )
 
-    return sctx.scan_motion()
+    # Scan video for motion with specified parameters.
+    processing_start = time.time()
+    event_list = sctx.scan_motion()
+    processing_time = time.time() - processing_start
+    # Display results and performance.
+    # TODO(v1.6): Refactor to not access private members of ScanContext.
+    processing_rate = float(sctx._frames_processed) / processing_time
+    sctx._logger.info("Processed %d frames read in %3.1f secs (avg %3.1f FPS).",
+                      sctx._frames_processed, processing_time, processing_rate)
+    if not event_list:
+        sctx._logger.info("No motion events detected in input.")
+        return
+    sctx._logger.info("Detected %d motion events in input.", len(event_list))
+    if event_list:
+        output_strs = [
+            "-------------------------------------------------------------",
+            "|   Event #    |  Start Time  |   Duration   |   End Time   |",
+            "-------------------------------------------------------------"
+        ]
+        output_strs += [
+            "|  Event %4d  |  %s  |  %s  |  %s  |" % (
+                event_num + 1,
+                event_start.get_timecode(precision=1),
+                (event_end - event_start).get_timecode(precision=1),
+                event_end.get_timecode(precision=1),
+            ) for event_num, (event_start, event_end) in enumerate(event_list)
+        ]
+        output_strs += ["-------------------------------------------------------------"]
+        sctx._logger.info("List of motion events:\n%s", '\n'.join(output_strs))
+        timecode_list = []
+        for event_start, event_end in event_list:
+            timecode_list.append(event_start.get_timecode())
+            timecode_list.append(event_end.get_timecode())
+        sctx._logger.info("Comma-separated timecode values:")
+        # Print values regardless of quiet mode or not.
+        # TODO(#78): Fix this output format to be more usable, in the form:
+        # start1-end1[,[+]start2-end2[,[+]start3-end3...]]
+        print(','.join(timecode_list))
+
+    if sctx._output_mode != OutputMode.SCAN_ONLY:
+        sctx._logger.info("Motion events written to disk.")

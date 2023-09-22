@@ -378,7 +378,7 @@ class ScanContext:
             is invalid.
         """
         self._threshold = threshold
-        # TODO(v1.6): Take a detector instead of a type and remove kernel size.
+        # TODO: This should take an already constructed detector, instead of a factory/type.
         self._detector_type = detector_type
 
         if downscale_factor < 0:
@@ -535,7 +535,6 @@ class ScanContext:
 
         in_motion_event = False
         self._frames_processed = 0
-        processing_start = time.time()
 
         # Seek to starting position if required.
         if self._start_time is not None:
@@ -763,8 +762,6 @@ class ScanContext:
                         self._encode_thread_exception[2])
 
             # Display an error if we got more than one decode failure / corrupt frame.
-            # TODO(v1.6): Add a property to get the number of corrupted frames and move this
-            # warning into cli.controller.
             # TODO: This will also fire if no frames are decoded. Add a check to make sure
             # the fourCC is valid. Also figure out a better way to handle the case where NO frames
             # are decoded (rather than reporting X frames failed to decode).
@@ -774,52 +771,7 @@ class ScanContext:
                     " re-encoding or remuxing video (e.g. ffmpeg -i video.mp4 -c:v copy out.mp4). "
                     "See https://github.com/Breakthrough/DVR-Scan/issues/62 for details.",
                     self._input.decode_failures)
-
-            self._post_scan_motion(processing_start=processing_start)
-
         return self._event_list
-
-    # TODO(v1.6): Move this into cli.controller and just add a getter for frames_processed.
-    def _post_scan_motion(self, processing_start: float):
-        processing_time = time.time() - processing_start
-        processing_rate = float(self._frames_processed) / processing_time
-        self._logger.info("Processed %d frames read in %3.1f secs (avg %3.1f FPS).",
-                          self._frames_processed, processing_time, processing_rate)
-        if not len(self._event_list) > 0:
-            self._logger.info("No motion events detected in input.")
-            return
-
-        self._logger.info("Detected %d motion events in input.", len(self._event_list))
-
-        if self._event_list:
-            output_strs = [
-                "-------------------------------------------------------------",
-                "|   Event #    |  Start Time  |   Duration   |   End Time   |",
-                "-------------------------------------------------------------"
-            ]
-            output_strs += [
-                "|  Event %4d  |  %s  |  %s  |  %s  |" % (
-                    event_num + 1,
-                    event_start.get_timecode(precision=1),
-                    (event_end - event_start).get_timecode(precision=1),
-                    event_end.get_timecode(precision=1),
-                ) for event_num, (event_start, event_end) in enumerate(self._event_list)
-            ]
-            output_strs += ["-------------------------------------------------------------"]
-            self._logger.info("List of motion events:\n%s", '\n'.join(output_strs))
-
-            timecode_list = []
-            for event_start, event_end in self._event_list:
-                timecode_list.append(event_start.get_timecode())
-                timecode_list.append(event_end.get_timecode())
-            self._logger.info("Comma-separated timecode values:")
-            # Print values regardless of quiet mode or not.
-            # TODO(#78): Fix this output format to be more usable, in the form:
-            # start1-end1[,[+]start2-end2[,[+]start3-end3...]]
-            print(','.join(timecode_list))
-
-        if self._output_mode != OutputMode.SCAN_ONLY:
-            self._logger.info("Motion events written to disk.")
 
     def _decode_thread(self, decode_queue: queue.Queue):
         try:
