@@ -48,8 +48,6 @@ class VideoJoiner:
         self._curr_cap_index = 0
         self._total_frames: int = 0
         self._decode_failures: int = 0
-        # TODO(v1.6): Add CLI option to override this, and also add some unit tests.
-        self._ignore_corrupt_videos: bool = False
         self._load_input_videos()
         # Initialize position now that the framerate is valid.
         self._position: FrameTimecode = FrameTimecode(0, self.framerate)
@@ -87,17 +85,17 @@ class VideoJoiner:
 
     def read(self, decode: bool = True) -> Optional[numpy.ndarray]:
         """Read/decode the next frame."""
-        # TODO(v1.6): Need to forward PySceneDetect logging calls here.
         next = self._cap.read(decode=decode)
         if next is False:
             if (self._curr_cap_index + 1) < len(self._paths):
                 self._curr_cap_index += 1
-                self._position += 1                                      # Compensate for presentation time of last frame
-                self._last_cap_pos = self._cap.base_timecode
+                # Compensate for presentation time of last frame
+                self._position += 1
                 self._decode_failures += self._cap._decode_failures
                 logging.debug("End of current video, loading next: %s" %
                               self._paths[self._curr_cap_index])
                 self._cap = VideoStreamCv2(self._paths[self._curr_cap_index])
+                self._last_cap_pos = self._cap.base_timecode
                 return self.read(decode=decode)
             logging.debug("No more input to process.")
             return None
@@ -127,8 +125,6 @@ class VideoJoiner:
                 cap = VideoStreamCv2(video_path)
             except VideoOpenFailure as ex:
                 self._logger.error("Error: Couldn't load video %s", video_path)
-                if self._ignore_corrupt_videos:
-                    continue
                 raise
             validated_paths.append(video_path)
             self._total_frames += cap.duration.frame_num

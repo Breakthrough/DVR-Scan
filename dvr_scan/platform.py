@@ -59,6 +59,25 @@ def is_ffmpeg_available(ffmpeg_path: AnyStr = 'ffmpeg'):
     return True
 
 
+def _init_logger_impl(logger: logging.Logger, log_level: int, format_str: str, show_stdout: bool,
+                      log_file: Optional[str]):
+    logger.handlers = []
+    logger.setLevel(log_level)
+    # Add stdout handler if required.
+    if show_stdout:
+        handler = logging.StreamHandler(stream=sys.stdout)
+        handler.setLevel(log_level)
+        handler.setFormatter(logging.Formatter(fmt=format_str))
+        logger.addHandler(handler)
+    # Add file handler if required.
+    if log_file:
+        log_file = get_and_create_path(log_file)
+        handler = logging.FileHandler(log_file)
+        handler.setLevel(log_level)
+        handler.setFormatter(logging.Formatter(fmt=format_str))
+        logger.addHandler(handler)
+
+
 def init_logger(log_level: int = logging.INFO,
                 show_stdout: bool = False,
                 log_file: Optional[str] = None) -> logging.Logger:
@@ -76,24 +95,15 @@ def init_logger(log_level: int = logging.INFO,
     format_str = '[DVR-Scan] %(message)s'
     if log_level == logging.DEBUG:
         format_str = '%(levelname)s: %(module)s.%(funcName)s(): %(message)s'
-    # Get the named logger and remove any existing handlers.
-    logger = logging.getLogger('dvr_scan')
-    logger.handlers = []
-    logger.setLevel(log_level)
-    # Add stdout handler if required.
-    if show_stdout:
-        handler = logging.StreamHandler(stream=sys.stdout)
-        handler.setLevel(log_level)
-        handler.setFormatter(logging.Formatter(fmt=format_str))
-        logger.addHandler(handler)
-    # Add file handler if required.
-    if log_file:
-        log_file = get_and_create_path(log_file)
-        handler = logging.FileHandler(log_file)
-        handler.setLevel(log_level)
-        handler.setFormatter(logging.Formatter(fmt=format_str))
-        logger.addHandler(handler)
-    return logger
+    _init_logger_impl(logging.getLogger('dvr_scan'), log_level, format_str, show_stdout, log_file)
+    # The `scenedetect` package also has useful log messages when opening and decoding videos.
+    # We still want to make sure we can tell the messages apart, so we add a short prefix [::].
+    format_str = '[DVR-Scan] :: %(message)s'
+    if log_level == logging.DEBUG:
+        format_str = '%(levelname)s: [scenedetect] %(module)s.%(funcName)s(): %(message)s'
+    _init_logger_impl(
+        logging.getLogger('pyscenedetect'), log_level, format_str, show_stdout, log_file)
+    return logging.getLogger('dvr_scan')
 
 
 def get_filename(path: AnyStr, include_extension: bool) -> AnyStr:

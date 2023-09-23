@@ -204,11 +204,12 @@ def run_dvr_scan(settings: ProgramSettings) -> ty.List[ty.Tuple[FrameTimecode, F
         show_progress=not settings.get('quiet-mode'),
     )
 
+    output_mode = (
+        OutputMode.SCAN_ONLY if settings.get_arg('scan-only') else settings.get('output-mode'))
     sctx.set_output(
         comp_file=settings.get_arg('output'),
         mask_file=settings.get_arg('mask-output'),
-        output_mode=(OutputMode.SCAN_ONLY
-                     if settings.get_arg('scan-only') else settings.get('output-mode')),
+        output_mode=output_mode,
         opencv_fourcc=settings.get('opencv-codec'),
         ffmpeg_input_args=settings.get('ffmpeg-input-args'),
         ffmpeg_output_args=settings.get('ffmpeg-output-args'),
@@ -283,42 +284,43 @@ def run_dvr_scan(settings: ProgramSettings) -> ty.List[ty.Tuple[FrameTimecode, F
 
     # Scan video for motion with specified parameters.
     processing_start = time.time()
-    event_list = sctx.scan_motion()
+    result = sctx.scan_motion()
     processing_time = time.time() - processing_start
     # Display results and performance.
-    # TODO(v1.6): Refactor to not access private members of ScanContext.
-    processing_rate = float(sctx._frames_processed) / processing_time
-    sctx._logger.info("Processed %d frames read in %3.1f secs (avg %3.1f FPS).",
-                      sctx._frames_processed, processing_time, processing_rate)
-    if not event_list:
-        sctx._logger.info("No motion events detected in input.")
+
+    processing_rate = float(result.frames_processed) / processing_time
+    logger.info("Processed %d frames read in %3.1f secs (avg %3.1f FPS).", result.frames_processed,
+                processing_time, processing_rate)
+    if not result.event_list:
+        logger.info("No motion events detected in input.")
         return
-    sctx._logger.info("Detected %d motion events in input.", len(event_list))
-    if event_list:
+    logger.info("Detected %d motion events in input.", len(result.event_list))
+    if result.event_list:
         output_strs = [
             "-------------------------------------------------------------",
             "|   Event #    |  Start Time  |   Duration   |   End Time   |",
             "-------------------------------------------------------------"
         ]
+        print(result.event_list)
         output_strs += [
             "|  Event %4d  |  %s  |  %s  |  %s  |" % (
-                event_num + 1,
-                event_start.get_timecode(precision=1),
-                (event_end - event_start).get_timecode(precision=1),
-                event_end.get_timecode(precision=1),
-            ) for event_num, (event_start, event_end) in enumerate(event_list)
+                i + 1,
+                event.start.get_timecode(precision=1),
+                (event.end - event.start).get_timecode(precision=1),
+                event.end.get_timecode(precision=1),
+            ) for i, event in enumerate(result.event_list)
         ]
         output_strs += ["-------------------------------------------------------------"]
-        sctx._logger.info("List of motion events:\n%s", '\n'.join(output_strs))
+        logger.info("List of motion events:\n%s", '\n'.join(output_strs))
         timecode_list = []
-        for event_start, event_end in event_list:
-            timecode_list.append(event_start.get_timecode())
-            timecode_list.append(event_end.get_timecode())
-        sctx._logger.info("Comma-separated timecode values:")
+        for event in result.event_list:
+            timecode_list.append(event.start.get_timecode())
+            timecode_list.append(event.end.get_timecode())
+        logger.info("Comma-separated timecode values:")
         # Print values regardless of quiet mode or not.
         # TODO(#78): Fix this output format to be more usable, in the form:
         # start1-end1[,[+]start2-end2[,[+]start3-end3...]]
         print(','.join(timecode_list))
 
-    if sctx._output_mode != OutputMode.SCAN_ONLY:
-        sctx._logger.info("Motion events written to disk.")
+    if output_mode != OutputMode.SCAN_ONLY:
+        logger.info("Motion events written to disk.")
