@@ -48,16 +48,16 @@ class TextOverlay(object):
             margin: Amount of margin from edge of frame.
             border: Amount of padding added within background box.
             thickness: Thickness of lines used to draw text.
-            color: Foreground color of the text.
-            bg_color: Background color behind the text, or None for no background.
+            color: Foreground color of the text (RGB).
+            bg_color: Background color behind the text, or None for no background (RGB).
         """
         self._font = font
         self._font_scale = font_scale
         self._margin = margin
         self._border = border
         self._thickness = thickness
-        self._color = color
-        self._bg_color = bg_color
+        self._color = color[::-1]
+        self._bg_color = bg_color[::-1]
         assert corner in (TextOverlay.Corner.TopLeft, TextOverlay.Corner.TopRight)
         self._corner = corner
 
@@ -128,12 +128,11 @@ class BoundingBoxOverlay(object):
         Arguments:
             min_size_ratio: Minimum size of resulting bounding box relative to frame size.
             thickness_ratio: Box edge thickness relative to the frame size.
-            color: Color to use for drawing edges of the bounding box.
+            color: Color to use for drawing edges of the bounding box (RGB).
             smoothing: Amount of temporal smoothing, in frames. Values <= 1 indicate no smoothing.
         """
         self._min_size_ratio = min_size_ratio
         self._thickness_ratio = thickness_ratio
-        # TODO: Why don't we need to swap colors for the text overlay?
         self._color = color[::-1]
 
         self._smoothing_amount = max(1, smoothing)

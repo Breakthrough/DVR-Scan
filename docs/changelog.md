@@ -29,7 +29,7 @@ In development.
  - [general] Include stack traces in logfiles when setting `--verbosity debug`
  - [bugfix] Fix CNT mode always treating first few frame as having motion [#119](https://github.com/Breakthrough/DVR-Scan/issues/119)
  - [bugfix] Fix timecode format `HH:MM:SS[.nnn]` being rejected for start/end time ([#141](https://github.com/Breakthrough/DVR-Scan/issues/141))
- - [bugfix] Fix incorrect bounding box color mapping (previously was BGR, now is RGB as documented)
+ - [bugfix] Fix incorrect RGB mapping for config file (values were treated as BGR instead)
  - [other] Config option `timecode` has been renamed to `time-code` to match the command-line option
  - [other] Config options that started with `timecode-` have been renamed to start with `text-`, and are now shared between the `time-code` and `frame-metrics` overlays:
     - `time-code-margin` is now `text-margin`
