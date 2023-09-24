@@ -5,7 +5,7 @@
 #       [  Site: https://github.com/Breakthrough/DVR-Scan/   ]
 #       [  Documentation: http://dvr-scan.readthedocs.org/   ]
 #
-# Copyright (C) 2014-2022 Brandon Castellano <http://www.bcastell.com>.
+# Copyright (C) 2014-2023 Brandon Castellano <http://www.bcastell.com>.
 # PySceneDetect is licensed under the BSD 2-Clause License; see the
 # included LICENSE file, or visit one of the above pages for details.
 #
@@ -134,47 +134,15 @@ def int_type_check(min_val: int, max_val: Optional[int] = None, metavar: Optiona
     return _type_checker
 
 
-def odd_int_type_check(min_val: int,
-                       max_val: Optional[int] = None,
-                       metavar: Optional[str] = None,
-                       allow_zero: bool = True):
-    """ Creates an argparse type for a range-limited integer which must be odd.
-
-    The passed argument is declared valid if it is a valid integer which is odd
-    (i.e. the modulus of the value with respect to two is non-zero), is greater
-    than or equal to min_val, and, if specified, less than or equal to max_val.
-
-    Returns:
-        A function which can be passed as an argument type, when calling
-        add_argument on an ArgumentParser object
-
-    Raises:
-        ArgumentTypeError: Argument must be odd integer within specified range.
-    """
+def _kernel_size_type_check(metavar: Optional[str] = None):
     metavar = 'value' if metavar is None else metavar
 
     def _type_checker(value):
         value = int(value)
-        valid = True
-        msg = ''
-        if value == -1:
-            return -1
-        if value == 0 and allow_zero is True:
-            return 0
-        if (value % 2) == 0:
-            valid = False
-            msg = 'invalid choice: %d (%s must be an odd number)' % (value, metavar)
-        elif max_val is None:
-            if value < min_val:
-                valid = False
-            msg = 'invalid choice: %d (%s must be at least %d)' % (value, metavar, min_val)
-        else:
-            if value < min_val or value > max_val:
-                valid = False
-            msg = 'invalid choice: %d (%s must be between %d and %d)' % (value, metavar, min_val,
-                                                                         max_val)
-        if not valid:
-            raise argparse.ArgumentTypeError(msg)
+        if not value in (-1, 0) and (value < 3 or value % 2 == 0):
+            raise argparse.ArgumentTypeError(
+                'invalid choice: %d (%s must be an odd number starting from 3, 0 to disable, or '
+                '-1 for auto)' % (value, metavar))
         return value
 
     return _type_checker
@@ -324,7 +292,7 @@ def get_cli_parser(user_config: ConfigRegistry):
         parser._optionals.title = 'arguments'
 
     parser.add_argument(
-        '-v',
+        '-V',
         '--version',
         action=VersionAction,
         version=VERSION_STRING,
@@ -424,11 +392,11 @@ def get_cli_parser(user_config: ConfigRegistry):
         '-k',
         '--kernel-size',
         metavar='size',
-        type=odd_int_type_check(min_val=1, max_val=None, metavar='size', allow_zero=True),
-        help=('Size in pixels of the noise reduction kernel. Must be odd integer greater than 1, '
-              'or -1 to auto-set based on video resolution (default). Values of 0 or 1 specify no '
-              'noise reduction. If the kernel size is set too large, some movement in the scene'
-              ' may not be detected.%s' % (user_config.get_help_string('kernel-size'))),
+        type=_kernel_size_type_check(metavar='size'),
+        help=('Size in pixels of the noise reduction kernel. Must be odd number greater than 1, '
+              '0 to disable, or -1 to auto-set based on video resolution (default). If the kernel '
+              'size is set too large, some movement in the scene may not be detected.%s' %
+              (user_config.get_help_string('kernel-size'))),
     )
 
     parser.add_argument(
@@ -584,6 +552,7 @@ def get_cli_parser(user_config: ConfigRegistry):
     )
 
     parser.add_argument(
+        '-v',
         '--verbosity',
         metavar='type',
         type=string_type_check(CHOICE_MAP['verbosity'], False, 'type'),

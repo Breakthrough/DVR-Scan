@@ -5,7 +5,7 @@
 #       [  Site: https://github.com/Breakthrough/DVR-Scan/   ]
 #       [  Documentation: http://dvr-scan.readthedocs.org/   ]
 #
-# Copyright (C) 2014-2022 Brandon Castellano <http://www.bcastell.com>.
+# Copyright (C) 2014-2023 Brandon Castellano <http://www.bcastell.com>.
 # PySceneDetect is licensed under the BSD 2-Clause License; see the
 # included LICENSE file, or visit one of the above pages for details.
 #
@@ -19,7 +19,7 @@ main modules under `dvr_scan` are organized as follows:
 
   ``scanner``: scans a video for motion and extracts events
 
-  ``motion_detector``: motion detection algorithms
+  ``detector``: motion detection algorithms
 
   ``overlays``: overlays which can be drawn when outputting events
 

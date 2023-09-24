@@ -10,7 +10,7 @@
  * <b><pre>-h, --help</pre></b>
     Show help message and all options and default values. Will also show any options overriden by your [user config file](#config-file), if set.
 
- * <b><pre>-v, --version</pre></b>
+ * <b><pre>-V, --version</pre></b>
     Show version information.
 
  * <b><pre>-L, --license</pre></b>
@@ -24,7 +24,7 @@ The following options control terminal output:
  * <b><pre>-q, --quiet</pre></b>
     Suppress all console output except for final cutting list.
 
- * <b><pre>--verbosity</pre></b>
+ * <b><pre>-v, --verbosity</pre></b>
     Set verbosity of output messages, must be one of: <b><pre>debug, info, warning, error</pre></b>
     <span class="dvr-scan-default">
     ```
@@ -354,7 +354,7 @@ The following options control motion detection.  A more comprehensive descriptio
     </span>
 
  * <b><pre>kernel-size</pre></b>
-    Size (in pixels) of the noise reduction kernel. Must be an odd integer greater than 1, or -1 to auto-set based on video resolution.
+    Size (in pixels) of the noise reduction kernel. Size must be an odd number starting from 3, 0 to disable, or -1 to auto-set based on video resolution.
     <span class="dvr-scan-default">
     ```
     kernel-size = -1

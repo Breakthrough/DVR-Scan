@@ -6,7 +6,7 @@
 #     [  Docs:   http://manual.scenedetect.scenedetect.com/      ]
 #     [  Github: https://github.com/Breakthrough/PySceneDetect/  ]
 #
-# Copyright (C) 2014-2022 Brandon Castellano <http://www.bcastell.com>.
+# Copyright (C) 2014-2023 Brandon Castellano <http://www.bcastell.com>.
 # PySceneDetect is licensed under the BSD 3-Clause License; see the
 # included LICENSE file, or visit one of the above pages for details.
 #
@@ -150,17 +150,12 @@ class RangeValue(ValidatedValue):
 
 
 class KernelSizeValue(ValidatedValue):
-    """Validator for kernel sizes (odd integer > 1, or -1 for auto size)."""
+    """Validator for kernel sizes (odd integer > 1, 0 for off, or -1 for auto size)."""
 
     def __init__(self, value: int = -1):
-        if value == -1:
-            # Downscale factor of -1 maps to None internally for auto downscale.
-            value = None
-        elif value < 0:
-            # Disallow other negative values.
-            raise ValueError()
-        elif not value in (0, 1) and value % 2 == 0:
-            # Disallow even values.
+
+        value = int(value)
+        if not value in (-1, 0) and (value < 3 or value % 2 == 0):
             raise ValueError()
         self._value = value
 
@@ -172,8 +167,10 @@ class KernelSizeValue(ValidatedValue):
         return str(self.value)
 
     def __str__(self) -> str:
-        if self.value is None:
-            return 'auto'
+        if self.value == -1:
+            return '-1 (auto)'
+        elif self.value == 0:
+            return '0 (off)'
         return str(self.value)
 
     @staticmethod
@@ -182,7 +179,7 @@ class KernelSizeValue(ValidatedValue):
             return KernelSizeValue(int(config_value))
         except ValueError as ex:
             raise OptionParseFailure(
-                'Value must be an odd integer greater than 1, or set to -1 for auto kernel size.'
+                'Size must be odd number starting from 3, 0 to disable, or -1 for auto.'
             ) from ex
 
 

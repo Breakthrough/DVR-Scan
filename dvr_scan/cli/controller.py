@@ -5,7 +5,7 @@
 #       [  Site: https://github.com/Breakthrough/DVR-Scan/   ]
 #       [  Documentation: http://dvr-scan.readthedocs.org/   ]
 #
-# Copyright (C) 2014-2022 Brandon Castellano <http://www.bcastell.com>.
+# Copyright (C) 2014-2023 Brandon Castellano <http://www.bcastell.com>.
 # PySceneDetect is licensed under the BSD 2-Clause License; see the
 # included LICENSE file, or visit one of the above pages for details.
 #
@@ -75,9 +75,6 @@ def _preprocess_args(args):
     # -o/--output
     if hasattr(args, 'output') and not '.' in args.output:
         args.output += '.avi'
-    # -k/--kernel-size
-    if hasattr(args, 'kernel_size') and args.kernel_size < 0:
-        args.kernel_size = None
     # -roi/--region-of-interest
     if hasattr(args, 'region_of_interest') and args.region_of_interest:
         original_roi = args.region_of_interest

@@ -5,7 +5,7 @@
 #       [  Site: https://github.com/Breakthrough/DVR-Scan/   ]
 #       [  Documentation: http://dvr-scan.readthedocs.org/   ]
 #
-# Copyright (C) 2014-2022 Brandon Castellano <http://www.bcastell.com>.
+# Copyright (C) 2014-2023 Brandon Castellano <http://www.bcastell.com>.
 # PySceneDetect is licensed under the BSD 2-Clause License; see the
 # included LICENSE file, or visit one of the above pages for details.
 #
@@ -24,7 +24,7 @@ import pytest
 from dvr_scan import opencv_loader as _
 from scenedetect.video_splitter import is_ffmpeg_available
 
-from dvr_scan.motion_detector import MotionDetectorCNT, MotionDetectorCudaMOG2
+from dvr_scan.detector import DetectorCNT, DetectorCudaMOG2
 
 # TODO: Open extracted motion events and validate the actual frames.
 
@@ -157,7 +157,7 @@ def test_mog2(tmp_path):
     assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS, "Incorrect number of events found."
 
 
-@pytest.mark.skipif(not MotionDetectorCNT.is_available(), reason="CNT not available")
+@pytest.mark.skipif(not DetectorCNT.is_available(), reason="CNT not available")
 def test_cnt(tmp_path):
     """Test -b/--bg-subtractor CNT."""
     tmp_path = str(tmp_path)                                        # Hack for Python 3.7 builder.
@@ -170,7 +170,7 @@ def test_cnt(tmp_path):
     assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS, "Incorrect number of events found."
 
 
-@pytest.mark.skipif(not MotionDetectorCudaMOG2.is_available(), reason="MOG2_CUDA not available")
+@pytest.mark.skipif(not DetectorCudaMOG2.is_available(), reason="MOG2_CUDA not available")
 def test_mog2_cuda(tmp_path):
     """Test -b/--bg-subtractor MOG2_CUDA."""
     tmp_path = str(tmp_path)                                        # Hack for Python 3.7 builder.

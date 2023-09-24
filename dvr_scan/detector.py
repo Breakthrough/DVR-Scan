@@ -5,11 +5,15 @@
 #       [  Site: https://github.com/Breakthrough/DVR-Scan/   ]
 #       [  Documentation: http://dvr-scan.readthedocs.org/   ]
 #
-# Copyright (C) 2014-2022 Brandon Castellano <http://www.bcastell.com>.
+# Copyright (C) 2014-2023 Brandon Castellano <http://www.bcastell.com>.
 # PySceneDetect is licensed under the BSD 2-Clause License; see the
 # included LICENSE file, or visit one of the above pages for details.
 #
-"""``dvr_scan.motion_detector`` Module"""
+"""``dvr_scan.detector`` Module
+
+Implementations of motion detectors. Currently, detectors use background subtraction to estimate the
+amount of motion in a sequence of frames. The frame score is calculated from how much of the frame
+contains foreground (moving) elements."""
 
 from abc import ABC, abstractmethod
 
@@ -17,7 +21,7 @@ import cv2
 import numpy
 
 
-class MotionDetector(ABC):
+class Detector(ABC):
     """Provides a consistent interface for calculating a mask of areas within each video
     frame containing any motion."""
 
@@ -40,7 +44,7 @@ class MotionDetector(ABC):
         raise NotImplementedError()
 
 
-class MotionDetectorMOG2(MotionDetector):
+class DetectorMOG2(Detector):
     """MOG2 background subtractor."""
 
     def __init__(
@@ -51,7 +55,7 @@ class MotionDetectorMOG2(MotionDetector):
         detect_shadows: bool = False,
     ):
         if kernel_size < 0 or (kernel_size > 1 and kernel_size % 2 == 0):
-            raise ValueError("kernel_size must be odd integer >= 1 or zero (0)")
+            raise ValueError("kernel_size must be >= 0")
         self._kernel = numpy.ones(
             (kernel_size, kernel_size), numpy.uint8) if kernel_size > 1 else None
         self._subtractor = cv2.createBackgroundSubtractorMOG2(
@@ -76,7 +80,7 @@ class MotionDetectorMOG2(MotionDetector):
         return hasattr(cv2, 'createBackgroundSubtractorMOG2')
 
 
-class MotionDetectorCNT(MotionDetectorMOG2):
+class DetectorCNT(DetectorMOG2):
     """CNT background subtractor."""
 
     def __init__(
@@ -103,7 +107,7 @@ class MotionDetectorCNT(MotionDetectorMOG2):
         return hasattr(cv2, 'bgsegm') and hasattr(cv2.bgsegm, 'createBackgroundSubtractorCNT')
 
 
-class MotionDetectorCudaMOG2(MotionDetectorMOG2):
+class DetectorCudaMOG2(DetectorMOG2):
     """CUDA-accelerated MOG2 background subtractor."""
 
     def __init__(

@@ -5,7 +5,7 @@
 #       [  Site: https://github.com/Breakthrough/DVR-Scan/   ]
 #       [  Documentation: http://dvr-scan.readthedocs.org/   ]
 #
-# Copyright (C) 2014-2022 Brandon Castellano <http://www.bcastell.com>.
+# Copyright (C) 2014-2023 Brandon Castellano <http://www.bcastell.com>.
 # PySceneDetect is licensed under the BSD 2-Clause License; see the
 # included LICENSE file, or visit one of the above pages for details.
 #
@@ -36,10 +36,10 @@ from tqdm.contrib.logging import logging_redirect_tqdm
 
 from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
 from dvr_scan.platform import get_filename, get_min_screen_bounds, is_ffmpeg_available
-from dvr_scan.motion_detector import (
-    MotionDetectorMOG2,
-    MotionDetectorCNT,
-    MotionDetectorCudaMOG2,
+from dvr_scan.detector import (
+    DetectorMOG2,
+    DetectorCNT,
+    DetectorCudaMOG2,
 )
 from dvr_scan.video_joiner import VideoJoiner
 
@@ -71,10 +71,10 @@ PROGRESS_BAR_DESCRIPTION = 'Detected: %d | Progress'
 
 
 class DetectorType(Enum):
-    """Type of motion detector to use (see dvr_scan.motion_detector for implementations)."""
-    MOG2 = MotionDetectorMOG2
-    CNT = MotionDetectorCNT
-    MOG2_CUDA = MotionDetectorCudaMOG2
+    """Type of motion detector to use (see dvr_scan.detector for implementations)."""
+    MOG2 = DetectorMOG2
+    CNT = DetectorCNT
+    MOG2_CUDA = DetectorCudaMOG2
 
 
 class OutputMode(Enum):
@@ -354,7 +354,7 @@ class ScanContext:
     def set_detection_params(self,
                              detector_type: DetectorType = DetectorType.MOG2,
                              threshold: float = 0.15,
-                             kernel_size: Optional[int] = None,
+                             kernel_size: int = -1,
                              downscale_factor: int = 1,
                              roi: Optional[List[int]] = None):
         """ Sets motion detection parameters.
@@ -366,9 +366,8 @@ class ScanContext:
                 require less movement, and are more sensitive to motion. If the
                 threshold is too high, some movement in the scene may not be
                 detected, while a threshold too low can trigger a false events.
-            kernel_size: Size in pixels of the noise reduction kernel. Must be odd integer greater
-                than 1. Values of 0 or 1 specify no kernel. If None, will be calculated based on
-                input video resolution. If too large, some movement may not be detected.
+            kernel_size: Size of the noise reduction kernel. Must be odd number starting from 3,
+                0 for off, or -1 to auto set. If too large, small movements may not be detected.
             downscale_factor: Factor to downscale (shrink) video before
                 processing, to improve performance. For example, if input video
                 resolution is 1024 x 400, and factor=2, each frame is reduced to'
@@ -389,9 +388,7 @@ class ScanContext:
             raise ValueError("Downscale factor must be positive.")
         self._downscale_factor = max(downscale_factor, 1)
 
-        if not kernel_size is None:
-            if kernel_size < 0 or (not kernel_size in (0, 1) and kernel_size % 2 == 0):
-                raise ValueError("kernel_size must be odd integer >= 1, zero (0), or None")
+        assert kernel_size == -1 or kernel_size == 0 or kernel_size >= 3
         self._kernel_size = kernel_size
 
         # Validate ROI.
@@ -557,17 +554,18 @@ class ScanContext:
             self._bounding_box.set_corrections(
                 downscale_factor=self._downscale_factor, roi=self._roi, frame_skip=self._frame_skip)
 
-        # Calculate size of noise reduction kernel. Even if an ROI is set, the auto factor is set
-        # based on the original video's input resolution.
-        if self._kernel_size is None:
+        if self._kernel_size == -1:
+            # Calculate size of noise reduction kernel. Even if an ROI is set, the auto factor is
+            # set based on the original video's input resolution.
             kernel_size = _recommended_kernel_size(self._input.resolution[0],
                                                    self._downscale_factor)
         else:
             kernel_size = _scale_kernel_size(self._kernel_size, self._downscale_factor)
 
         # Create motion detector.
-        logger.debug('Using detector %s with params: kernel_size = %d', self._detector_type.name,
-                     kernel_size)
+        logger.debug('Using detector %s with params: kernel_size = %s%s', self._detector_type.name,
+                     str(kernel_size) if kernel_size else 'off',
+                     ' (auto)' if self._kernel_size == -1 else '')
         motion_detector = self._detector_type.value(kernel_size=kernel_size)
 
         # Correct pre/post and minimum event lengths to account for frame skip factor.

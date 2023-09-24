@@ -5,7 +5,7 @@
 #       [  Site: https://github.com/Breakthrough/DVR-Scan/   ]
 #       [  Documentation: http://dvr-scan.readthedocs.org/   ]
 #
-# Copyright (C) 2014-2022 Brandon Castellano <http://www.bcastell.com>.
+# Copyright (C) 2014-2023 Brandon Castellano <http://www.bcastell.com>.
 # PySceneDetect is licensed under the BSD 2-Clause License; see the
 # included LICENSE file, or visit one of the above pages for details.
 #
@@ -17,7 +17,7 @@ Validates functionality of the motion scanning context using various parameters.
 import pytest
 
 from dvr_scan.scanner import DetectorType, ScanContext
-from dvr_scan.motion_detector import MotionDetectorCNT, MotionDetectorCudaMOG2
+from dvr_scan.detector import DetectorCNT, DetectorCudaMOG2
 
 # ROI within the frame used for the test case (see traffic_camera.txt for details).
 TRAFFIC_CAMERA_ROI = [631, 532, 210, 127]
@@ -67,7 +67,7 @@ def test_scan_context(traffic_camera_video):
     assert event_list == TRAFFIC_CAMERA_EVENTS
 
 
-@pytest.mark.skipif(not MotionDetectorCudaMOG2.is_available(), reason="CUDA module not available.")
+@pytest.mark.skipif(not DetectorCudaMOG2.is_available(), reason="CUDA module not available.")
 def test_scan_context_cuda(traffic_camera_video):
     """ Test functionality of ScanContext with the DetectorType.MOG2_CUDA. """
     sctx = ScanContext([traffic_camera_video])
@@ -84,7 +84,7 @@ def test_scan_context_cuda(traffic_camera_video):
             (i, CUDA_EVENT_TOLERANCE, str(event), str(TRAFFIC_CAMERA_EVENTS[i])))
 
 
-@pytest.mark.skipif(not MotionDetectorCNT.is_available(), reason="CNT algorithm not available.")
+@pytest.mark.skipif(not DetectorCNT.is_available(), reason="CNT algorithm not available.")
 def test_scan_context_cnt(traffic_camera_video):
     """ Test basic functionality of ScanContext using the CNT algorithm. """
     sctx = ScanContext([traffic_camera_video])
