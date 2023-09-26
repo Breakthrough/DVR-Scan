@@ -17,13 +17,16 @@ In development.
 
  - [feature] Multiple regions of interest can now be defined
     - For example: `dvr-scan -i video.mp4 -roi 5 5 20 20 -roi 100 100 20 20`
- - [general] Move option for limiting ROI window size (`-roi 1920 1080`) to config file (`max-window-size = 1920 1080`)
 
 
 **General**:
 
  - [feature] New `-fm` / `--frame-metrics` option draws motion score on each frame to help tune [detection parameters](https://dvr-scan.readthedocs.io/en/latest/guide/options/#
  - [cli] Short flag `-v` is now used for `--verbosity`, replaced by `-V` for `--version`
+ - [cli] Short flag `-roi` is now deprecated, use `--roi` instead
+ - [cli] Add `max-window-width` and `max-window-height` settings to config file, controls maximum size of ROI selection window
+    - By default, videos larger than the smallest display are downscaled
+    - Replaces deprecated `-roi WIDTH HEIGHT` overload
  - [general] Improved seeking performance, using `-st`/`--start-time` is now much faster ([#92](https://github.com/Breakthrough/DVR-Scan/issues/92))
  -detection-parameters)
  - [general] Noise reduction kernel can now be disabled by setting `-k`/`--kernel-size` to `0` ([#123](https://github.com/Breakthrough/DVR-Scan/issues/123))

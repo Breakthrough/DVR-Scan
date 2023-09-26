@@ -75,21 +75,9 @@ def _preprocess_args(args):
     # -o/--output
     if hasattr(args, 'output') and not '.' in args.output:
         args.output += '.avi'
-    # -roi/--region-of-interest
-    if hasattr(args, 'region_of_interest') and args.region_of_interest:
-        original_roi = args.region_of_interest
-        if len(original_roi) > 1:
-            # TODO(v1.6): Support multiple ROI windows.
-            logger.error('Error: Multiple ROI windows are under development.')
-            return False, None
-        try:
-            args.region_of_interest = ROIValue(
-                value=' '.join(original_roi[0]), allow_size=True).value
-        except ValueError:
-            logger.error(
-                'Error: Invalid value for ROI. Must be specified as rectangle of the form x y w h'
-                ' (example: -roi 25 75 200 100).')
-            return False, None
+    # -roi has been replaced with --roi/--region of interest
+    if hasattr(args, 'used_deprecated_roi_option'):
+        logger.warning('WARNING: Short form -roi is deprecated, use --roi instead.')
     return True, args
 
 
@@ -161,12 +149,12 @@ def parse_settings(args: ty.List[str] = None) -> ty.Optional[ProgramSettings]:
             return None
 
     if config.config_dict:
-        logger.debug("Current configuration:\n%s", str(config.config_dict))
+        logger.debug("Loaded configuration:\n%s", str(config.config_dict))
 
-    logger.debug('Validating program options.')
     validated, args = _preprocess_args(args)
     if not validated:
         return None
+    logger.debug("Program arguments:\n%s", str(args))
     settings = ProgramSettings(args=args, config=config)
 
     # Validate that the specified motion detector is available on this system.
@@ -264,8 +252,9 @@ def run_dvr_scan(settings: ProgramSettings) -> ty.List[ty.Tuple[FrameTimecode, F
         threshold=settings.get('threshold'),
         kernel_size=settings.get('kernel-size'),
         downscale_factor=settings.get('downscale-factor'),
-        roi=settings.get('region-of-interest'),
-    )
+        roi_list=settings.get('region-of-interest'),
+        show_roi_window=settings.get_arg('show-roi-window'),
+        max_window_size=(settings.get('max-window-height'), settings.get('max-window-width')))
 
     sctx.set_event_params(
         min_event_len=settings.get('min-event-length'),
@@ -282,11 +271,14 @@ def run_dvr_scan(settings: ProgramSettings) -> ty.List[ty.Tuple[FrameTimecode, F
     # Scan video for motion with specified parameters.
     processing_start = time.time()
     result = sctx.scan_motion()
+    if result is None:
+        logging.debug("Exiting early, scan_motion() returned None.")
+        return
     processing_time = time.time() - processing_start
     # Display results and performance.
 
-    processing_rate = float(result.frames_processed) / processing_time
-    logger.info("Processed %d frames read in %3.1f secs (avg %3.1f FPS).", result.frames_processed,
+    processing_rate = float(result.num_frames) / processing_time
+    logger.info("Processed %d frames read in %3.1f secs (avg %3.1f FPS).", result.num_frames,
                 processing_time, processing_rate)
     if not result.event_list:
         logger.info("No motion events detected in input.")

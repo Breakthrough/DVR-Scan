@@ -23,15 +23,15 @@ import argparse
 from typing import List, Optional
 
 import dvr_scan
-from dvr_scan.cli.config import ConfigRegistry, CHOICE_MAP, USER_CONFIG_FILE_PATH
+from dvr_scan.cli.config import ConfigRegistry, CHOICE_MAP, USER_CONFIG_FILE_PATH, ROIValue
 
 # Version string shown for the -v/--version CLI argument.
-VERSION_STRING = """------------------------------------------------
-DVR-Scan %s
+VERSION_STRING = f"""------------------------------------------------
+DVR-Scan {dvr_scan.__version__}
 ------------------------------------------------
 Copyright (C) 2016-2022 Brandon Castellano
 < https://github.com/Breakthrough/DVR-Scan >
-""" % dvr_scan.__version__
+"""
 
 # In the CLI, -so/--scan-only is a different flag than -m/--output-mode, whereas in the
 # config file they are the same option. Therefore, we remove the scan only choice
@@ -90,9 +90,9 @@ def timecode_type_check(metavar: Optional[str] = None):
                     valid = True
         if not valid:
             raise argparse.ArgumentTypeError(
-                'invalid timecode: %s\n'
-                'Timecode must be specified as number of frames (12345), seconds (number followed'
-                ' by s, e.g. 123s or 123.45s), or timecode (HH:MM:SS[.nnn].' % value)
+                f'invalid timecode: {value}\n'
+                'Timecode must be specified as number of frames (12345), seconds (number followed '
+                'by s, e.g. 123s or 123.45s), or timecode (HH:MM:SS[.nnn].')
         return value
 
     return _type_checker
@@ -228,7 +228,6 @@ def string_type_check(valid_strings: List[str],
     return _type_checker
 
 
-# pylint: disable=too-few-public-methods
 class LicenseAction(argparse.Action):
     """argparse Action for displaying DVR-Scan license & copyright info."""
 
@@ -250,7 +249,6 @@ class LicenseAction(argparse.Action):
         parser.exit(message=version)
 
 
-# pylint: disable=too-few-public-methods
 class VersionAction(argparse.Action):
     """argparse Action for displaying DVR-Scan version."""
 
@@ -272,6 +270,65 @@ class VersionAction(argparse.Action):
         parser.exit(message=version)
 
 
+class RoiAction(argparse.Action):
+
+    def __init__(self,
+                 option_strings,
+                 dest,
+                 nargs=None,
+                 const=None,
+                 default=None,
+                 type=None,
+                 choices=None,
+                 required=False,
+                 help=None,
+                 metavar=None):
+        assert nargs == '*'
+        assert const is None
+        super(RoiAction, self).__init__(
+            option_strings=option_strings,
+            dest=dest,
+            nargs=nargs,
+            const=const,
+            default=default,
+            type=type,
+            choices=choices,
+            required=required,
+            help=help,
+            metavar=metavar)
+
+    def _is_deprecated(self) -> bool:
+        return '-roi' in self.option_strings
+
+    def __call__(self, parser, namespace, values: List[str], option_string=None):
+        # Used to show warning to user if they use -roi instead of --roi.
+        if self._is_deprecated():
+            setattr(namespace, 'used_deprecated_roi_option', True)
+        # --roi/--region-of-interest specified without coordinates
+        if not values:
+            if not hasattr(namespace, 'show_roi_window'):
+                setattr(namespace, 'show_roi_window', 1)
+            else:
+                namespace.show_roi_window += 1
+            return
+        # TODO(v1.6): Figure out how to represent multiple ROIs in config file,
+        # e.g.: region-of-interest = [10, 10 / 20, 20], [..]
+        # TODO(v1.6): Add backwards compatibility for --roi MAX_WIDTH MAX_HEIGHT syntax *only* for
+        # the deprecated -roi flag, not the new one.
+        try:
+            roi = ROIValue(' '.join(values))
+        except ValueError as ex:
+            raise argparse.ArgumentError(
+                self, 'ROI must be rectangle of the form --roi X0 Y0 W H') from ex
+
+        # Append this ROI to any existing ones, if any.
+        items = getattr(namespace, 'region_of_interest', [])
+        items += roi.value
+        setattr(namespace, 'region_of_interest', items)
+
+
+# TODO: To help with debugging, add a `debug` option to the config file as well that, if set in the
+# user config file, initializes the parser with exit_on_error=False.
 def get_cli_parser(user_config: ConfigRegistry):
     """Creates the DVR-Scan argparse command-line interface.
 
@@ -458,14 +515,25 @@ def get_cli_parser(user_config: ConfigRegistry):
     )
 
     parser.add_argument(
-        '-roi',
+        '--roi',
         '--region-of-interest',
         metavar='x0 y0 w h',
+        dest='region_of_interest',
         nargs='*',
-        action='append',
-        help=('Limit detection to specified region. Can specify as -roi to show popup window,'
-              ' or specify the region in the form -roi x,y w,h (e.g. -roi 100 200 50 50)%s' %
+        action=RoiAction,
+        help=('Limit detection to specified region. Can specify as --roi to show popup window,'
+              ' or specify the region in the form --roi x,y w,h (e.g. --roi 100 200 50 50)%s' %
               (user_config.get_help_string('region-of-interest', show_default=False))),
+    )
+
+    # TODO(v1.7): Remove -roi (replaced by --roi/--region-of-interest).
+    parser.add_argument(
+        '-roi',
+        metavar='x0 y0 w h',
+        dest='region_of_interest',
+        nargs='*',
+        action=RoiAction,
+        help=argparse.SUPPRESS,
     )
 
     parser.add_argument(

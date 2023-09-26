@@ -30,6 +30,7 @@ from platformdirs import user_config_dir
 from scenedetect.frame_timecode import FrameTimecode
 
 from dvr_scan.scanner import DEFAULT_FFMPEG_INPUT_ARGS, DEFAULT_FFMPEG_OUTPUT_ARGS
+from dvr_scan.scanner.roi import Rectangle
 
 # Backwards compatibility for config options that were renamed/replaced.
 DEPRECATED_CONFIG_OPTIONS: Dict[str, str] = {
@@ -179,38 +180,39 @@ class KernelSizeValue(ValidatedValue):
             return KernelSizeValue(int(config_value))
         except ValueError as ex:
             raise OptionParseFailure(
-                'Size must be odd number starting from 3, 0 to disable, or -1 for auto.'
-            ) from ex
+                'Size must be odd number starting from 3, 0 to disable, or -1 for auto.') from ex
 
 
 class ROIValue(ValidatedValue):
-    """Validator for region-of-interest values."""
+    """Validator for a set of regions of interest."""
 
     _IGNORE_CHARS = [',', '/', '(', ')']
     """Characters to ignore."""
 
-    def __init__(self, value: Optional[str] = None, allow_size: bool = False):
+    def __init__(self, value: Optional[str] = None):
         if value is not None:
             translation_table = str.maketrans({char: ' ' for char in ROIValue._IGNORE_CHARS})
             values = value.translate(translation_table).split()
-            valid_lengths = (2, 4) if allow_size else (4,)
-            if not (len(values) in valid_lengths and all([val.isdigit() for val in values])
-                    and all([int(val) >= 0 for val in values])):
+            if not len(values) == 4 and all([val.isdigit() for val in values]):
                 raise ValueError()
-            self._value = [int(val) for val in values]
-        else:
-            self._value = None
+            value = [[int(val) for val in values]]
+        self._value = value
 
     @property
-    def value(self) -> Optional[List[int]]:
+    def value(self) -> Optional[List[Rectangle]]:
         return self._value
 
     def __repr__(self) -> str:
+        if self.value is not None:
+            assert len(self.value) == 1
+            return str(self.value[0])
         return str(self.value)
 
     def __str__(self) -> str:
         if self.value is not None:
-            return '(%d,%d)/(%d,%d)' % (self.value[0], self.value[1], self.value[2], self.value[3])
+            assert len(self.value) == 1
+            value = self.value[0]
+            return 'X=%d, Y=%d, W=%d, H=%d' % (value[0], value[1], value[2], value[3])
         return str(self.value)
 
     @staticmethod
@@ -316,6 +318,8 @@ CONFIG_MAP: ConfigDict = {
     'kernel-size': KernelSizeValue(),
     'downscale-factor': 0,
     'region-of-interest': ROIValue(),
+    'max-window-width': 0,
+    'max-window-height': 0,
     'frame-skip': 0,
 
                                                          # Overlays
@@ -427,11 +431,11 @@ class ConfigRegistry:
             replacement = DEPRECATED_CONFIG_OPTIONS[deprecated]
             if replacement in config[DEFAULTSECT]:
                 self._log(
-                    logging.WARNING, 'Warning: deprecated config option %s was overriden by %s.' %
+                    logging.WARNING, 'WARNING: deprecated config option %s was overriden by %s.' %
                     (deprecated, replacement))
             else:
                 self._log(
-                    logging.WARNING, 'Warning: config option %s is deprecated, use %s instead.' %
+                    logging.WARNING, 'WARNING: config option %s is deprecated, use %s instead.' %
                     (deprecated, replacement))
                 config[DEFAULTSECT][replacement] = config[DEFAULTSECT][deprecated]
             del config[DEFAULTSECT][deprecated]

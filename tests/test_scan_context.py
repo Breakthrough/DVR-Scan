@@ -20,7 +20,7 @@ from dvr_scan.scanner import DetectorType, ScanContext
 from dvr_scan.detector import DetectorCNT, DetectorCudaMOG2
 
 # ROI within the frame used for the test case (see traffic_camera.txt for details).
-TRAFFIC_CAMERA_ROI = [631, 532, 210, 127]
+TRAFFIC_CAMERA_ROI = [[631, 532, 210, 127]]
 
 TRAFFIC_CAMERA_EVENTS = [
     (9, 149),
@@ -51,7 +51,7 @@ TRAFFIC_CAMERA_EVENTS_CNT = [
 ]
 
 # Small ROI for faster test execution.
-CORRUPT_VIDEO_ROI = [0, 0, 32, 32]
+CORRUPT_VIDEO_ROI = [[0, 0, 32, 32]]
 CORRUPT_VIDEO_EVENTS = [
     (152, 366),
 ]
@@ -60,7 +60,7 @@ CORRUPT_VIDEO_EVENTS = [
 def test_scan_context(traffic_camera_video):
     """Test functionality of ScanContext with default parameters (DetectorType.MOG2)."""
     sctx = ScanContext([traffic_camera_video])
-    sctx.set_detection_params(roi=TRAFFIC_CAMERA_ROI)
+    sctx.set_detection_params(roi_list=TRAFFIC_CAMERA_ROI)
     sctx.set_event_params(min_event_len=4, time_pre_event=0)
     event_list = sctx.scan_motion().event_list
     event_list = [(event.start.frame_num, event.end.frame_num) for event in event_list]
@@ -71,7 +71,7 @@ def test_scan_context(traffic_camera_video):
 def test_scan_context_cuda(traffic_camera_video):
     """ Test functionality of ScanContext with the DetectorType.MOG2_CUDA. """
     sctx = ScanContext([traffic_camera_video])
-    sctx.set_detection_params(detector_type=DetectorType.MOG2_CUDA, roi=TRAFFIC_CAMERA_ROI)
+    sctx.set_detection_params(detector_type=DetectorType.MOG2_CUDA, roi_list=TRAFFIC_CAMERA_ROI)
     sctx.set_event_params(min_event_len=4, time_pre_event=0)
     event_list = sctx.scan_motion().event_list
     assert len(event_list) == len(TRAFFIC_CAMERA_EVENTS)
@@ -88,7 +88,7 @@ def test_scan_context_cuda(traffic_camera_video):
 def test_scan_context_cnt(traffic_camera_video):
     """ Test basic functionality of ScanContext using the CNT algorithm. """
     sctx = ScanContext([traffic_camera_video])
-    sctx.set_detection_params(detector_type=DetectorType.CNT, roi=TRAFFIC_CAMERA_ROI)
+    sctx.set_detection_params(detector_type=DetectorType.CNT, roi_list=TRAFFIC_CAMERA_ROI)
     sctx.set_event_params(min_event_len=3, time_pre_event=0)
     event_list = sctx.scan_motion().event_list
     event_list = [(event.start.frame_num, event.end.frame_num) for event in event_list]
@@ -98,7 +98,7 @@ def test_scan_context_cnt(traffic_camera_video):
 def test_pre_event_shift(traffic_camera_video):
     """ Test setting time_pre_event. """
     sctx = ScanContext([traffic_camera_video])
-    sctx.set_detection_params(roi=TRAFFIC_CAMERA_ROI)
+    sctx.set_detection_params(roi_list=TRAFFIC_CAMERA_ROI)
     sctx.set_event_params(min_event_len=4, time_pre_event=6)
     event_list = sctx.scan_motion().event_list
     event_list = [(event.start.frame_num, event.end.frame_num) for event in event_list]
@@ -109,7 +109,7 @@ def test_pre_event_shift_with_frame_skip(traffic_camera_video):
     """ Test setting time_pre_event when using frame_skip. """
     for frame_skip in range(1, 6):
         sctx = ScanContext([traffic_camera_video], frame_skip=frame_skip)
-        sctx.set_detection_params(roi=TRAFFIC_CAMERA_ROI)
+        sctx.set_detection_params(roi_list=TRAFFIC_CAMERA_ROI)
         sctx.set_event_params(min_event_len=4, time_pre_event=6)
         event_list = sctx.scan_motion().event_list
         event_list = [(event.start.frame_num, event.end.frame_num) for event in event_list]
@@ -127,7 +127,7 @@ def test_post_event_shift(traffic_camera_video):
     """ Test setting time_post_event. """
 
     sctx = ScanContext([traffic_camera_video])
-    sctx.set_detection_params(roi=TRAFFIC_CAMERA_ROI)
+    sctx.set_detection_params(roi_list=TRAFFIC_CAMERA_ROI)
     sctx.set_event_params(min_event_len=4, time_pre_event=0, time_post_event=40)
 
     event_list = sctx.scan_motion().event_list
@@ -140,7 +140,7 @@ def test_post_event_shift_with_frame_skip(traffic_camera_video):
     """ Test setting time_post_event. """
     for frame_skip in range(1, 6):
         sctx = ScanContext([traffic_camera_video], frame_skip=frame_skip)
-        sctx.set_detection_params(roi=TRAFFIC_CAMERA_ROI)
+        sctx.set_detection_params(roi_list=TRAFFIC_CAMERA_ROI)
         sctx.set_event_params(min_event_len=4, time_post_event=40)
         event_list = sctx.scan_motion().event_list
         assert len(event_list) == len(TRAFFIC_CAMERA_EVENTS_TIME_POST_40)
@@ -162,7 +162,7 @@ def test_decode_corrupt_video(corrupt_video):
     """Ensure we can process a video with a single bad frame."""
     sctx = ScanContext([corrupt_video])
     sctx.set_event_params(min_event_len=2)
-    sctx.set_detection_params(roi=CORRUPT_VIDEO_ROI)
+    sctx.set_detection_params(roi_list=CORRUPT_VIDEO_ROI)
     event_list = sctx.scan_motion().event_list
     event_list = [(event.start.frame_num, event.end.frame_num) for event in event_list]
     assert event_list == CORRUPT_VIDEO_EVENTS
@@ -171,7 +171,7 @@ def test_decode_corrupt_video(corrupt_video):
 def test_start_end_time(traffic_camera_video):
     """ Test basic functionality of ScanContext with start and stop times defined. """
     sctx = ScanContext([traffic_camera_video])
-    sctx.set_detection_params(roi=TRAFFIC_CAMERA_ROI)
+    sctx.set_detection_params(roi_list=TRAFFIC_CAMERA_ROI)
     sctx.set_event_params(min_event_len=4, time_pre_event=0)
     sctx.set_video_time(start_time=200, end_time=500)
     event_list = sctx.scan_motion().event_list
@@ -183,7 +183,7 @@ def test_start_end_time(traffic_camera_video):
 def test_start_duration(traffic_camera_video):
     """ Test basic functionality of ScanContext with start and duration defined. """
     sctx = ScanContext([traffic_camera_video])
-    sctx.set_detection_params(roi=TRAFFIC_CAMERA_ROI)
+    sctx.set_detection_params(roi_list=TRAFFIC_CAMERA_ROI)
     sctx.set_event_params(min_event_len=4, time_pre_event=0)
     sctx.set_video_time(start_time=200, duration=300)
     event_list = sctx.scan_motion().event_list

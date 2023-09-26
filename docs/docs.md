@@ -151,21 +151,21 @@ Motion detection can be fine-tuned for specific use cases.  When modifying detec
 
 ##### Region of Interest
 
-Detection can be limited to a specific region of the frame using the `-roi` flag.
+Detection can be limited to a specific region of the frame using the `--roi` flag.
 
 !!! tip "Setting a region of interest improves scanning performance."
 
 
- * <b><pre>-roi</pre></b> Show pop-up window to select a region of interest using the mouse.  The first frame will be displayed.
+ * <b><pre>--roi</pre></b> Show pop-up window to select a region of interest using the mouse.  The first frame will be displayed.
 
- * <b><pre>-roi x0 y0 w h</pre></b> Rectangle specified by coordinate of top-left corner `x0`, `y0` and size `w`, `h`. The top left corner of the video is `0`, `0`.
+ * <b><pre>--roi x0 y0 w h</pre></b> Rectangle specified by coordinate of top-left corner `x0`, `y0` and size `w`, `h`. The top left corner of the video is `0`, `0`.
 <span class="dvr-scan-example">
 ```
--roi 50 75 100 100
+--roi 50 75 100 100
 ```
 </span>
 
- * <b><pre>-roi width height</pre></b> Same as `-roi`, but ensures selection window is no larger than `height` x `width`.  Useful for processing videos larger than the monitor resolution.
+ * <b><pre>--roi width height</pre></b> Same as `--roi`, but ensures selection window is no larger than `height` x `width`.  Useful for processing videos larger than the monitor resolution.
 
 ------------------------------------------------
 

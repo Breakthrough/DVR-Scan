@@ -36,20 +36,20 @@ def main():
     logger = logging.getLogger('dvr_scan')
     redirect = FakeTqdmLoggingRedirect if settings.get('quiet-mode') else logging_redirect_tqdm
     debug_mode = settings.get('debug')
-    log_traceback = logging.DEBUG == getattr(logging, settings.get('verbosity').upper())
+    show_traceback = logging.DEBUG == getattr(logging, settings.get('verbosity').upper())
     with redirect(loggers=[logger]):
         try:
             run_dvr_scan(settings)
         except ValueError as ex:
-            logger.critical('Error: %s', str(ex), exc_info=log_traceback)
+            logger.critical('Setting Error: %s', str(ex), exc_info=show_traceback)
             if debug_mode:
                 raise
         except VideoOpenFailure as ex:
-            logger.critical('Failed to load input: %s', str(ex), exc_info=log_traceback)
+            logger.critical('Failed to load input: %s', str(ex), exc_info=show_traceback)
             if debug_mode:
                 raise
         except KeyboardInterrupt as ex:
-            logger.info("Stopping (interrupt received)...", exc_info=log_traceback)
+            logger.info("Stopping (interrupt received)...", exc_info=show_traceback)
             if debug_mode:
                 raise
         except CalledProcessError as ex:
@@ -58,12 +58,16 @@ def main():
                 ' '.join(ex.cmd),
                 ex.returncode,
                 ex.output,
-                exc_info=log_traceback,
+                exc_info=show_traceback,
             )
             if debug_mode:
                 raise
-        except:
-            logger.critical('Error during processing:', exc_info=True)
+        except NotImplementedError as ex:
+            logger.critical('Error (Not Implemented): %s', str(ex), exc_info=show_traceback)
+            if debug_mode:
+                raise
+        except Exception as ex:
+            logger.critical('Critical Error: %s', str(ex), exc_info=True)
             if debug_mode:
                 raise
         else:
