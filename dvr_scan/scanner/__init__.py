@@ -555,9 +555,9 @@ class ScanContext:
             return None
 
         motion_regions = RegionsOfInterest(
-            frame_size=self._input.resolution, downscale=self._downscale_factor)
-        if self._roi_list:
-            motion_regions.add(self._roi_list)
+            frame_size=self._input.resolution,
+            downscale=self._downscale_factor,
+            regions=self._roi_list)
 
         # Initialize overlays.
         if self._bounding_box:

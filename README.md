@@ -1,4 +1,5 @@
 ![DVR-Scan Logo](https://raw.githubusercontent.com/Breakthrough/DVR-Scan/main/docs/assets/dvr-scan-logo.png)
+
 :vhs: Find and extract motion events in videos.
 
 ------------------------------------------------
