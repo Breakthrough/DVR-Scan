@@ -2,12 +2,12 @@
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
-#       [  Site: https://github.com/Breakthrough/DVR-Scan/   ]
-#       [  Documentation: http://dvr-scan.readthedocs.org/   ]
+#       [  Site: https://www.dvr-scan.com/                 ]
+#       [  Repo: https://github.com/Breakthrough/DVR-Scan  ]
 #
 # Copyright (C) 2014-2023 Brandon Castellano <http://www.bcastell.com>.
-# PySceneDetect is licensed under the BSD 2-Clause License; see the
-# included LICENSE file, or visit one of the above pages for details.
+# DVR-Scan is licensed under the BSD 2-Clause License; see the included
+# LICENSE file, or visit one of the above pages for details.
 #
 """ ``dvr_scan.cli`` Module
 
@@ -318,12 +318,12 @@ class RoiAction(argparse.Action):
         try:
             roi = ROIValue(' '.join(values))
         except ValueError as ex:
-            raise argparse.ArgumentError(
-                self, 'ROI must be rectangle of the form --roi X0 Y0 W H') from ex
+            raise argparse.ArgumentError(self,
+                                         'ROI must be rectangle of the form --roi X Y W H') from ex
 
         # Append this ROI to any existing ones, if any.
         items = getattr(namespace, 'region_of_interest', [])
-        items += roi.value
+        items += [roi.value]
         setattr(namespace, 'region_of_interest', items)
 
 

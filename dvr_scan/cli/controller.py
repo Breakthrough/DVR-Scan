@@ -2,12 +2,12 @@
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
-#       [  Site: https://github.com/Breakthrough/DVR-Scan/   ]
-#       [  Documentation: http://dvr-scan.readthedocs.org/   ]
+#       [  Site: https://www.dvr-scan.com/                 ]
+#       [  Repo: https://github.com/Breakthrough/DVR-Scan  ]
 #
 # Copyright (C) 2014-2023 Brandon Castellano <http://www.bcastell.com>.
-# PySceneDetect is licensed under the BSD 2-Clause License; see the
-# included LICENSE file, or visit one of the above pages for details.
+# DVR-Scan is licensed under the BSD 2-Clause License; see the included
+# LICENSE file, or visit one of the above pages for details.
 #
 """ ``dvr_scan.cli.controller`` Module
 
@@ -25,9 +25,10 @@ from scenedetect import FrameTimecode
 
 import dvr_scan
 from dvr_scan.cli import get_cli_parser
-from dvr_scan.cli.config import ConfigRegistry, ConfigLoadFailure, ROIValue
+from dvr_scan.cli.config import ConfigRegistry, ConfigLoadFailure
 from dvr_scan.overlays import TextOverlay, BoundingBoxOverlay
-from dvr_scan.scanner import DetectorType, OutputMode, ScanContext
+from dvr_scan.detector import MotionDetector, Rectangle
+from dvr_scan.scanner import DetectorType, OutputMode, MotionScanner
 from dvr_scan.platform import init_logger
 
 logger = logging.getLogger('dvr_scan')
@@ -175,15 +176,15 @@ def parse_settings(args: ty.List[str] = None) -> ty.Optional[ProgramSettings]:
     return settings
 
 
-# TODO: Along with the TODO ontop of ScanContext, the actual conversion from the ProgramSetting
-# to the option in ScanContext should be done via properties, e.g. make a property in
+# TODO: Along with the TODO ontop of MotionScanner, the actual conversion from the ProgramSetting
+# to the option in MotionScanner should be done via properties, e.g. make a property in
 # ProgramSettings called 'output_dir' that just returns settings.get('output_dir'). These can then
-# be directly referenced from the ScanContext.
+# be directly referenced from the MotionScanner.
 def run_dvr_scan(settings: ProgramSettings) -> ty.List[ty.Tuple[FrameTimecode, FrameTimecode]]:
     """Run DVR-Scan scanning logic using validated `settings` from `parse_settings()`."""
 
     logger.info("Initializing scan context...")
-    sctx = ScanContext(
+    scanner = MotionScanner(
         input_videos=settings.get_arg('input'),
         frame_skip=settings.get('frame-skip'),
         show_progress=not settings.get('quiet-mode'),
@@ -191,7 +192,7 @@ def run_dvr_scan(settings: ProgramSettings) -> ty.List[ty.Tuple[FrameTimecode, F
 
     output_mode = (
         OutputMode.SCAN_ONLY if settings.get_arg('scan-only') else settings.get('output-mode'))
-    sctx.set_output(
+    scanner.set_output(
         comp_file=settings.get_arg('output'),
         mask_file=settings.get_arg('mask-output'),
         output_mode=output_mode,
@@ -231,9 +232,10 @@ def run_dvr_scan(settings: ProgramSettings) -> ty.List[ty.Tuple[FrameTimecode, F
     bounding_box_arg = settings.get_arg('bounding-box')
     if bounding_box_arg is not None or settings.get('bounding-box'):
         if bounding_box_arg is not None and bounding_box_arg is not False:
-            smoothing_time = FrameTimecode(bounding_box_arg, sctx.framerate)
+            smoothing_time = FrameTimecode(bounding_box_arg, scanner.framerate)
         else:
-            smoothing_time = FrameTimecode(settings.get('bounding-box-smooth-time'), sctx.framerate)
+            smoothing_time = FrameTimecode(
+                settings.get('bounding-box-smooth-time'), scanner.framerate)
         bounding_box = BoundingBoxOverlay(
             min_size_ratio=settings.get('bounding-box-min-size'),
             thickness_ratio=settings.get('bounding-box-thickness'),
@@ -241,28 +243,34 @@ def run_dvr_scan(settings: ProgramSettings) -> ty.List[ty.Tuple[FrameTimecode, F
             smoothing=smoothing_time.frame_num,
         )
 
-    sctx.set_overlays(
+    scanner.set_overlays(
         timecode_overlay=timecode_overlay,
         metrics_overlay=metrics_overlay,
         bounding_box=bounding_box,
     )
 
-    sctx.set_detection_params(
+    roi_list = settings.get('region-of-interest')
+    # TODO(v1.6): Support multiple ROIs by config file.
+    if isinstance(roi_list, Rectangle):
+        if all(x == 0 for x in roi_list):
+            roi_list = []
+
+    scanner.set_detection_params(
         detector_type=DetectorType[settings.get('bg-subtractor').upper()],
         threshold=settings.get('threshold'),
         kernel_size=settings.get('kernel-size'),
         downscale_factor=settings.get('downscale-factor'),
-        roi_list=settings.get('region-of-interest'),
+        roi_list=roi_list,
         show_roi_window=settings.get_arg('show-roi-window'),
         max_window_size=(settings.get('max-window-height'), settings.get('max-window-width')))
 
-    sctx.set_event_params(
+    scanner.set_event_params(
         min_event_len=settings.get('min-event-length'),
         time_pre_event=settings.get('time-before-event'),
         time_post_event=settings.get('time-post-event'),
     )
 
-    sctx.set_video_time(
+    scanner.set_video_time(
         start_time=settings.get_arg('start-time'),
         end_time=settings.get_arg('end-time'),
         duration=settings.get_arg('duration'),
@@ -270,9 +278,9 @@ def run_dvr_scan(settings: ProgramSettings) -> ty.List[ty.Tuple[FrameTimecode, F
 
     # Scan video for motion with specified parameters.
     processing_start = time.time()
-    result = sctx.scan_motion()
+    result = scanner.scan()
     if result is None:
-        logging.debug("Exiting early, scan_motion() returned None.")
+        logging.debug("Exiting early, scan() returned None.")
         return
     processing_time = time.time() - processing_start
     # Display results and performance.

@@ -3,8 +3,8 @@
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
-#       [  Site: https://github.com/Breakthrough/DVR-Scan/   ]
-#       [  Documentation: http://dvr-scan.readthedocs.org/   ]
+#       [  Site: https://www.dvr-scan.com/                 ]
+#       [  Repo: https://github.com/Breakthrough/DVR-Scan  ]
 #
 # Copyright (C) 2014-2023 Brandon Castellano <http://www.bcastell.com>.
 #

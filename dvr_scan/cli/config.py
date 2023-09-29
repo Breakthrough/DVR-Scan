@@ -30,7 +30,7 @@ from platformdirs import user_config_dir
 from scenedetect.frame_timecode import FrameTimecode
 
 from dvr_scan.scanner import DEFAULT_FFMPEG_INPUT_ARGS, DEFAULT_FFMPEG_OUTPUT_ARGS
-from dvr_scan.scanner.roi import Rectangle
+from dvr_scan.detector import Rectangle
 
 # Backwards compatibility for config options that were renamed/replaced.
 DEPRECATED_CONFIG_OPTIONS: Dict[str, str] = {
@@ -190,29 +190,23 @@ class ROIValue(ValidatedValue):
     """Characters to ignore."""
 
     def __init__(self, value: Optional[str] = None):
-        if value is not None:
+        if value is None:
+            self._value = Rectangle(0, 0, 0, 0)
+        else:
             translation_table = str.maketrans({char: ' ' for char in ROIValue._IGNORE_CHARS})
             values = value.translate(translation_table).split()
             if not len(values) == 4 and all([val.isdigit() for val in values]):
                 raise ValueError()
-            value = [[int(val) for val in values]]
-        self._value = value
+            self._value = Rectangle(*[int(val) for val in values])
 
     @property
-    def value(self) -> Optional[List[Rectangle]]:
+    def value(self) -> Rectangle:
         return self._value
 
     def __repr__(self) -> str:
-        if self.value is not None:
-            assert len(self.value) == 1
-            return str(self.value[0])
         return str(self.value)
 
     def __str__(self) -> str:
-        if self.value is not None:
-            assert len(self.value) == 1
-            value = self.value[0]
-            return 'X=%d, Y=%d, W=%d, H=%d' % (value[0], value[1], value[2], value[3])
         return str(self.value)
 
     @staticmethod
@@ -220,8 +214,8 @@ class ROIValue(ValidatedValue):
         try:
             return ROIValue(config_value)
         except ValueError as ex:
-            raise OptionParseFailure('ROI must be four positive integers of the form (x,y)/(w,h).'
-                                     ' Brackets, commas, slashes, and spaces are optional.') from ex
+            raise OptionParseFailure(
+                'ROI must be four positive integers of the form X, Y, W, H.') from ex
 
 
 class RGBValue(ValidatedValue):

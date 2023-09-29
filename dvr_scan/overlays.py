@@ -2,12 +2,12 @@
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
-#       [  Site: https://github.com/Breakthrough/DVR-Scan/   ]
-#       [  Documentation: http://dvr-scan.readthedocs.org/   ]
+#       [  Site: https://www.dvr-scan.com/                 ]
+#       [  Repo: https://github.com/Breakthrough/DVR-Scan  ]
 #
 # Copyright (C) 2014-2023 Brandon Castellano <http://www.bcastell.com>.
-# PySceneDetect is licensed under the BSD 2-Clause License; see the
-# included LICENSE file, or visit one of the above pages for details.
+# DVR-Scan is licensed under the BSD 2-Clause License; see the included
+# LICENSE file, or visit one of the above pages for details.
 #
 """ ``dvr_scan.overlays`` Module
 
@@ -139,11 +139,10 @@ class BoundingBoxOverlay(object):
         self._smoothing_window = []
 
         self._downscale_factor = 1
-        self._roi = None
+        self._shift = (0, 0)
         self._frame_skip = 0
 
-    def set_corrections(self, downscale_factor: int, roi: Tuple[int, int, int, int],
-                        frame_skip: int):
+    def set_corrections(self, downscale_factor: int, shift: Tuple[int, int], frame_skip: int):
         """Set various correction factors which need to be compensated for when drawing the
         resulting bounding box onto a given target frame.
 
@@ -151,13 +150,12 @@ class BoundingBoxOverlay(object):
             downscale_factor: Integer downscale factor which was applied before calculating
                 the motion_mask passed to `update`. The resulting bounding box is upscaled
                 by this amount to match the original video frame scale.
-            roi: Area of original frame which was cropped before applying downscale_factor.
-                Used to offset resulting bounding box to correct location when rendering.
+            shift: Offset to apply to boxes when drawing on source frame.
             frame_skip: Amount of frames skipped for every processed frame. Used to correct
                 the smoothing amount.
         """
         self._downscale_factor = max(1, downscale_factor)
-        self._roi = roi
+        self._shift = shift
         # We're reducing the number of frames by 1 / (frame_skip + 1)
         self._frame_skip = frame_skip
 
@@ -212,9 +210,9 @@ class BoundingBoxOverlay(object):
         top_left = (top_left[0] - correction_x // 2, top_left[1] - correction_y // 2)
         bottom_right = (bottom_right[0] + correction_x // 2, bottom_right[1] + correction_y // 2)
         # Shift bounding box if ROI was set
-        if self._roi:
-            top_left = (top_left[0] + self._roi[0], top_left[1] + self._roi[1])
-            bottom_right = (bottom_right[0] + self._roi[0], bottom_right[1] + self._roi[1])
+        if self._shift:
+            top_left = (top_left[0] + self._shift[0], top_left[1] + self._shift[1])
+            bottom_right = (bottom_right[0] + self._shift[0], bottom_right[1] + self._shift[1])
         # Ensure coordinates are positive. Values greater than frame size are okay, and should be
         # handled correctly by cv2.rectangle below. Note that we do not currently limit the
         # bounding box to fit within the ROI.

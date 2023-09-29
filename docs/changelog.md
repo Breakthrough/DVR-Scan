@@ -15,9 +15,17 @@ In development.
 
 **WIP**:
 
- - [feature] Multiple regions of interest can now be defined
-    - For example: `dvr-scan -i video.mp4 -roi 5 5 20 20 -roi 100 100 20 20`
+ - TODO: Change -roi to have old behavior (x y w h), new one to use two points (x0 y0 x1 y1)
+ - TODO: Add a new config file option to replace `region-of-interest`, call it `detection-regions`
 
+ - [feature] ROI selection window has been improved, easier to create complex masks
+ - [feature] ROI specification has been extended to allow more complex shapes
+    - Specifying two points (X0 Y0 X1 Y1) will result in a rectangular ROI
+    - Specifying three or more points will result in a polygonal ROI, e.g. for a triangle: `--roi 0 0 50 0 25 25`
+ - [feature] Multiple regions of interest (rectangular or polygonal) can now be provided:
+    - Using the ROI selection window: `dvr-scan -i video.mp4 --roi`
+    - From command-line: `dvr-scan -i video.mp4 --roi 5 5 20 20 --roi 100 100 20 20`
+    - From config file: `region-of-interest = [5 5 20 20], [100 100 20 20]`
 
 **General**:
 
