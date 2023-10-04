@@ -47,6 +47,7 @@ POINT_CONTROL_RADIUS = 16
 
 MAX_HISTORY_SIZE = 1024
 
+MAX_DOWNSCALE_FACTOR = 1024
 
 MAX_UPDATE_RATE_NORMAL = 20
 MAX_UPDATE_RATE_DRAGGING = 5
@@ -114,7 +115,7 @@ class SelectionWindow:
         self._frame = self._original_frame.copy()
         self._frame_size = Size(w=self._frame.shape[1], h=self._frame.shape[0])
         self._redraw = True
-        logger.debug("Resizing window: scale = 1/%d%s, resolution = %d x %d", self._scale,
+        logger.debug("Resizing: scale = 1/%d%s, resolution = %d x %d", self._scale,
                      ' (off)' if self._scale == 1 else '', self._frame_size.w, self._frame_size.h)
 
     def _undo(self):
@@ -123,7 +124,7 @@ class SelectionWindow:
             self._point_list = deepcopy(self._history[self._history_pos])
             self._recalculate = True
             self._redraw = True
-            logger.debug("Undo Applied[%d/%d]", self._history_pos, len(self._history))
+            logger.debug("Undo: [%d/%d]", self._history_pos, len(self._history))
 
     def _redo(self):
         if self._history_pos > 0:
@@ -131,7 +132,7 @@ class SelectionWindow:
             self._point_list = deepcopy(self._history[self._history_pos])
             self._recalculate = True
             self._redraw = True
-            logger.debug("Redo Applied [%d/%d]", self._history_pos, len(self._history))
+            logger.debug("Redo: [%d/%d]", self._history_pos, len(self._history))
 
     def _commit(self):
         self._history = self._history[self._history_pos:]
@@ -140,11 +141,13 @@ class SelectionWindow:
         self._history_pos = 0
         self._recalculate = True
         self._redraw = True
-        logger.debug("Commit: size = %d, data = [%s]", len(self._history),
+        logger.debug("Commit: [%d] = %s",
+                     len(self._history) - 1,
                      ', '.join(f'P({x},{y})' for x, y in [point for point in self._point_list]))
-        
+
     def _emit_points(self):
-        logger.info("ROI:\n--roi %s", " ".join("%d %d" % (point.x, point.y) for point in self._point_list))
+        logger.info("ROI:\n--roi %s",
+                    " ".join("%d %d" % (point.x, point.y) for point in self._point_list))
 
     def _draw(self):
         # TODO: Can cache a lot of the calculations below. Need to keep drawing as fast as possible.
@@ -245,12 +248,15 @@ class SelectionWindow:
                 min_i = i
         # If we've shrunk the image, we need to compensate for the size difference in the image.
         # The control handles remain the same size but the image is smaller
-        return min_i if self._mouse_distances[min_i] <= (POINT_CONTROL_RADIUS * self._scale)**2 else None
+        return min_i if self._mouse_distances[min_i] <= (POINT_CONTROL_RADIUS *
+                                                         self._scale)**2 else None
 
     def run(self):
         logger.debug('Creating window for frame (scale = %d)', self._scale)
-        cv2.imshow(WINDOW_NAME, self._frame)
-        cv2.setMouseCallback(WINDOW_NAME, self._handle_mouse_input)
+        cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_GUI_NORMAL)
+        cv2.resizeWindow(WINDOW_NAME, width=self._frame_size.w, height=self._frame_size.h)
+        cv2.imshow(WINDOW_NAME, mat=self._frame)
+        cv2.setMouseCallback(WINDOW_NAME, on_mouse=self._handle_mouse_input)
         while True:
             self._draw()
             key = cv2.waitKey(
@@ -265,11 +271,13 @@ class SelectionWindow:
                 self._redraw = True
                 logger.debug("Antialiasing: %s", 'ON' if self._use_aa else 'OFF')
             elif key == ord('w'):
-                self._scale += 1
-                self._rescale()
+                if self._scale < MAX_DOWNSCALE_FACTOR:
+                    self._scale += 1
+                    self._rescale()
             elif key == ord('s'):
-                self._scale = max(1, self._scale - 1)
-                self._rescale()
+                if self._scale > 1:
+                    self._scale = max(1, self._scale - 1)
+                    self._rescale()
             elif key == ord('z'):
                 self._undo()
             elif key == ord('y'):
@@ -303,13 +311,9 @@ class SelectionWindow:
         self._recalculate = False
 
     def _handle_mouse_input(self, event, x, y, flags, param):
-        # TODO: Handle case where mouse leaves frame (stop highlighting).
-        self._curr_mouse_pos = bound_point(point=Point(x, y), size=self._frame_size)
-        self._curr_mouse_pos = Point(self._curr_mouse_pos.x * self._scale,
-                                     self._curr_mouse_pos.y * self._scale)
         drag_started = False
-        # scale coordinates
-
+        bounded = bound_point(point=Point(x, y), size=self._frame_size)
+        self._curr_mouse_pos = Point(bounded.x * self._scale, bounded.y * self._scale)
         if event == cv2.EVENT_LBUTTONDOWN:
             if not self._hover_point is None:
                 self._dragging = True

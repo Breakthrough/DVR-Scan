@@ -500,18 +500,19 @@ class MotionScanner:
             self._logger.info("Selecting area of interest:")
             # TODO: We should process this frame.
             frame_for_crop = self._input.read()
-            scale_factor = None
+            scale_factor = 1
             screen_bounds = get_min_screen_bounds()
             if not screen_bounds is None:
-                max_h = screen_bounds[0] if self._max_window_size[0] == 0 else self._max_window_size[0]
-                max_w = screen_bounds[1] if self._max_window_size[1] == 0 else self._max_window_size[1]
-                current_rois = []
-                if max_h > 0 or max_w > 0:
+                max_h = screen_bounds[0] if self._max_window_size[
+                    0] == 0 else self._max_window_size[0]
+                max_w = screen_bounds[1] if self._max_window_size[
+                    1] == 0 else self._max_window_size[1]
+                frame_h, frame_w = (frame_for_crop.shape[0], frame_for_crop.shape[1])
+                if (max_h > 0 and frame_h > max_h) or (max_w > 0 and frame_w > max_w):
                     logger.debug('Max window size: %d x %d', max_w, max_h)
-                    frame_h, frame_w = (frame_for_crop.shape[0], frame_for_crop.shape[1])
                     # Downscale the image if it's too large for the screen.
-                    factor_h = frame_h / float(max_h) if max_h > 0 and frame_h > max_h else 0
-                    factor_w = frame_w / float(max_w) if max_w > 0 and frame_w > max_w else 0
+                    factor_h = frame_h / float(max_h) if max_h > 0 and frame_h > max_h else 1
+                    factor_w = frame_w / float(max_w) if max_w > 0 and frame_w > max_w else 1
                     scale_factor = round(max(factor_h, factor_w))
             roi_list = SelectionWindow(frame_for_crop, scale_factor).run()
             logging.info(str(roi_list))
