@@ -33,6 +33,8 @@ from dvr_scan.scanner import DEFAULT_FFMPEG_INPUT_ARGS, DEFAULT_FFMPEG_OUTPUT_AR
 from dvr_scan.detector import Rectangle
 
 # Backwards compatibility for config options that were renamed/replaced.
+# TODO(v1.6): Ensure 'region-of-interest' is deprecated and a warning to use -r/--roi with a file
+# will be required in a subsequent release.
 DEPRECATED_CONFIG_OPTIONS: Dict[str, str] = {
     'timecode': 'time-code',
     'timecode-margin': 'text-margin',
@@ -183,39 +185,43 @@ class KernelSizeValue(ValidatedValue):
                 'Size must be odd number starting from 3, 0 to disable, or -1 for auto.') from ex
 
 
-class ROIValue(ValidatedValue):
-    """Validator for a set of regions of interest."""
+class RegionValueDeprecated(ValidatedValue):
+    """Validator for deprecated region-of-interest values."""
 
     _IGNORE_CHARS = [',', '/', '(', ')']
     """Characters to ignore."""
 
-    def __init__(self, value: Optional[str] = None):
-        if value is None:
-            self._value = Rectangle(0, 0, 0, 0)
-        else:
-            translation_table = str.maketrans({char: ' ' for char in ROIValue._IGNORE_CHARS})
+    def __init__(self, value: Optional[str] = None, allow_size: bool = False):
+        if value is not None:
+            translation_table = str.maketrans({char: ' ' for char in RegionValue._IGNORE_CHARS})
             values = value.translate(translation_table).split()
-            if not len(values) == 4 and all([val.isdigit() for val in values]):
+            valid_lengths = (2, 4) if allow_size else (4,)
+            if not (len(values) in valid_lengths and all([val.isdigit() for val in values])
+                    and all([int(val) >= 0 for val in values])):
                 raise ValueError()
-            self._value = Rectangle(*[int(val) for val in values])
+            self._value = [int(val) for val in values]
+        else:
+            self._value = None
 
     @property
-    def value(self) -> Rectangle:
+    def value(self) -> Optional[List[int]]:
         return self._value
 
     def __repr__(self) -> str:
         return str(self.value)
 
     def __str__(self) -> str:
+        if self.value is not None:
+            return '(%d,%d)/(%d,%d)' % (self.value[0], self.value[1], self.value[2], self.value[3])
         return str(self.value)
 
     @staticmethod
-    def from_config(config_value: str, default: 'ROIValue') -> 'ROIValue':
+    def from_config(config_value: str, default: 'RegionValue') -> 'RegionValue':
         try:
-            return ROIValue(config_value)
+            return RegionValue(config_value)
         except ValueError as ex:
-            raise OptionParseFailure(
-                'ROI must be four positive integers of the form X, Y, W, H.') from ex
+            raise OptionParseFailure('ROI must be four positive integers of the form (x,y)/(w,h).'
+                                     ' Brackets, commas, slashes, and spaces are optional.') from ex
 
 
 class RGBValue(ValidatedValue):
@@ -311,7 +317,8 @@ CONFIG_MAP: ConfigDict = {
     'threshold': 0.15,
     'kernel-size': KernelSizeValue(),
     'downscale-factor': 0,
-    'region-of-interest': ROIValue(),
+                                                         # TODO(v1.7): Remove, replaced with region files.
+    'region-of-interest': RegionValueDeprecated(),
     'max-window-width': 0,
     'max-window-height': 0,
     'frame-skip': 0,

@@ -222,7 +222,8 @@ class MotionScanner:
     def __init__(self,
                  input_videos: List[AnyStr],
                  frame_skip: int = 0,
-                 show_progress: bool = False):
+                 show_progress: bool = False,
+                 debug_mode: bool = False):
         """ Initializes the MotionScanner with the supplied arguments.
 
         Arguments:
@@ -236,6 +237,7 @@ class MotionScanner:
 
         self._in_motion_event: bool = False
         self._show_progress: bool = show_progress
+        self._debug_mode: bool = debug_mode
 
         # Output Parameters (set_output)
         self._comp_file: Optional[AnyStr] = None       # -o/--output
@@ -411,12 +413,7 @@ class MotionScanner:
         self._downscale_factor = max(downscale_factor, 1)
         assert kernel_size == -1 or kernel_size == 0 or kernel_size >= 3
         self._kernel_size = kernel_size
-        if roi_list is not None:
-            if isinstance(roi_list, Rectangle):
-                self._roi_list = [roi_list]
-            else:
-                assert all(isinstance(roi, Rectangle) for roi in roi_list)
-                self._roi_list = list(roi_list)
+        # TODO(v1.6): Redo ROI list.
         self._show_roi_window = show_roi_window
         self._max_window_size = tuple(None if x is None else max(x, 0) for x in max_window_size)
 
@@ -514,7 +511,10 @@ class MotionScanner:
                     factor_h = frame_h / float(max_h) if max_h > 0 and frame_h > max_h else 1
                     factor_w = frame_w / float(max_w) if max_w > 0 and frame_w > max_w else 1
                     scale_factor = round(max(factor_h, factor_w))
-            roi_list = SelectionWindow(frame_for_crop, scale_factor).run()
+            # TODO(v1.6): Allow previewing a pre-defined set of polygons if they were loaded from
+            # command line or config file.
+            roi_list = SelectionWindow(
+                frame_for_crop, scale_factor, debug_mode=self._debug_mode).run()
             logging.info(str(roi_list))
             # TODO: Actually use ROI list now.
             sys.exit(0)

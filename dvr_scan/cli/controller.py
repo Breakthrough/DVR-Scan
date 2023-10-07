@@ -188,6 +188,7 @@ def run_dvr_scan(settings: ProgramSettings) -> ty.List[ty.Tuple[FrameTimecode, F
         input_videos=settings.get_arg('input'),
         frame_skip=settings.get('frame-skip'),
         show_progress=not settings.get('quiet-mode'),
+        debug_mode=settings.get('debug'),
     )
 
     output_mode = (

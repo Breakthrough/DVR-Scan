@@ -20,16 +20,18 @@ which provides an argparse-based CLI used by the DVR-Scan application.
 """
 
 import argparse
+import os
 from typing import List, Optional
 
 import dvr_scan
-from dvr_scan.cli.config import ConfigRegistry, CHOICE_MAP, USER_CONFIG_FILE_PATH, ROIValue
+from dvr_scan.cli.config import ConfigRegistry, CHOICE_MAP, USER_CONFIG_FILE_PATH
+from dvr_scan.selection_window import Point, RegionValue
 
 # Version string shown for the -v/--version CLI argument.
 VERSION_STRING = f"""------------------------------------------------
 DVR-Scan {dvr_scan.__version__}
 ------------------------------------------------
-Copyright (C) 2016-2022 Brandon Castellano
+Copyright (C) 2016-2023 Brandon Castellano
 < https://github.com/Breakthrough/DVR-Scan >
 """
 
@@ -272,6 +274,8 @@ class VersionAction(argparse.Action):
 
 class RoiAction(argparse.Action):
 
+    DEFAULT_ERROR_MESSAGE = "Region must be 3 or more points of the form X0 Y0 X1 Y1 X2 Y2 ..."
+
     def __init__(self,
                  option_strings,
                  dest,
@@ -296,34 +300,50 @@ class RoiAction(argparse.Action):
             required=required,
             help=help,
             metavar=metavar)
+        self.file_list = []
 
     def _is_deprecated(self) -> bool:
-        return '-roi' in self.option_strings
+        return '-roi' in self.option_strings or '--region-of-interest' in self.option_strings
 
     def __call__(self, parser, namespace, values: List[str], option_string=None):
-        # Used to show warning to user if they use -roi instead of --roi.
+        # Used to show warning to user if they use -roi/--region-of-interest instead of -r/--roi.
         if self._is_deprecated():
             setattr(namespace, 'used_deprecated_roi_option', True)
-        # --roi/--region-of-interest specified without coordinates
+        # -r/--roi specified without coordinates
         if not values:
             if not hasattr(namespace, 'show_roi_window'):
                 setattr(namespace, 'show_roi_window', 1)
             else:
                 namespace.show_roi_window += 1
             return
-        # TODO(v1.6): Figure out how to represent multiple ROIs in config file,
-        # e.g.: region-of-interest = [10, 10 / 20, 20], [..]
-        # TODO(v1.6): Add backwards compatibility for --roi MAX_WIDTH MAX_HEIGHT syntax *only* for
-        # the deprecated -roi flag, not the new one.
-        try:
-            roi = ROIValue(' '.join(values))
-        except ValueError as ex:
-            raise argparse.ArgumentError(self,
-                                         'ROI must be rectangle of the form --roi X Y W H') from ex
+        regions = []
+        save_regions_to = None
+        if len(values) == 1:
+            try:
+                if os.path.exists(values[0]):
+                    region_path = values[0]
+                    with open(region_path, "rt") as region_file:
+                        regions = list(
+                            RegionValue(region) for region in filter(None, (
+                                region.strip() for region in region_file.readlines())))
+                else:
+                    save_regions_to = values[0]
+            except ValueError as ex:
+                prefix = f"Error loading region from {region_path}: "
+                message = " ".join(
+                    str(arg) for arg in ex.args) if ex.args else RoiAction.DEFAULT_ERROR_MESSAGE
+                raise (argparse.ArgumentError(self, f"{prefix}{message}")) from ex
+        else:
+            try:
+                regions.append(RegionValue(" ".join(values)))
+            except ValueError as ex:
+                message = " ".join(str(arg) for arg in ex.args)
+                raise (argparse.ArgumentError(
+                    self, message if message else RoiAction.DEFAULT_ERROR_MESSAGE)) from ex
 
         # Append this ROI to any existing ones, if any.
         items = getattr(namespace, 'region_of_interest', [])
-        items += [roi.value]
+        items += regions
         setattr(namespace, 'region_of_interest', items)
 
 
@@ -514,21 +534,30 @@ def get_cli_parser(user_config: ConfigRegistry):
         help=('Timecode to stop processing the input (see -st for valid timecode formats).'),
     )
 
+    # Too much logic crammed in one flag, split it up:
+    #
+    # -r/--region [X0 Y0 X1 Y1 X2 Y2 ...]
+    # -R/--load-region [FILE]
+    # -s/--save-region [FILE]
+    #
     parser.add_argument(
-        '--roi',
-        '--region-of-interest',
-        metavar='x0 y0 w h',
+        '-r',
+        '--region',
+        metavar='x0 y0 x1 y1 x2 y2',
         dest='region_of_interest',
         nargs='*',
         action=RoiAction,
-        help=('Limit detection to specified region. Can specify as --roi to show popup window,'
-              ' or specify the region in the form --roi x,y w,h (e.g. --roi 100 200 50 50)%s' %
+        help=('TODO.  %s' %
               (user_config.get_help_string('region-of-interest', show_default=False))),
     )
 
-    # TODO(v1.7): Remove -roi (replaced by --roi/--region-of-interest).
+    # TODO(v1.7): Remove -roi (split up into other options).
     parser.add_argument(
+                                   # TODO(v1.6): Re-add support for -roi MAX_WIDTH MAX_HEIGHT syntax until this is removed,
+                                   # replaced with config file options.
+                                   # TODO(v1.6): Restore this argument to the exact way it was except for the pop-up window.
         '-roi',
+        '-region-of-interest',
         metavar='x0 y0 w h',
         dest='region_of_interest',
         nargs='*',
