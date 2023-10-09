@@ -149,23 +149,15 @@ Motion detection can be fine-tuned for specific use cases.  When modifying detec
 
 ------------------------------------------------
 
-##### Region of Interest
+##### Regions
 
-Detection can be limited to a specific region of the frame using the `--roi` flag.
+Detection can be limited to specific regions of the frame. This can be done interactively using the `-r/--region-editor` flag, or by providing a list (`-a/--add-region`) or file (`-R/--load-region`) containing polygon data.
+
+Regions are specified as a list of points (X, Y) forming a closed polygon (shape with at least 3 points). For example, a triangle is defined as `0 0 100 0 50 50`. Multiple regions can be combined, and the result can also be saved to a file using `-s/--save-region`.
 
 !!! tip "Setting a region of interest improves scanning performance."
 
-
- * <b><pre>--roi</pre></b> Show pop-up window to select a region of interest using the mouse.  The first frame will be displayed.
-
- * <b><pre>--roi x0 y0 w h</pre></b> Rectangle specified by coordinate of top-left corner `x0`, `y0` and size `w`, `h`. The top left corner of the video is `0`, `0`.
-<span class="dvr-scan-example">
-```
---roi 50 75 100 100
-```
-</span>
-
- * <b><pre>--roi width height</pre></b> Same as `--roi`, but ensures selection window is no larger than `height` x `width`.  Useful for processing videos larger than the monitor resolution.
+TODO - This feature is under development in v1.6. More to come here.
 
 ------------------------------------------------
 

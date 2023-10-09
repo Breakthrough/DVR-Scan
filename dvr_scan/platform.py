@@ -14,6 +14,7 @@
 Provides logging and platform/operating system compatibility.
 """
 
+from contextlib import contextmanager
 import logging
 import os
 import subprocess
@@ -27,19 +28,31 @@ except ImportError:
 
 from scenedetect.platform import get_and_create_path
 
+try:
+    import tkinter
+except ImportError:
+    tkinter = None
+
+HAS_TKINTER = not tkinter is None
+
+IS_WINDOWS = os.name == 'nt'
+
+if IS_WINDOWS:
+    import ctypes
+    import ctypes.wintypes
+
 
 def get_min_screen_bounds():
-    """ Safely attempts to get the minimum screen resolution of all monitors
-    using the `screeninfo` package. Returns the minimum of all monitor's heights
-    and widths with 10% padding."""
-    if screeninfo is not None:
+    """Attempts to get the minimum screen resolution of all monitors using the `screeninfo` package.
+    Returns the minimum of all monitor's heights and widths with 10% padding, or None if the package
+    is unavailable."""
+    if not screeninfo is None:
         try:
             monitors = screeninfo.get_monitors()
             return (int(0.9 * min(m.height for m in monitors)),
                     int(0.9 * min(m.width for m in monitors)))
         except screeninfo.common.ScreenInfoError as ex:
-            pass
-    logging.getLogger('dvr_scan').warning("Unable to get screen resolution: %s", ex)
+            logging.getLogger('dvr_scan').warning("Unable to get screen resolution: %s", ex)
     return None
 
 
@@ -114,3 +127,37 @@ def get_filename(path: AnyStr, include_extension: bool) -> AnyStr:
         if dot_position > 0:
             filename = filename[:dot_position]
     return filename
+
+
+def set_icon(window_name: str, icon_path: str):
+    if not IS_WINDOWS:
+        # TODO: Set icon on Linux/OSX.
+        return
+    SendMessage = ctypes.windll.user32.SendMessageW
+    FindWindow = ctypes.windll.user32.FindWindowW
+    LoadImage = ctypes.windll.user32.LoadImageW
+    IMAGE_ICON = 1
+    ICON_SMALL = 1
+    ICON_BIG = 1
+    LR_LOADFROMFILE = 0x00000010
+    LR_CREATEDIBSECTION = 0x00002000
+    WM_SETICON = 0x0080
+    hWnd = FindWindow(None, window_name)
+    hIcon = LoadImage(None, icon_path, IMAGE_ICON, 0, 0, LR_LOADFROMFILE | LR_CREATEDIBSECTION)
+    SendMessage(hWnd, WM_SETICON, ICON_SMALL, hIcon)
+    SendMessage(hWnd, WM_SETICON, ICON_BIG, hIcon)
+
+
+@contextmanager
+def temp_tk_window(icon_path: str):
+    """Used to provide a hidden Tk window as a root for pop-up dialog boxes to return focus to
+    main region window when destroyed."""
+    root = tkinter.Tk()
+    try:
+        root.withdraw()
+        # TODO: Set icon on Linux/OSX.
+        if IS_WINDOWS and os.path.exists(icon_path):
+            root.iconbitmap(os.path.abspath(icon_path))
+        yield root
+    finally:
+        root.destroy()

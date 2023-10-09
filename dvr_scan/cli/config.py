@@ -33,15 +33,18 @@ from dvr_scan.scanner import DEFAULT_FFMPEG_INPUT_ARGS, DEFAULT_FFMPEG_OUTPUT_AR
 from dvr_scan.detector import Rectangle
 
 # Backwards compatibility for config options that were renamed/replaced.
-# TODO(v1.6): Ensure 'region-of-interest' is deprecated and a warning to use -r/--roi with a file
-# will be required in a subsequent release.
-DEPRECATED_CONFIG_OPTIONS: Dict[str, str] = {
+MIGRATED_CONFIG_OPTION: Dict[str, str] = {
     'timecode': 'time-code',
     'timecode-margin': 'text-margin',
     'timecode-font-scale': 'text-font-scale',
     'timecode-font-thickness': 'text-font-thickness',
     'timecode-font-color': 'text-font-color',
     'timecode-bg-color': 'text-bg-color',
+}
+
+DEPRECATED_CONFIG_OPTION: Dict[str, str] = {
+    "region-of-interest": "The region-of-interest config option is deprecated and may be removed. "
+                          "Use the load-region option instead, or specify -R/--load-region."
 }
 
 
@@ -193,7 +196,8 @@ class RegionValueDeprecated(ValidatedValue):
 
     def __init__(self, value: Optional[str] = None, allow_size: bool = False):
         if value is not None:
-            translation_table = str.maketrans({char: ' ' for char in RegionValue._IGNORE_CHARS})
+            translation_table = str.maketrans(
+                {char: ' ' for char in RegionValueDeprecated._IGNORE_CHARS})
             values = value.translate(translation_table).split()
             valid_lengths = (2, 4) if allow_size else (4,)
             if not (len(values) in valid_lengths and all([val.isdigit() for val in values])
@@ -216,9 +220,9 @@ class RegionValueDeprecated(ValidatedValue):
         return str(self.value)
 
     @staticmethod
-    def from_config(config_value: str, default: 'RegionValue') -> 'RegionValue':
+    def from_config(config_value: str, default: 'RegionValueDeprecated') -> 'RegionValueDeprecated':
         try:
-            return RegionValue(config_value)
+            return RegionValueDeprecated(config_value)
         except ValueError as ex:
             raise OptionParseFailure('ROI must be four positive integers of the form (x,y)/(w,h).'
                                      ' Brackets, commas, slashes, and spaces are optional.') from ex
@@ -297,6 +301,7 @@ USER_CONFIG_FILE_PATH: AnyStr = os.path.join(_CONFIG_FILE_DIR, _CONFIG_FILE_NAME
 CONFIG_MAP: ConfigDict = {
 
                                                          # General Options
+    'region-editor': False,
     'quiet-mode': False,
     'verbosity': 'info',
 
@@ -319,8 +324,7 @@ CONFIG_MAP: ConfigDict = {
     'downscale-factor': 0,
                                                          # TODO(v1.7): Remove, replaced with region files.
     'region-of-interest': RegionValueDeprecated(),
-    'max-window-width': 0,
-    'max-window-height': 0,
+    'load-region': '',
     'frame-skip': 0,
 
                                                          # Overlays
@@ -423,23 +427,23 @@ class ConfigRegistry:
         if any(level >= logging.ERROR for level, _ in self._init_log):
             raise ConfigLoadFailure(self._init_log)
 
-    def _replace_deprecated_options(self, config: ConfigParser):
-        """Override config options using deprecated keys if a replacement was not specified."""
-        deprecated_options: List[str] = [
-            option for option in config[DEFAULTSECT] if option in DEPRECATED_CONFIG_OPTIONS
-        ]
-        for deprecated in deprecated_options:
-            replacement = DEPRECATED_CONFIG_OPTIONS[deprecated]
+    def _migrate_deprecated(self, config: ConfigParser):
+        migrated_options = [opt for opt in config[DEFAULTSECT] if opt in MIGRATED_CONFIG_OPTION]
+        for migrated in migrated_options:
+            replacement = MIGRATED_CONFIG_OPTION[migrated]
             if replacement in config[DEFAULTSECT]:
                 self._log(
-                    logging.WARNING, 'WARNING: deprecated config option %s was overriden by %s.' %
-                    (deprecated, replacement))
+                    logging.WARNING,
+                    f"WARNING: deprecated config option {migrated} was overriden by {replacement}.")
             else:
                 self._log(
-                    logging.WARNING, 'WARNING: config option %s is deprecated, use %s instead.' %
-                    (deprecated, replacement))
-                config[DEFAULTSECT][replacement] = config[DEFAULTSECT][deprecated]
-            del config[DEFAULTSECT][deprecated]
+                    logging.WARNING,
+                    f"WARNING: config option {migrated} is deprecated, use {replacement} instead.")
+                config[DEFAULTSECT][replacement] = config[DEFAULTSECT][migrated]
+            del config[DEFAULTSECT][migrated]
+        deprecated_options = [opt for opt in config[DEFAULTSECT] if opt in DEPRECATED_CONFIG_OPTION]
+        for deprecated in deprecated_options:
+            self._log(logging.WARNING, f"WARNING: {DEPRECATED_CONFIG_OPTION[deprecated]}")
 
     def _parse_config(self,
                       config: ConfigParser) -> Tuple[Optional[ConfigDict], List[Tuple[int, str]]]:
@@ -454,7 +458,7 @@ class ConfigRegistry:
                 (', '.join(['[%s]' % section for section in config.sections()])))
             return
 
-        self._replace_deprecated_options(config)
+        self._migrate_deprecated(config)
 
         for option in config[DEFAULTSECT]:
             if not option in CONFIG_MAP:

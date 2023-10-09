@@ -272,7 +272,49 @@ class VersionAction(argparse.Action):
         parser.exit(message=version)
 
 
-class RoiAction(argparse.Action):
+class RegionActionDeprecated(argparse.Action):
+
+    def __init__(self,
+                 option_strings,
+                 dest,
+                 nargs=None,
+                 const=None,
+                 default=None,
+                 type=None,
+                 choices=None,
+                 required=False,
+                 help=None,
+                 metavar=None):
+        assert nargs == '*'
+        assert const is None
+        super(RegionActionDeprecated, self).__init__(
+            option_strings=option_strings,
+            dest=dest,
+            nargs=nargs,
+            const=const,
+            default=default,
+            type=type,
+            choices=choices,
+            required=required,
+            help=help,
+            metavar=metavar)
+
+    def __call__(self, parser, namespace, values: List[str], option_string=None):
+        # Used to show warning to user if they use -roi/--region-of-interest instead of -r/-a.
+        setattr(namespace, 'used_deprecated_roi_option', True)
+        # -r/--roi specified without coordinates
+        if not values:
+            setattr(namespace, 'region_editor', True)
+            return
+        # TODO(v1.6): Re-add backwards compat. for X Y W H rectangles.
+        raise NotImplementedError()
+        # Append this ROI to any existing ones, if any.
+        items = getattr(namespace, 'roi_deprecated', [])
+        items += regions
+        setattr(namespace, 'roi_deprecated', items)
+
+
+class RegionAction(argparse.Action):
 
     DEFAULT_ERROR_MESSAGE = "Region must be 3 or more points of the form X0 Y0 X1 Y1 X2 Y2 ..."
 
@@ -289,7 +331,7 @@ class RoiAction(argparse.Action):
                  metavar=None):
         assert nargs == '*'
         assert const is None
-        super(RoiAction, self).__init__(
+        super(RegionAction, self).__init__(
             option_strings=option_strings,
             dest=dest,
             nargs=nargs,
@@ -300,51 +342,20 @@ class RoiAction(argparse.Action):
             required=required,
             help=help,
             metavar=metavar)
-        self.file_list = []
-
-    def _is_deprecated(self) -> bool:
-        return '-roi' in self.option_strings or '--region-of-interest' in self.option_strings
 
     def __call__(self, parser, namespace, values: List[str], option_string=None):
-        # Used to show warning to user if they use -roi/--region-of-interest instead of -r/--roi.
-        if self._is_deprecated():
-            setattr(namespace, 'used_deprecated_roi_option', True)
-        # -r/--roi specified without coordinates
-        if not values:
-            if not hasattr(namespace, 'show_roi_window'):
-                setattr(namespace, 'show_roi_window', 1)
-            else:
-                namespace.show_roi_window += 1
-            return
-        regions = []
-        save_regions_to = None
-        if len(values) == 1:
-            try:
-                if os.path.exists(values[0]):
-                    region_path = values[0]
-                    with open(region_path, "rt") as region_file:
-                        regions = list(
-                            RegionValue(region) for region in filter(None, (
-                                region.strip() for region in region_file.readlines())))
-                else:
-                    save_regions_to = values[0]
-            except ValueError as ex:
-                prefix = f"Error loading region from {region_path}: "
-                message = " ".join(
-                    str(arg) for arg in ex.args) if ex.args else RoiAction.DEFAULT_ERROR_MESSAGE
-                raise (argparse.ArgumentError(self, f"{prefix}{message}")) from ex
-        else:
-            try:
-                regions.append(RegionValue(" ".join(values)))
-            except ValueError as ex:
-                message = " ".join(str(arg) for arg in ex.args)
-                raise (argparse.ArgumentError(
-                    self, message if message else RoiAction.DEFAULT_ERROR_MESSAGE)) from ex
+
+        try:
+            region = RegionValue(" ".join(values))
+        except ValueError as ex:
+            message = " ".join(str(arg) for arg in ex.args)
+            raise (argparse.ArgumentError(
+                self, message if message else RegionAction.DEFAULT_ERROR_MESSAGE)) from ex
 
         # Append this ROI to any existing ones, if any.
-        items = getattr(namespace, 'region_of_interest', [])
-        items += regions
-        setattr(namespace, 'region_of_interest', items)
+        items = getattr(namespace, 'regions', [])
+        items += [region.value]
+        setattr(namespace, 'regions', items)
 
 
 # TODO: To help with debugging, add a `debug` option to the config file as well that, if set in the
@@ -444,6 +455,45 @@ def get_cli_parser(user_config: ConfigRegistry):
     )
 
     parser.add_argument(
+        "-r",
+        "--region-editor",
+        dest='region_editor',
+        action='store_true',
+        help=("Show region editor window. Motion detection will be limited to the enclosed area "
+              "during processing. Only single regions can be edited, but supports preview of "
+              "multiple regions if defined.%s" % user_config.get_help_string("region-editor")),
+    )
+
+    parser.add_argument(
+        "-a",
+        "--add-region",
+        metavar="X0 Y0 X1 Y1 X2 Y2",
+        dest='regions',
+        nargs='*',
+        action=RegionAction,
+        help=(
+            "Limit motion detection to a region of the frame. The region is defined as a sequence "
+            "of 3 or more points forming a closed shape inside the video. Coordinate 0 0 is top "
+            "left of the frame, and WIDTH-1 HEIGHT-1 is bottom right. Can be specified multiple "
+            "times to add more regions."))
+    parser.add_argument(
+        "-R",
+        "--load-region",
+        metavar="FILE.txt",
+        type=str,
+        help=("Load region data from file. Each line must be a list of points in the format "
+              "specified by -a/--add-region. Each line is treated as a separate polygon."),
+    )
+
+    parser.add_argument(
+        "-s",
+        "--save-region",
+        metavar="FILE.txt",
+        type=str,
+        help=("Save detection regions to FILE.txt before processing. If FILE.txt exists it will be "
+              "overwritten. Allows loading same regions using -R/--load-region."))
+
+    parser.add_argument(
         '-b',
         '--bg-subtractor',
         metavar='type',
@@ -534,34 +584,16 @@ def get_cli_parser(user_config: ConfigRegistry):
         help=('Timecode to stop processing the input (see -st for valid timecode formats).'),
     )
 
-    # Too much logic crammed in one flag, split it up:
-    #
-    # -r/--region [X0 Y0 X1 Y1 X2 Y2 ...]
-    # -R/--load-region [FILE]
-    # -s/--save-region [FILE]
-    #
-    parser.add_argument(
-        '-r',
-        '--region',
-        metavar='x0 y0 x1 y1 x2 y2',
-        dest='region_of_interest',
-        nargs='*',
-        action=RoiAction,
-        help=('TODO.  %s' %
-              (user_config.get_help_string('region-of-interest', show_default=False))),
-    )
-
+    # TODO(v1.6): Restore this argument to the exact way it was. Error if specified with any of
+    # the replacements above.
     # TODO(v1.7): Remove -roi (split up into other options).
     parser.add_argument(
-                                   # TODO(v1.6): Re-add support for -roi MAX_WIDTH MAX_HEIGHT syntax until this is removed,
-                                   # replaced with config file options.
-                                   # TODO(v1.6): Restore this argument to the exact way it was except for the pop-up window.
         '-roi',
         '-region-of-interest',
         metavar='x0 y0 w h',
         dest='region_of_interest',
         nargs='*',
-        action=RoiAction,
+        action=RegionActionDeprecated,
         help=argparse.SUPPRESS,
     )
 

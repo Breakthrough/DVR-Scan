@@ -35,7 +35,7 @@ from tqdm.contrib.logging import logging_redirect_tqdm
 from dvr_scan.detector import MotionDetector, Rectangle
 from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
 from dvr_scan.platform import get_filename, get_min_screen_bounds, is_ffmpeg_available
-from dvr_scan.selection_window import SelectionWindow
+from dvr_scan.selection_window import SelectionWindow, Point, Size, bound_point
 from dvr_scan.subtractor import (
     SubtractorMOG2,
     SubtractorCNT,
@@ -129,26 +129,6 @@ class DetectionResult:
     num_frames: int
 
 
-# TODO(v1.7): Allow loading a PNG image as a mask.
-class DetectionMask:
-    """Mask of area in video to ignore."""
-
-    def __init__(self, rectangles: List[Tuple[int, int, int, int]]):
-        assert rectangles
-        if len(rectangles) == 1:
-            self._bounds = rectangles[0]
-        else:
-            # TODO: Generate a 2d np array that can be used as a mask.
-            raise NotImplementedError()
-
-    def get_bounds(self):
-        raise NotImplementedError()
-
-    def sum(frame: np.ndarray, origin=(0, 0)):
-        """Calculate the sum of all pixels in `frame` that overlap with `rectangles`."""
-        raise NotImplementedError
-
-
 def _scale_kernel_size(kernel_size: int, downscale_factor: int):
     if kernel_size in (0, 1):
         return kernel_size
@@ -239,6 +219,8 @@ class MotionScanner:
         self._show_progress: bool = show_progress
         self._debug_mode: bool = debug_mode
 
+        # Scan state and options they come from:
+
         # Output Parameters (set_output)
         self._comp_file: Optional[AnyStr] = None       # -o/--output
         self._mask_file: Optional[AnyStr] = None       # -mo/--mask-output
@@ -258,9 +240,8 @@ class MotionScanner:
         self._threshold = 0.15                    # -t/--threshold
         self._kernel_size = None                  # -k/--kernel-size
         self._downscale_factor = 1                # -df/--downscale-factor
-        self._roi_list = []                       # --roi/--region-of-interest
-        self._show_roi_window = False             # --roi/--region-of-interest
-        self._max_window_size = (0, 0)            # max-window-width/max-window-height
+                                                  # TODO(v1.6): Add ability to configure this filter by adding a threshold + amount option
+                                                  # (e.g. ignore up to 2 frames in a row that are over score 100).
         self._max_score = 255.0                   # scores greater than this are ignored
 
         # Motion Event Parameters (set_event_params)
@@ -268,13 +249,19 @@ class MotionScanner:
         self._pre_event_len = None  # -tb/--time-before-event
         self._post_event_len = None # -tp/--time-post-event
 
-        # Input Video Parameters
+        # Region Parameters (set_region)
+        self._region_editor = False                       # -w/--region-window
+        self._regions: Optional[List[List[Point]]] = None # -a/--add-region, -w/--region-window
+        self._load_region: Optional[str] = None           # -R/--load-region
+        self._save_region: Optional[str] = None           # -s/--save-region
+
+        # Input Video Parameters (set_video_time)
         self._input: VideoJoiner = VideoJoiner(input_videos) # -i/--input
         self._frame_skip: int = frame_skip                   # -fs/--frame-skip
         self._start_time: FrameTimecode = None               # -st/--start-time
         self._end_time: FrameTimecode = None                 # -et/--end-time
 
-        # Other Internal Parameters
+        # Internal Variables
         self._stop: threading.Event = threading.Event()
         self._decode_thread_exception = None
         self._encode_thread_exception = None
@@ -374,38 +361,14 @@ class MotionScanner:
         self._metrics_overlay = metrics_overlay
         self._bounding_box = bounding_box
 
-    def set_detection_params(self,
-                             detector_type: DetectorType = DetectorType.MOG2,
-                             threshold: float = 0.15,
-                             kernel_size: int = -1,
-                             downscale_factor: int = 1,
-                             roi_list: Optional[Union[Rectangle, List[Rectangle]]] = None,
-                             show_roi_window: int = 0,
-                             max_window_size: Tuple[int, int] = (0, 0)):
-        """ Sets motion detection parameters.
-
-        Arguments:
-            detector_type: Type of motion detector to use.
-            threshold: Threshold value representing the amount of motion
-                in a frame required to trigger a motion event. Lower values
-                require less movement, and are more sensitive to motion. If the
-                threshold is too high, some movement in the scene may not be
-                detected, while a threshold too low can trigger a false events.
-            kernel_size: Size of the noise reduction kernel. Must be odd number starting from 3,
-                0 for off, or -1 to auto set. If too large, small movements may not be detected.
-            downscale_factor: Factor to downscale (shrink) video before
-                processing, to improve performance. For example, if input video
-                resolution is 1024 x 400, and factor=2, each frame is reduced to'
-                1024/2 x 400/2=512 x 200 before processing. 0 or 1 (default)
-                indicate no downscaling.
-            roi_list: List of rectangle [x y w h] representing region of interest within the frame
-                to search for motion. Frame scores will be normalized to the number of pixels within
-                the provided rectangles.
-            show_roi_window: Display GUI pop-up window to add more regions of interest.
-        Raises:
-            ValueError if kernel_size is not odd, downscale_factor < 0, or roi
-            is invalid.
-        """
+    def set_detection_params(
+        self,
+        detector_type: DetectorType = DetectorType.MOG2,
+        threshold: float = 0.15,
+        kernel_size: int = -1,
+        downscale_factor: int = 1,
+    ):
+        """Set detection parameters."""
         self._threshold = threshold
         self._subtractor_type = detector_type
         if downscale_factor < 0:
@@ -413,15 +376,20 @@ class MotionScanner:
         self._downscale_factor = max(downscale_factor, 1)
         assert kernel_size == -1 or kernel_size == 0 or kernel_size >= 3
         self._kernel_size = kernel_size
-        # TODO(v1.6): Redo ROI list.
-        self._show_roi_window = show_roi_window
-        self._max_window_size = tuple(None if x is None else max(x, 0) for x in max_window_size)
+
+    def set_regions(self, region_editor: bool, regions: Optional[List[List[Point]]],
+                    load_region: Optional[str], save_region: Optional[str]):
+        """Set options for limiting detection regions."""
+        self._region_editor = region_editor
+        self._regions = regions
+        self._load_region = load_region
+        self._save_region = save_region
 
     def set_event_params(self,
                          min_event_len: Union[int, float, str] = '0.1s',
                          time_pre_event: Union[int, float, str] = '1.5s',
                          time_post_event: Union[int, float, str] = '2s'):
-        """ Sets motion event parameters. """
+        """Set motion event parameters."""
         assert self._input.framerate is not None
         self._min_event_len = FrameTimecode(min_event_len, self._input.framerate)
         self._pre_event_len = FrameTimecode(time_pre_event, self._input.framerate)
@@ -431,7 +399,7 @@ class MotionScanner:
                        start_time: Optional[Union[int, float, str]] = None,
                        end_time: Optional[Union[int, float, str]] = None,
                        duration: Optional[Union[int, float, str]] = None):
-        """ Used to select a sub-set of the video in time for processing. """
+        """Set a sub-set of the video in time for processing."""
         assert self._input.framerate is not None
         if start_time is not None:
             self._start_time = FrameTimecode(start_time, self._input.framerate)
@@ -488,23 +456,27 @@ class MotionScanner:
 
         return (NullProgressBar(), NullContextManager())
 
-    # TODO: Move this into platform or a separate module.
-    def _select_roi(self) -> bool:
-        # area selection
+    def _process_regions(self) -> bool:
+
+        if self._save_region:
+            raise NotImplementedError()
+        if self._load_region:
+            raise NotImplementedError()
+        if self._region_editor and self._regions:
+            raise NotImplementedError()
+
+        # TODO(v1.6): Handle self._load_region. Right now they are overwritten by the region editor.
         # TODO(v1.6): Allow adding multiple ROIs by re-displaying the window in a loop.
         # TODO(v1.6): Display ROIs added via command line/config file as overlay on frame.
-        if self._show_roi_window:
+        if self._region_editor:
             self._logger.info("Selecting area of interest:")
             # TODO: We should process this frame.
             frame_for_crop = self._input.read()
             scale_factor = 1
             screen_bounds = get_min_screen_bounds()
             if not screen_bounds is None:
-                max_h = screen_bounds[0] if self._max_window_size[
-                    0] == 0 else self._max_window_size[0]
-                max_w = screen_bounds[1] if self._max_window_size[
-                    1] == 0 else self._max_window_size[1]
-                frame_h, frame_w = (frame_for_crop.shape[0], frame_for_crop.shape[1])
+                max_w, max_h = screen_bounds[1], screen_bounds[0]
+                frame_w, frame_h = frame_for_crop.shape[1], frame_for_crop.shape[0]
                 if (max_h > 0 and frame_h > max_h) or (max_w > 0 and frame_w > max_w):
                     logger.debug('Max window size: %d x %d', max_w, max_h)
                     # Downscale the image if it's too large for the screen.
@@ -513,11 +485,20 @@ class MotionScanner:
                     scale_factor = round(max(factor_h, factor_w))
             # TODO(v1.6): Allow previewing a pre-defined set of polygons if they were loaded from
             # command line or config file.
-            roi_list = SelectionWindow(
-                frame_for_crop, scale_factor, debug_mode=self._debug_mode).run()
-            logging.info(str(roi_list))
-            # TODO: Actually use ROI list now.
-            sys.exit(0)
+            regions = SelectionWindow(frame_for_crop, scale_factor, debug_mode=self._debug_mode)
+            if not regions.run():
+                return False
+            # TODO(v1.6): Handle self._save_region.
+            self._regions = regions.shapes
+        # Ensure all regions are bounded to the frame.
+
+        if self._regions:
+            print(self._regions)
+            self._regions = [[bound_point(point, Size(*self._input.resolution))
+                              for point in shape]
+                             for shape in self._regions]
+            logger.info(f"Limiting detection to {len(self._regions)} "
+                        f"region{'s' if len(self._regions) > 1 else ''}.")
         return True
 
     def stop(self):
@@ -543,12 +524,9 @@ class MotionScanner:
         start_frame = self._input.position.frame_num
 
         # Show ROI selection window if required.
-        # TODO: This should be done before calling scan().
-        if not self._select_roi():
+        if not self._process_regions():
+            self._logger.info("Exiting...")
             return None
-        if self._roi_list:
-            self._logger.info('Detection regions:\n  %s',
-                              '\n  '.join(str(roi) for roi in self._roi_list))
 
         if self._kernel_size == -1:
             # Calculate size of noise reduction kernel. Even if an ROI is set, the auto factor is
@@ -563,11 +541,15 @@ class MotionScanner:
             subtractor=self._subtractor_type.value(kernel_size=kernel_size),
             frame_size=self._input.resolution,
             downscale=self._downscale_factor,
-            regions=self._roi_list)
-        logger.debug('Using detector %s with params: kernel_size = %s%s',
-                     self._subtractor_type.name,
-                     str(kernel_size) if kernel_size else 'off',
-                     ' (auto)' if self._kernel_size == -1 else '')
+            regions=self._regions)
+
+        logger.info(
+            'Using subtractor %s with kernel_size = %s%s',
+            self._subtractor_type.name,
+            str(kernel_size) if kernel_size else 'off',
+            ' (auto)' if self._kernel_size == -1 else '',
+        )
+        # TODO(v1.6): Dump point info only if in debug mode and other stats.
 
         # Correct pre/post and minimum event lengths to account for frame skip factor.
         post_event_len: int = self._post_event_len.frame_num // (self._frame_skip + 1)

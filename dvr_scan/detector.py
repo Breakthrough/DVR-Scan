@@ -20,9 +20,11 @@ from dataclasses import dataclass
 import logging
 import typing as ty
 
+import cv2
 import numpy as np
 
 from dvr_scan.subtractor import Subtractor
+from dvr_scan.selection_window import Point
 
 Rectangle = namedtuple("Rectangle", ['x', 'y', 'w', 'h'])
 
@@ -45,33 +47,29 @@ class MotionDetector:
     """Detects motion on the input provided by the associated MotionScanner."""
 
     def __init__(self, subtractor: Subtractor, frame_size: ty.Tuple[int, int], downscale: int,
-                 regions: ty.Optional[ty.Iterable[Rectangle]]):
-        logging.debug('frame size = %s', str(frame_size))
+                 regions: ty.Optional[ty.Iterable[ty.Iterable[Rectangle]]]):
         self._subtractor = subtractor
         self._frame_size = frame_size
         self._downscale = downscale
         self._regions = list(regions) if not regions is None else []
         self._mask: np.ndarray = np.ones((0, 0))
         self._area: Rectangle = Rectangle(x=0, y=0, w=self._frame_size[0], h=self._frame_size[1])
-        logging.debug('%s', str(self._area))
-        if len(self._regions) > 1:
-            # For multiple ROIs, we calculate a mask array where True denotes ignored (masked)
-            # elements, and False represents unmasked elements - those inside the defined ROI.
+        if self._regions:
+            mask = np.zeros((frame_size[1], frame_size[0], 3), dtype=np.uint8)
+            for shape in self._regions:
+                points = np.array([shape], np.int32)
+                mask = cv2.fillPoly(mask, points, color=(255, 255, 255), lineType=cv2.LINE_4)
+            # True denotes ignored (masked) elements, and False represents unmasked elements (those
+            # inside any region).
+            self._mask = np.logical_not(mask.astype(bool))
+            # Calculate subset of frame to use to speed up calculations.
             min_x, min_y, max_x, max_y = self._frame_size[0], self._frame_size[1], 0, 0
-            for region in self._regions:
-                min_x, min_y = min(min_x, region.x), min(min_y, region.y)
-                max_x, max_y = max(max_x, region.x + region.w), max(max_y, region.y + region.h)
-            width, height = max(0, max_x - min_x), max(0, max_y - min_y)
-            logger.debug(f"creating mask, covers [{min_x},{min_y}] to [{max_x}, {max_y}]")
-            self._mask = np.ones((height, width), dtype=bool)
-            for region in self._regions:
-                region = Rectangle(x=region.x - min_x, y=region.y, w=region.w, h=region.h)
-                self._mask[region.y:region.y + region.h, region.x:region.x + region.w] = False
-            if self._downscale > 1:
-                self._mask = self._mask[::self._downscale, ::self._downscale]
-            self._area = Rectangle(x=min_x, y=min_y, w=width, h=height)
-        elif len(self._regions) == 1:
-            self._area = self._regions[0]
+            for shape in self._regions:
+                for point in shape:
+                    min_x, min_y = min(min_x, point.x), min(min_y, point.y)
+                    max_x, max_y = max(max_x, point.x), max(max_y, point.y)
+            self._area: Rectangle = Rectangle(x=min_x, y=min_y, w=max_x - min_x, h=max_y - min_y)
+            logger.debug("Cropping detection area: %s", str(self._area))
 
     @property
     def area(self) -> Rectangle:
@@ -86,9 +84,6 @@ class MotionDetector:
         cropped = None
         if not self._regions:
             cropped = frame
-        elif len(self._regions) == 1:
-            cropped = frame[self._regions[0].y:self._regions[0].y + self._regions[0].h,
-                            self._regions[0].x:self._regions[0].x + self._regions[0].w]
         else:
             cropped = frame[
                 self._area.y:self._area.y + self._area.h,

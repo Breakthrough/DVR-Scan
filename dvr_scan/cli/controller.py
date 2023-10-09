@@ -250,20 +250,12 @@ def run_dvr_scan(settings: ProgramSettings) -> ty.List[ty.Tuple[FrameTimecode, F
         bounding_box=bounding_box,
     )
 
-    roi_list = settings.get('region-of-interest')
-    # TODO(v1.6): Support multiple ROIs by config file.
-    if isinstance(roi_list, Rectangle):
-        if all(x == 0 for x in roi_list):
-            roi_list = []
-
     scanner.set_detection_params(
         detector_type=DetectorType[settings.get('bg-subtractor').upper()],
         threshold=settings.get('threshold'),
         kernel_size=settings.get('kernel-size'),
         downscale_factor=settings.get('downscale-factor'),
-        roi_list=roi_list,
-        show_roi_window=settings.get_arg('show-roi-window'),
-        max_window_size=(settings.get('max-window-height'), settings.get('max-window-width')))
+    )
 
     scanner.set_event_params(
         min_event_len=settings.get('min-event-length'),
@@ -275,6 +267,14 @@ def run_dvr_scan(settings: ProgramSettings) -> ty.List[ty.Tuple[FrameTimecode, F
         start_time=settings.get_arg('start-time'),
         end_time=settings.get_arg('end-time'),
         duration=settings.get_arg('duration'),
+    )
+
+    # TODO(v1.6): Ensure ROI window respects start time if set.
+    scanner.set_regions(
+        region_editor=settings.get('region-editor'),
+        regions=settings.get_arg('regions'),
+        load_region=settings.get('load-region'),
+        save_region=settings.get_arg('save-region'),
     )
 
     # Scan video for motion with specified parameters.
