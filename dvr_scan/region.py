@@ -9,6 +9,7 @@
 # DVR-Scan is licensed under the BSD 2-Clause License; see the included
 # LICENSE file, or visit one of the above pages for details.
 #
+"""Handles detection region processing."""
 
 from collections import namedtuple
 from contextlib import contextmanager
@@ -28,11 +29,22 @@ if HAS_TKINTER:
     import tkinter
     import tkinter.filedialog
 
-WINDOW_NAME = "DVR-Scan: Select ROI"
+_WINDOW_NAME = "DVR-Scan: Select ROI"
 """Title given to the ROI selection window."""
 
-# TODO(v1.6): Figure out how to properly get icon path in the package.
-ICON_PATH = "dist/dvr-scan.ico"
+
+# TODO(v1.6): Figure out how to properly get icon path in the package. The folder will be different
+# in the final Windows build, may have to check if this is a frozen instance or not. Also need to
+# ensure the icon is included in the package metadata.
+# TODO(v1.7): Figure out how to make icon work on Linux. Might need a PNG version.
+def _get_icon_path() -> str:
+    for path in ("dvr-scan.ico", "dist/dvr-scan.ico"):
+        if os.path.exists(path):
+            return path
+    return ''
+
+
+_ICON_PATH = _get_icon_path()
 
 DEFAULT_WINDOW_MODE = (cv2.WINDOW_AUTOSIZE if IS_WINDOWS else cv2.WINDOW_KEEPRATIO)
 """Minimum height/width for a ROI created using the mouse."""
@@ -46,22 +58,27 @@ Size = namedtuple("Size", ['w', 'h'])
 InputRectangle = ty.Tuple[Point, Point]
 
 
-def check_tkinter_support():
-    # TODO(v1.6): Only show the warning if the user hasn't specified a file to save the ROI to.
-    if not HAS_TKINTER:
+@dataclass
+class Snapshot:
+    regions: ty.List[ty.List[Point]]
+    active_shape: ty.Optional[int]
+
+
+def check_tkinter_support(warn_if_notkinter: bool):
+    if warn_if_notkinter and not HAS_TKINTER:
         logger.warning(
             "Warning: Tkinter is not installed. To save the region to disk, use "
             "-s/--save-region [FILE], or install python3-tk (e.g. `sudo apt install python3-tk`).")
 
 
-class RegionValue:
+class RegionValidator:
     """Validator for a set of points representing a closed polygon."""
 
     _IGNORE_CHARS = [',', '/', '(', ')', '[', ']']
     """Characters to ignore."""
 
     def __init__(self, value: str):
-        translation_table = str.maketrans({char: ' ' for char in RegionValue._IGNORE_CHARS})
+        translation_table = str.maketrans({char: ' ' for char in RegionValidator._IGNORE_CHARS})
         values = value.translate(translation_table).split()
         if not all([val.isdigit() for val in values]):
             raise ValueError("Regions can only contain numbers and the following characters:"
@@ -84,7 +101,7 @@ class RegionValue:
         return ", ".join(f'P({x},{y})' for x, y in self._value)
 
 
-# TODO(v1.6): Allow controlling some of these settings in the config file.
+# TODO(v1.7): Allow controlling some of these settings in the config file.
 @dataclass
 class SelectionWindowSettings:
     use_aa: bool = True
@@ -98,28 +115,30 @@ class SelectionWindowSettings:
     highlight_insert: bool = False
 
 
-# TODO(v1.6): Move more of these to SelectionWindowSettings.
+# TODO(v1.7): Move more of these to SelectionWindowSettings.
 MIN_NUM_POINTS = 3
 MAX_HISTORY_SIZE = 1024
 MAX_DOWNSCALE_FACTOR = 100
 MAX_UPDATE_RATE_NORMAL = 20
 MAX_UPDATE_RATE_DRAGGING = 5
-HOVER_DISPLAY_DISTANCE = 200000
+HOVER_DISPLAY_DISTANCE = 260**2
 MAX_DOWNSCALE_AA_LEVEL = 4
 
-KEYBIND_POINT_DELETE = 'x'
-KEYBIND_POINT_ADD = 'q'
+KEYBIND_REGION_ADD = 'a'
+KEYBIND_REGION_DELETE = 'x'
+KEYBIND_REGION_NEXT = 'k'
+KEYBIND_REGION_PREV = 'l'
 KEYBIND_UNDO = 'z'
 KEYBIND_REDO = 'y'
 KEYBIND_MASK = 'm'
-KEYBIND_TOGGLE_AA = 'a'
+KEYBIND_TOGGLE_AA = 'q'
 KEYBIND_WINDOW_MODE = 'r'
 KEYBIND_DOWNSCALE_INC = 'w'
 KEYBIND_DOWNSCALE_DEC = 'e'
 KEYBIND_OUTPUT_LIST = 'c'
 KEYBIND_HELP = 'h'
 KEYBIND_BREAKPOINT = 'b'
-KEYBIND_LOAD = 'l'
+KEYBIND_LOAD = 'o'
 KEYBIND_SAVE = 's'
 
 
@@ -160,22 +179,29 @@ def show_controls():
     _WINDOWS_ONLY = 'Right, ' if IS_WINDOWS else ''
     logger.info(f"""ROI Window Controls:
 
-Add Point           Key: {KEYBIND_POINT_ADD}    Mouse: Left
-Delete Point        Key: {KEYBIND_POINT_DELETE}    Mouse: {_WINDOWS_ONLY}Middle
-Print Points        Key: {KEYBIND_OUTPUT_LIST}
+Editor:
+  Preview             Key: {KEYBIND_MASK}
+  Start Scan          Key: Space, Enter
+  Quit                Key: Escape
+  Save                Key: {KEYBIND_SAVE}
+  Load                Key: {KEYBIND_LOAD}
+  Undo                Key: {KEYBIND_UNDO}
+  Redo                Key: {KEYBIND_REDO}
+  Print Points        Key: {KEYBIND_OUTPUT_LIST}
 
-Start Scan          Key: Space, Enter
-Quit                Key: Escape
-Save                Key: {KEYBIND_SAVE}
-Load                Key: {KEYBIND_LOAD}
-Undo                Key: {KEYBIND_UNDO}
-Redo                Key: {KEYBIND_REDO}
+Regions:
+  Add Point           Mouse: Left
+  Delete Point        Mouse: {_WINDOWS_ONLY}Middle
+  Add Region          Key: {KEYBIND_REGION_ADD}
+  Delete Region       Key: {KEYBIND_REGION_DELETE}
+  Select Region       Key: 1 - 9
+  Next Region         Key: {KEYBIND_REGION_NEXT}
+  Previous Region     Key: {KEYBIND_REGION_PREV}
 
-Toggle Mask         Key: {KEYBIND_MASK}
-Downscale Set       Key: 1 - 9
-Downscale +/-       Key: {KEYBIND_DOWNSCALE_INC}(+), {KEYBIND_DOWNSCALE_DEC} (-)
-Antialiasing        Key: {KEYBIND_TOGGLE_AA}
-Window Mode         Key: {KEYBIND_WINDOW_MODE}
+Display:
+  Downscale +/-       Key: {KEYBIND_DOWNSCALE_INC}(+), {KEYBIND_DOWNSCALE_DEC} (-)
+  Antialiasing        Key: {KEYBIND_TOGGLE_AA}
+  Window Mode         Key: {KEYBIND_WINDOW_MODE}
 """)
 
 
@@ -199,18 +225,34 @@ def bound_point(point: Point, size: Size):
     return Point(min(max(0, point.x), size.w), min(max(0, point.y), size.h))
 
 
+def load_regions(path: ty.AnyStr) -> ty.Iterable[RegionValidator]:
+    region_data = None
+    with open(path, 'rt') as file:
+        region_data = file.readlines()
+    if region_data:
+        return list(
+            RegionValidator(region).value
+            for region in filter(None, (region.strip() for region in region_data)))
+    return []
+
+
 # TODO(v1.7): Allow multiple polygons by adding new ones using keyboard.
 # TODO(v1.7): Allow shifting polygons by using middle mouse button.
 class SelectionWindow:
 
-    def __init__(self, frame: np.ndarray, initial_scale: ty.Optional[int], debug_mode: bool):
+    def __init__(self, frame: np.ndarray, initial_shapes: ty.Optional[ty.List[ty.List[Point]]],
+                 initial_scale: ty.Optional[int], debug_mode: bool):
         self._source_frame = frame.copy()   # Frame before downscaling
         self._source_size = Size(w=frame.shape[1], h=frame.shape[0])
         self._scale: int = 1 if initial_scale is None else initial_scale
         self._frame = frame.copy()          # Workspace
         self._frame_size = Size(w=frame.shape[1], h=frame.shape[0])
         self._original_frame = frame.copy() # Copy to redraw on
-        self._shapes = [initial_point_list(self._frame_size)]
+        if initial_shapes:
+            self._regions = initial_shapes
+        else:
+            self._regions = [initial_point_list(self._frame_size)]
+        self._active_shape = len(self._regions) - 1
         self._history = []
         self._history_pos = 0
         self._curr_mouse_pos = None
@@ -230,7 +272,12 @@ class SelectionWindow:
 
     @property
     def shapes(self) -> ty.Iterable[ty.Iterable[Point]]:
-        return self._shapes
+        return self._regions
+
+    @property
+    def active_region(self) -> ty.Optional[ty.List[Point]]:
+        return self._regions[self._active_shape] if (not self._active_shape is None
+                                                     and bool(self._regions)) else None
 
     def _rescale(self):
         assert self._scale > 0
@@ -244,22 +291,27 @@ class SelectionWindow:
     def _undo(self):
         if self._history_pos < (len(self._history) - 1):
             self._history_pos += 1
-            self._shapes = deepcopy(self._history[self._history_pos])
+            snapshot = deepcopy(self._history[self._history_pos])
+            self._regions = snapshot.regions
+            self._active_shape = snapshot.active_shape
             self._recalculate = True
             self._redraw = True
-            logger.debug("Undo: [%d/%d]", self._history_pos, len(self._history))
+            logger.debug("Undo: [%d/%d]", self._history_pos, len(self._history) - 1)
 
     def _redo(self):
         if self._history_pos > 0:
             self._history_pos -= 1
-            self._shapes = deepcopy(self._history[self._history_pos])
+            snapshot = deepcopy(self._history[self._history_pos])
+            self._regions = snapshot.regions
+            self._active_shape = snapshot.active_shape
             self._recalculate = True
             self._redraw = True
-            logger.debug("Redo: [%d/%d]", self._history_pos, len(self._history))
+            logger.debug("Redo: [%d/%d]", self._history_pos, len(self._history) - 1)
 
     def _commit(self):
+        snapshot = deepcopy(Snapshot(regions=self._regions, active_shape=self._active_shape))
         self._history = self._history[self._history_pos:]
-        self._history.insert(0, deepcopy(self._shapes))
+        self._history.insert(0, snapshot)
         self._history = self._history[:MAX_HISTORY_SIZE]
         self._history_pos = 0
         self._recalculate = True
@@ -267,7 +319,7 @@ class SelectionWindow:
 
     def _emit_points(self):
         region_info = []
-        for shape in self._shapes:
+        for shape in self._regions:
             region_info.append("--region %s" % " ".join(f"{x} {y}" for x, y in shape))
         logger.info("Region data for CLI:\n%s", " ".join(region_info))
 
@@ -278,34 +330,40 @@ class SelectionWindow:
             return
 
         frame = self._original_frame.copy()
-        for shape in self._shapes:
+        # Mask pixels outside of the defined region if we're in mask mode.
+        if self._settings.mask_source:
+            mask = np.zeros_like(frame, dtype=np.uint8)
+            for shape in self._regions:
+                points = np.array([shape], np.int32)
+                if self._scale > 1:
+                    points = points // self._scale
+                mask = cv2.fillPoly(mask, points, color=(255, 255, 255), lineType=cv2.LINE_4)
+            # TODO: We can pre-calculate a masked version of the frame and just swap both out.
+            frame = np.bitwise_and(frame, mask).astype(np.uint8)
+
+        thickness = edge_thickness(self._scale)
+        thickness_active = edge_thickness(self._scale, 1)
+        for shape in self._regions:
             points = np.array([shape], np.int32)
-            thickness = edge_thickness(self._scale)
-            thickness_active = edge_thickness(self._scale, 1)
             if self._scale > 1:
                 points = points // self._scale
-
-            if self._settings.mask_source:
-                mask = cv2.fillPoly(
-                    np.zeros_like(frame, dtype=np.uint8),
-                    points,
-                    color=(255, 255, 255),
-                    lineType=cv2.LINE_4)
-                frame = np.bitwise_and(frame, mask).astype(np.uint8)
-
             line_type = cv2.LINE_AA if self._settings.use_aa and self._scale <= MAX_DOWNSCALE_AA_LEVEL else cv2.LINE_4
-            frame = cv2.polylines(
-                frame,
-                points,
-                isClosed=True,
-                color=self._settings.line_color,
-                thickness=thickness,
-                lineType=line_type)
-        if not self._hover_point is None:
-            first, mid, last = ((self._hover_point - 1) % len(self._shapes[0]), self._hover_point,
-                                (self._hover_point + 1) % len(self._shapes[0]))
+            #
+            if not self._settings.mask_source:
+                frame = cv2.polylines(
+                    frame,
+                    points,
+                    isClosed=True,
+                    color=self._settings.line_color,
+                    thickness=thickness,
+                    lineType=line_type)
+        if not self._hover_point is None and not self._settings.mask_source:
+            first, mid, last = ((self._hover_point - 1) % len(self.active_region),
+                                self._hover_point,
+                                (self._hover_point + 1) % len(self.active_region))
             points = np.array(
-                [[self._shapes[0][first], self._shapes[0][mid], self._shapes[0][last]]], np.int32)
+                [[self.active_region[first], self.active_region[mid], self.active_region[last]]],
+                np.int32)
             if self._scale > 1:
                 points = points // self._scale
             frame = cv2.polylines(
@@ -316,10 +374,11 @@ class SelectionWindow:
                 if not self._dragging else self._settings.hover_color_alt,
                 thickness=thickness_active,
                 lineType=line_type)
-        elif not self._nearest_points is None and self._settings.highlight_insert:
+        elif not self._nearest_points is None and self._settings.highlight_insert and not self._settings.mask_source:
 
             points = np.array([[
-                self._shapes[0][self._nearest_points[0]], self._shapes[0][self._nearest_points[1]]
+                self.active_region[self._nearest_points[0]],
+                self.active_region[self._nearest_points[1]]
             ]], np.int32)
             if self._scale > 1:
                 points = points // self._scale
@@ -331,44 +390,47 @@ class SelectionWindow:
                 thickness=thickness_active,
                 lineType=line_type)
 
-        radius = control_handle_radius(self._scale)
-        for i, point in enumerate(self._shapes[0]):
-            color = self._settings.line_color_alt
-            if not self._hover_point is None:
-                if self._hover_point == i:
-                    color = self._settings.hover_color_alt if not self._dragging else self._settings.interact_color
-            elif not self._nearest_points is None and i in self._nearest_points:
-                color = self._settings.hover_color if self._dragging else self._settings.interact_color
-            start, end = (
-                Point((point.x // self._scale) - radius, (point.y // self._scale) - radius),
-                Point((point.x // self._scale) + radius, (point.y // self._scale) + radius),
-            )
-            cv2.rectangle(
-                frame,
-                start,
-                end,
-                color,
-                thickness=cv2.FILLED,
-            )
+        if not self.active_region is None:
+            radius = control_handle_radius(self._scale)
+            for i, point in enumerate(self.active_region):
+                color = self._settings.line_color_alt
+                if not self._hover_point is None:
+                    if self._hover_point == i:
+                        color = self._settings.hover_color_alt if not self._dragging else self._settings.interact_color
+                elif not self._nearest_points is None and i in self._nearest_points:
+                    color = self._settings.hover_color if self._dragging else self._settings.interact_color
+                start, end = (
+                    Point((point.x // self._scale) - radius, (point.y // self._scale) - radius),
+                    Point((point.x // self._scale) + radius, (point.y // self._scale) + radius),
+                )
+                cv2.rectangle(
+                    frame,
+                    start,
+                    end,
+                    color,
+                    thickness=cv2.FILLED,
+                )
         self._frame = frame
-        cv2.imshow(WINDOW_NAME, self._frame)
+        cv2.imshow(_WINDOW_NAME, self._frame)
         self._redraw = False
 
     def _find_nearest(self) -> ty.Tuple[int, int]:
         nearest_seg, nearest_dist, largest_cosine = 0, 2**31, math.pi
-        for i in range(len(self._shapes[0])):
+        for i in range(len(self.active_region)):
             # Create a triangle where side a's length is the mouse to closest point on the line,
             # side c is the length to the furthest point, and side b is the line segment length.
-            next = (i + 1) % len(self._shapes[0])
+            next = (i + 1) % len(self.active_region)
             a_sq = min(self._mouse_dist[i], self._mouse_dist[next])
             c_sq = max(self._mouse_dist[i], self._mouse_dist[next])
             b_sq = self._segment_dist[i]
-            # Calculate "angle" C (angle between line segment and closest line to mouse)
-            a = math.sqrt(a_sq)
-            b = math.sqrt(b_sq)
+            assert a_sq > 0 # Should never hit this since we check _hovering_over first.
+            if b_sq == 0:
+                            # Two adjacent points are overlapping, just skip this one.
+                continue
+            a, b = math.sqrt(a_sq), math.sqrt(b_sq)
             cos_C = ((a_sq + b_sq) - c_sq) / (2.0 * a * b)
-            # If cos_C is between [0,1] the triangle is acute. If it's not, just take the distance
-            # of the closest point.
+                            # If cos_C is between [0,1] the triangle is acute. If it's not, just take the distance
+                            # of the closest point.
             dist = int(a_sq - (int(a * cos_C)**2)) if cos_C > 0 else a_sq
             if dist < nearest_dist or (dist == nearest_dist and cos_C > largest_cosine):
                 nearest_seg, nearest_dist, largest_cosine = i, dist, cos_C
@@ -376,7 +438,7 @@ class SelectionWindow:
         self._settings.highlight_insert = nearest_dist <= HOVER_DISPLAY_DISTANCE
         if last != self._settings.highlight_insert:
             self._redraw = True
-        self._nearest_points = (nearest_seg, (nearest_seg + 1) % len(self._shapes[0]))
+        self._nearest_points = (nearest_seg, (nearest_seg + 1) % len(self.active_region))
 
     def _hovering_over(self) -> ty.Optional[int]:
         min_i = 0
@@ -389,20 +451,21 @@ class SelectionWindow:
                                                     self._scale)**2 else None
 
     def _init_window(self):
-        cv2.namedWindow(WINDOW_NAME, self._settings.window_mode)
+        cv2.namedWindow(_WINDOW_NAME, self._settings.window_mode)
         if self._settings.window_mode == cv2.WINDOW_AUTOSIZE:
-            cv2.resizeWindow(WINDOW_NAME, width=self._frame_size.w, height=self._frame_size.h)
-        cv2.imshow(WINDOW_NAME, mat=self._frame)
-        cv2.setMouseCallback(WINDOW_NAME, on_mouse=self._handle_mouse_input)
+            cv2.resizeWindow(_WINDOW_NAME, width=self._frame_size.w, height=self._frame_size.h)
+        cv2.imshow(_WINDOW_NAME, mat=self._frame)
+        cv2.setMouseCallback(_WINDOW_NAME, on_mouse=self._handle_mouse_input)
 
-    # TODO(v1.6): Need to return status if ROI selection succeeded or user hit escape/closed window.
-    def run(self) -> bool:
+    def run(self, warn_if_notkinter: bool) -> bool:
         logger.debug("Creating window for frame (scale = %d)", self._scale)
         self._init_window()
-        check_tkinter_support()
-        set_icon(WINDOW_NAME, ICON_PATH)
+        check_tkinter_support(warn_if_notkinter)
+        set_icon(_WINDOW_NAME, _ICON_PATH)
+        regions_valid = False
+        logger.info(f"Region editor active. Press {KEYBIND_HELP} to show controls.")
         while True:
-            if not cv2.getWindowProperty(WINDOW_NAME, cv2.WND_PROP_VISIBLE):
+            if not cv2.getWindowProperty(_WINDOW_NAME, cv2.WND_PROP_VISIBLE):
                 logger.debug("Main window closed.")
                 break
             self._draw()
@@ -412,7 +475,8 @@ class SelectionWindow:
             if key == 27:
                 break
             elif key in (ord(' '), 13):
-                return True
+                regions_valid = True
+                break
             elif key == ord(KEYBIND_BREAKPOINT) and self._debug_mode:
                 breakpoint()
             elif key == ord(KEYBIND_TOGGLE_AA):
@@ -438,7 +502,7 @@ class SelectionWindow:
             elif key == ord(KEYBIND_MASK):
                 self._toggle_mask()
             elif key == ord(KEYBIND_WINDOW_MODE):
-                cv2.destroyWindow(WINDOW_NAME)
+                cv2.destroyWindow(_WINDOW_NAME)
                 if self._settings.window_mode == cv2.WINDOW_KEEPRATIO:
                     self._settings.window_mode = cv2.WINDOW_AUTOSIZE
                 else:
@@ -447,29 +511,34 @@ class SelectionWindow:
                     "Window Mode: %s", "KEEPRATIO"
                     if self._settings.window_mode == cv2.WINDOW_KEEPRATIO else "AUTOSIZE")
                 self._init_window()
-            elif key == ord(KEYBIND_POINT_DELETE):
-                self._delete_point()
-            elif key == ord(KEYBIND_POINT_ADD):
-                self._add_point()
+
+            elif key == ord(KEYBIND_REGION_ADD):
+                self._add_region()
+            elif key == ord(KEYBIND_REGION_DELETE):
+                self._delete_region()
+            elif key == ord(KEYBIND_REGION_NEXT):
+                self._next_region()
+            elif key == ord(KEYBIND_REGION_PREV):
+                self._prev_region()
+
             elif key == ord(KEYBIND_HELP):
                 show_controls()
-            elif key == ord('l'):
+            elif key == ord(KEYBIND_LOAD):
                 self._load()
-            elif key == ord('s'):
+            elif key == ord(KEYBIND_SAVE):
                 self._save()
-            elif key >= ord('1') and key <= ord('9'):
-                scale = 1 + key - ord('1')
-                if scale != self._scale:
-                    self._scale = scale
-                    self._rescale()
-        return False
+            elif key >= ord('0') and key <= ord('9'):
+                self._select_region((key - ord('1')) % 10)
+
+        cv2.destroyAllWindows()
+        return regions_valid
 
     def _save(self):
         if not HAS_TKINTER:
             logger.debug("Cannot show file dialog.")
             return
         save_path = None
-        with temp_tk_window(ICON_PATH) as _:
+        with temp_tk_window(_ICON_PATH) as _:
             save_path = tkinter.filedialog.asksaveasfilename(
                 title="DVR-Scan: Save Region",
                 filetypes=[("Region File", "*.txt")],
@@ -478,8 +547,9 @@ class SelectionWindow:
             )
         if save_path:
             with open(save_path, "wt") as region_file:
-                regions = " ".join(f"{x} {y}" for x, y in self._shapes[0])
-                region_file.write(f"{regions}\n")
+                for shape in self._regions:
+                    region_file.write(" ".join(f"{x} {y}" for x, y in shape))
+                    region_file.write("\n")
             logger.info('Saved region to: %s', save_path)
 
     def _load(self):
@@ -487,7 +557,7 @@ class SelectionWindow:
             logger.debug("Cannot show file dialog.")
             return
         load_path = None
-        with temp_tk_window(ICON_PATH) as _:
+        with temp_tk_window(_ICON_PATH) as _:
             load_path = tkinter.filedialog.askopenfilename(
                 title="DVR-Scan: Load Region",
                 filetypes=[("Region File", "*.txt")],
@@ -498,36 +568,31 @@ class SelectionWindow:
         if not os.path.exists(load_path):
             logger.error(f"File does not exist: {load_path}")
             return
-        region_data = None
-        with open(load_path, 'rt') as region_file:
-            region_data = region_file.readlines()
-        regions = None
-        if region_data:
-            try:
-                regions = list(
-                    RegionValue(region)
-                    for region in filter(None, (region.strip() for region in region_data)))
-            except ValueError as ex:
-                reason = " ".join(str(arg) for arg in ex.args)
-                if not reason:
-                    reason = "Could not parse region file!"
-                logger.error(f"Error loading region from {load_path}: {reason}")
-        if regions:
-            logger.debug("Loaded %d polygon%s from region file:\n%s", len(region_data),
-                         's' if len(region_data) > 1 else '',
+        regions = []
+        try:
+            regions = load_regions(load_path)
+        except ValueError as ex:
+            reason = " ".join(str(arg) for arg in ex.args)
+            if not reason:
+                reason = "Could not parse region file!"
+            logger.error(f"Error loading region from {load_path}: {reason}")
+        else:
+            logger.debug("Loaded %d polygon%s from region file:\n%s", len(regions),
+                         's' if len(regions) > 1 else '',
                          "\n".join(f"[{i}] = {points}" for i, points in enumerate(regions)))
-            if len(regions) > 1:
-                logger.error("Error: GUI does not support multiple regions.")
-                return
-            self._shapes[0] = [bound_point(point, self._source_size) for point in regions[0].value]
+
+            self._regions = [
+                [bound_point(point, self._source_size) for point in shape] for shape in regions
+            ]
             self._commit()
+            self._active_shape = 0 if len(self._regions) > 0 else None
 
     def _delete_point(self):
         if not self._hover_point is None:
-            if len(self._shapes[0]) > MIN_NUM_POINTS:
+            if len(self.active_region) > MIN_NUM_POINTS:
                 hover = self._hover_point
-                x, y = self._shapes[0][hover]
-                del self._shapes[0][hover]
+                x, y = self.active_region[hover]
+                del self.active_region[hover]
                 self._hover_point = None
                 logger.debug("Del: [%d] = %s", hover, f'P({x},{y})')
                 self._commit()
@@ -544,8 +609,8 @@ class SelectionWindow:
         if not self._nearest_points is None:
             insert_pos = (1 + self._nearest_points[0] if self._nearest_points[0]
                           < self._nearest_points[1] else self._nearest_points[1])
-            insert_pos = insert_pos % len(self._shapes[0])
-            self._shapes[0].insert(insert_pos, self._curr_mouse_pos)
+            insert_pos = insert_pos % len(self.active_region)
+            self.active_region.insert(insert_pos, self._curr_mouse_pos)
             self._nearest_points = None
             self._hover_point = insert_pos
             self._dragging = True
@@ -559,19 +624,23 @@ class SelectionWindow:
         # from the last calculation point.
         if self._curr_mouse_pos is None:
             return
+        if not self._regions or self.active_region is None:
+            self._hover_point = None
+            self._nearest_points = None
+            return
         last_hover = self._hover_point
         last_nearest = self._nearest_points
-        # Calculate distance from mouse cursor  to each point.
+        # Calculate distance from mouse cursor to each point.
         self._mouse_dist = [
-            squared_distance(self._curr_mouse_pos, point) for point in self._shapes[0]
+            squared_distance(self._curr_mouse_pos, point) for point in self.active_region
         ]
         # Check if we're hovering over a point.
         self._hover_point = self._hovering_over()
         # Optimization: Only recalculate segment distances if we aren't hovering over a point.
         if self._hover_point is None:
-            num_points = len(self._shapes[0])
+            num_points = len(self.active_region)
             self._segment_dist = [
-                squared_distance(self._shapes[0][i], self._shapes[0][(i + 1) % num_points])
+                squared_distance(self.active_region[i], self.active_region[(i + 1) % num_points])
                 for i in range(num_points)
             ]
             self._find_nearest()
@@ -586,6 +655,8 @@ class SelectionWindow:
         self._curr_mouse_pos = Point(bounded.x * self._scale, bounded.y * self._scale)
 
         if event == cv2.EVENT_LBUTTONDOWN:
+            if not self._regions:
+                logger.info(f"No regions to edit, add a new one by pressing {KEYBIND_REGION_ADD}.")
             if not self._hover_point is None:
                 self._dragging = True
                 self._drag_start = self._curr_mouse_pos
@@ -596,7 +667,7 @@ class SelectionWindow:
 
         elif event == cv2.EVENT_MOUSEMOVE:
             if self._dragging:
-                self._shapes[0][self._hover_point] = self._curr_mouse_pos
+                self.active_region[self._hover_point] = self._curr_mouse_pos
                 self._redraw = True
             else:
                 self._recalculate = True
@@ -604,10 +675,10 @@ class SelectionWindow:
         elif event == cv2.EVENT_LBUTTONUP:
             if self._dragging:
                 assert not self._hover_point is None
-                if (len(self._shapes[0]) != len(self._history[self._history_pos])
+                if (len(self.active_region) != len(self._history[self._history_pos].regions)
                         or self._curr_mouse_pos != self._drag_start):
-                    self._shapes[0][self._hover_point] = self._curr_mouse_pos
-                    x, y = self._shapes[0][self._hover_point]
+                    self.active_region[self._hover_point] = self._curr_mouse_pos
+                    x, y = self.active_region[self._hover_point]
                     logger.debug("Add: [%d] = %s", self._hover_point, f'P({x},{y})')
                     self._commit()
                 self._redraw = True
@@ -620,3 +691,62 @@ class SelectionWindow:
         # we just started dragging a point (so it changes colour quicker).
         if not self._dragging or drag_started:
             self._draw()
+
+    def _add_region(self):
+        if self._dragging:
+            return
+
+        # Add a box around the current mouse position that's roughly 20% of the frame.
+        width, height = max(1, self._source_size.w // 10), max(1, self._source_size.h // 10)
+
+        top_left = Point(x=self._curr_mouse_pos.x - width, y=self._curr_mouse_pos.y - height)
+        points = [
+            top_left,
+            Point(x=top_left.x + 2 * width, y=top_left.y),
+            Point(x=top_left.x + 2 * width, y=top_left.y + 2 * height),
+            Point(x=top_left.x, y=top_left.y + 2 * height),
+        ]
+
+        self._regions.append([bound_point(point, self._source_size) for point in points])
+        self._commit()
+        self._active_shape = len(self._regions) - 1
+        self._recalculate = True
+        self._redraw = True
+
+    def _delete_region(self):
+        if self._dragging:
+            return
+        if self._regions:
+            del self._regions[self._active_shape]
+            self._commit()
+            if not self._regions:
+                self._active_shape = None
+            else:
+                self._active_shape = (self._active_shape - 1) % len(self._regions)
+            self._recalculate = True
+            self._redraw = True
+
+    def _select_region(self, index: int):
+        if self._dragging:
+            return
+        assert index >= 0
+        if self._regions and index < len(self._regions):
+            self._active_shape = index
+            self._recalculate = True
+            self._redraw = True
+
+    def _next_region(self):
+        if self._dragging:
+            return
+        if self._regions:
+            self._active_shape = (self._active_shape + 1) % len(self._regions)
+            self._recalculate = True
+            self._redraw = True
+
+    def _prev_region(self):
+        if self._dragging:
+            return
+        if self._regions:
+            self._active_shape = (self._active_shape - 1) % len(self._regions)
+            self._recalculate = True
+            self._redraw = True

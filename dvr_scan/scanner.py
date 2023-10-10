@@ -35,7 +35,7 @@ from tqdm.contrib.logging import logging_redirect_tqdm
 from dvr_scan.detector import MotionDetector, Rectangle
 from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
 from dvr_scan.platform import get_filename, get_min_screen_bounds, is_ffmpeg_available
-from dvr_scan.selection_window import SelectionWindow, Point, Size, bound_point
+from dvr_scan.region import SelectionWindow, Point, Size, bound_point, load_regions
 from dvr_scan.subtractor import (
     SubtractorMOG2,
     SubtractorCNT,
@@ -240,9 +240,10 @@ class MotionScanner:
         self._threshold = 0.15                    # -t/--threshold
         self._kernel_size = None                  # -k/--kernel-size
         self._downscale_factor = 1                # -df/--downscale-factor
-                                                  # TODO(v1.6): Add ability to configure this filter by adding a threshold + amount option
-                                                  # (e.g. ignore up to 2 frames in a row that are over score 100).
-        self._max_score = 255.0                   # scores greater than this are ignored
+
+        # TODO(v1.6): Add ability to configure the rejection filter (_max_score_) by adding a
+        # threshold + amount option (e.g. ignore up to 2 frames in a row that are over score 100).
+        self._max_score = 255.0
 
         # Motion Event Parameters (set_event_params)
         self._min_event_len = None  # -l/--min-event-length
@@ -250,10 +251,10 @@ class MotionScanner:
         self._post_event_len = None # -tp/--time-post-event
 
         # Region Parameters (set_region)
-        self._region_editor = False                       # -w/--region-window
-        self._regions: Optional[List[List[Point]]] = None # -a/--add-region, -w/--region-window
-        self._load_region: Optional[str] = None           # -R/--load-region
-        self._save_region: Optional[str] = None           # -s/--save-region
+        self._region_editor = False             # -w/--region-window
+        self._regions: List[List[Point]] = []   # -a/--add-region, -w/--region-window
+        self._load_region: Optional[str] = None # -R/--load-region
+        self._save_region: Optional[str] = None # -s/--save-region
 
         # Input Video Parameters (set_video_time)
         self._input: VideoJoiner = VideoJoiner(input_videos) # -i/--input
@@ -377,11 +378,14 @@ class MotionScanner:
         assert kernel_size == -1 or kernel_size == 0 or kernel_size >= 3
         self._kernel_size = kernel_size
 
-    def set_regions(self, region_editor: bool, regions: Optional[List[List[Point]]],
-                    load_region: Optional[str], save_region: Optional[str]):
+    def set_regions(self,
+                    region_editor: bool = False,
+                    regions: Optional[List[List[Point]]] = None,
+                    load_region: Optional[str] = None,
+                    save_region: Optional[str] = None):
         """Set options for limiting detection regions."""
         self._region_editor = region_editor
-        self._regions = regions
+        self._regions = regions if regions else []
         self._load_region = load_region
         self._save_region = save_region
 
@@ -456,18 +460,24 @@ class MotionScanner:
 
         return (NullProgressBar(), NullContextManager())
 
-    def _process_regions(self) -> bool:
-
-        if self._save_region:
-            raise NotImplementedError()
+    def _handle_regions(self) -> bool:
         if self._load_region:
-            raise NotImplementedError()
-        if self._region_editor and self._regions:
-            raise NotImplementedError()
-
-        # TODO(v1.6): Handle self._load_region. Right now they are overwritten by the region editor.
-        # TODO(v1.6): Allow adding multiple ROIs by re-displaying the window in a loop.
-        # TODO(v1.6): Display ROIs added via command line/config file as overlay on frame.
+            try:
+                regions = load_regions(self._load_region)
+            except ValueError as ex:
+                reason = " ".join(str(arg) for arg in ex.args)
+                if not reason:
+                    reason = "Could not parse region file!"
+                logger.error(f"Error loading region from {self._load_region}: {reason}")
+            else:
+                logger.debug("Loaded %d region%s from file:\n%s", len(regions),
+                             's' if len(regions) > 1 else '',
+                             "\n".join(f"[{i}] = {points}" for i, points in enumerate(regions)))
+            self._regions += regions
+        if self._regions:
+            self._regions = [[bound_point(point, Size(*self._input.resolution))
+                              for point in shape]
+                             for shape in self._regions]
         if self._region_editor:
             self._logger.info("Selecting area of interest:")
             # TODO: We should process this frame.
@@ -483,22 +493,33 @@ class MotionScanner:
                     factor_h = frame_h / float(max_h) if max_h > 0 and frame_h > max_h else 1
                     factor_w = frame_w / float(max_w) if max_w > 0 and frame_w > max_w else 1
                     scale_factor = round(max(factor_h, factor_w))
-            # TODO(v1.6): Allow previewing a pre-defined set of polygons if they were loaded from
-            # command line or config file.
-            regions = SelectionWindow(frame_for_crop, scale_factor, debug_mode=self._debug_mode)
-            if not regions.run():
+            regions = SelectionWindow(
+                frame=frame_for_crop,
+                initial_shapes=self._regions,
+                initial_scale=scale_factor,
+                debug_mode=self._debug_mode)
+            save_was_specified = bool(self._save_region)
+            if not regions.run(warn_if_notkinter=not save_was_specified):
                 return False
-            # TODO(v1.6): Handle self._save_region.
-            self._regions = regions.shapes
-        # Ensure all regions are bounded to the frame.
 
+            self._regions = list(regions.shapes)
         if self._regions:
-            print(self._regions)
-            self._regions = [[bound_point(point, Size(*self._input.resolution))
-                              for point in shape]
-                             for shape in self._regions]
             logger.info(f"Limiting detection to {len(self._regions)} "
                         f"region{'s' if len(self._regions) > 1 else ''}.")
+        else:
+            logger.info("No regions selected, using entire frame.")
+        if self._save_region:
+            regions = self._regions if self._regions else [[
+                Point(0, 0),
+                Point(frame_w - 1, 0),
+                Point(frame_w - 1, frame_h - 1),
+                Point(0, frame_h - 1)
+            ]]
+            with open(self._save_region, 'wt') as region_file:
+                for shape in self._regions:
+                    region_file.write(" ".join(f"{x} {y}" for x, y in shape))
+                    region_file.write("\n")
+            logger.info(f"Saved region data to: {self._save_region}")
         return True
 
     def stop(self):
@@ -524,7 +545,7 @@ class MotionScanner:
         start_frame = self._input.position.frame_num
 
         # Show ROI selection window if required.
-        if not self._process_regions():
+        if not self._handle_regions():
             self._logger.info("Exiting...")
             return None
 
@@ -549,14 +570,15 @@ class MotionScanner:
             str(kernel_size) if kernel_size else 'off',
             ' (auto)' if self._kernel_size == -1 else '',
         )
-        # TODO(v1.6): Dump point info only if in debug mode and other stats.
 
-        # Correct pre/post and minimum event lengths to account for frame skip factor.
+        # Correct event length parameters to account frame skip.
         post_event_len: int = self._post_event_len.frame_num // (self._frame_skip + 1)
         pre_event_len: int = self._pre_event_len.frame_num // (self._frame_skip + 1)
         min_event_len: int = max(self._min_event_len.frame_num // (self._frame_skip + 1), 1)
+
         # Calculations below rely on min_event_len always being >= 1 (cannot be zero)
         assert min_event_len >= 1, "min_event_len must be at least 1 frame"
+
         # Ensure that we include the exact amount of time specified in `-tb`/`--time-before` when
         # shifting the event start time. Instead of using `-l`/`--min-event-len` directly, we
         # need to compensate for rounding errors when we corrected it for frame skip. This is
@@ -569,11 +591,10 @@ class MotionScanner:
         event_end = FrameTimecode(timecode=0, fps=self._input.framerate)
         last_frame_above_threshold = 0
 
-        # TODO(v1.6): This doesn't display correctly when there is a single ROI.
         if self._bounding_box:
             self._bounding_box.set_corrections(
                 downscale_factor=self._downscale_factor,
-                shift=(detector.area.x, detector.area.y),
+                shift=(detector.area[0].x, detector.area[0].y),
                 frame_skip=self._frame_skip)
 
         # Motion event scanning/detection loop. Need to avoid CLI output/logging until end of the
@@ -584,7 +605,6 @@ class MotionScanner:
 
         # Don't use the first result from the background subtractor.
         processed_first_frame = False
-
         progress_bar, context_manager = self._create_progress_bar(show_progress=self._show_progress)
 
         # TODO: The main scanning loop should be refactored into a state machine.
@@ -607,7 +627,7 @@ class MotionScanner:
                 if frame is None:
                     break
                 assert frame.frame_rgb is not None
-                # TODO(v1.6): Is this copy necessary?
+                # TODO(v1.7): Is this copy necessary?
                 frame_copy = (
                     frame.frame_rgb
                     if not self._output_mode == OutputMode.OPENCV else frame.frame_rgb.copy())
@@ -626,10 +646,6 @@ class MotionScanner:
                     processed_first_frame = True
                 event_window = event_window[-min_event_len:]
 
-                # TODO(v1.6): Figure out the best way to make the overlay work with multiple ROIs.
-                # It might be good enough to simply ignore the ROI and just draw the bounds over
-                # the unmasked `result.subtracted` and leave this as a follow-up, but verify that
-                # the result still works as intended.
                 bounding_box = None
                 # TODO: Only call clear() when we exit the current motion event.
                 # TODO: Include frames below the threshold for smoothing, or push a sentinel

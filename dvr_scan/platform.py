@@ -130,12 +130,15 @@ def get_filename(path: AnyStr, include_extension: bool) -> AnyStr:
 
 
 def set_icon(window_name: str, icon_path: str):
+    if not icon_path:
+        return
     if not IS_WINDOWS:
         # TODO: Set icon on Linux/OSX.
         return
     SendMessage = ctypes.windll.user32.SendMessageW
     FindWindow = ctypes.windll.user32.FindWindowW
     LoadImage = ctypes.windll.user32.LoadImageW
+    SetFocus = ctypes.windll.user32.SetFocus
     IMAGE_ICON = 1
     ICON_SMALL = 1
     ICON_BIG = 1
@@ -146,6 +149,7 @@ def set_icon(window_name: str, icon_path: str):
     hIcon = LoadImage(None, icon_path, IMAGE_ICON, 0, 0, LR_LOADFROMFILE | LR_CREATEDIBSECTION)
     SendMessage(hWnd, WM_SETICON, ICON_SMALL, hIcon)
     SendMessage(hWnd, WM_SETICON, ICON_BIG, hIcon)
+    SetFocus(hWnd)
 
 
 @contextmanager

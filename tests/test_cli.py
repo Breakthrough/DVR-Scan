@@ -34,8 +34,8 @@ BASE_OUTPUT_NAME: str = 'traffic_camera'
 BASE_COMMAND = [
     '--input',
     'tests/resources/traffic_camera.mp4',
-    '--region-of-interest',
-    '631,532, 210,127',
+    '--add-region',
+    '631 532 841 532 841 659 631 659',
     '--min-event-length',
     '4',
     '--time-before-event',
@@ -44,7 +44,6 @@ BASE_COMMAND = [
 BASE_COMMAND_NUM_EVENTS = 3
 
 TEST_CONFIG_FILE = """
-region-of-interest = 631,532 210,127
 min-event-length = 4
 time-before-event = 0
 """
@@ -218,7 +217,7 @@ def test_config_file(tmp_path):
         file.write(TEST_CONFIG_FILE)
 
     output = subprocess.check_output(
-        args=DVR_SCAN_COMMAND + BASE_COMMAND[0:2] + [ # Only use the input from BASE_COMMAND.
+        args=DVR_SCAN_COMMAND + BASE_COMMAND[0:4] + [ # Only use the input from BASE_COMMAND.
             '--output-dir',
             tmp_path,
             '--config',

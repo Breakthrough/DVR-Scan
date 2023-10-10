@@ -269,7 +269,7 @@ def run_dvr_scan(settings: ProgramSettings) -> ty.List[ty.Tuple[FrameTimecode, F
         duration=settings.get_arg('duration'),
     )
 
-    # TODO(v1.6): Ensure ROI window respects start time if set.
+    # TODO(v1.7): Ensure ROI window respects start time if set.
     scanner.set_regions(
         region_editor=settings.get('region-editor'),
         regions=settings.get_arg('regions'),

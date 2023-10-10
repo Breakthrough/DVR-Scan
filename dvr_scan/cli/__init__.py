@@ -25,7 +25,7 @@ from typing import List, Optional
 
 import dvr_scan
 from dvr_scan.cli.config import ConfigRegistry, CHOICE_MAP, USER_CONFIG_FILE_PATH
-from dvr_scan.selection_window import Point, RegionValue
+from dvr_scan.region import Point, RegionValidator
 
 # Version string shown for the -v/--version CLI argument.
 VERSION_STRING = f"""------------------------------------------------
@@ -306,7 +306,7 @@ class RegionActionDeprecated(argparse.Action):
         if not values:
             setattr(namespace, 'region_editor', True)
             return
-        # TODO(v1.6): Re-add backwards compat. for X Y W H rectangles.
+        # TODO(v1.6): Re-add backwards compatibility for X Y W H rectangles.
         raise NotImplementedError()
         # Append this ROI to any existing ones, if any.
         items = getattr(namespace, 'roi_deprecated', [])
@@ -346,7 +346,7 @@ class RegionAction(argparse.Action):
     def __call__(self, parser, namespace, values: List[str], option_string=None):
 
         try:
-            region = RegionValue(" ".join(values))
+            region = RegionValidator(" ".join(values))
         except ValueError as ex:
             message = " ".join(str(arg) for arg in ex.args)
             raise (argparse.ArgumentError(
