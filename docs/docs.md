@@ -2,7 +2,6 @@
 # :fontawesome-solid-book:Documentation
 
 
-
 ## :fontawesome-solid-terminal:`dvr-scan` Options
 
 ### General
@@ -39,7 +38,7 @@ The following options control terminal output:
     Path to input video. May specify multiple input videos so long as they have the same resolution and framerate. Wildcards/globs are supported (e.g. `-i folder/*.mp4`). Extracted motion events use the filename of the first video only as a prefix.
 
  * <b><pre>-c settings.cfg, --config settings.cfg</pre></b>
-    Path to config file. If not set, tries to load one automatically from the user settings folder. See the [config file documentation](#config-file) for details.
+    Path to config file. If not set, tries to load one automatically from the user settings folder (run `dvr-scan --help` to see the exact path for your system). See the [config file documentation](#config-file) for what options can be specified.
 
 #### Seeking/Duration
 
@@ -78,12 +77,11 @@ dvr-scan -i video.mp4 --start-time 00:35:52 --duration 00:05:00
     ```
     </span>
 
+!!! warning "Multiple input files are not supported when `-m`/`--output-mode` is set to `ffmpeg` or `copy`. You can use `ffmpeg` to [concatenate all input videos](https://trac.ffmpeg.org/wiki/Concatenate) *before* using DVR-Scan, or [run DVR-Scan in a for-loop](guide.md#processing-multiple-videos)."
+
  * <b><pre>-o video.avi, --output video.avi</pre></b> Save all motion events to a single file, instead of the default (one file per event). Only supported with the default output mode (`opencv`). Requires `.avi` extension.
 
  * <b><pre>-mo mask.avi, --mask-output mask.avi</pre></b> Save a video containing the calculated motion mask on each frame. Useful for tuning motion detection. Requires `.avi` extension.
-
-
-
 
 
 ### Events
@@ -203,15 +201,7 @@ TODO - This feature is under development in v1.6. More to come here.
 
 ## :fontawesome-regular-file:Config File
 
-Many of DVR-Scan's options and defaults can be set using a config file.  This page describes all possible config options, but you can also download [the `dvr-scan.cfg` config template](https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.6/dvr-scan.cfg) as a starting point.
-
-A config file path can be specified via the `-c`/`--config` option. DVR-Scan also looks for a `dvr-scan.cfg` file in the following locations:
-
- * Windows: `C:/Users/%USERNAME%/AppData/Local/DVR-Scan/dvr-scan.cfg`
- * Linux: `~/.config/DVR-Scan/dvr-scan.cfg` or `$XDG_CONFIG_HOME/dvr-scan.cfg`
- * OSX: `~/Library/Preferences/DVR-Scan/dvr-scan.cfg`
-
-Run `dvr-scan --help` to see the exact path on your system which will be used (it will be listed under the help text for the `-c`/`--config` option).
+Settings are specified one per line as `option = value`. Lines starting with `#` are ignored as comments. The [`dvr-scan.cfg` config template](https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.6/dvr-scan.cfg) can be saved and used as a starting point (it includes the information in this section as comments).
 
 Configuration options are set as `option = value`, and lines starting with `#` are ignored as comments. For example:
 
@@ -223,12 +213,6 @@ time-post-event = 2.0s
 bounding-box = yes
 bounding-box-color = 0xFF0000
 ```
-
-------------------------------------------------
-
-### Template
-
-You can download [the `dvr-scan.cfg` template](https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.6/dvr-scan.cfg) to use as a starting point for creating a config file from scratch.
 
 ------------------------------------------------
 
@@ -266,6 +250,8 @@ You can download [the `dvr-scan.cfg` template](https://raw.githubusercontent.com
     output-mode = opencv
     ```
     </span>
+
+!!! warning "Multiple input files are not supported when `-m`/`--output-mode` is set to `ffmpeg` or `copy`. You can use `ffmpeg` to [concatenate all input videos](https://trac.ffmpeg.org/wiki/Concatenate) *before* using DVR-Scan, or [run DVR-Scan in a for-loop](guide.md#processing-multiple-videos)."
 
  * <b><pre>ffmpeg-input-args</pre></b>
     Arguments added before the input to `ffmpeg` when *output-mode* is *ffmpeg* or *copy*. Note that *-y* and *-nostdin* are always added.

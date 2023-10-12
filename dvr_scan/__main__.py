@@ -19,14 +19,12 @@ from subprocess import CalledProcessError
 import sys
 
 from dvr_scan.cli.controller import parse_settings, run_dvr_scan
-from dvr_scan.cli.config import ConfigLoadFailure
 
 from scenedetect import VideoOpenFailure
 from scenedetect.platform import logging_redirect_tqdm, FakeTqdmLoggingRedirect
 
 EXIT_SUCCESS: int = 0
 EXIT_ERROR: int = 1
-
 
 def main():
     """Main entry-point for DVR-Scan."""

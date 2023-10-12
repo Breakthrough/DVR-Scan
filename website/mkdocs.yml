@@ -70,6 +70,7 @@ nav:
  - 'Home': 'index.md'
  - 'Download': 'download.md'
  - 'Changelog': 'changelog.md'
+ - 'User Guide': 'guide.md'
  - 'Documentation': 'docs.md'
  - 'FAQ': 'faq.md'
  - 'Resources': 'resources.md'

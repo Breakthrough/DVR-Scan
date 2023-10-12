@@ -13,7 +13,7 @@ hide:
 
 !!! success "Latest Version: 1.5.1 (August 15, 2022)"
 
-    <div class="buttongrid">[:fontawesome-solid-download: &nbsp; Download](download.md){ .md-button #download-button }[:fontawesome-solid-book: Documentation](docs.md){ .md-button #changelog-button }[:fontawesome-solid-bars: &nbsp; Changelog](changelog.md){ .md-button #documentation-button }[:fontawesome-solid-gear: &nbsp; Resources](resources.md){ .md-button #quickstart-button }</div>
+    <div class="buttongrid">[:fontawesome-solid-download: &nbsp; Download](download.md){ .md-button #download-button }[:fontawesome-solid-book: User Guide](user_guide.md){ .md-button #changelog-button }[:fontawesome-solid-bars: &nbsp; Documentation](docs.md){ .md-button #documentation-button }[:fontawesome-solid-gear: &nbsp; Resources](changelog.md){ .md-button #quickstart-button }</div>
 
 ------------------------------------------------------
 

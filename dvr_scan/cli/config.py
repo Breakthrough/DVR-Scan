@@ -350,7 +350,7 @@ CONFIG_MAP: ConfigDict = {
 The types of these values are used when decoding the configuration file. Valid choices for
 certain string options are stored in `CHOICE_MAP`."""
 
-# TODO: This should be a validator.
+# TODO: This should be a validator. These sub- lists should also be constants somewhere.
 CHOICE_MAP: Dict[str, List[str]] = {
     'opencv-codec': ['XVID', 'MP4V', 'MP42', 'H264'],
     'output-mode': ['scan_only', 'opencv', 'copy', 'ffmpeg'],

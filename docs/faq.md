@@ -32,9 +32,19 @@ dvr-scan -i folder/*.mp4
 
 ```
 
-You can also specify multiple input video paths, which will be processed in the order they are specified.
+You can also specify multiple paths directly.  Multiple inputs are not supported when `-m`/`--output-mode` is set to `ffmpeg` or `copy`. You can use `ffmpeg` to [concatenate all input videos](https://trac.ffmpeg.org/wiki/Concatenate) *before* using DVR-Scan as a workaround.
 
-Note that multiple input videos are not supported when `-m`/`--output-mode` is set to `ffmpeg` or `copy`. You can use `ffmpeg` to [concatenate all input videos](https://trac.ffmpeg.org/wiki/Concatenate) *before* using DVR-Scan as a workaround.
+Note that DVR-Scan will **concatenate** the videos together **in the order they are specified** (or expanded if using wildcards). To avoid this, you can run DVR-Scan on each video in a loop. For example, on Windows:
+
+   for /F %i in ('dir *.mp4 /b') do dvr-scan -i %i
+
+Or on Linux/OSX:
+
+   target="/some/folder"
+   for f in "$target"*
+   do
+      dvr-scan -i $f
+   done
 
 
 ----------------------------------------------------------
