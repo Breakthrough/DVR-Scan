@@ -67,12 +67,11 @@ markdown_extensions:
 
 
 nav:
- - 'Home': 'index.md'
  - 'Download': 'download.md'
- - 'Changelog': 'changelog.md'
  - 'User Guide': 'guide.md'
  - 'Documentation': 'docs.md'
  - 'FAQ': 'faq.md'
+ - 'Changelog': 'changelog.md'
  - 'Resources': 'resources.md'
 
 extra_css:

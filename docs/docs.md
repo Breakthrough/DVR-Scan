@@ -77,7 +77,7 @@ dvr-scan -i video.mp4 --start-time 00:35:52 --duration 00:05:00
     ```
     </span>
 
-!!! warning "Multiple input files are not supported when `-m`/`--output-mode` is set to `ffmpeg` or `copy`. You can use `ffmpeg` to [concatenate all input videos](https://trac.ffmpeg.org/wiki/Concatenate) *before* using DVR-Scan, or [run DVR-Scan in a for-loop](guide.md#processing-multiple-videos)."
+!!! warning "Multiple input files are not supported when `-m`/`--output-mode` is set to `ffmpeg` or `copy`. You can use `ffmpeg` to [concatenate all input videos](https://trac.ffmpeg.org/wiki/Concatenate) *before* using DVR-Scan, or [run DVR-Scan in a for-loop](guide.md#multiple-videos)."
 
  * <b><pre>-o video.avi, --output video.avi</pre></b> Save all motion events to a single file, instead of the default (one file per event). Only supported with the default output mode (`opencv`). Requires `.avi` extension.
 
@@ -138,7 +138,7 @@ Motion detection can be fine-tuned for specific use cases.  When modifying detec
 ```
 </span>
 
- * <b><pre>-k size, --kernel-size size</pre></b> Size in pixels of the noise reduction kernel. Must be an *odd* integer at least `3` or greater. By default, selects automatically based on input resolution (`-1` implies `auto`). Auto kernel sizes are 7 for 1080p or greater, 5 for 720p and 3 for 480p. Kernel size can be increased to filter out smaller movements from a scene.
+ * <b><pre>-k size, --kernel-size size</pre></b> Noise reduction kernel size, in pixels.  Kernel size can be increased to filter out smaller movements from a scene. Must be an *odd* integer at least `3` or greater. Can also be set to `0` to disable, or `-1` to select automatically based on input resolution. Auto sizes are `7` for 1080p or higher, `5` for 720p, and `3` for 480p or lower.
 <span class="dvr-scan-example">
 ```
 --kernel-size 5
@@ -153,9 +153,36 @@ Detection can be limited to specific regions of the frame. This can be done inte
 
 Regions are specified as a list of points (X, Y) forming a closed polygon (shape with at least 3 points). For example, a triangle is defined as `0 0 100 0 50 50`. Multiple regions can be combined, and the result can also be saved to a file using `-s/--save-region`.
 
-!!! tip "Setting a region of interest improves scanning performance."
+!!! tip "Setting a smaller region of interest can improve scanning performance."
 
-TODO - This feature is under development in v1.6. More to come here.
+ * <b><pre>-r, --region-editor</pre></b> Display region editor before processing. Press `H` to show controls in your terminal. See [the user guide](guide.md#region-editor) for more details.
+<span class="dvr-scan-example">
+```
+dvr-scan -i video.mp4 -r
+```
+</span>
+
+ * <b><pre>-a, --add-region</pre></b>Add a region to the scan. Regions are defined by a list of points (min. 3) that enclose the scanning region.
+<span class="dvr-scan-example">
+```
+dvr-scan -i video.mp4 -a 50 50 100 50 75 75
+```
+</span>
+
+ * <b><pre>-s, --save-region</pre></b>Save region data for this scan. Include all regions added or loaded via command line, and any edits made with the region editor if launched.
+<span class="dvr-scan-example">
+```
+dvr-scan -i video.mp4 -r -s regions.txt
+```
+</span>
+
+ * <b><pre>-R, --load-region</pre></b>Load region data an existing file.
+<span class="dvr-scan-example">
+```
+dvr-scan -i video.mp4 -R regions.txt
+```
+</span>
+
 
 ------------------------------------------------
 
@@ -218,23 +245,6 @@ bounding-box-color = 0xFF0000
 
 ### Options
 
-
- * <b><pre>quiet-mode</pre></b>
-    Suppress all console output: (`yes` or `no`). Only a final comma-separated list of timecodes will be printed if set to `yes`.
-    <span class="dvr-scan-default">
-    ```
-    quiet-mode = no
-    ```
-    </span>
-
- * <b><pre>verbosity</pre></b>
-    Verbosity of console output: (`debug`, `info`, `warning`, `error`).
-    <span class="dvr-scan-default">
-    ```
-    verbosity = info
-    ```
-    </span>
-
  * <b><pre>output-dir</pre></b>
     Directory to output all created files. If unset, files will be created in the current working directory.
     <span class="dvr-scan-example">
@@ -251,7 +261,7 @@ bounding-box-color = 0xFF0000
     ```
     </span>
 
-!!! warning "Multiple input files are not supported when `-m`/`--output-mode` is set to `ffmpeg` or `copy`. You can use `ffmpeg` to [concatenate all input videos](https://trac.ffmpeg.org/wiki/Concatenate) *before* using DVR-Scan, or [run DVR-Scan in a for-loop](guide.md#processing-multiple-videos)."
+!!! warning "Multiple input files are not supported when `-m`/`--output-mode` is set to `ffmpeg` or `copy`. You can use `ffmpeg` to [concatenate all input videos](https://trac.ffmpeg.org/wiki/Concatenate) *before* using DVR-Scan, or [run DVR-Scan in a for-loop](guide.md#multiple-videos)."
 
  * <b><pre>ffmpeg-input-args</pre></b>
     Arguments added before the input to `ffmpeg` when *output-mode* is *ffmpeg* or *copy*. Note that *-y* and *-nostdin* are always added.
@@ -276,6 +286,23 @@ bounding-box-color = 0xFF0000
     opencv-codec = XVID
     ```
     </span>
+
+ * <b><pre>verbosity</pre></b>
+    Verbosity of console output: (`debug`, `info`, `warning`, `error`).
+    <span class="dvr-scan-default">
+    ```
+    verbosity = info
+    ```
+    </span>
+
+ * <b><pre>quiet-mode</pre></b>
+    Suppress all console output: (`yes` or `no`). Only a final comma-separated list of timecodes will be printed if set to `yes`.
+    <span class="dvr-scan-default">
+    ```
+    quiet-mode = no
+    ```
+    </span>
+
 
 ------------------------------------------------
 

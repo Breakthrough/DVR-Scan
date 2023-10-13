@@ -22,19 +22,21 @@ Windows builds are also available on [the Downloads page](https://www.dvr-scan.c
 
 ## Quickstart
 
-![example](https://raw.githubusercontent.com/Breakthrough/DVR-Scan/main/docs/assets/bounding-box.gif)
-
 Scan `video.mp4` (separate clips for each event):
 
     dvr-scan -i video.mp4
 
-Only scan a region of interest (select with mouse):
+Only scan a region of interest ([see user guide](https://dvr-scan.readthedocs.io/en/develop/guide/) or hit `H` for controls):
 
     dvr-scan -i video.mp4 -roi
+
+<img alt="example of region editor" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/develop/docs/assets/region-editor-multiple.jpg" width="480"/>
 
 Draw boxes around motion:
 
     dvr-scan -i video.mp4 -bb
+
+<img alt="example of bounding boxes" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/develop/docs/assets/bounding-box.gif" width="480"/>
 
 Use `ffmpeg` to extract events:
 
@@ -44,5 +46,5 @@ See [the documentation](docs.md) for a complete list of all command-line and con
 
 ------------------------------------------------
 
-Copyright © 2016-2022 Brandon Castellano. All rights reserved.
+Copyright © 2016-2023 Brandon Castellano. All rights reserved.
 Licensed under BSD 2-Clause (see the LICENSE file for details).

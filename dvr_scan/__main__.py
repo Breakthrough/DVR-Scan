@@ -26,6 +26,7 @@ from scenedetect.platform import logging_redirect_tqdm, FakeTqdmLoggingRedirect
 EXIT_SUCCESS: int = 0
 EXIT_ERROR: int = 1
 
+
 def main():
     """Main entry-point for DVR-Scan."""
     settings = parse_settings()

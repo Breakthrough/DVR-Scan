@@ -13,7 +13,7 @@ hide:
 
 !!! success "Latest Version: 1.5.1 (August 15, 2022)"
 
-    <div class="buttongrid">[:fontawesome-solid-download: &nbsp; Download](download.md){ .md-button #download-button }[:fontawesome-solid-book: User Guide](user_guide.md){ .md-button #changelog-button }[:fontawesome-solid-bars: &nbsp; Documentation](docs.md){ .md-button #documentation-button }[:fontawesome-solid-gear: &nbsp; Resources](changelog.md){ .md-button #quickstart-button }</div>
+    <div class="buttongrid">[:fontawesome-solid-download: &nbsp; Download](download.md){ .md-button #download-button }[:fontawesome-solid-book: User Guide](guide.md){ .md-button #changelog-button }[:fontawesome-solid-bars: &nbsp; Documentation](docs.md){ .md-button #documentation-button }[:fontawesome-solid-gear: &nbsp; Resources](changelog.md){ .md-button #quickstart-button }</div>
 
 ------------------------------------------------------
 
@@ -21,22 +21,26 @@ DVR-Scan is a command-line application that **automatically detects motion event
 
 ## :fontawesome-solid-person-running:Quickstart
 
-<img alt="overlay example" src="assets/bounding-box.gif"/>
-
 Scan `video.mp4` (separate clips for each event):
 
     dvr-scan -i video.mp4
 
-Only scan a region of interest (select with mouse):
+Only scan a region of interest ([see user guide](guide.md#region-editor) or hit `H` for controls):
 
-    dvr-scan -i video.mp4 -roi
+    dvr-scan -i video.mp4 -r
+
+<img alt="overlay example" src="assets/region-editor-multiple.jpg" width="480"/>
 
 Draw boxes around motion:
 
     dvr-scan -i video.mp4 -bb
 
+<img alt="overlay example" src="assets/bounding-box.gif" width="480"/>
+
 Use `ffmpeg` to extract events:
 
     dvr-scan -i video.mp4 -m ffmpeg
 
-See [the documentation](docs.md) for a complete list of all command-line and configuration file options which can be set. You can also type `dvr-scan --help` for an overview of command line options. Some program options can also be set [using a config file](docs.md#config-file).
+Once installed, see [the user guide](guide.md) to get started, try one of the examples above, or type `dvr-scan --help`. Press `Ctrl + C` to stop processing at any time.
+
+See the [documentation](docs.md) for a complete description of all [command-line](docs.md#dvr-scan-options) and [config file](docs.md#config-file) settings.

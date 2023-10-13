@@ -41,22 +41,26 @@ class ProgramSettings:
         self._args = args
         self._config = config
 
+    @property
+    def config(self) -> ConfigRegistry:
+        return self._config
+
     def get_arg(self, arg: str) -> ty.Optional[ty.Any]:
         """Get setting specified via command line argument, if any."""
         arg_name = arg.replace('-', '_')
         return getattr(self._args, arg_name) if hasattr(self._args, arg_name) else None
 
-    def get(self, option: str, arg: ty.Optional[str] = None) -> ty.Union[str, int, float, bool]:
+    def get(self, option: str) -> ty.Union[str, int, float, bool]:
         """Get setting based on following resolution order:
             1. Argument specified via command line.
             2. Option set in the active config file (either explicit with -c/--config, or
                the dvr-scan.cfg file in the user's settings folder).
             3. Default value specified in the config map (`dvr_scan.cli.config.CONFIG_MAP`).
         """
-        arg_val = self.get_arg(option if arg is None else arg)
+        arg_val = self.get_arg(option)
         if arg_val is not None:
             return arg_val
-        return self._config.get_value(option)
+        return self.config.get_value(option)
 
 
 def _preprocess_args(args):
@@ -269,11 +273,18 @@ def run_dvr_scan(settings: ProgramSettings) -> ty.List[ty.Tuple[FrameTimecode, F
         duration=settings.get_arg('duration'),
     )
 
-    # TODO(v1.7): Ensure ROI window respects start time if set.
+    # If the user specified some regions on the command line, ignore the load-regions setting in the
+    # config file.
+    load_region = settings.get_arg('load-region')
+    if load_region is None:
+        load_region = settings.config.get_value('load-region', ignore_default=True)
+        if not settings.get_arg('regions') is None:
+            load_region = None
+
     scanner.set_regions(
-        region_editor=settings.get('region-editor'),
+        region_editor=settings.get_arg('region-editor'),
         regions=settings.get_arg('regions'),
-        load_region=settings.get('load-region'),
+        load_region=load_region,
         save_region=settings.get_arg('save-region'),
     )
 

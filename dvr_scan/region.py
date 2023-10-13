@@ -9,10 +9,12 @@
 # DVR-Scan is licensed under the BSD 2-Clause License; see the included
 # LICENSE file, or visit one of the above pages for details.
 #
-"""Handles detection region processing."""
+"""DVR-Scan Region Editor handles detection region input and processing.
+
+Regions are represented as a set of closed polygons defined by lists of points.
+"""
 
 from collections import namedtuple
-from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import dataclass
 from logging import getLogger
@@ -29,8 +31,15 @@ if HAS_TKINTER:
     import tkinter
     import tkinter.filedialog
 
-_WINDOW_NAME = "DVR-Scan: Select ROI"
+# TODO(v1.6): Update screenshots to reflect release title.
+_WINDOW_NAME = "DVR-Scan Region Editor"
 """Title given to the ROI selection window."""
+
+KEYCODE_ESCAPE = ord('\x1b')
+KEYCODE_RETURN = ord('\r')
+KEYCODE_SPACE = ord(' ')
+KEYCODE_WINDOWS_UNDO = 26
+KEYCODE_WINDOWS_REDO = 25
 
 
 # TODO(v1.6): Figure out how to properly get icon path in the package. The folder will be different
@@ -118,29 +127,31 @@ class SelectionWindowSettings:
 # TODO(v1.7): Move more of these to SelectionWindowSettings.
 MIN_NUM_POINTS = 3
 MAX_HISTORY_SIZE = 1024
-MAX_DOWNSCALE_FACTOR = 100
+MIN_DOWNSCALE_FACTOR = 1
+MAX_DOWNSCALE_FACTOR = 50
 MAX_UPDATE_RATE_NORMAL = 20
 MAX_UPDATE_RATE_DRAGGING = 5
 HOVER_DISPLAY_DISTANCE = 260**2
 MAX_DOWNSCALE_AA_LEVEL = 4
 
-# TODO(v1.6): Need to add keyboard alternate for adding/deleting point from current shape.
-KEYBIND_REGION_ADD = 'a'
-KEYBIND_REGION_DELETE = 'x'
-KEYBIND_REGION_NEXT = 'l'
-KEYBIND_REGION_PREV = 'k'
-KEYBIND_UNDO = 'z'
-KEYBIND_REDO = 'y'
-KEYBIND_MASK = 'm'
-KEYBIND_TOGGLE_AA = 'q'
-KEYBIND_WINDOW_MODE = 'r'
+KEYBIND_BREAKPOINT = 'b'
 KEYBIND_DOWNSCALE_INC = 'w'
 KEYBIND_DOWNSCALE_DEC = 'e'
-KEYBIND_OUTPUT_LIST = 'c'
 KEYBIND_HELP = 'h'
-KEYBIND_BREAKPOINT = 'b'
 KEYBIND_LOAD = 'o'
+KEYBIND_MASK = 'm'
+KEYBIND_OUTPUT_LIST = 'c'
+KEYBIND_POINT_ADD = 'a'
+KEYBIND_POINT_DELETE = 'x'
+KEYBIND_REGION_ADD = 'A'
+KEYBIND_REGION_DELETE = 'X'
+KEYBIND_REGION_NEXT = 'l'
+KEYBIND_REGION_PREVIOUS = 'k'
+KEYBIND_REDO = 'y'
+KEYBIND_TOGGLE_AA = 'q'
 KEYBIND_SAVE = 's'
+KEYBIND_UNDO = 'z'
+KEYBIND_WINDOW_MODE = 'r'
 
 
 def control_handle_radius(scale: int):
@@ -178,31 +189,32 @@ def show_controls():
     # Right click is disabled on Linux/OSX due to a context manager provided by the UI framework
     # showing up when right clicking.
     _WINDOWS_ONLY = 'Right, ' if IS_WINDOWS else ''
+
     logger.info(f"""ROI Window Controls:
 
 Editor:
-  Preview             Key: {KEYBIND_MASK}
+  Mask On/Off         Key: {str(KEYBIND_MASK).upper()}
   Start Scan          Key: Space, Enter
   Quit                Key: Escape
-  Save                Key: {KEYBIND_SAVE}
-  Load                Key: {KEYBIND_LOAD}
-  Undo                Key: {KEYBIND_UNDO}
-  Redo                Key: {KEYBIND_REDO}
-  Print Points        Key: {KEYBIND_OUTPUT_LIST}
+  Save                Key: {str(KEYBIND_SAVE).upper()}
+  Load                Key: {str(KEYBIND_LOAD).upper()}
+  Undo                Key: {str(KEYBIND_UNDO).upper()}
+  Redo                Key: {str(KEYBIND_REDO).upper()}
+  Print Points        Key: {str(KEYBIND_OUTPUT_LIST).upper()}
 
 Regions:
-  Add Point           Mouse: Left
-  Delete Point        Mouse: {_WINDOWS_ONLY}Middle
-  Add Region          Key: {KEYBIND_REGION_ADD}
-  Delete Region       Key: {KEYBIND_REGION_DELETE}
+  Add Point           Key: {str(KEYBIND_POINT_ADD).upper()},  Mouse: Left
+  Delete Point        Key: {str(KEYBIND_POINT_DELETE).upper()},  Mouse: {_WINDOWS_ONLY}Middle
+  Add Region          Key: Shift + {str(KEYBIND_REGION_ADD).upper()}
+  Delete Region       Key: Shift + {str(KEYBIND_REGION_DELETE).upper()}
   Select Region       Key: 1 - 9
-  Next Region         Key: {KEYBIND_REGION_NEXT}
-  Previous Region     Key: {KEYBIND_REGION_PREV}
+  Next Region         Key: {str(KEYBIND_REGION_NEXT).upper()}
+  Previous Region     Key: {str(KEYBIND_REGION_PREVIOUS).upper()}
 
 Display:
-  Downscale +/-       Key: {KEYBIND_DOWNSCALE_INC}(+), {KEYBIND_DOWNSCALE_DEC} (-)
-  Antialiasing        Key: {KEYBIND_TOGGLE_AA}
-  Window Mode         Key: {KEYBIND_WINDOW_MODE}
+  Downscale +/-       Key: {str(KEYBIND_DOWNSCALE_INC).upper()}(+), {str(KEYBIND_DOWNSCALE_DEC).upper()} (-)
+  Antialiasing        Key: {str(KEYBIND_TOGGLE_AA).upper()}
+  Window Mode         Key: {str(KEYBIND_WINDOW_MODE).upper()}
 """)
 
 
@@ -458,81 +470,73 @@ class SelectionWindow:
         cv2.imshow(_WINDOW_NAME, mat=self._frame)
         cv2.setMouseCallback(_WINDOW_NAME, on_mouse=self._handle_mouse_input)
 
+    def _breakpoint(self):
+        if self._debug_mode:
+            breakpoint()
+
+    def _create_keymap(self) -> ty.Dict[int, ty.Callable]:
+        return {
+            KEYBIND_BREAKPOINT: lambda: self._breakpoint,
+            KEYBIND_DOWNSCALE_INC: lambda: self._adjust_downscale(1),
+            KEYBIND_DOWNSCALE_DEC: lambda: self._adjust_downscale(-1),
+            KEYBIND_HELP: lambda: show_controls(),
+            KEYBIND_LOAD: lambda: self._load(),
+            KEYBIND_MASK: lambda: self._toggle_mask(),
+            KEYBIND_OUTPUT_LIST: lambda: self._emit_points(),
+            KEYBIND_POINT_ADD: lambda: self._add_point(),
+            KEYBIND_POINT_DELETE: lambda: self._delete_point(),
+            KEYBIND_REGION_ADD: lambda: self._add_region(),
+            KEYBIND_REGION_DELETE: lambda: self._delete_region(),
+            KEYBIND_REGION_NEXT: lambda: self._next_region(),
+            KEYBIND_REGION_PREVIOUS: lambda: self._prev_region(),
+            KEYBIND_REDO: lambda: self._redo(),
+            KEYBIND_TOGGLE_AA: lambda: self._toggle_antialiasing(),
+            KEYBIND_SAVE: lambda: self._save(),
+            KEYBIND_UNDO: lambda: self._undo(),
+            KEYBIND_WINDOW_MODE: lambda: self._toggle_window_mode(),
+            chr(KEYCODE_WINDOWS_REDO): lambda: self._redo(),
+            chr(KEYCODE_WINDOWS_UNDO): lambda: self._undo(),
+        }
+
     def run(self, warn_if_notkinter: bool) -> bool:
-        logger.debug("Creating window for frame (scale = %d)", self._scale)
-        self._init_window()
-        check_tkinter_support(warn_if_notkinter)
-        set_icon(_WINDOW_NAME, _ICON_PATH)
-        regions_valid = False
-        logger.info(f"Region editor active. Press {KEYBIND_HELP} to show controls.")
-        while True:
-            if not cv2.getWindowProperty(_WINDOW_NAME, cv2.WND_PROP_VISIBLE):
-                logger.debug("Main window closed.")
-                break
-            self._draw()
-            key = cv2.waitKey(
-                MAX_UPDATE_RATE_NORMAL if not self._dragging else MAX_UPDATE_RATE_DRAGGING) & 0xFF
-            # TODO: Map keybinds to callbacks rather than handle each case explicitly.
-            if key == 27:
-                break
-            elif key in (ord(' '), 13):
-                regions_valid = True
-                break
-            elif key == ord(KEYBIND_BREAKPOINT) and self._debug_mode:
-                breakpoint()
-            elif key == ord(KEYBIND_TOGGLE_AA):
-                self._settings.use_aa = not self._settings.use_aa
-                self._redraw = True
-                logger.debug("AA: %s", "ON" if self._settings.use_aa else "OFF")
-                if self._scale >= MAX_DOWNSCALE_AA_LEVEL:
-                    logger.warning("AA is disabled due to current scale factor.")
-            elif key == ord(KEYBIND_DOWNSCALE_INC):
-                if self._scale < MAX_DOWNSCALE_FACTOR:
-                    self._scale += 1
-                    self._rescale()
-            elif key == ord(KEYBIND_DOWNSCALE_DEC):
-                if self._scale > 1:
-                    self._scale = max(1, self._scale - 1)
-                    self._rescale()
-            elif key == ord(KEYBIND_UNDO):
-                self._undo()
-            elif key == ord(KEYBIND_REDO):
-                self._redo()
-            elif key == ord(KEYBIND_OUTPUT_LIST):
-                self._emit_points()
-            elif key == ord(KEYBIND_MASK):
-                self._toggle_mask()
-            elif key == ord(KEYBIND_WINDOW_MODE):
-                cv2.destroyWindow(_WINDOW_NAME)
-                if self._settings.window_mode == cv2.WINDOW_KEEPRATIO:
-                    self._settings.window_mode = cv2.WINDOW_AUTOSIZE
-                else:
-                    self._settings.window_mode = cv2.WINDOW_KEEPRATIO
-                logger.debug(
-                    "Window Mode: %s", "KEEPRATIO"
-                    if self._settings.window_mode == cv2.WINDOW_KEEPRATIO else "AUTOSIZE")
-                self._init_window()
+        try:
+            logger.debug("Creating window for frame (scale = %d)", self._scale)
+            self._init_window()
+            check_tkinter_support(warn_if_notkinter)
+            set_icon(_WINDOW_NAME, _ICON_PATH)
+            regions_valid = False
+            logger.info(f"Region editor active. Press {KEYBIND_HELP} to show controls.")
+            keyboard_callbacks = self._create_keymap()
+            while True:
+                if not cv2.getWindowProperty(_WINDOW_NAME, cv2.WND_PROP_VISIBLE):
+                    logger.debug("Main window closed.")
+                    break
+                self._draw()
+                key = cv2.waitKey(MAX_UPDATE_RATE_NORMAL
+                                  if not self._dragging else MAX_UPDATE_RATE_DRAGGING) & 0xFF
+                if key == KEYCODE_ESCAPE:
+                    break
+                elif key in (KEYCODE_SPACE, KEYCODE_RETURN):
+                    regions_valid = True
+                    break
+                elif key >= ord('0') and key <= ord('9'):
+                    self._select_region((key - ord('1')) % 10)
+                elif chr(key) in keyboard_callbacks:
+                    keyboard_callbacks[chr(key)]()
+                elif key != 0xFF:
+                    print("Unhandled key: %s" % str(key))
+            return regions_valid
 
-            elif key == ord(KEYBIND_REGION_ADD):
-                self._add_region()
-            elif key == ord(KEYBIND_REGION_DELETE):
-                self._delete_region()
-            elif key == ord(KEYBIND_REGION_NEXT):
-                self._next_region()
-            elif key == ord(KEYBIND_REGION_PREV):
-                self._prev_region()
+        finally:
+            cv2.destroyAllWindows()
 
-            elif key == ord(KEYBIND_HELP):
-                show_controls()
-            elif key == ord(KEYBIND_LOAD):
-                self._load()
-            elif key == ord(KEYBIND_SAVE):
-                self._save()
-            elif key >= ord('0') and key <= ord('9'):
-                self._select_region((key - ord('1')) % 10)
-
-        cv2.destroyAllWindows()
-        return regions_valid
+    def _adjust_downscale(self, amount: int):
+        # scale is clamped to MIN_DOWNSCALE_FACTOR/MAX_DOWNSCALE_FACTOR.
+        scale = self._scale + amount
+        self._scale = (
+            MIN_DOWNSCALE_FACTOR if scale < MIN_DOWNSCALE_FACTOR else
+            scale if scale < MAX_DOWNSCALE_FACTOR else MAX_DOWNSCALE_FACTOR)
+        self._rescale()
 
     def _save(self):
         if not HAS_TKINTER:
@@ -589,7 +593,7 @@ class SelectionWindow:
             self._active_shape = 0 if len(self._regions) > 0 else None
 
     def _delete_point(self):
-        if not self._hover_point is None:
+        if not self._hover_point is None and not self._dragging:
             if len(self.active_region) > MIN_NUM_POINTS:
                 hover = self._hover_point
                 x, y = self.active_region[hover]
@@ -601,10 +605,28 @@ class SelectionWindow:
                 logger.error("Cannot remove point, shape must have at least 3 points.")
             self._dragging = False
 
+    def _toggle_antialiasing(self):
+        self._settings.use_aa = not self._settings.use_aa
+        self._redraw = True
+        logger.debug("AA: %s", "ON" if self._settings.use_aa else "OFF")
+        if self._scale >= MAX_DOWNSCALE_AA_LEVEL:
+            logger.warning("AA is disabled due to current scale factor.")
+
     def _toggle_mask(self):
         self._settings.mask_source = not self._settings.mask_source
         logger.debug("Masking: %s", "ON" if self._settings.mask_source else "OFF")
         self._redraw = True
+
+    def _toggle_window_mode(self):
+        cv2.destroyWindow(_WINDOW_NAME)
+        if self._settings.window_mode == cv2.WINDOW_KEEPRATIO:
+            self._settings.window_mode = cv2.WINDOW_AUTOSIZE
+        else:
+            self._settings.window_mode = cv2.WINDOW_KEEPRATIO
+        logger.debug(
+            "Window Mode: %s",
+            "KEEPRATIO" if self._settings.window_mode == cv2.WINDOW_KEEPRATIO else "AUTOSIZE")
+        self._init_window()
 
     def _add_point(self) -> bool:
         if not self._nearest_points is None:

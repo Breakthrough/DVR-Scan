@@ -480,7 +480,8 @@ class MotionScanner:
                              for shape in self._regions]
         if self._region_editor:
             self._logger.info("Selecting area of interest:")
-            # TODO: We should process this frame.
+            # TODO(v1.7): Ensure ROI window respects start time if set.
+            # TODO(v1.7): We should process this frame (right now it gets skipped).
             frame_for_crop = self._input.read()
             scale_factor = 1
             screen_bounds = get_min_screen_bounds()
@@ -854,9 +855,6 @@ class MotionScanner:
         if not self._metrics_overlay is None:
             to_display = "Frame: %04d\nScore: %3.2f" % (timecode.get_frames(), frame_score)
             self._metrics_overlay.draw(frame, text=to_display)
-        # TODO(v1.6): The bounding box overlay does not draw correctly on masks when an ROI
-        # is defined due to the coordinate shift being incorrectly applied. Allow passing `shift`
-        # on each frame to the `draw` function to make it explicit what shift is used where.
         if not self._bounding_box is None and not bounding_box is None:
             self._bounding_box.draw(frame, bounding_box)
 

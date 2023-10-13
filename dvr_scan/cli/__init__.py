@@ -353,6 +353,8 @@ class RegionAction(argparse.Action):
                 self, message if message else RegionAction.DEFAULT_ERROR_MESSAGE)) from ex
 
         # Append this ROI to any existing ones, if any.
+        # TODO(v1.7): Audit uses of the 'regions' constant for -a/--add-region, replace with a named
+        # constant where possible.
         items = getattr(namespace, 'regions', [])
         items += [region.value]
         setattr(namespace, 'regions', items)
