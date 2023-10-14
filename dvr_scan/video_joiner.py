@@ -27,6 +27,8 @@ from scenedetect.video_stream import VideoOpenFailure
 
 FRAMERATE_DELTA_TOLERANCE: float = 0.1
 
+logger = logging.getLogger('dvr_scan')
+
 
 # TODO: Replace this with the equivalent from PySceneDetect when available.
 class VideoJoiner:
@@ -37,7 +39,6 @@ class VideoJoiner:
     """
 
     def __init__(self, paths: Union[AnyStr, List[AnyStr]]):
-        self._logger = logging.getLogger('dvr_scan')
         if isinstance(paths, (str, bytes)):
             paths = [paths]
 
@@ -92,12 +93,12 @@ class VideoJoiner:
                 # Compensate for presentation time of last frame
                 self._position += 1
                 self._decode_failures += self._cap._decode_failures
-                logging.debug("End of current video, loading next: %s" %
-                              self._paths[self._curr_cap_index])
+                logger.debug("End of current video, loading next: %s" %
+                             self._paths[self._curr_cap_index])
                 self._cap = VideoStreamCv2(self._paths[self._curr_cap_index])
                 self._last_cap_pos = self._cap.base_timecode
                 return self.read(decode=decode)
-            logging.debug("No more input to process.")
+            logger.debug("No more input to process.")
             return None
 
         self._position += self._cap.position.frame_num - self._last_cap_pos.frame_num
@@ -124,33 +125,32 @@ class VideoJoiner:
             try:
                 cap = VideoStreamCv2(video_path)
             except VideoOpenFailure as ex:
-                self._logger.error("Error: Couldn't load video %s", video_path)
+                logger.error("Error: Couldn't load video %s", video_path)
                 raise
             validated_paths.append(video_path)
             self._total_frames += cap.duration.frame_num
             # Set the resolution/framerate based on the first video.
             if not opened_video:
                 self._cap = cap
-                self._logger.info("Opened video %s (%d x %d at %2.3f FPS).", video_name,
-                                  cap.frame_size[0], cap.frame_size[1], cap.frame_rate)
+                logger.info("Opened video %s (%d x %d at %2.3f FPS).", video_name,
+                            cap.frame_size[0], cap.frame_size[1], cap.frame_rate)
                 opened_video = True
                 continue
             # Otherwise, validate the appended video's parameters.
-            self._logger.info("Appending video %s (%d x %d at %2.3f FPS).", video_name,
-                              cap.frame_size[0], cap.frame_size[1], cap.frame_rate)
+            logger.info("Appending video %s (%d x %d at %2.3f FPS).", video_name, cap.frame_size[0],
+                        cap.frame_size[1], cap.frame_rate)
             if cap.frame_size != self._cap.frame_size:
-                self._logger.error("Error: Video resolution does not match the first input.")
+                logger.error("Error: Video resolution does not match the first input.")
                 raise VideoOpenFailure("Video resolutions must match to be concatenated!")
             if abs(cap.frame_rate - self._cap.frame_rate) > FRAMERATE_DELTA_TOLERANCE:
-                self._logger.warning("Warning: framerate does not match first input."
-                                     " Timecodes may be incorrect.")
+                logger.warning("Warning: framerate does not match first input."
+                               " Timecodes may be incorrect.")
             if round(cap.capture.get(cv2.CAP_PROP_FOURCC)) == 0:
                 unsupported_codec = True
 
         self._paths = validated_paths
 
         if unsupported_codec:
-            self._logger.error(
-                'Unsupported or invalid codec, output may be incorrect. Possible fixes:\n'
-                '  - Re-encode the input video with ffmpeg\n'
-                '  - Update OpenCV (pip install --upgrade opencv-python)')
+            logger.error('Unsupported or invalid codec, output may be incorrect. Possible fixes:\n'
+                         '  - Re-encode the input video with ffmpeg\n'
+                         '  - Update OpenCV (pip install --upgrade opencv-python)')

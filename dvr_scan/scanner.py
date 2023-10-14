@@ -28,9 +28,8 @@ from typing import Any, AnyStr, List, Optional, Tuple, Union
 import cv2
 import numpy as np
 from scenedetect import FrameTimecode
-
+from scenedetect.platform import FakeTqdmObject
 from tqdm import tqdm
-from tqdm.contrib.logging import logging_redirect_tqdm
 
 from dvr_scan.detector import MotionDetector, Rectangle
 from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
@@ -55,14 +54,15 @@ MAX_ENCODE_QUEUE_SIZE: int = 4
 """Maximum size of the queue of encode events waiting to be processed."""
 
 DEFAULT_FFMPEG_INPUT_ARGS = '-v error'
-"""Args to add before the input when calling ffmpeg in OutputMode.FFMPEG or OutputMode.COPY."""
+"""Default arguments to add before input when invoking ffmpeg."""
 
 DEFAULT_FFMPEG_OUTPUT_ARGS = '-map 0 -c:v libx264 -preset fast -crf 21 -c:a aac -sn'
-"""Default arguments passed to ffmpeg when using OutputMode.COPY."""
+"""Default arguments passed to ffmpeg when using OutputMode.FFMPEG."""
 
 COPY_MODE_OUTPUT_ARGS = '-map 0 -c:v copy -c:a copy -sn'
-"""Arguments passed to ffmpeg when using OutputMode.COPY."""
+"""Default arguments passed to ffmpeg when using OutputMode.COPY."""
 
+# TODO(v1.7): Allow setting template in the config file.
 OUTPUT_FILE_TEMPLATE = '{VIDEO_NAME}.DSME_{EVENT_NUMBER}.{EXTENSION}'
 """Template to use for generating output files."""
 
@@ -213,7 +213,6 @@ class MotionScanner:
                 expense of accuracy (default is 0 for no skipping).
             show_progress: Show a progress bar using tqdm.
         """
-        self._logger = logging.getLogger('dvr_scan')
 
         self._in_motion_event: bool = False
         self._show_progress: bool = show_progress
@@ -440,50 +439,6 @@ class MotionScanner:
         elif end_time is not None:
             self._end_time = FrameTimecode(end_time, self._input.framerate)
 
-    # TODO: Move this into platform.
-    def _create_progress_bar(self, show_progress: bool):
-        """Create and return a `tqdm` and context manager object for logging.
-
-        If show_progress is False, a fake is returned."""
-        if show_progress:
-            num_frames = self._input.total_frames
-            # Correct for end time.
-            if self._end_time and self._end_time.frame_num < num_frames:
-                num_frames = self._end_time.frame_num
-            # Correct for current seek position.
-            num_frames = max(0, num_frames - self._input.position.frame_num)
-            return (tqdm(
-                total=num_frames,
-                unit=' frames',
-                desc=PROGRESS_BAR_DESCRIPTION % 0,
-                dynamic_ncols=True), logging_redirect_tqdm(loggers=[logger]))
-
-        class NullProgressBar:
-            """Acts like a tqdm.tqdm object, but really a no-operation."""
-
-            def update(self, *args):
-                """ No-op. """
-
-            def close(self):
-                """ No-op. """
-
-            def set_description(self, *args, **kwargs):
-                """ No-op. """
-
-        class NullContextManager:
-            """No-op context manager to use as a fake tqdm logging redirect."""
-
-            def __enter__(self):
-                """ No-op. """
-
-            # pylint: disable=redefined-builtin
-            def __exit__(self, type, value, traceback):
-                """ No-op. """
-
-            # pylint: enable=redefined-builtin
-
-        return (NullProgressBar(), NullContextManager())
-
     def _handle_regions(self) -> bool:
         # TODO(v2.0): Remove deprecated ROI selection handlers.
         if (self._show_roi_window_deprecated) and (self._load_region or self._regions
@@ -509,7 +464,7 @@ class MotionScanner:
                               for point in shape]
                              for shape in self._regions]
         if self._region_editor:
-            self._logger.info("Selecting area of interest:")
+            logger.info("Selecting area of interest:")
             # TODO(v1.7): Ensure ROI window respects start time if set.
             # TODO(v1.7): We should process this frame (right now it gets skipped).
             frame_for_crop = self._input.read()
@@ -556,10 +511,20 @@ class MotionScanner:
             logger.info(f"Saved region data to: {path}")
         return True
 
+    def _create_progress_bar(self) -> tqdm:
+        num_frames = self._input.total_frames
+        # Correct for end time.
+        if self._end_time and self._end_time.frame_num < num_frames:
+            num_frames = self._end_time.frame_num
+        # Correct for current seek position.
+        num_frames = max(0, num_frames - self._input.position.frame_num)
+        return tqdm(
+            total=num_frames, unit=' frames', desc=PROGRESS_BAR_DESCRIPTION % 0, dynamic_ncols=True)
+
     def stop(self):
         """Stop the current scan call. This is the only thread-safe public method."""
         self._stop.set()
-        self._logger.debug("Stop event set.")
+        logger.debug("Stop event set.")
 
     def scan(self) -> Optional[DetectionResult]:
         """ Performs motion analysis on the MotionScanner's input video(s). """
@@ -580,7 +545,7 @@ class MotionScanner:
 
         # Show ROI selection window if required.
         if not self._handle_regions():
-            self._logger.info("Exiting...")
+            logger.info("Exiting...")
             return None
 
         if self._kernel_size == -1:
@@ -631,188 +596,185 @@ class MotionScanner:
                 shift=(detector.area[0].x, detector.area[0].y),
                 frame_skip=self._frame_skip)
 
+        # Don't use the first result from the background subtractor.
+        processed_first_frame = False
+
         # Motion event scanning/detection loop. Need to avoid CLI output/logging until end of the
         # main scanning loop below, otherwise it will interrupt the progress bar.
-        self._logger.info(
+        logger.info(
             "Scanning %s for motion events...", "%d input videos" %
             len(self._input.paths) if len(self._input.paths) > 1 else "input video")
 
-        # Don't use the first result from the background subtractor.
-        processed_first_frame = False
-        progress_bar, context_manager = self._create_progress_bar(show_progress=self._show_progress)
+        progress_bar = FakeTqdmObject() if not self._show_progress else self._create_progress_bar()
+
+        decode_queue = queue.Queue(MAX_DECODE_QUEUE_SIZE)
+        decode_thread = threading.Thread(
+            target=MotionScanner._decode_thread, args=(self, decode_queue), daemon=True)
+        decode_thread.start()
+
+        encode_thread = None
+        if self._output_mode != OutputMode.SCAN_ONLY or self._mask_file is not None:
+            encode_queue = queue.Queue(MAX_ENCODE_QUEUE_SIZE)
+            encode_thread = threading.Thread(
+                target=MotionScanner._encode_thread, args=(self, encode_queue), daemon=True)
+            encode_thread.start()
 
         # TODO: The main scanning loop should be refactored into a state machine.
-        with context_manager:
-            decode_queue = queue.Queue(MAX_DECODE_QUEUE_SIZE)
-            decode_thread = threading.Thread(
-                target=MotionScanner._decode_thread, args=(self, decode_queue), daemon=True)
-            decode_thread.start()
+        while not self._stop.is_set():
+            # Keep polling decode queue until it's empty (signaled via None).
+            frame: Optional[DecodeEvent] = decode_queue.get()
+            if frame is None:
+                break
+            assert frame.frame_rgb is not None
+            # TODO(v1.7): Is this copy necessary?
+            frame_copy = (
+                frame.frame_rgb
+                if not self._output_mode == OutputMode.OPENCV else frame.frame_rgb.copy())
+            result = detector.update(frame_copy)
+            frame_score = result.score
+            # TODO(v1.6): Allow disabling the rejection filter or customizing amount of
+            # consecutive frames it will ignore.
+            if frame_score >= self._max_score:
+                frame_score = 0
+            above_threshold = frame_score >= self._threshold
+            event_window.append(frame_score)
+            # The first frame fed to the detector can sometimes produce unreliable results due
+            # to it not having any previous information to compare against.
+            if not processed_first_frame:
+                above_threshold = False
+                processed_first_frame = True
+            event_window = event_window[-min_event_len:]
 
-            encode_thread = None
-            if self._output_mode != OutputMode.SCAN_ONLY or self._mask_file is not None:
-                encode_queue = queue.Queue(MAX_ENCODE_QUEUE_SIZE)
-                encode_thread = threading.Thread(
-                    target=MotionScanner._encode_thread, args=(self, encode_queue), daemon=True)
-                encode_thread.start()
+            bounding_box = None
+            # TODO: Only call clear() when we exit the current motion event.
+            # TODO: Include frames below the threshold for smoothing, or push a sentinel
+            # value to update() to compensate the amount of smoothing accordingly.
+            if self._bounding_box:
+                bounding_box = (
+                    self._bounding_box.update(result.subtracted)
+                    if above_threshold else self._bounding_box.clear())
 
-            while not self._stop.is_set():
-                # Keep polling decode queue until it's empty (signaled via None).
-                frame: Optional[DecodeEvent] = decode_queue.get()
-                if frame is None:
-                    break
-                assert frame.frame_rgb is not None
-                # TODO(v1.7): Is this copy necessary?
-                frame_copy = (
-                    frame.frame_rgb
-                    if not self._output_mode == OutputMode.OPENCV else frame.frame_rgb.copy())
-                result = detector.update(frame_copy)
-                frame_score = result.score
-                # TODO(v1.6): Allow disabling the rejection filter or customizing amount of
-                # consecutive frames it will ignore.
-                if frame_score >= self._max_score:
-                    frame_score = 0
-                above_threshold = frame_score >= self._threshold
-                event_window.append(frame_score)
-                # The first frame fed to the detector can sometimes produce unreliable results due
-                # to it not having any previous information to compare against.
-                if not processed_first_frame:
-                    above_threshold = False
-                    processed_first_frame = True
-                event_window = event_window[-min_event_len:]
+            if self._mask_file and not self._stop.is_set():
+                encode_queue.put(
+                    MotionMaskEvent(
+                        motion_mask=np.ma.filled(result.masked, fill_value=63),
+                        timecode=frame.timecode,
+                        score=frame_score,
+                        bounding_box=bounding_box,
+                    ))
 
-                bounding_box = None
-                # TODO: Only call clear() when we exit the current motion event.
-                # TODO: Include frames below the threshold for smoothing, or push a sentinel
-                # value to update() to compensate the amount of smoothing accordingly.
-                if self._bounding_box:
-                    bounding_box = (
-                        self._bounding_box.update(result.subtracted)
-                        if above_threshold else self._bounding_box.clear())
-
-                if self._mask_file and not self._stop.is_set():
-                    encode_queue.put(
-                        MotionMaskEvent(
-                            motion_mask=np.ma.filled(result.masked, fill_value=63),
-                            timecode=frame.timecode,
-                            score=frame_score,
-                            bounding_box=bounding_box,
-                        ))
-
-                # Last frame was part of a motion event, or still within the post-event window.
-                if in_motion_event:
-                    # If this frame still has motion, reset the post-event window.
-                    if above_threshold:
-                        num_frames_post_event = 0
-                        last_frame_above_threshold = frame.timecode.frame_num
-                    # Otherwise, we wait until the post-event window has passed before ending
-                    # this motion event and start looking for a new one.
-                    #
-                    # TODO(#72): We should wait until the max of *both* the pre-event and post-
-                    # event windows have passed. Right now we just consider the post-event window.
-                    else:
-                        num_frames_post_event += 1
-                        if num_frames_post_event >= post_event_len:
-                            in_motion_event = False
-                            # Calculate event end based on the last frame we had with motion plus
-                            # the post event length time. We also need to compensate for the number
-                            # of frames that we skipped that could have had motion.
-                            # We also add 1 to include the presentation duration of the last frame.
-                            event_end = FrameTimecode(
-                                1 + last_frame_above_threshold + self._post_event_len.frame_num +
-                                self._frame_skip, self._input.framerate)
-                            assert event_end.frame_num >= event_start.frame_num
-                            event_list.append(MotionEvent(start=event_start, end=event_end))
-                            if self._output_mode != OutputMode.SCAN_ONLY:
-                                encode_queue.put(MotionEvent(start=event_start, end=event_end))
-
-                    # Send frame to encode thread.
-                    if in_motion_event and self._output_mode == OutputMode.OPENCV:
-                        encode_queue.put(
-                            EncodeFrameEvent(
-                                frame_rgb=frame.frame_rgb,
-                                timecode=frame.timecode,
-                                bounding_box=bounding_box,
-                                score=frame_score,
-                            ))
-                # Not already in a motion event, look for a new one.
+            # Last frame was part of a motion event, or still within the post-event window.
+            if in_motion_event:
+                # If this frame still has motion, reset the post-event window.
+                if above_threshold:
+                    num_frames_post_event = 0
+                    last_frame_above_threshold = frame.timecode.frame_num
+                # Otherwise, we wait until the post-event window has passed before ending
+                # this motion event and start looking for a new one.
+                #
+                # TODO(#72): We should wait until the max of *both* the pre-event and post-
+                # event windows have passed. Right now we just consider the post-event window.
                 else:
-                    # Buffer the required amount of frames and overlay data until we find an event.
-                    if self._output_mode == OutputMode.OPENCV:
-                        buffered_frames.append(
-                            EncodeFrameEvent(
-                                frame_rgb=frame.frame_rgb,
-                                timecode=frame.timecode,
-                                bounding_box=bounding_box,
-                                score=frame_score,
-                            ))
-                        buffered_frames = buffered_frames[-buff_len:]
-                    # Start a new event once all frames in the event window have motion.
-                    if len(event_window) >= min_event_len and all(
-                            score >= self._threshold for score in event_window):
-                        in_motion_event = True
-                        progress_bar.set_description(
-                            PROGRESS_BAR_DESCRIPTION % (1 + len(event_list)), refresh=False)
-                        event_window = []
-                        num_frames_post_event = 0
-                        frames_since_last_event = frame.timecode.frame_num - event_end.frame_num
-                        last_frame_above_threshold = frame.timecode.frame_num
-                        shift_amount = min(frames_since_last_event, start_event_shift)
-                        shifted_start = max(start_frame,
-                                            frame.timecode.frame_num + 1 - shift_amount)
-                        event_start = FrameTimecode(shifted_start, self._input.framerate)
-                        # Send buffered frames to encode thread.
-                        for encode_frame in buffered_frames:
-                            # We have to be careful here. Since we're putting multiple items
-                            # into the queue, we have to keep making sure the encode thread
-                            # is running. Otherwise, the queue will never empty we will block
-                            # indefinitely here waiting for a spot.
-                            if self._stop.is_set():
-                                break
-                            encode_queue.put(encode_frame)
-                        buffered_frames = []
+                    num_frames_post_event += 1
+                    if num_frames_post_event >= post_event_len:
+                        in_motion_event = False
+                        # Calculate event end based on the last frame we had with motion plus
+                        # the post event length time. We also need to compensate for the number
+                        # of frames that we skipped that could have had motion.
+                        # We also add 1 to include the presentation duration of the last frame.
+                        event_end = FrameTimecode(
+                            1 + last_frame_above_threshold + self._post_event_len.frame_num +
+                            self._frame_skip, self._input.framerate)
+                        assert event_end.frame_num >= event_start.frame_num
+                        event_list.append(MotionEvent(start=event_start, end=event_end))
+                        if self._output_mode != OutputMode.SCAN_ONLY:
+                            encode_queue.put(MotionEvent(start=event_start, end=event_end))
 
-                frames_processed += 1 + self._frame_skip
-                progress_bar.update(1 + self._frame_skip)
+                # Send frame to encode thread.
+                if in_motion_event and self._output_mode == OutputMode.OPENCV:
+                    encode_queue.put(
+                        EncodeFrameEvent(
+                            frame_rgb=frame.frame_rgb,
+                            timecode=frame.timecode,
+                            bounding_box=bounding_box,
+                            score=frame_score,
+                        ))
+            # Not already in a motion event, look for a new one.
+            else:
+                # Buffer the required amount of frames and overlay data until we find an event.
+                if self._output_mode == OutputMode.OPENCV:
+                    buffered_frames.append(
+                        EncodeFrameEvent(
+                            frame_rgb=frame.frame_rgb,
+                            timecode=frame.timecode,
+                            bounding_box=bounding_box,
+                            score=frame_score,
+                        ))
+                    buffered_frames = buffered_frames[-buff_len:]
+                # Start a new event once all frames in the event window have motion.
+                if len(event_window) >= min_event_len and all(
+                        score >= self._threshold for score in event_window):
+                    in_motion_event = True
+                    progress_bar.set_description(
+                        PROGRESS_BAR_DESCRIPTION % (1 + len(event_list)), refresh=False)
+                    event_window = []
+                    num_frames_post_event = 0
+                    frames_since_last_event = frame.timecode.frame_num - event_end.frame_num
+                    last_frame_above_threshold = frame.timecode.frame_num
+                    shift_amount = min(frames_since_last_event, start_event_shift)
+                    shifted_start = max(start_frame, frame.timecode.frame_num + 1 - shift_amount)
+                    event_start = FrameTimecode(shifted_start, self._input.framerate)
+                    # Send buffered frames to encode thread.
+                    for encode_frame in buffered_frames:
+                        # We have to be careful here. Since we're putting multiple items
+                        # into the queue, we have to keep making sure the encode thread
+                        # is running. Otherwise, the queue will never empty we will block
+                        # indefinitely here waiting for a spot.
+                        if self._stop.is_set():
+                            break
+                        encode_queue.put(encode_frame)
+                    buffered_frames = []
 
-            # Close the progress bar before producing any more output.
-            if progress_bar is not None:
-                progress_bar.close()
+            frames_processed += 1 + self._frame_skip
+            progress_bar.update(1 + self._frame_skip)
 
-            # Unblock any remaining puts, wait for decode thread, and re-raise any exceptions.
-            while not decode_queue.empty():
-                _ = decode_queue.get_nowait()
-            decode_thread.join()
-            if self._decode_thread_exception is not None:
-                raise self._decode_thread_exception[1].with_traceback(
-                    self._decode_thread_exception[2])
+        # Close the progress bar before producing any more output.
+        progress_bar.close()
 
-            # Video ended, finished processing frames. If we're still in a motion event,
-            # compute the duration and ending timecode and add it to the event list.
-            if in_motion_event and not self._stop.is_set():
-                # curr_pos already includes the presentation duration of the frame.
-                event_end = FrameTimecode(self._input.position.frame_num, self._input.framerate)
-                event_list.append(MotionEvent(start=event_start, end=event_end))
-                if self._output_mode != OutputMode.SCAN_ONLY:
-                    encode_queue.put(MotionEvent(start=event_start, end=event_end))
+        # Unblock any remaining puts, wait for decode thread, and re-raise any exceptions.
+        while not decode_queue.empty():
+            _ = decode_queue.get_nowait()
+        decode_thread.join()
+        if self._decode_thread_exception is not None:
+            raise self._decode_thread_exception[1].with_traceback(self._decode_thread_exception[2])
 
-            # Push sentinel to queue, wait for encode thread, and re-raise any exceptions.
-            if encode_thread is not None:
-                encode_queue.put(None)
-                encode_thread.join()
-                if self._encode_thread_exception is not None:
-                    raise self._encode_thread_exception[1].with_traceback(
-                        self._encode_thread_exception[2])
+        # Video ended, finished processing frames. If we're still in a motion event,
+        # compute the duration and ending timecode and add it to the event list.
+        if in_motion_event and not self._stop.is_set():
+            # curr_pos already includes the presentation duration of the frame.
+            event_end = FrameTimecode(self._input.position.frame_num, self._input.framerate)
+            event_list.append(MotionEvent(start=event_start, end=event_end))
+            if self._output_mode != OutputMode.SCAN_ONLY:
+                encode_queue.put(MotionEvent(start=event_start, end=event_end))
 
-            # Display an error if we got more than one decode failure / corrupt frame.
-            # TODO: This will also fire if no frames are decoded. Add a check to make sure
-            # the fourCC is valid. Also figure out a better way to handle the case where NO frames
-            # are decoded (rather than reporting X frames failed to decode).
-            if self._input.decode_failures > 1:
-                self._logger.error(
-                    "Failed to decode %d frame(s) from video, timestamps may be incorrect. Try"
-                    " re-encoding or remuxing video (e.g. ffmpeg -i video.mp4 -c:v copy out.mp4). "
-                    "See https://github.com/Breakthrough/DVR-Scan/issues/62 for details.",
-                    self._input.decode_failures)
+        # Push sentinel to queue, wait for encode thread, and re-raise any exceptions.
+        if encode_thread is not None:
+            encode_queue.put(None)
+            encode_thread.join()
+            if self._encode_thread_exception is not None:
+                raise self._encode_thread_exception[1].with_traceback(
+                    self._encode_thread_exception[2])
+
+        # Display an error if we got more than one decode failure / corrupt frame.
+        # TODO: This will also fire if no frames are decoded. Add a check to make sure
+        # the fourCC is valid. Also figure out a better way to handle the case where NO frames
+        # are decoded (rather than reporting X frames failed to decode).
+        if self._input.decode_failures > 1:
+            logger.error(
+                "Failed to decode %d frame(s) from video, timestamps may be incorrect. Try"
+                " re-encoding or remuxing video (e.g. ffmpeg -i video.mp4 -c:v copy out.mp4). "
+                "See https://github.com/Breakthrough/DVR-Scan/issues/62 for details.",
+                self._input.decode_failures)
 
         return DetectionResult(event_list, frames_processed)
 
@@ -974,10 +936,10 @@ class MotionScanner:
     def _select_roi_deprecated(self) -> bool:
         # area selection
         if self._show_roi_window_deprecated:
-            self._logger.warning(
+            logger.warning(
                 "WARNING: -roi/--region-of-interest is deprecated and will be removed. Use "
                 "-r/--region-editor instead.")
-            self._logger.info("Selecting area of interest:")
+            logger.info("Selecting area of interest:")
             # TODO: We should process this frame.
             frame_for_crop = self._input.read()
             scale_factor = None
@@ -998,14 +960,14 @@ class MotionScanner:
             roi = cv2.selectROI("DVR-Scan ROI Selection", frame_for_crop)
             cv2.destroyAllWindows()
             if any([coord == 0 for coord in roi[2:]]):
-                self._logger.info("ROI selection cancelled. Aborting...")
+                logger.info("ROI selection cancelled. Aborting...")
                 return False
             # Unscale coordinates if we downscaled the image.
             if scale_factor:
                 roi = [round(x * scale_factor) for x in roi]
             self._roi_deprecated = roi
         if self._roi_deprecated:
-            self._logger.info(
+            logger.info(
                 'ROI set: (x,y)/(w,h) = (%d,%d)/(%d,%d)',
                 self._roi_deprecated[0],
                 self._roi_deprecated[1],
@@ -1016,7 +978,7 @@ class MotionScanner:
             x, y, w, h = self._roi_deprecated
             region = [Point(x, y), Point(x + w, y), Point(x + w, y + h), Point(x, y + h)]
             region_arg = " ".join(f"{x} {y}" for x, y in region)
-            self._logger.warning(
+            logger.warning(
                 "WARNING: region-of-interest (roi) is deprecated and will be removed. "
                 "Use the following equivalent option by command line:\n\n"
                 f"--add-region {region_arg}\n\n"
