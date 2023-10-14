@@ -101,7 +101,7 @@ You can use the left mouse button to add a new point (keyboard: `A`) and right/m
 
 <img alt="example of non-rectangular region" src="../assets/region-editor-region.jpg"/>
 
-Regions can be created by pressing `Shift + A` and deleted by pressing `Shift + X`.
+Regions can be created by pressing `T` and deleted by pressing `G`.
 or to click-and-drag an existing point.
 
 <img alt="example of region mask" src="../assets/region-editor-multiple.jpg"/>
@@ -120,8 +120,8 @@ Lastly, you can hit `M` to view a cutout of the active mask:
 |--|--|--|
 | Add Point | `A` | Left |
 | Delete Point | `X` | :fontawesome-brands-windows:Right<br/>:fontawesome-brands-linux:Middle |
-| Add Region | `Shift + A` | |
-| Delete Region | `Shift + X` | |
+| Add Region | `T` | |
+| Delete Region | `G` | |
 | Select Region | `1` - `9` | |
 | Next Region | `L` | |
 | Previous Region | `K` | |
@@ -147,4 +147,4 @@ Lastly, you can hit `M` to view a cutout of the active mask:
 | Downscale Decrease | `E` | |
 | Antialiasing | `Q` | |
 | Window Mode | `R` | |
-| Display Menu | | :fontawesome-brands-linux:Right |
+| Window Menu | | :fontawesome-brands-linux:Right |
