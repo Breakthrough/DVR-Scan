@@ -272,48 +272,6 @@ class VersionAction(argparse.Action):
         parser.exit(message=version)
 
 
-class RegionActionDeprecated(argparse.Action):
-
-    def __init__(self,
-                 option_strings,
-                 dest,
-                 nargs=None,
-                 const=None,
-                 default=None,
-                 type=None,
-                 choices=None,
-                 required=False,
-                 help=None,
-                 metavar=None):
-        assert nargs == '*'
-        assert const is None
-        super(RegionActionDeprecated, self).__init__(
-            option_strings=option_strings,
-            dest=dest,
-            nargs=nargs,
-            const=const,
-            default=default,
-            type=type,
-            choices=choices,
-            required=required,
-            help=help,
-            metavar=metavar)
-
-    def __call__(self, parser, namespace, values: List[str], option_string=None):
-        # Used to show warning to user if they use -roi/--region-of-interest instead of -r/-a.
-        setattr(namespace, 'used_deprecated_roi_option', True)
-        # -r/--roi specified without coordinates
-        if not values:
-            setattr(namespace, 'region_editor', True)
-            return
-        # TODO(v1.6): Re-add backwards compatibility for X Y W H rectangles.
-        raise NotImplementedError()
-        # Append this ROI to any existing ones, if any.
-        items = getattr(namespace, 'roi_deprecated', [])
-        items += regions
-        setattr(namespace, 'roi_deprecated', items)
-
-
 class RegionAction(argparse.Action):
 
     DEFAULT_ERROR_MESSAGE = "Region must be 3 or more points of the form X0 Y0 X1 Y1 X2 Y2 ..."
@@ -586,16 +544,13 @@ def get_cli_parser(user_config: ConfigRegistry):
         help=('Timecode to stop processing the input (see -st for valid timecode formats).'),
     )
 
-    # TODO(v1.6): Restore this argument to the exact way it was. Error if specified with any of
-    # the replacements above.
-    # TODO(v1.7): Remove -roi (split up into other options).
+    # TODO(v2.0): Remove -roi (replaced by -r/--region-editor and -a/--add-region).
     parser.add_argument(
         '-roi',
-        '-region-of-interest',
-        metavar='x0 y0 w h',
+        '--region-of-interest',
         dest='region_of_interest',
+        metavar='x0 y0 w h',
         nargs='*',
-        action=RegionActionDeprecated,
         help=argparse.SUPPRESS,
     )
 

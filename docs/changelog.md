@@ -9,32 +9,21 @@
 
 #### Release Notes
 
-In development.
+DVR-Scan 1.6 showcases the new region editor and has improved seeking performance. There are also several other improvements and bugfixes since the last release.
 
 #### Changelog
 
-**WIP**:
-
- - TODO: Change -roi to have old behavior (x y w h), new one to use two points (x0 y0 x1 y1)
- - TODO: Add a new config file option to replace `region-of-interest`, call it `detection-regions`
-
- - [feature] ROI selection window has been improved, easier to create complex masks
- - [feature] ROI specification has been extended to allow more complex shapes
-    - Specifying two points (X0 Y0 X1 Y1) will result in a rectangular ROI
-    - Specifying three or more points will result in a polygonal ROI, e.g. for a triangle: `--roi 0 0 50 0 25 25`
- - [feature] Multiple regions of interest (rectangular or polygonal) can now be provided:
-    - Using the ROI selection window: `dvr-scan -i video.mp4 --roi`
-    - From command-line: `dvr-scan -i video.mp4 --roi 5 5 20 20 --roi 100 100 20 20`
-    - From config file: `region-of-interest = [5 5 20 20], [100 100 20 20]`
-
-**General**:
-
- - [feature] New `-fm` / `--frame-metrics` option draws motion score on each frame to help tune [detection parameters](https://dvr-scan.readthedocs.io/en/latest/guide/options/#
+ - [feature] [New region editor](https://dvr-scan.readthedocs.io/en/develop/guide/#region-editor) `-r`/`--region-editor` allows creation of multiple regions without shape restrictions, replaces `-roi`/`--region-of-interest`
+ - [feature] Multiple regions of interest (rectangular or polygonal) can now be created:
+    - Using the new region editor by adding the `-r`/`--region-editor` flag: `dvr-scan -i video.mp4 -r`
+    - New `-a`/`--add-region` replaces `-roi`/`--region-of-interest` option: `dvr-scan -i video.mp4 -a 5 5 20 5 20 20 5 20`
+    - Regions can now be saved to a file: press S in the region editor or use `-s`/`--save-region`
+    - Regions can now be loaded from a file: press O in the region editor or use `-R`/`--load-region`
+    - Config files can specify a region file to use by default with the `load-region` option, replaces the `region-of-interest` setting
+ - [feature] New `-fm` / `--frame-metrics` option draws motion score on each frame to help tune detection parameters
  - [cli] Short flag `-v` is now used for `--verbosity`, replaced by `-V` for `--version`
- - [cli] Short flag `-roi` is now deprecated, use `--roi` instead
- - [cli] Add `max-window-width` and `max-window-height` settings to config file, controls maximum size of ROI selection window
-    - By default, videos larger than the smallest display are downscaled
-    - Replaces deprecated `-roi WIDTH HEIGHT` overload
+ - [cli] `-roi`/`--region-of-interest` is now deprecated, replaced by region editor and add/save/load region flags
+    - Specifying this option will display the ROI in the new region format allowing you to update usages more easily
  - [general] Improved seeking performance, using `-st`/`--start-time` is now much faster ([#92](https://github.com/Breakthrough/DVR-Scan/issues/92))
  -detection-parameters)
  - [general] Noise reduction kernel can now be disabled by setting `-k`/`--kernel-size` to `0` ([#123](https://github.com/Breakthrough/DVR-Scan/issues/123))

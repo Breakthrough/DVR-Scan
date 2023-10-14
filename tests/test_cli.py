@@ -254,3 +254,26 @@ def test_copy_mode(tmp_path):
         'copy',
     ]) == 0
     assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS, "Incorrect number of events found."
+
+
+def test_deprecated_roi(tmp_path):
+    """Test deprecated ROI translation."""
+    tmp_path = str(tmp_path)                     # Hack for Python 3.7 builder.
+    output = subprocess.check_output(
+        args=DVR_SCAN_COMMAND + BASE_COMMAND + [
+            '--output-dir',
+            tmp_path,
+            '--scan-only',
+            '-dt',
+            '2',
+            '-roi',
+            '10 20 10 15',
+            '-s',
+            'roi.txt',
+        ],
+        text=True)
+    roi_path = os.path.join(tmp_path, "roi.txt")
+    assert os.path.exists(roi_path)
+    with open(roi_path, "rt") as roi_file:
+        last_line_of_file = list(filter(None, roi_file.readlines()))[-1].strip()
+    assert last_line_of_file == "10 20 20 20 20 35 10 35"

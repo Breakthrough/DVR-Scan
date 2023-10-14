@@ -255,6 +255,9 @@ class MotionScanner:
         self._regions: List[List[Point]] = []   # -a/--add-region, -w/--region-window
         self._load_region: Optional[str] = None # -R/--load-region
         self._save_region: Optional[str] = None # -s/--save-region
+        self._max_roi_size_deprecated = None
+        self._show_roi_window_deprecated = False
+        self._roi_deprecated = None
 
         # Input Video Parameters (set_video_time)
         self._input: VideoJoiner = VideoJoiner(input_videos) # -i/--input
@@ -382,12 +385,33 @@ class MotionScanner:
                     region_editor: bool = False,
                     regions: Optional[List[List[Point]]] = None,
                     load_region: Optional[str] = None,
-                    save_region: Optional[str] = None):
+                    save_region: Optional[str] = None,
+                    roi_deprecated: Optional[List[int]] = None):
         """Set options for limiting detection regions."""
         self._region_editor = region_editor
         self._regions = regions if regions else []
         self._load_region = load_region
         self._save_region = save_region
+
+        # Handle deprecated ROI option.
+        # TODO(v2.0): Remove.
+        if roi_deprecated is not None:
+            if roi_deprecated:
+                if not all(isinstance(i, int) for i in roi_deprecated):
+                    raise TypeError('Error: Non-integral type found in specified roi.')
+                if any(x < 0 for x in roi_deprecated):
+                    raise ValueError('Error: Negative value found in roi.')
+                if len(roi_deprecated) == 2:
+                    self._max_roi_size_deprecated = roi_deprecated
+                    self._show_roi_window_deprecated = True
+                elif len(roi_deprecated) == 4:
+                    self._roi_deprecated = roi_deprecated
+                    self._show_roi_window_deprecated = False
+                else:
+                    raise ValueError('Error: Expected either 2 or 4 elements in roi.')
+            # -roi with no arguments.
+            else:
+                self._show_roi_window_deprecated = True
 
     def set_event_params(self,
                          min_event_len: Union[int, float, str] = '0.1s',
@@ -461,6 +485,12 @@ class MotionScanner:
         return (NullProgressBar(), NullContextManager())
 
     def _handle_regions(self) -> bool:
+        # TODO(v2.0): Remove deprecated ROI selection handlers.
+        if (self._show_roi_window_deprecated) and (self._load_region or self._regions
+                                                   or self._region_editor):
+            raise ValueError("Use -r/--region-editor instead of -roi.")
+        self._select_roi_deprecated()
+
         if self._load_region:
             try:
                 regions = load_regions(self._load_region)
@@ -508,19 +538,22 @@ class MotionScanner:
             logger.info(f"Limiting detection to {len(self._regions)} "
                         f"region{'s' if len(self._regions) > 1 else ''}.")
         else:
-            logger.info("No regions selected, using entire frame.")
+            logger.debug("No regions selected.")
         if self._save_region:
             regions = self._regions if self._regions else [[
                 Point(0, 0),
-                Point(frame_w - 1, 0),
-                Point(frame_w - 1, frame_h - 1),
-                Point(0, frame_h - 1)
+                Point(self._input.resolution[0] - 1, 0),
+                Point(self._input.resolution[0] - 1, self._input.resolution[1] - 1),
+                Point(0, self._input.resolution[1] - 1)
             ]]
-            with open(self._save_region, 'wt') as region_file:
+            path = self._save_region
+            if self._output_dir:
+                path = os.path.join(self._output_dir, path)
+            with open(path, 'wt') as region_file:
                 for shape in self._regions:
                     region_file.write(" ".join(f"{x} {y}" for x, y in shape))
                     region_file.write("\n")
-            logger.info(f"Saved region data to: {self._save_region}")
+            logger.info(f"Saved region data to: {path}")
         return True
 
     def stop(self):
@@ -936,3 +969,60 @@ class MotionScanner:
             while not encode_queue.empty():
                 _ = encode_queue.get_nowait()
         # pylint: enable=bare-except
+
+    # TODO(v2.0): Remove deprecated function, replaced by Region Editor.
+    def _select_roi_deprecated(self) -> bool:
+        # area selection
+        if self._show_roi_window_deprecated:
+            self._logger.warning(
+                "WARNING: -roi/--region-of-interest is deprecated and will be removed. Use "
+                "-r/--region-editor instead.")
+            self._logger.info("Selecting area of interest:")
+            # TODO: We should process this frame.
+            frame_for_crop = self._input.read()
+            scale_factor = None
+            if self._max_roi_size is None:
+                self._max_roi_size = get_min_screen_bounds()
+            if self._max_roi_size is not None:
+                frame_h, frame_w = (frame_for_crop.shape[0], frame_for_crop.shape[1])
+                max_w, max_h = self._max_roi_size
+                # Downscale the image if it's too large for the screen.
+                if frame_h > max_h or frame_w > max_w:
+                    factor_h = frame_h / float(max_h)
+                    factor_w = frame_w / float(max_w)
+                    scale_factor = max(factor_h, factor_w)
+                    new_height = round(frame_h / scale_factor)
+                    new_width = round(frame_w / scale_factor)
+                    frame_for_crop = cv2.resize(
+                        frame_for_crop, (new_width, new_height), interpolation=cv2.INTER_CUBIC)
+            roi = cv2.selectROI("DVR-Scan ROI Selection", frame_for_crop)
+            cv2.destroyAllWindows()
+            if any([coord == 0 for coord in roi[2:]]):
+                self._logger.info("ROI selection cancelled. Aborting...")
+                return False
+            # Unscale coordinates if we downscaled the image.
+            if scale_factor:
+                roi = [round(x * scale_factor) for x in roi]
+            self._roi_deprecated = roi
+        if self._roi_deprecated:
+            self._logger.info(
+                'ROI set: (x,y)/(w,h) = (%d,%d)/(%d,%d)',
+                self._roi_deprecated[0],
+                self._roi_deprecated[1],
+                self._roi_deprecated[2],
+                self._roi_deprecated[3],
+            )
+
+            x, y, w, h = self._roi_deprecated
+            region = [Point(x, y), Point(x + w, y), Point(x + w, y + h), Point(x, y + h)]
+            region_arg = " ".join(f"{x} {y}" for x, y in region)
+            self._logger.warning(
+                "WARNING: region-of-interest (roi) is deprecated and will be removed. "
+                "Use the following equivalent option by command line:\n\n"
+                f"--add-region {region_arg}\n\n"
+                "For config files, save this ROI as a region file and specify the path as the "
+                "load-region option (e.g. load-region = /usr/share/regions.txt). You can also save "
+                "the ROI to a file and load it again by adding `-s region.txt` to this command, or "
+                "by launching the region editor (add -r to this command and hit S to save).")
+            self._regions += [region]
+        return True

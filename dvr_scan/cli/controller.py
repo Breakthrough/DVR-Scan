@@ -25,7 +25,7 @@ from scenedetect import FrameTimecode
 
 import dvr_scan
 from dvr_scan.cli import get_cli_parser
-from dvr_scan.cli.config import ConfigRegistry, ConfigLoadFailure
+from dvr_scan.cli.config import ConfigRegistry, ConfigLoadFailure, RegionValueDeprecated
 from dvr_scan.overlays import TextOverlay, BoundingBoxOverlay
 from dvr_scan.detector import MotionDetector, Rectangle
 from dvr_scan.scanner import DetectorType, OutputMode, MotionScanner
@@ -80,9 +80,18 @@ def _preprocess_args(args):
     # -o/--output
     if hasattr(args, 'output') and not '.' in args.output:
         args.output += '.avi'
-    # -roi has been replaced with --roi/--region of interest
-    if hasattr(args, 'used_deprecated_roi_option'):
-        logger.warning('WARNING: Short form -roi is deprecated, use --roi instead.')
+    # -roi/--region-of-interest
+    if hasattr(args, 'region_of_interest') and args.region_of_interest:
+        original_roi = args.region_of_interest
+        try:
+            args.region_of_interest = RegionValueDeprecated(
+                value=' '.join(original_roi), allow_size=True).value
+        except ValueError:
+            logger.error(
+                'Error: Invalid value for ROI: %s. ROI must be specified as a rectangle of'
+                ' the form `x,y,w,h` or the max window size `w,h` (commas/spaces are ignored).'
+                ' For example: -roi 200,250 50,100', ' '.join(original_roi))
+            return False, None
     return True, args
 
 
@@ -286,6 +295,7 @@ def run_dvr_scan(settings: ProgramSettings) -> ty.List[ty.Tuple[FrameTimecode, F
         regions=settings.get_arg('regions'),
         load_region=load_region,
         save_region=settings.get_arg('save-region'),
+        roi_deprecated=settings.get('region-of-interest'),
     )
 
     # Scan video for motion with specified parameters.
