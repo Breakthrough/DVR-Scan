@@ -45,6 +45,8 @@ KEYCODE_WINDOWS_REDO = 25
 # TODO(v1.6): Figure out how to properly get icon path in the package. The folder will be different
 # in the final Windows build, may have to check if this is a frozen instance or not. Also need to
 # ensure the icon is included in the package metadata.
+# For Python distributions, may have to put dvr-scan.ico with the source files, and use
+# os.path.dirname(sys.modules[package].__file__) (or just __file__ here).
 # TODO(v1.7): Figure out how to make icon work on Linux. Might need a PNG version.
 def _get_icon_path() -> str:
     for path in ("dvr-scan.ico", "dist/dvr-scan.ico"):
@@ -523,8 +525,8 @@ class SelectionWindow:
                     self._select_region((key - ord('1')) % 10)
                 elif chr(key) in keyboard_callbacks:
                     keyboard_callbacks[chr(key)]()
-                elif key != 0xFF:
-                    print("Unhandled key: %s" % str(key))
+                elif key != 0xFF and self._debug_mode:
+                    logger.debug("Unhandled key: %s", str(key))
             return regions_valid
 
         finally:

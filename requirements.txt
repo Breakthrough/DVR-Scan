@@ -1,11 +1,11 @@
 #
 # DVR-Scan Python Requirements
 #
-platformdirs
-pytest
 numpy
 opencv-python
 opencv-contrib-python
+platformdirs
+pytest
 scenedetect
 screeninfo
 tqdm

@@ -40,9 +40,7 @@ import pkgutil
 # packages are imported which might attempt to import the `cv2` module.
 import dvr_scan.opencv_loader as _
 
-# Top-level imports for easier access from the dvr_scan module.
 from dvr_scan.platform import init_logger
-from dvr_scan.scanner import MotionScanner
 
 # Used for module/distribution identification.
 __version__ = '1.6-dev0'

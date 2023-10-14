@@ -21,6 +21,7 @@ import sys
 # On Windows, make sure we include any required DLL paths.
 if os.name == 'nt':
     # If we're running a frozen version of the app, the EXE path should include all required DLLs.
+    # TODO(v1.6): This path might need to be updated with the latest version of Pyinstaller.
     if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
         os.add_dll_directory(os.path.abspath(os.path.dirname(sys.executable)))
     # If CUDA is installed, include those DLLs in the search paths.

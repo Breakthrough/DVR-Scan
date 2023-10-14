@@ -981,11 +981,11 @@ class MotionScanner:
             # TODO: We should process this frame.
             frame_for_crop = self._input.read()
             scale_factor = None
-            if self._max_roi_size is None:
-                self._max_roi_size = get_min_screen_bounds()
-            if self._max_roi_size is not None:
+            if self._max_roi_size_deprecated is None:
+                self._max_roi_size_deprecated = get_min_screen_bounds()
+            if self._max_roi_size_deprecated is not None:
                 frame_h, frame_w = (frame_for_crop.shape[0], frame_for_crop.shape[1])
-                max_w, max_h = self._max_roi_size
+                max_w, max_h = self._max_roi_size_deprecated
                 # Downscale the image if it's too large for the screen.
                 if frame_h > max_h or frame_w > max_w:
                     factor_h = frame_h / float(max_h)

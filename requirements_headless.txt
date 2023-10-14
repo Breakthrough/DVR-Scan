@@ -1,9 +1,10 @@
 #
 # DVR-Scan Python Requirements
 #
-pytest
 numpy
 opencv-python-headless
 opencv-contrib-python-headless
+platformdirs
+pytest
 scenedetect
 tqdm
