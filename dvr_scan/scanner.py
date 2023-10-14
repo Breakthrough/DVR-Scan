@@ -444,10 +444,17 @@ class MotionScanner:
         if (self._show_roi_window_deprecated) and (self._load_region or self._regions
                                                    or self._region_editor):
             raise ValueError("Use -r/--region-editor instead of -roi.")
-        self._select_roi_deprecated()
+        if not self._select_roi_deprecated():
+            return
 
         if self._load_region:
+            if not os.path.exists(self._load_region):
+                logger.error(f"File does not exist: {self._load_region}")
+                raise ValueError(
+                    "Could not find specified region file. Ensure the specified path is valid "
+                    "and the file exists.")
             try:
+                logger.info(f"Loading regions from file: {self._load_region}")
                 regions = load_regions(self._load_region)
             except ValueError as ex:
                 reason = " ".join(str(arg) for arg in ex.args)
@@ -455,7 +462,7 @@ class MotionScanner:
                     reason = "Could not parse region file!"
                 logger.error(f"Error loading region from {self._load_region}: {reason}")
             else:
-                logger.debug("Loaded %d region%s from file:\n%s", len(regions),
+                logger.debug("Loaded %d region%s:\n%s", len(regions),
                              's' if len(regions) > 1 else '',
                              "\n".join(f"[{i}] = {points}" for i, points in enumerate(regions)))
             self._regions += regions
@@ -937,8 +944,8 @@ class MotionScanner:
         # area selection
         if self._show_roi_window_deprecated:
             logger.warning(
-                "WARNING: -roi/--region-of-interest is deprecated and will be removed. Use "
-                "-r/--region-editor instead.")
+                "**WARNING**: -roi/--region-of-interest is deprecated and will be removed.\n\n"
+                "Use -r/--region-editor instead.\n")
             logger.info("Selecting area of interest:")
             # TODO: We should process this frame.
             frame_for_crop = self._input.read()
@@ -974,17 +981,13 @@ class MotionScanner:
                 self._roi_deprecated[2],
                 self._roi_deprecated[3],
             )
-
             x, y, w, h = self._roi_deprecated
             region = [Point(x, y), Point(x + w, y), Point(x + w, y + h), Point(x, y + h)]
             region_arg = " ".join(f"{x} {y}" for x, y in region)
             logger.warning(
-                "WARNING: region-of-interest (roi) is deprecated and will be removed. "
-                "Use the following equivalent option by command line:\n\n"
-                f"--add-region {region_arg}\n\n"
-                "For config files, save this ROI as a region file and specify the path as the "
-                "load-region option (e.g. load-region = /usr/share/regions.txt). You can also save "
-                "the ROI to a file and load it again by adding `-s region.txt` to this command, or "
-                "by launching the region editor (add -r to this command and hit S to save).")
+                "**WARNING**: region-of-interest (-roi) is deprecated and will be removed.\n\n"
+                "You can use the following equivalent region:\n"
+                f"--add-region {region_arg}\n"
+                "For config files, save this region to a file and set the load-region option.\n")
             self._regions += [region]
         return True

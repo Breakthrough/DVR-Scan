@@ -577,6 +577,7 @@ class SelectionWindow:
             return
         regions = []
         try:
+            logger.debug(f"Loading regions from file: {load_path}")
             regions = load_regions(load_path)
         except ValueError as ex:
             reason = " ".join(str(arg) for arg in ex.args)
@@ -584,7 +585,7 @@ class SelectionWindow:
                 reason = "Could not parse region file!"
             logger.error(f"Error loading region from {load_path}: {reason}")
         else:
-            logger.debug("Loaded %d polygon%s from region file:\n%s", len(regions),
+            logger.debug("Loaded %d region%s from region file:\n%s", len(regions),
                          's' if len(regions) > 1 else '',
                          "\n".join(f"[{i}] = {points}" for i, points in enumerate(regions)))
 
