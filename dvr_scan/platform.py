@@ -33,6 +33,25 @@ try:
 except ImportError:
     tkinter = None
 
+
+# TODO(v1.7): Figure out how to make icon work on Linux. Might need a PNG version.
+def get_icon_path() -> str:
+    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+        app_folder = os.path.abspath(os.path.dirname(sys.executable))
+        icon_path = os.path.join(app_folder, "dvr-scan.ico")
+        if os.path.exists(icon_path):
+            return icon_path
+    # TODO(v1.6): Figure out how to properly get icon path in the package. The folder will be
+    # different in the final Windows build, may have to check if this is a frozen instance or not.
+    # Also need to ensure the icon is included in the package metadata.
+    # For Python distributions, may have to put dvr-scan.ico with the source files, and use
+    # os.path.dirname(sys.modules[package].__file__) (or just __file__ here).
+    for path in ("dvr-scan.ico", "dist/dvr-scan.ico"):
+        if os.path.exists(path):
+            return path
+    return ""
+
+
 HAS_TKINTER = not tkinter is None
 
 IS_WINDOWS = os.name == 'nt'
@@ -129,7 +148,8 @@ def get_filename(path: AnyStr, include_extension: bool) -> AnyStr:
     return filename
 
 
-def set_icon(window_name: str, icon_path: str):
+def set_icon(window_name: str):
+    icon_path = get_icon_path()
     if not icon_path:
         return
     if not IS_WINDOWS:
@@ -153,15 +173,17 @@ def set_icon(window_name: str, icon_path: str):
 
 
 @contextmanager
-def temp_tk_window(icon_path: str):
+def temp_tk_window():
     """Used to provide a hidden Tk window as a root for pop-up dialog boxes to return focus to
     main region window when destroyed."""
     root = tkinter.Tk()
     try:
         root.withdraw()
         # TODO: Set icon on Linux/OSX.
-        if IS_WINDOWS and os.path.exists(icon_path):
-            root.iconbitmap(os.path.abspath(icon_path))
+        if IS_WINDOWS:
+            icon_path = get_icon_path()
+            if icon_path:
+                root.iconbitmap(os.path.abspath(icon_path))
         yield root
     finally:
         root.destroy()

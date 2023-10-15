@@ -36,15 +36,19 @@ You can also specify multiple paths directly.  Multiple inputs are not supported
 
 Note that DVR-Scan will **concatenate** the videos together **in the order they are specified** (or expanded if using wildcards). To avoid this, you can run DVR-Scan on each video in a loop. For example, on Windows:
 
-   for /F %i in ('dir *.mp4 /b') do dvr-scan -i %i
+```
+for /F %i in ('dir *.mp4 /b') do dvr-scan -i %i
+```
 
 Or on Linux/OSX:
 
-   target="/some/folder"
-   for f in "$target"*
-   do
-      dvr-scan -i $f
-   done
+```
+target="/some/folder"
+for f in "$target"*
+do
+   dvr-scan -i $f
+done
+```
 
 
 ----------------------------------------------------------
@@ -52,10 +56,11 @@ Or on Linux/OSX:
 
 ### How can I improve scanning performance?
 
-Adjusting [motion detection parameters](docs.md#detection-options) can have a large effect on performance:
+Adjusting [motion detection settings](docs.md#motion-settings) can have a large effect on performance:
 
- - `-roi`: If a region of interest is set
- -  Setting the output mode `-m`/`--output-mode` to either `ffmpeg` or `copy` can also improve performance compared to the default (`opencv`).  Limiting detection to a specific region of the frame with the `-roi` flag will also make processing faster.
+ - Limiting detection to a specific region of the frame with the region editor will also improve performance
+ - Setting the output mode to either `ffmpeg` or `copy` can also improve performance compared to the default (`opencv`)
+ - Downscaling high resolution videos can also improve performance greatly, at the expense of accuracy
 
 
 ----------------------------------------------------------

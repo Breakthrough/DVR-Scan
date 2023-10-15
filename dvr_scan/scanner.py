@@ -227,6 +227,7 @@ class MotionScanner:
         self._output_mode: OutputMode = None           # -m/--output-mode / -so/--scan-only
         self._ffmpeg_input_args: Optional[str] = None  # input args for OutputMode.FFMPEG/COPY
         self._ffmpeg_output_args: Optional[str] = None # output args for OutputMode.FFMPEG
+                                                       # TODO: Replace uses of self._output_dir with a helper function called "get_output_path".
         self._output_dir: AnyStr = ''                  # -d/--directory
 
         # Overlay Parameters (set_overlays)

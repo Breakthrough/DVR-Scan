@@ -56,7 +56,7 @@ jobs:
 
       - name: Assemble Portable Distribution
         run: |
-          python dist/prepare_dist.py
+          python dist/create_win64_release.py
           7z e -odist/ffmpeg ffmpeg-6.0-full_build.7z LICENSE -r
           Move-Item -Path ffmpeg.exe -Destination dist/dvr-scan/ffmpeg.exe
           Move-Item -Path dist/ffmpeg/LICENSE -Destination dist/dvr-scan/LICENSE-FFMPEG -Force

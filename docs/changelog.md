@@ -9,7 +9,11 @@
 
 #### Release Notes
 
-DVR-Scan 1.6 showcases the new region editor and has improved seeking performance. There are also several other improvements and bugfixes since the last release.
+This version of DVR-Scan includes a much requested feature: multiple regions of interest.  Not only can you select multiple regions, but they can be any shape or complexity (see [user guide](https://dvr-scan.readthedocs.io/en/develop/guide/#region-editor)):
+
+<img alt="example of region editor" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/develop/docs/assets/region-editor-multiple.jpg" width="480"/>
+
+There are also several other bugfixes and improvements, such as improved seeking performance.
 
 #### Changelog
 

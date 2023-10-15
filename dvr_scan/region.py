@@ -41,22 +41,6 @@ KEYCODE_SPACE = ord(' ')
 KEYCODE_WINDOWS_UNDO = 26
 KEYCODE_WINDOWS_REDO = 25
 
-
-# TODO(v1.6): Figure out how to properly get icon path in the package. The folder will be different
-# in the final Windows build, may have to check if this is a frozen instance or not. Also need to
-# ensure the icon is included in the package metadata.
-# For Python distributions, may have to put dvr-scan.ico with the source files, and use
-# os.path.dirname(sys.modules[package].__file__) (or just __file__ here).
-# TODO(v1.7): Figure out how to make icon work on Linux. Might need a PNG version.
-def _get_icon_path() -> str:
-    for path in ("dvr-scan.ico", "dist/dvr-scan.ico"):
-        if os.path.exists(path):
-            return path
-    return ''
-
-
-_ICON_PATH = _get_icon_path()
-
 DEFAULT_WINDOW_MODE = (cv2.WINDOW_AUTOSIZE if IS_WINDOWS else cv2.WINDOW_KEEPRATIO)
 """Minimum height/width for a ROI created using the mouse."""
 
@@ -505,7 +489,7 @@ class SelectionWindow:
             logger.debug("Creating window for frame (scale = %d)", self._scale)
             self._init_window()
             check_tkinter_support(warn_if_notkinter)
-            set_icon(_WINDOW_NAME, _ICON_PATH)
+            set_icon(_WINDOW_NAME)
             regions_valid = False
             logger.info(f"Region editor active. Press {KEYBIND_HELP} to show controls.")
             keyboard_callbacks = self._create_keymap()
@@ -545,7 +529,7 @@ class SelectionWindow:
             logger.debug("Cannot show file dialog.")
             return
         save_path = None
-        with temp_tk_window(_ICON_PATH) as _:
+        with temp_tk_window() as _:
             save_path = tkinter.filedialog.asksaveasfilename(
                 title="DVR-Scan: Save Region",
                 filetypes=[("Region File", "*.txt")],
@@ -564,7 +548,7 @@ class SelectionWindow:
             logger.debug("Cannot show file dialog.")
             return
         load_path = None
-        with temp_tk_window(_ICON_PATH) as _:
+        with temp_tk_window() as _:
             load_path = tkinter.filedialog.askopenfilename(
                 title="DVR-Scan: Load Region",
                 filetypes=[("Region File", "*.txt")],
