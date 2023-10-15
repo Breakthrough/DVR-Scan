@@ -31,7 +31,7 @@ If want to use an existing OpenCV installation or require a non-PyPI version, yo
 
 !!! windows-download "**1.5.1**<span class="dvr-scan-release-date">August 15, 2022</span>"
 
-    <div class="buttongrid buttongrid-download">[:fontawesome-solid-download: &nbsp; Installer `.msi`](download.md){ .md-button #download-button }[:fontawesome-solid-file-zipper: &nbsp; Portable `.zip`](changelog.md){ .md-button #changelog-button }</div>
+    <div class="buttongrid buttongrid-download">[:fontawesome-solid-download: &nbsp; Installer `.msi`](https://github.com/Breakthrough/DVR-Scan/releases/download/v1.5.1-release/dvr-scan-1.5.1-win64.msi){ .md-button #download-button }[:fontawesome-solid-file-zipper: &nbsp; Portable `.zip`](https://github.com/Breakthrough/DVR-Scan/releases/download/v1.5.1-release/dvr-scan-1.5.1-win64.zip){ .md-button #changelog-button }</div>
 
 
 The installer is recommended for most users.  Windows builds include all required dependencies to run DVR-Scan.  Only 64-bit builds are available.
@@ -46,7 +46,7 @@ Nvidia CUDA® builds are available, but still early in development. This version
 
 !!! cuda-download "**1.5.1**<span class="dvr-scan-release-date">:fontawesome-solid-triangle-exclamation:</span>"
 
-    <div class="buttongrid buttongrid-download">[:fontawesome-solid-flask: &nbsp; CUDA® Build `.zip`](docs.md){ .md-button #changelog-button }</div>
+    <div class="buttongrid buttongrid-download">[:fontawesome-solid-flask: &nbsp; CUDA® Build `.zip`](https://github.com/Breakthrough/DVR-Scan/releases/download/v1.5.1-release/dvr-scan-1.5.1-win64-cuda.zip){ .md-button #changelog-button }</div>
 
 Make sure to set `-b MOG2_CUDA` when running DVR-Scan (e.g. `dvr-scan -i video.mp4 -b MOG2_CUDA`). CUDA builds are done infrequently and may not be up to date.  The Python version of DVR-Scan is compatible with any CUDA® enabled version of the `opencv-python` module.  You can get better performance or use DVR-Scan on a wider variety of GPUs if you build the module on your system. with the latest SDK version.
 
