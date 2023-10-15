@@ -4,9 +4,11 @@
 
 ------------------------------------------------
 
-### Latest Release: v1.5.1 (August 15, 2022)
+### Latest Release: v1.6 (October 15, 2023)
 
 **Website**: [dvr-scan.com](https://www.dvr-scan.com)
+
+**User Guide**: [dvr-scan.com/guide](https://www.dvr-scan.com/guide/)
 
 **Documentation**: [dvr-scan.com/docs](https://www.dvr-scan.com/docs/)
 
@@ -26,17 +28,21 @@ Scan `video.mp4` (separate clips for each event):
 
     dvr-scan -i video.mp4
 
-Only scan a region of interest ([see user guide](https://dvr-scan.readthedocs.io/en/develop/guide/) or hit `H` for controls):
+Select a region to scan using [the region editor](https://www.dvr-scan.com/guide/):
 
-    dvr-scan -i video.mp4 -roi
+    dvr-scan -i video.mp4 -r
 
-<img alt="example of region editor" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/develop/docs/assets/region-editor-multiple.jpg" width="480"/>
+<img alt="example of region editor" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.6/docs/assets/region-editor-multiple.jpg" width="480"/>
+
+Select a region to scan using command line (list of points as X Y):
+
+    dvr-scan -i video.mp4 -a 50 50 100 50 100 100 100 50
 
 Draw boxes around motion:
 
     dvr-scan -i video.mp4 -bb
 
-<img alt="example of bounding boxes" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/develop/docs/assets/bounding-box.gif" width="480"/>
+<img alt="example of bounding boxes" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.6/docs/assets/bounding-box.gif" width="480"/>
 
 Use `ffmpeg` to extract events:
 

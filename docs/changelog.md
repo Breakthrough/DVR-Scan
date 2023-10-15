@@ -5,19 +5,21 @@
 
 ## DVR-Scan 1.6
 
-### 1.6 (In Development)
+### 1.6 (October 15, 2023)
 
 #### Release Notes
 
-This version of DVR-Scan includes a much requested feature: multiple regions of interest.  Not only can you select multiple regions, but they can be any shape or complexity (see [user guide](https://dvr-scan.readthedocs.io/en/develop/guide/#region-editor)):
+This version of DVR-Scan includes a new region editor ([user guide](https://www.dvr-scan.com/guide/#region-editor))
 
-<img alt="example of region editor" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/develop/docs/assets/region-editor-multiple.jpg" width="480"/>
+<img alt="example of region editor" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.6/docs/assets/region-editor-multiple.jpg" width="480"/>
+
+Multiple regions can now be defined with any shape, size, and complexity. Region data can be saved to a file and loaded again.
 
 There are also several other bugfixes and improvements, such as improved seeking performance.
 
 #### Changelog
 
- - [feature] [New region editor](https://dvr-scan.readthedocs.io/en/develop/guide/#region-editor) `-r`/`--region-editor` allows creation of multiple regions without shape restrictions, replaces `-roi`/`--region-of-interest`
+ - [feature] [New region editor](https://www.dvr-scan.com/guide/#region-editor) `-r`/`--region-editor` allows creation of multiple regions without shape restrictions, replaces `-roi`/`--region-of-interest`
  - [feature] Multiple regions of interest (rectangular or polygonal) can now be created:
     - Using the new region editor by adding the `-r`/`--region-editor` flag: `dvr-scan -i video.mp4 -r`
     - New `-a`/`--add-region` replaces `-roi`/`--region-of-interest` option: `dvr-scan -i video.mp4 -a 5 5 20 5 20 20 5 20`
