@@ -44,7 +44,7 @@ The installer is recommended for most users.  Windows builds include all require
 
 Nvidia CUDA® builds are available, but still early in development. This version may not be the latest, and should be considered experimental. Not all GPU versions may be supported.
 
-!!! cuda-download "**1.5.1 (Not Latest)**<span class="dvr-scan-release-date">:fontawesome-solid-triangle-exclamation:</span>
+!!! cuda-download "**1.5.1 (Not Latest)**<span class="dvr-scan-release-date">:fontawesome-solid-triangle-exclamation:</span>"
 
     <div class="buttongrid buttongrid-download">[:fontawesome-solid-flask: &nbsp; CUDA® Build `.zip`](https://github.com/Breakthrough/DVR-Scan/releases/download/v1.5.1-release/dvr-scan-1.5.1-win64-cuda.zip){ .md-button #changelog-button }</div>
 
