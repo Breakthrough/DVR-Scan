@@ -2,12 +2,12 @@
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
-#       [  Site: https://github.com/Breakthrough/DVR-Scan/   ]
-#       [  Documentation: http://dvr-scan.readthedocs.org/   ]
+#       [  Site: https://www.dvr-scan.com/                 ]
+#       [  Repo: https://github.com/Breakthrough/DVR-Scan  ]
 #
-# Copyright (C) 2014-2022 Brandon Castellano <http://www.bcastell.com>.
-# PySceneDetect is licensed under the BSD 2-Clause License; see the
-# included LICENSE file, or visit one of the above pages for details.
+# Copyright (C) 2014-2023 Brandon Castellano <http://www.bcastell.com>.
+# DVR-Scan is licensed under the BSD 2-Clause License; see the included
+# LICENSE file, or visit one of the above pages for details.
 #
 """DVR-Scan CLI Tests
 
@@ -24,7 +24,7 @@ import pytest
 from dvr_scan import opencv_loader as _
 from scenedetect.video_splitter import is_ffmpeg_available
 
-from dvr_scan.motion_detector import MotionDetectorCNT, MotionDetectorCudaMOG2
+from dvr_scan.subtractor import SubtractorCNT, SubtractorCudaMOG2
 
 # TODO: Open extracted motion events and validate the actual frames.
 
@@ -34,8 +34,8 @@ BASE_OUTPUT_NAME: str = 'traffic_camera'
 BASE_COMMAND = [
     '--input',
     'tests/resources/traffic_camera.mp4',
-    '--region-of-interest',
-    '631,532, 210,127',
+    '--add-region',
+    '631 532 841 532 841 659 631 659',
     '--min-event-length',
     '4',
     '--time-before-event',
@@ -44,7 +44,6 @@ BASE_COMMAND = [
 BASE_COMMAND_NUM_EVENTS = 3
 
 TEST_CONFIG_FILE = """
-region-of-interest = 631,532 210,127
 min-event-length = 4
 time-before-event = 0
 """
@@ -157,7 +156,7 @@ def test_mog2(tmp_path):
     assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS, "Incorrect number of events found."
 
 
-@pytest.mark.skipif(not MotionDetectorCNT.is_available(), reason="CNT not available")
+@pytest.mark.skipif(not SubtractorCNT.is_available(), reason="CNT not available")
 def test_cnt(tmp_path):
     """Test -b/--bg-subtractor CNT."""
     tmp_path = str(tmp_path)                                        # Hack for Python 3.7 builder.
@@ -170,7 +169,7 @@ def test_cnt(tmp_path):
     assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS, "Incorrect number of events found."
 
 
-@pytest.mark.skipif(not MotionDetectorCudaMOG2.is_available(), reason="MOG2_CUDA not available")
+@pytest.mark.skipif(not SubtractorCudaMOG2.is_available(), reason="MOG2_CUDA not available")
 def test_mog2_cuda(tmp_path):
     """Test -b/--bg-subtractor MOG2_CUDA."""
     tmp_path = str(tmp_path)                                        # Hack for Python 3.7 builder.
@@ -184,12 +183,13 @@ def test_mog2_cuda(tmp_path):
 
 
 def test_overlays(tmp_path):
-    """Test overlays -bb/--bounding-box and -tc/--timecode."""
+    """Test overlays -bb/--bounding-box, --fm/--frame-metrics, and -tc/--time-code."""
     tmp_path = str(tmp_path)                                        # Hack for Python 3.7 builder.
     assert subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND + [
         '--output-dir',
         tmp_path,
         '--bounding-box',
+        '--frame-metrics',
         '--time-code',
     ]) == 0
     assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS, "Incorrect number of events found."
@@ -217,7 +217,7 @@ def test_config_file(tmp_path):
         file.write(TEST_CONFIG_FILE)
 
     output = subprocess.check_output(
-        args=DVR_SCAN_COMMAND + BASE_COMMAND[0:2] + [ # Only use the input from BASE_COMMAND.
+        args=DVR_SCAN_COMMAND + BASE_COMMAND[0:4] + [ # Only use the input from BASE_COMMAND.
             '--output-dir',
             tmp_path,
             '--config',
@@ -254,3 +254,26 @@ def test_copy_mode(tmp_path):
         'copy',
     ]) == 0
     assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS, "Incorrect number of events found."
+
+
+def test_deprecated_roi(tmp_path):
+    """Test deprecated ROI translation."""
+    tmp_path = str(tmp_path)                     # Hack for Python 3.7 builder.
+    output = subprocess.check_output(
+        args=DVR_SCAN_COMMAND + BASE_COMMAND + [
+            '--output-dir',
+            tmp_path,
+            '--scan-only',
+            '-dt',
+            '2',
+            '-roi',
+            '10 20 10 15',
+            '-s',
+            'roi.txt',
+        ],
+        text=True)
+    roi_path = os.path.join(tmp_path, "roi.txt")
+    assert os.path.exists(roi_path)
+    with open(roi_path, "rt") as roi_file:
+        last_line_of_file = list(filter(None, roi_file.readlines()))[-1].strip()
+    assert last_line_of_file == "10 20 20 20 20 35 10 35"

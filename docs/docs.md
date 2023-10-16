@@ -2,7 +2,6 @@
 # :fontawesome-solid-book:Documentation
 
 
-
 ## :fontawesome-solid-terminal:`dvr-scan` Options
 
 ### General
@@ -10,7 +9,7 @@
  * <b><pre>-h, --help</pre></b>
     Show help message and all options and default values. Will also show any options overriden by your [user config file](#config-file), if set.
 
- * <b><pre>-v, --version</pre></b>
+ * <b><pre>-V, --version</pre></b>
     Show version information.
 
  * <b><pre>-L, --license</pre></b>
@@ -24,7 +23,7 @@ The following options control terminal output:
  * <b><pre>-q, --quiet</pre></b>
     Suppress all console output except for final cutting list.
 
- * <b><pre>--verbosity</pre></b>
+ * <b><pre>-v, --verbosity</pre></b>
     Set verbosity of output messages, must be one of: <b><pre>debug, info, warning, error</pre></b>
     <span class="dvr-scan-default">
     ```
@@ -39,7 +38,7 @@ The following options control terminal output:
     Path to input video. May specify multiple input videos so long as they have the same resolution and framerate. Wildcards/globs are supported (e.g. `-i folder/*.mp4`). Extracted motion events use the filename of the first video only as a prefix.
 
  * <b><pre>-c settings.cfg, --config settings.cfg</pre></b>
-    Path to config file. If not set, tries to load one automatically from the user settings folder. See the [config file documentation](#config-file) for details.
+    Path to config file. If not set, tries to load one automatically from the user settings folder (run `dvr-scan --help` to see the exact path for your system). See the [config file documentation](#config-file) for what options can be specified.
 
 #### Seeking/Duration
 
@@ -78,12 +77,11 @@ dvr-scan -i video.mp4 --start-time 00:35:52 --duration 00:05:00
     ```
     </span>
 
+!!! warning "Multiple input files are not supported when `-m`/`--output-mode` is set to `ffmpeg` or `copy`. You can use `ffmpeg` to [concatenate all input videos](https://trac.ffmpeg.org/wiki/Concatenate) *before* using DVR-Scan, or [run DVR-Scan in a for-loop](guide.md#multiple-videos)."
+
  * <b><pre>-o video.avi, --output video.avi</pre></b> Save all motion events to a single file, instead of the default (one file per event). Only supported with the default output mode (`opencv`). Requires `.avi` extension.
 
  * <b><pre>-mo mask.avi, --mask-output mask.avi</pre></b> Save a video containing the calculated motion mask on each frame. Useful for tuning motion detection. Requires `.avi` extension.
-
-
-
 
 
 ### Events
@@ -140,7 +138,7 @@ Motion detection can be fine-tuned for specific use cases.  When modifying detec
 ```
 </span>
 
- * <b><pre>-k size, --kernel-size size</pre></b> Size in pixels of the noise reduction kernel. Must be an *odd* integer at least `3` or greater. By default, selects automatically based on input resolution (`-1` implies `auto`). Auto kernel sizes are 7 for 1080p or greater, 5 for 720p and 3 for 480p. Kernel size can be increased to filter out smaller movements from a scene.
+ * <b><pre>-k size, --kernel-size size</pre></b> Noise reduction kernel size, in pixels.  Kernel size can be increased to filter out smaller movements from a scene. Must be an *odd* integer at least `3` or greater. Can also be set to `0` to disable, or `-1` to select automatically based on input resolution. Auto sizes are `7` for 1080p or higher, `5` for 720p, and `3` for 480p or lower.
 <span class="dvr-scan-example">
 ```
 --kernel-size 5
@@ -149,23 +147,42 @@ Motion detection can be fine-tuned for specific use cases.  When modifying detec
 
 ------------------------------------------------
 
-##### Region of Interest
+##### Regions
 
-Detection can be limited to a specific region of the frame using the `-roi` flag.
+Detection can be limited to specific regions of the frame. This can be done interactively using the `-r/--region-editor` flag, or by providing a list (`-a/--add-region`) or file (`-R/--load-region`) containing polygon data.
 
-!!! tip "Setting a region of interest improves scanning performance."
+Regions are specified as a list of points (X, Y) forming a closed polygon (shape with at least 3 points). For example, a triangle is defined as `0 0 100 0 50 50`. Multiple regions can be combined, and the result can also be saved to a file using `-s/--save-region`.
 
+!!! tip "Setting a smaller region of interest can improve scanning performance."
 
- * <b><pre>-roi</pre></b> Show pop-up window to select a region of interest using the mouse.  The first frame will be displayed.
-
- * <b><pre>-roi x0 y0 w h</pre></b> Rectangle specified by coordinate of top-left corner `x0`, `y0` and size `w`, `h`. The top left corner of the video is `0`, `0`.
+ * <b><pre>-r, --region-editor</pre></b> Display region editor before processing. Press `H` to show controls in your terminal. See [the user guide](guide.md#region-editor) for more details.
 <span class="dvr-scan-example">
 ```
--roi 50 75 100 100
+dvr-scan -i video.mp4 -r
 ```
 </span>
 
- * <b><pre>-roi width height</pre></b> Same as `-roi`, but ensures selection window is no larger than `height` x `width`.  Useful for processing videos larger than the monitor resolution.
+ * <b><pre>-a, --add-region</pre></b>Add a region to the scan. Regions are defined by a list of points (min. 3) that enclose the scanning region.
+<span class="dvr-scan-example">
+```
+dvr-scan -i video.mp4 -a 50 50 100 50 75 75
+```
+</span>
+
+ * <b><pre>-s, --save-region</pre></b>Save region data for this scan. Include all regions added or loaded via command line, and any edits made with the region editor if launched.
+<span class="dvr-scan-example">
+```
+dvr-scan -i video.mp4 -r -s regions.txt
+```
+</span>
+
+ * <b><pre>-R, --load-region</pre></b>Load region data an existing file.
+<span class="dvr-scan-example">
+```
+dvr-scan -i video.mp4 -R regions.txt
+```
+</span>
+
 
 ------------------------------------------------
 
@@ -193,7 +210,8 @@ Detection can be limited to a specific region of the frame using the `-roi` flag
 
 ### Overlays
 
-<!-- SHOW EXAMPLE VIA GIF -->
+<img alt="overlay example" src="../assets/bounding-box.gif"/>
+
 !!! note "Overlays are only supported with the default output mode ([`-m opencv`](#output))."
 
  * <b><pre>-bb, --bounding-box</pre></b> Draw a bounding box around the areas where motion is detected.
@@ -203,57 +221,29 @@ Detection can be limited to a specific region of the frame using the `-roi` flag
  * <b><pre>-tc, --time-code</pre></b>  Draw time code of each frame on the top left corner.
 <br/>Text properties (e.g. color, font size, margin) can be set with a [config file](#overlays_1).
 
+ * <b><pre>-fm, --frame-metrics</pre></b>  Draw frame metrics, including motion score, on the top right corner.
+<br/>Text properties (e.g. color, font size, margin) can be set with a [config file](config_file.md#text-overlays).
+
 ------------------------------------------------
 
 ## :fontawesome-regular-file:Config File
 
-Many of DVR-Scan's options and defaults can be set using a config file.  This page describes all possible config options, but you can also download [the `dvr-scan.cfg` config template](https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.5.1/dvr-scan.cfg) as a starting point.
-
-A config file path can be specified via the `-c`/`--config` option. DVR-Scan also looks for a `dvr-scan.cfg` file in the following locations:
-
- * Windows: `C:/Users/%USERNAME%/AppData/Local/DVR-Scan/dvr-scan.cfg`
- * Linux: `~/.config/DVR-Scan/dvr-scan.cfg` or `$XDG_CONFIG_HOME/dvr-scan.cfg`
- * OSX: `~/Library/Preferences/DVR-Scan/dvr-scan.cfg`
-
-Run `dvr-scan --help` to see the exact path on your system which will be used (it will be listed under the help text for the `-c`/`--config` option).
+Settings are specified one per line as `option = value`. Lines starting with `#` are ignored as comments. The [`dvr-scan.cfg` config template](https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.6/dvr-scan.cfg) can be saved and used as a starting point (it includes the information in this section as comments).
 
 Configuration options are set as `option = value`, and lines starting with `#` are ignored as comments. For example:
 
 ```
 # This is an example of a DVR-Scan config file.
 # Lines starting with # are treated as comments.
-output-mode = COPY
-min-event-length = 0.25s
+time-before-event = 0.5s
+time-post-event = 2.0s
 bounding-box = yes
-bounding-box-color = 0, 255, 0
+bounding-box-color = 0xFF0000
 ```
 
 ------------------------------------------------
 
-### Template
-
-You can download [the `dvr-scan.cfg` template](https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.5.1/dvr-scan.cfg) to use as a starting point for creating a config file from scratch.
-
-------------------------------------------------
-
 ### Options
-
-
- * <b><pre>quiet-mode</pre></b>
-    Suppress all console output: (`yes` or `no`). Only a final comma-separated list of timecodes will be printed if set to `yes`.
-    <span class="dvr-scan-default">
-    ```
-    quiet-mode = no
-    ```
-    </span>
-
- * <b><pre>verbosity</pre></b>
-    Verbosity of console output: (`debug`, `info`, `warning`, `error`).
-    <span class="dvr-scan-default">
-    ```
-    verbosity = info
-    ```
-    </span>
 
  * <b><pre>output-dir</pre></b>
     Directory to output all created files. If unset, files will be created in the current working directory.
@@ -270,6 +260,8 @@ You can download [the `dvr-scan.cfg` template](https://raw.githubusercontent.com
     output-mode = opencv
     ```
     </span>
+
+!!! warning "Multiple input files are not supported when `-m`/`--output-mode` is set to `ffmpeg` or `copy`. You can use `ffmpeg` to [concatenate all input videos](https://trac.ffmpeg.org/wiki/Concatenate) *before* using DVR-Scan, or [run DVR-Scan in a for-loop](guide.md#multiple-videos)."
 
  * <b><pre>ffmpeg-input-args</pre></b>
     Arguments added before the input to `ffmpeg` when *output-mode* is *ffmpeg* or *copy*. Note that *-y* and *-nostdin* are always added.
@@ -294,6 +286,23 @@ You can download [the `dvr-scan.cfg` template](https://raw.githubusercontent.com
     opencv-codec = XVID
     ```
     </span>
+
+ * <b><pre>verbosity</pre></b>
+    Verbosity of console output: (`debug`, `info`, `warning`, `error`).
+    <span class="dvr-scan-default">
+    ```
+    verbosity = info
+    ```
+    </span>
+
+ * <b><pre>quiet-mode</pre></b>
+    Suppress all console output: (`yes` or `no`). Only a final comma-separated list of timecodes will be printed if set to `yes`.
+    <span class="dvr-scan-default">
+    ```
+    quiet-mode = no
+    ```
+    </span>
+
 
 ------------------------------------------------
 
@@ -349,8 +358,16 @@ The following options control motion detection.  A more comprehensive descriptio
     ```
     </span>
 
+ * <b><pre>max-threshold</pre></b>
+     Scores of this amount or higher are ignored. 255.0 is the maximum score, so values greater than 255.0 will disable the filter.
+    <span class="dvr-scan-default">
+    ```
+    max-threshold = 255.0
+    ```
+    </span>
+
  * <b><pre>kernel-size</pre></b>
-    Size (in pixels) of the noise reduction kernel. Must be an odd integer greater than 1, or -1 to auto-set based on video resolution.
+    Size (in pixels) of the noise reduction kernel. Size must be an odd number starting from 3, 0 to disable, or -1 to auto-set based on video resolution.
     <span class="dvr-scan-default">
     ```
     kernel-size = -1
@@ -388,66 +405,13 @@ The following options control motion detection.  A more comprehensive descriptio
 
 Color values can be specified as either `(R,G,B)` or in hex as `0xFFFFFF`. Time values can be given in seconds as a number followed by `s` (`123s` or `123.45s`), or as number of frames (e.g. `1234`).
 
-<h5>Timecode Overlay</h5>
-
- * <b><pre>timecode</pre></b>
-    Enable timecode overlay: (`yes` or `no`).
-    <span class="dvr-scan-default">
-    ```
-    timecode = no
-    ```
-    </span>
-
- * <b><pre>timecode-margin</pre></b>
-    Margin from edge in pixels.
-    <span class="dvr-scan-default">
-    ```
-    timecode-margin = 5
-    ```
-    </span>
-
- * <b><pre>timecode-font-scale</pre></b>
-    Scale factor for text size.
-    <span class="dvr-scan-default">
-    ```
-    timecode-font-scale = 2.0
-    ```
-    </span>
-
- * <b><pre>timecode-font-thickness</pre></b>
-    Thickness of font (integer values only).
-    <span class="dvr-scan-default">
-    ```
-    timecode-font-thickness = 2
-    ```
-    </span>
-
- * <b><pre>timecode-font-color</pre></b>
-    Text color specified as `R, G, B`.
-    <span class="dvr-scan-default">
-    ```
-    timecode-font-color = 255, 255, 255
-    ```
-    </span>
-
- * <b><pre>timecode-bg-color</pre></b>
-    Background color specified as `R, G, B`.
-    <span class="dvr-scan-default">
-    ```
-    timecode-bg-color = 0, 0, 0
-    ```
-    </span>
-
-
-------------------------------------------------
-
 <h5>Bounding Box</h5>
 
 * <pre>bounding-box</pre></b>
     Enable bounding box: (`yes` or `no`).
-    <span class="dvr-scan-default">
+    <span class="dvr-scan-example">
     ```
-    bounding-box = no
+    bounding-box = yes
     ```
     </span>
 
@@ -480,5 +444,73 @@ Color values can be specified as either `(R,G,B)` or in hex as `0xFFFFFF`. Time 
     <span class="dvr-scan-default">
     ```
     bounding-box-min-size = 0.032
+    ```
+    </span>
+
+------------------------------------------------
+
+<h5>Text Overlays</h5>
+
+ * <b><pre>time-code</pre></b>
+    Enable timecode overlay: (`yes` or `no`). Draws timecode on top left of each frame.
+    <span class="dvr-scan-example">
+    ```
+    time-code = yes
+    ```
+    </span>
+
+ * <b><pre>frame-metrics</pre></b>
+    Enable frame metrics overlay: (`yes` or `no`). Draws frame metrics, including motion score, on top right of each frame.
+    <span class="dvr-scan-example">
+    ```
+    frame-metrics = yes
+    ```
+    </span>
+
+ * <b><pre>text-border</pre></b>
+    Margin from edge in pixels.
+    <span class="dvr-scan-default">
+    ```
+    text-margin = 5
+    ```
+    </span>
+
+ * <b><pre>text-margin</pre></b>
+    Margin from edge in pixels.
+    <span class="dvr-scan-default">
+    ```
+    text-margin = 5
+    ```
+    </span>
+
+ * <b><pre>text-font-scale</pre></b>
+    Scale factor for text size.
+    <span class="dvr-scan-default">
+    ```
+    text-font-scale = 2.0
+    ```
+    </span>
+
+ * <b><pre>text-font-thickness</pre></b>
+    Thickness of font (integer values only).
+    <span class="dvr-scan-default">
+    ```
+    text-font-thickness = 2
+    ```
+    </span>
+
+ * <b><pre>text-font-color</pre></b>
+    Text color specified as `R, G, B`.
+    <span class="dvr-scan-default">
+    ```
+    text-font-color = 255, 255, 255
+    ```
+    </span>
+
+ * <b><pre>text-bg-color</pre></b>
+    Background color specified as `R, G, B`.
+    <span class="dvr-scan-default">
+    ```
+    text-bg-color = 0, 0, 0
     ```
     </span>

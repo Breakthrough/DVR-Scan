@@ -2,12 +2,12 @@
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
-#       [  Site: https://github.com/Breakthrough/DVR-Scan/   ]
-#       [  Documentation: http://dvr-scan.readthedocs.org/   ]
+#       [  Site: https://www.dvr-scan.com/                 ]
+#       [  Repo: https://github.com/Breakthrough/DVR-Scan  ]
 #
-# Copyright (C) 2014-2022 Brandon Castellano <http://www.bcastell.com>.
-# PySceneDetect is licensed under the BSD 2-Clause License; see the
-# included LICENSE file, or visit one of the above pages for details.
+# Copyright (C) 2014-2023 Brandon Castellano <http://www.bcastell.com>.
+# DVR-Scan is licensed under the BSD 2-Clause License; see the included
+# LICENSE file, or visit one of the above pages for details.
 #
 """ ``dvr_scan.video_joiner`` Module
 
@@ -22,9 +22,12 @@ from typing import AnyStr, List, Optional, Tuple, Union
 import cv2
 import numpy
 from scenedetect import FrameTimecode
+from scenedetect.backends import VideoStreamCv2
 from scenedetect.video_stream import VideoOpenFailure
 
 FRAMERATE_DELTA_TOLERANCE: float = 0.1
+
+logger = logging.getLogger('dvr_scan')
 
 
 # TODO: Replace this with the equivalent from PySceneDetect when available.
@@ -36,22 +39,20 @@ class VideoJoiner:
     """
 
     def __init__(self, paths: Union[AnyStr, List[AnyStr]]):
-        self._logger = logging.getLogger('dvr_scan')
         if isinstance(paths, (str, bytes)):
             paths = [paths]
 
         assert paths
         self._paths = paths
 
-        self._cap: Optional[cv2.VideoCapture] = None
+        self._cap: Optional[VideoStreamCv2] = None
         self._curr_cap_index = 0
-        self._resolution: Tuple[int, int] = None
-        self._framerate: float = None
         self._total_frames: int = 0
         self._decode_failures: int = 0
         self._load_input_videos()
         # Initialize position now that the framerate is valid.
         self._position: FrameTimecode = FrameTimecode(0, self.framerate)
+        self._last_cap_pos: FrameTimecode = FrameTimecode(0, self.framerate)
 
     @property
     def paths(self) -> List[AnyStr]:
@@ -61,12 +62,12 @@ class VideoJoiner:
     @property
     def resolution(self) -> Tuple[int, int]:
         """Video resolution (width x height) in pixels."""
-        return self._resolution
+        return self._cap.frame_size
 
     @property
     def framerate(self) -> float:
         """Video framerate (frames/sec)."""
-        return self._framerate
+        return self._cap.frame_rate
 
     @property
     def total_frames(self) -> float:
@@ -76,92 +77,80 @@ class VideoJoiner:
     @property
     def decode_failures(self) -> float:
         """Number of frames which failed to decode (may indicate video corruption)."""
-        return self._decode_failures
+        return self._decode_failures + self._cap._decode_failures
 
     @property
     def position(self) -> FrameTimecode:
-        """Current position of the video including presentation time of the current frame (thus, the
-        first frame has a frame number of 1)."""
-        return self._position
+        """Current position of the video including presentation time of the current frame."""
+        return self._position + 1
 
-    def read(self, decode: bool = True, num_retries: int = 5) -> Optional[numpy.ndarray]:
+    def read(self, decode: bool = True) -> Optional[numpy.ndarray]:
         """Read/decode the next frame."""
-        if self._cap:
-            decode_failures = 0
-            for _ in range(num_retries + 1):
-                if decode:
-                    (ret_val, frame) = self._cap.read()
-                else:
-                    ret_val = self._cap.grab()
-                    frame = True
-                if ret_val:
-                    self._position += 1
-                    self._decode_failures += decode_failures
-                    return frame
-                else:
-                    decode_failures += 1
-                if self._total_frames > 0 and self._position.frame_num >= self._total_frames:
-                    break
-            if round(self._cap.get(cv2.CAP_PROP_POS_FRAMES)) < round(
-                    self._cap.get(cv2.CAP_PROP_FRAME_COUNT)):
-                self._decode_failures += 1
-            self._cap.release()
-            self._cap = None
+        next = self._cap.read(decode=decode)
+        if next is False:
+            if (self._curr_cap_index + 1) < len(self._paths):
+                self._curr_cap_index += 1
+                # Compensate for presentation time of last frame
+                self._position += 1
+                self._decode_failures += self._cap._decode_failures
+                logger.debug("End of current video, loading next: %s" %
+                             self._paths[self._curr_cap_index])
+                self._cap = VideoStreamCv2(self._paths[self._curr_cap_index])
+                self._last_cap_pos = self._cap.base_timecode
+                return self.read(decode=decode)
+            logger.debug("No more input to process.")
+            return None
 
-        if self._cap is None and (1 + self._curr_cap_index) < len(self._paths):
-            self._curr_cap_index += 1
-            self._cap = cv2.VideoCapture(self._paths[self._curr_cap_index])
-            if self._cap.isOpened():
-                return self.read(decode=decode, num_retries=num_retries)
-            else:
-                self._logger.error("Error: Unable to load video for processing.")
-                raise VideoOpenFailure("Unable to open %s" % self._paths[self._curr_cap_index])
-        return None
+        self._position += self._cap.position.frame_num - self._last_cap_pos.frame_num
+        self._last_cap_pos = self._cap.position
+        return next
 
     def seek(self, target: FrameTimecode):
         """Seek to the target offset. Only seeking forward is supported (i.e. `target` must be
         greater than the current `position`."""
-        # TODO: This should be optimized by actually seeking on the underlying VideoCapture objects.
-        while self.position < target:
-            if self.read(decode=False) is None:
-                break
+        if len(self._paths) == 1 or self._curr_cap_index == 0 and target <= self._cap.duration:
+            self._cap.seek(target)
+        else:
+            # TODO: This is ineffient if we have multiple input videos.
+            while self.position < target:
+                if self.read(decode=False) is None:
+                    break
 
     def _load_input_videos(self):
         unsupported_codec: bool = False
-        for i, video_path in enumerate(self._paths):
-            cap = cv2.VideoCapture(video_path)
+        validated_paths: List[str] = []
+        opened_video: bool = False
+        for video_path in self._paths:
             video_name = os.path.basename(video_path)
-            if not cap.isOpened():
-                self._logger.error("Error: Couldn't load video %s.", video_name)
-                self._logger.info("Check that the given file is a valid video clip, and ensure all"
-                                  " required dependencies are installed and configured properly.")
-                raise VideoOpenFailure("isOpened() returned False for %s!" % video_name)
-            resolution = (round(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
-                          round(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
-            framerate = cap.get(cv2.CAP_PROP_FPS)
-            self._total_frames += round(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            try:
+                cap = VideoStreamCv2(video_path)
+            except VideoOpenFailure as ex:
+                logger.error("Error: Couldn't load video %s", video_path)
+                raise
+            validated_paths.append(video_path)
+            self._total_frames += cap.duration.frame_num
             # Set the resolution/framerate based on the first video.
-            if i == 0:
+            if not opened_video:
                 self._cap = cap
-                self._resolution = resolution
-                self._framerate = framerate
-                self._logger.info("Opened video %s (%d x %d at %2.3f FPS).", video_name,
-                                  resolution[0], resolution[1], framerate)
+                logger.info("Opened video %s (%d x %d at %2.3f FPS).", video_name,
+                            cap.frame_size[0], cap.frame_size[1], cap.frame_rate)
+                opened_video = True
                 continue
             # Otherwise, validate the appended video's parameters.
-            self._logger.info("Appending video %s (%d x %d at %2.3f FPS).", video_name,
-                              resolution[0], resolution[1], framerate)
-            if resolution != self._resolution:
-                self._logger.error("Error: Video resolution does not match the first input.")
+            logger.info("Appending video %s (%d x %d at %2.3f FPS).", video_name, cap.frame_size[0],
+                        cap.frame_size[1], cap.frame_rate)
+            if cap.frame_size != self._cap.frame_size:
+                logger.error("Error: Video resolution does not match the first input.")
                 raise VideoOpenFailure("Video resolutions must match to be concatenated!")
-            if abs(framerate - self._framerate) > FRAMERATE_DELTA_TOLERANCE:
-                self._logger.warning("Warning: framerate does not match first input."
-                                     " Timecodes may be incorrect.")
-            if round(cap.get(cv2.CAP_PROP_FOURCC)) == 0:
+            if abs(cap.frame_rate - self._cap.frame_rate) > FRAMERATE_DELTA_TOLERANCE:
+                logger.warning("Warning: framerate does not match first input."
+                               " Timecodes may be incorrect.")
+            if round(cap.capture.get(cv2.CAP_PROP_FOURCC)) == 0:
                 unsupported_codec = True
 
+        self._paths = validated_paths
+
         if unsupported_codec:
-            self._logger.error(
-                'Unsupported or invalid codec, output may be incorrect. Possible fixes:\n'
-                '  - Re-encode the input video with ffmpeg\n'
-                '  - Update OpenCV (pip install --upgrade opencv-python)')
+            logger.error('Unsupported or invalid codec, output may be incorrect. Possible fixes:\n'
+                         '  - Re-encode the input video with ffmpeg\n'
+                         '  - Update OpenCV (pip install --upgrade opencv-python)')

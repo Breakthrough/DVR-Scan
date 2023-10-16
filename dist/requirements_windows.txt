@@ -1,10 +1,11 @@
 #
-# DVR-Scan Requirements for Windows Build (Python 3.7-3.9)
+# DVR-Scan Requirements for Windows Build
 #
 numpy
-opencv-python==4.5.1.48
-opencv-contrib-python==4.5.1.48
-pyinstaller==4.10
+opencv-python==4.8.0.74
+opencv-contrib-python==4.8.0.74
+platformdirs
+pyinstaller>=6.0
 pytest
 scenedetect
 screeninfo

@@ -4,9 +4,11 @@
 
 ------------------------------------------------
 
-### Latest Release: v1.5.1 (August 15, 2022)
+### Latest Release: v1.6 (October 15, 2023)
 
 **Website**: [dvr-scan.com](https://www.dvr-scan.com)
+
+**User Guide**: [dvr-scan.com/guide](https://www.dvr-scan.com/guide/)
 
 **Documentation**: [dvr-scan.com/docs](https://www.dvr-scan.com/docs/)
 
@@ -22,19 +24,25 @@ Windows builds are also available on [the Downloads page](https://www.dvr-scan.c
 
 ## Quickstart
 
-![example](https://raw.githubusercontent.com/Breakthrough/DVR-Scan/main/docs/assets/bounding-box.gif)
-
 Scan `video.mp4` (separate clips for each event):
 
     dvr-scan -i video.mp4
 
-Only scan a region of interest (select with mouse):
+Select a region to scan using [the region editor](https://www.dvr-scan.com/guide/):
 
-    dvr-scan -i video.mp4 -roi
+    dvr-scan -i video.mp4 -r
+
+<img alt="example of region editor" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.6/docs/assets/region-editor-mask.jpg" width="480"/>
+
+Select a region to scan using command line (list of points as X Y):
+
+    dvr-scan -i video.mp4 -a 50 50 100 50 100 100 100 50
 
 Draw boxes around motion:
 
     dvr-scan -i video.mp4 -bb
+
+<img alt="example of bounding boxes" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.6/docs/assets/bounding-box.gif" width="480"/>
 
 Use `ffmpeg` to extract events:
 
@@ -44,5 +52,5 @@ See [the documentation](docs.md) for a complete list of all command-line and con
 
 ------------------------------------------------
 
-Copyright © 2016-2022 Brandon Castellano. All rights reserved.
+Copyright © 2016-2023 Brandon Castellano. All rights reserved.
 Licensed under BSD 2-Clause (see the LICENSE file for details).

@@ -43,7 +43,7 @@ jobs:
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
           python -m pip install dist/dvr-scan-${{ env.dvr_scan_version }}.tar.gz
-          python -m dvr_scan -v
+          python -m dvr_scan --version
           python -m dvr_scan -i tests/resources/simple_movement.mp4 -so -df 4 -et 100
           python -m pip uninstall -y dvr-scan
 
@@ -51,7 +51,7 @@ jobs:
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
           python -m pip install dist/dvr_scan-${{ env.dvr_scan_version }}-py3-none-any.whl
-          python -m dvr_scan -v
+          python -m dvr_scan --version
           python -m dvr_scan -i tests/resources/simple_movement.mp4 -so -df 4 -et 100
           python -m pip uninstall -y dvr-scan
 

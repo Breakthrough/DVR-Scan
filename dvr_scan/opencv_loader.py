@@ -2,12 +2,12 @@
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
-#       [  Site: https://github.com/Breakthrough/DVR-Scan/   ]
-#       [  Documentation: http://dvr-scan.readthedocs.org/   ]
+#       [  Site: https://www.dvr-scan.com/                 ]
+#       [  Repo: https://github.com/Breakthrough/DVR-Scan  ]
 #
-# Copyright (C) 2014-2022 Brandon Castellano <http://www.bcastell.com>.
-# PySceneDetect is licensed under the BSD 2-Clause License; see the
-# included LICENSE file, or visit one of the above pages for details.
+# Copyright (C) 2014-2023 Brandon Castellano <http://www.bcastell.com>.
+# DVR-Scan is licensed under the BSD 2-Clause License; see the included
+# LICENSE file, or visit one of the above pages for details.
 #
 """``dvr_scan.opencv_loader`` Module
 
@@ -21,6 +21,7 @@ import sys
 # On Windows, make sure we include any required DLL paths.
 if os.name == 'nt':
     # If we're running a frozen version of the app, the EXE path should include all required DLLs.
+    # TODO(v1.6): This path might need to be updated with the latest version of Pyinstaller.
     if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
         os.add_dll_directory(os.path.abspath(os.path.dirname(sys.executable)))
     # If CUDA is installed, include those DLLs in the search paths.

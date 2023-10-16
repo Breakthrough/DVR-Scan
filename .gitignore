@@ -2,7 +2,9 @@
 *.pyo
 site/
 build/
-dist/
+dist/dvr-scan/*
+dist/dvr-scan*
+dist/dvr_scan*
 *.egg-info/
 /tutorial-env/*
 .DS_Store

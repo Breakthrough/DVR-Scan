@@ -3,19 +3,60 @@
 
 ----------------------------------------------------------
 
-## DVR-Scan 1.5
+## DVR-Scan 1.6
+
+### 1.6 (October 15, 2023)
+
+#### Release Notes
+
+DVR-Scan greatly improves masking capabilities with the new region editor([user guide](https://www.dvr-scan.com/guide/#region-editor)):
+
+<img alt="example of region editor" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.6/docs/assets/region-editor-multiple.jpg" width="480"/>
+<img alt="example of region editor" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.6/docs/assets/region-editor-mask.jpg" width="480"/>
+
+Multiple regions can now be defined with any shape, size, and complexity. Region data can be saved to a file and loaded again. Regions can also be specified by command line.
+
+There are also several other bugfixes and improvements, such as improved seeking performance.
+
+#### Changelog
+
+ - [feature] [New region editor](https://www.dvr-scan.com/guide/#region-editor) `-r`/`--region-editor` allows creation of multiple regions without shape restrictions, replaces `-roi`/`--region-of-interest`
+ - [feature] Multiple regions of interest (rectangular or polygonal) can now be created:
+    - Using the new region editor by adding the `-r`/`--region-editor` flag: `dvr-scan -i video.mp4 -r`
+    - New `-a`/`--add-region` replaces `-roi`/`--region-of-interest` option: `dvr-scan -i video.mp4 -a 5 5 20 5 20 20 5 20`
+    - Regions can now be saved to a file: press S in the region editor or use `-s`/`--save-region`
+    - Regions can now be loaded from a file: press O in the region editor or use `-R`/`--load-region`
+    - Config files can specify a region file to use by default with the `load-region` option, replaces the `region-of-interest` setting
+ - [feature] New `-fm` / `--frame-metrics` option draws motion score on each frame to help tune detection parameters
+ - [cli] Short flag `-v` is now used for `--verbosity`, replaced by `-V` for `--version`
+ - [cli] `-roi`/`--region-of-interest` is now deprecated, replaced by region editor and add/save/load region flags
+    - Specifying this option will display the ROI in the new region format allowing you to update usages more easily
+ - [general] Improved seeking performance, using `-st`/`--start-time` is now much faster ([#92](https://github.com/Breakthrough/DVR-Scan/issues/92))
+ -detection-parameters)
+ - [general] Noise reduction kernel can now be disabled by setting `-k`/`--kernel-size` to `0` ([#123](https://github.com/Breakthrough/DVR-Scan/issues/123))
+ - [general] Include stack traces in logfiles when setting `--verbosity debug`
+ - [bugfix] Add `max-score` option to config file to fix CNT mode always treating first few frame as motion, default is 255.0 [#119](https://github.com/Breakthrough/DVR-Scan/issues/119)
+ - [bugfix] Fix timecode format `HH:MM:SS[.nnn]` being rejected for start/end time ([#141](https://github.com/Breakthrough/DVR-Scan/issues/141))
+ - [bugfix] Fix incorrect RGB mapping for config file (values were treated as BGR instead)
+ - [other] Config option `timecode` has been renamed to `time-code` to match the command-line option
+ - [other] Config options that started with `timecode-` have been renamed to start with `text-`, and are now shared between the `time-code` and `frame-metrics` overlays:
+    - `time-code-margin` is now `text-margin`
+    - `time-code-font-scale` is now `text-font-scale`
+    - `time-code-font-thickness` is now `text-font-thickness`
+    - `time-code-font-color` is now `text-font-color`
+    - `time-code-bg-color` is now `text-bg-color`
+
 
 ----------------------------------------------------------
 
-### :fontawesome-solid-tags: 1.5.1 (August 15, 2022)
+## DVR-Scan 1.5
 
+### :fontawesome-solid-tags: 1.5.1 (August 15, 2022)
 
 #### Changelog
 
  * [bugfix] Fix crash when opening multiple input videos ([#95](https://github.com/Breakthrough/DVR-Scan/issues/95))
  * [bugfix] Fix incorrect warning regarding frame decode failures at end of video
-
-----------------------------------------------------------
 
 ### 1.5 (July 30, 2022)
 
@@ -89,8 +130,6 @@
 
 ## DVR-Scan 1.4
 
-----------------------------------------------------------
-
 ### 1.4.1 (February 20, 2022)
 
 #### Release Notes
@@ -156,8 +195,6 @@ In addition to several bugfixes, this release of DVR-Scan adds the ability to dr
 
 ## DVR-Scan 1.3
 
-----------------------------------------------------------
-
 ### 1.3 (May 23, 2021)
 
 #### Release Notes
@@ -183,8 +220,6 @@ This version of DVR-Scan includes a new, faster background subtraction algorithm
 
 ## DVR-Scan 1.2
 
-----------------------------------------------------------
-
 ### 1.2 (March 10, 2021)
 
 #### Changelog
@@ -204,8 +239,6 @@ This version of DVR-Scan includes a new, faster background subtraction algorithm
 
 ## DVR-Scan 1.1
 
-----------------------------------------------------------
-
 ### 1.1 (July 12, 2020)
 
 #### Changelog
@@ -222,8 +255,6 @@ This version of DVR-Scan includes a new, faster background subtraction algorithm
 ----------------------------------------------------------
 
 ## DVR-Scan 1.0
-
-----------------------------------------------------------
 
 ### 1.0.1 (January 12, 2017)
 

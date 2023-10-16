@@ -2,12 +2,12 @@
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
-#       [  Site: https://github.com/Breakthrough/DVR-Scan/   ]
-#       [  Documentation: http://dvr-scan.readthedocs.org/   ]
+#       [  Site: https://www.dvr-scan.com/                 ]
+#       [  Repo: https://github.com/Breakthrough/DVR-Scan  ]
 #
-# Copyright (C) 2014-2022 Brandon Castellano <http://www.bcastell.com>.
-# PySceneDetect is licensed under the BSD 2-Clause License; see the
-# included LICENSE file, or visit one of the above pages for details.
+# Copyright (C) 2014-2023 Brandon Castellano <http://www.bcastell.com>.
+# DVR-Scan is licensed under the BSD 2-Clause License; see the included
+# LICENSE file, or visit one of the above pages for details.
 #
 """ ``dvr_scan.cli`` Module
 
@@ -24,14 +24,15 @@ from typing import List, Optional
 
 import dvr_scan
 from dvr_scan.cli.config import ConfigRegistry, CHOICE_MAP, USER_CONFIG_FILE_PATH
+from dvr_scan.region import RegionValidator
 
 # Version string shown for the -v/--version CLI argument.
-VERSION_STRING = """------------------------------------------------
-DVR-Scan %s
+VERSION_STRING = f"""------------------------------------------------
+DVR-Scan {dvr_scan.__version__}
 ------------------------------------------------
-Copyright (C) 2016-2022 Brandon Castellano
-< https://github.com/Breakthrough/DVR-Scan >
-""" % dvr_scan.__version__
+Copyright (C) 2016-2023 Brandon Castellano
+< https://www.dvr-scan.com >
+"""
 
 # In the CLI, -so/--scan-only is a different flag than -m/--output-mode, whereas in the
 # config file they are the same option. Therefore, we remove the scan only choice
@@ -88,12 +89,11 @@ def timecode_type_check(metavar: Optional[str] = None):
                 secs = float(tc_val[2]) if '.' in tc_val[2] else int(tc_val[2])
                 if (hrs >= 0 and mins >= 0 and secs >= 0 and mins < 60 and secs < 60):
                     valid = True
-                    value = [hrs, mins, secs]
         if not valid:
             raise argparse.ArgumentTypeError(
-                'invalid timecode: %s\n'
-                'Timecode must be specified as number of frames (12345), seconds (number followed'
-                ' by s, e.g. 123s or 123.45s), or timecode (HH:MM:SS[.nnn].' % value)
+                f'invalid timecode: {value}\n'
+                'Timecode must be specified as number of frames (12345), seconds (number followed '
+                'by s, e.g. 123s or 123.45s), or timecode (HH:MM:SS[.nnn].')
         return value
 
     return _type_checker
@@ -135,47 +135,15 @@ def int_type_check(min_val: int, max_val: Optional[int] = None, metavar: Optiona
     return _type_checker
 
 
-def odd_int_type_check(min_val: int,
-                       max_val: Optional[int] = None,
-                       metavar: Optional[str] = None,
-                       allow_zero: bool = True):
-    """ Creates an argparse type for a range-limited integer which must be odd.
-
-    The passed argument is declared valid if it is a valid integer which is odd
-    (i.e. the modulus of the value with respect to two is non-zero), is greater
-    than or equal to min_val, and, if specified, less than or equal to max_val.
-
-    Returns:
-        A function which can be passed as an argument type, when calling
-        add_argument on an ArgumentParser object
-
-    Raises:
-        ArgumentTypeError: Argument must be odd integer within specified range.
-    """
+def _kernel_size_type_check(metavar: Optional[str] = None):
     metavar = 'value' if metavar is None else metavar
 
     def _type_checker(value):
         value = int(value)
-        valid = True
-        msg = ''
-        if value == -1:
-            return -1
-        if value == 0 and allow_zero is True:
-            return 0
-        if (value % 2) == 0:
-            valid = False
-            msg = 'invalid choice: %d (%s must be an odd number)' % (value, metavar)
-        elif max_val is None:
-            if value < min_val:
-                valid = False
-            msg = 'invalid choice: %d (%s must be at least %d)' % (value, metavar, min_val)
-        else:
-            if value < min_val or value > max_val:
-                valid = False
-            msg = 'invalid choice: %d (%s must be between %d and %d)' % (value, metavar, min_val,
-                                                                         max_val)
-        if not valid:
-            raise argparse.ArgumentTypeError(msg)
+        if not value in (-1, 0) and (value < 3 or value % 2 == 0):
+            raise argparse.ArgumentTypeError(
+                'invalid choice: %d (%s must be an odd number starting from 3, 0 to disable, or '
+                '-1 for auto)' % (value, metavar))
         return value
 
     return _type_checker
@@ -261,7 +229,6 @@ def string_type_check(valid_strings: List[str],
     return _type_checker
 
 
-# pylint: disable=too-few-public-methods
 class LicenseAction(argparse.Action):
     """argparse Action for displaying DVR-Scan license & copyright info."""
 
@@ -283,7 +250,6 @@ class LicenseAction(argparse.Action):
         parser.exit(message=version)
 
 
-# pylint: disable=too-few-public-methods
 class VersionAction(argparse.Action):
     """argparse Action for displaying DVR-Scan version."""
 
@@ -305,6 +271,54 @@ class VersionAction(argparse.Action):
         parser.exit(message=version)
 
 
+class RegionAction(argparse.Action):
+
+    DEFAULT_ERROR_MESSAGE = "Region must be 3 or more points of the form X0 Y0 X1 Y1 X2 Y2 ..."
+
+    def __init__(self,
+                 option_strings,
+                 dest,
+                 nargs=None,
+                 const=None,
+                 default=None,
+                 type=None,
+                 choices=None,
+                 required=False,
+                 help=None,
+                 metavar=None):
+        assert nargs == '*'
+        assert const is None
+        super(RegionAction, self).__init__(
+            option_strings=option_strings,
+            dest=dest,
+            nargs=nargs,
+            const=const,
+            default=default,
+            type=type,
+            choices=choices,
+            required=required,
+            help=help,
+            metavar=metavar)
+
+    def __call__(self, parser, namespace, values: List[str], option_string=None):
+
+        try:
+            region = RegionValidator(" ".join(values))
+        except ValueError as ex:
+            message = " ".join(str(arg) for arg in ex.args)
+            raise (argparse.ArgumentError(
+                self, message if message else RegionAction.DEFAULT_ERROR_MESSAGE)) from ex
+
+        # Append this ROI to any existing ones, if any.
+        # TODO(v1.7): Audit uses of the 'regions' constant for -a/--add-region, replace with a named
+        # constant where possible.
+        items = getattr(namespace, 'regions', [])
+        items += [region.value]
+        setattr(namespace, 'regions', items)
+
+
+# TODO: To help with debugging, add a `debug` option to the config file as well that, if set in the
+# user config file, initializes the parser with exit_on_error=False.
 def get_cli_parser(user_config: ConfigRegistry):
     """Creates the DVR-Scan argparse command-line interface.
 
@@ -325,7 +339,7 @@ def get_cli_parser(user_config: ConfigRegistry):
         parser._optionals.title = 'arguments'
 
     parser.add_argument(
-        '-v',
+        '-V',
         '--version',
         action=VersionAction,
         version=VERSION_STRING,
@@ -400,6 +414,45 @@ def get_cli_parser(user_config: ConfigRegistry):
     )
 
     parser.add_argument(
+        "-r",
+        "--region-editor",
+        dest='region_editor',
+        action='store_true',
+        help=("Show region editor window. Motion detection will be limited to the enclosed area "
+              "during processing. Only single regions can be edited, but supports preview of "
+              "multiple regions if defined.%s" % user_config.get_help_string("region-editor")),
+    )
+
+    parser.add_argument(
+        "-a",
+        "--add-region",
+        metavar="X0 Y0 X1 Y1 X2 Y2",
+        dest='regions',
+        nargs='*',
+        action=RegionAction,
+        help=(
+            "Limit motion detection to a region of the frame. The region is defined as a sequence "
+            "of 3 or more points forming a closed shape inside the video. Coordinate 0 0 is top "
+            "left of the frame, and WIDTH-1 HEIGHT-1 is bottom right. Can be specified multiple "
+            "times to add more regions."))
+    parser.add_argument(
+        "-R",
+        "--load-region",
+        metavar="FILE.txt",
+        type=str,
+        help=("Load region data from file. Each line must be a list of points in the format "
+              "specified by -a/--add-region. Each line is treated as a separate polygon."),
+    )
+
+    parser.add_argument(
+        "-s",
+        "--save-region",
+        metavar="FILE.txt",
+        type=str,
+        help=("Save detection regions to FILE.txt before processing. If FILE.txt exists it will be "
+              "overwritten. Allows loading same regions using -R/--load-region."))
+
+    parser.add_argument(
         '-b',
         '--bg-subtractor',
         metavar='type',
@@ -425,11 +478,10 @@ def get_cli_parser(user_config: ConfigRegistry):
         '-k',
         '--kernel-size',
         metavar='size',
-        type=odd_int_type_check(3, None, 'size', True),
-        help=('Size in pixels of the noise reduction kernel. Must be an odd'
-              ' integer greater than 1, or set to -1 to auto-set based on'
-              ' input video resolution (default). If the kernel size is set too'
-              ' large, some movement in the scene may not be detected.%s' %
+        type=_kernel_size_type_check(metavar='size'),
+        help=('Size in pixels of the noise reduction kernel. Must be odd number greater than 1, '
+              '0 to disable, or -1 to auto-set based on video resolution (default). If the kernel '
+              'size is set too large, some movement in the scene may not be detected.%s' %
               (user_config.get_help_string('kernel-size'))),
     )
 
@@ -491,14 +543,14 @@ def get_cli_parser(user_config: ConfigRegistry):
         help=('Timecode to stop processing the input (see -st for valid timecode formats).'),
     )
 
+    # TODO(v2.0): Remove -roi (replaced by -r/--region-editor and -a/--add-region).
     parser.add_argument(
         '-roi',
         '--region-of-interest',
+        dest='region_of_interest',
         metavar='x0 y0 w h',
         nargs='*',
-        help=('Limit detection to specified region. Can specify as -roi to show popup window,'
-              ' or specify the region in the form -roi x,y w,h (e.g. -roi 100 200 50 50)%s' %
-              (user_config.get_help_string('region-of-interest', show_default=False))),
+        help=argparse.SUPPRESS,
     )
 
     parser.add_argument(
@@ -518,10 +570,17 @@ def get_cli_parser(user_config: ConfigRegistry):
     parser.add_argument(
         '-tc',
         '--time-code',
-        dest='draw_timecode',
         action='store_true',
-        help=('Draw time code of each frame on the top left corner.%s' %
-              user_config.get_help_string('timecode', show_default=False)),
+        help=('Draw time code in top left corner of each frame.%s' %
+              user_config.get_help_string('time-code', show_default=False)),
+    )
+
+    parser.add_argument(
+        '-fm',
+        '--frame-metrics',
+        action='store_true',
+        help=('Draw frame metrics in top right corner of each frame.%s' %
+              user_config.get_help_string('frame-metrics', show_default=False)),
     )
 
     parser.add_argument(
@@ -529,8 +588,8 @@ def get_cli_parser(user_config: ConfigRegistry):
         '--mask-output',
         metavar='motion_mask.avi',
         type=str,
-        help=('If specified, writes a video containing the motion mask. Can be used for '
-              ' tuning detection parameters or other analysis.'),
+        help=('Write a video containing the motion mask of each frame. Useful when tuning '
+              'detection parameters.'),
     )
 
     parser.add_argument(
@@ -578,6 +637,7 @@ def get_cli_parser(user_config: ConfigRegistry):
     )
 
     parser.add_argument(
+        '-v',
         '--verbosity',
         metavar='type',
         type=string_type_check(CHOICE_MAP['verbosity'], False, 'type'),
@@ -585,15 +645,18 @@ def get_cli_parser(user_config: ConfigRegistry):
               (', '.join(CHOICE_MAP['verbosity']), user_config.get_help_string('verbosity'))),
     )
 
-    # TODO(v1.6): Support both input and output concatenation in ffmpeg mode.
-    #parser.add_argument(
-    #    '--keep-temp-files',
-    #    action='store_true',
-    #    help=('Keep any temporary files the specified output mode generates.%s' %
-    #          user_config.get_help_string('keep-temp-files', show_default=False)),
-    #)
+    parser.add_argument(
+        '--debug',
+        action='store_true',
+        help=argparse.SUPPRESS,
+        default=False,
+    )
 
-    # TODO(v1.6): Add a mode that can dump frame scores (-s/--stats), and another mode
+    # TODO: Support both input and output concatenation in ffmpeg mode. For concatenating events,
+    # we can still encode files for each event, and then join them with ffmpeg's codec copying
+    # mode as a final pass. Can also add a config param to keep the events.
+
+    # TODO: Add a mode that can dump frame scores (-s/--stats), and another mode
     # that can dump the resulting frames after processing (-d/--dump-motion OUT.avi).
     # Might also be helpful to overlay the frame score when using -d. Multiply the motion
     # mask against the input image.

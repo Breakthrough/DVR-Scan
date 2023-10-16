@@ -10,15 +10,15 @@ hide:
 
 ## Python <span class="dvr-scan-download-icons">:fontawesome-brands-windows::fontawesome-brands-apple::fontawesome-brands-linux:</span>
 
-!!! python-download "**1.5.1**<span class="dvr-scan-release-date">August 15, 2022</span>"
+!!! python-download "**1.6**<span class="dvr-scan-release-date">October 15, 2023</span>"
 
     <h3>Regular Install:</h3>
 
-        pip install dvr-scan[opencv]==1.5.1
+        pip install dvr-scan[opencv]==1.6
 
     <h3>Headless (Servers):</h3>
 
-        pip install dvr-scan[opencv-headless]==1.5.1
+        pip install dvr-scan[opencv-headless]==1.6
 
 DVR-Scan is [available on PyPI](https://pypi.org/project/dvr-scan/) can be installed using `pip install dvr-scan[opencv]`. DVR-Scan works on Windows, Linux, and OSX, and requires Python 3.7 or higher.
 
@@ -29,9 +29,9 @@ If want to use an existing OpenCV installation or require a non-PyPI version, yo
 
 ## Windows Distribution<span class="dvr-scan-download-icons">:fontawesome-brands-windows:</span>
 
-!!! windows-download "**1.5.1**<span class="dvr-scan-release-date">August 15, 2022</span>"
+!!! windows-download "**1.6**<span class="dvr-scan-release-date">October 15, 2023</span>"
 
-    <div class="buttongrid buttongrid-download">[:fontawesome-solid-download: &nbsp; Installer `.msi`](https://github.com/Breakthrough/DVR-Scan/releases/download/v1.5.1-release/dvr-scan-1.5.1-win64.msi){ .md-button #download-button }[:fontawesome-solid-file-zipper: &nbsp; Portable `.zip`](https://github.com/Breakthrough/DVR-Scan/releases/download/v1.5.1-release/dvr-scan-1.5.1-win64.zip){ .md-button #changelog-button }</div>
+    <div class="buttongrid buttongrid-download">[:fontawesome-solid-download: &nbsp; Installer `.msi`](https://github.com/Breakthrough/DVR-Scan/releases/download/v1.6-release/dvr-scan-1.6-win64.msi){ .md-button #download-button }[:fontawesome-solid-file-zipper: &nbsp; Portable `.zip`](https://github.com/Breakthrough/DVR-Scan/releases/download/v1.6-release/dvr-scan-1.6-win64.zip){ .md-button #changelog-button }</div>
 
 
 The installer is recommended for most users.  Windows builds include all required dependencies to run DVR-Scan.  Only 64-bit builds are available.
@@ -44,7 +44,7 @@ The installer is recommended for most users.  Windows builds include all require
 
 Nvidia CUDA® builds are available, but still early in development. This version may not be the latest, and should be considered experimental. Not all GPU versions may be supported.
 
-!!! cuda-download "**1.5.1**<span class="dvr-scan-release-date">:fontawesome-solid-triangle-exclamation:</span>"
+!!! cuda-download "**1.5.1 (Not Latest)**<span class="dvr-scan-release-date">:fontawesome-solid-triangle-exclamation:</span>
 
     <div class="buttongrid buttongrid-download">[:fontawesome-solid-flask: &nbsp; CUDA® Build `.zip`](https://github.com/Breakthrough/DVR-Scan/releases/download/v1.5.1-release/dvr-scan-1.5.1-win64-cuda.zip){ .md-button #changelog-button }</div>
 

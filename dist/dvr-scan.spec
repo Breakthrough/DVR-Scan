@@ -2,15 +2,20 @@
 
 block_cipher = None
 
-
 a = Analysis(['../dvr_scan/__main__.py'],
              pathex=['.'],
              binaries=None,
-             datas=[('../*.md', '.'), ('../dvr_scan/LICENSE*', '.'), ('../docs/', 'docs/')],
+             datas=[
+                ('../dvr-scan.cfg', 'dvr-scan'),
+                ('../*.md', 'dvr-scan'),
+                ('../dist/dvr-scan.ico', 'dvr-scan'),
+                ('../dvr_scan/LICENSE*', 'dvr-scan'),
+                ('../docs/*.md', 'dvr-scan/docs/')
+            ],
              hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
-             excludes=[],
+             excludes=["av"],
              win_no_prefer_redirects=False,
              win_private_assemblies=False,
              cipher=block_cipher)

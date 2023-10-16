@@ -2,18 +2,19 @@
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
-#       [  Site: https://github.com/Breakthrough/DVR-Scan/   ]
-#       [  Documentation: http://dvr-scan.readthedocs.org/   ]
+#       [  Site: https://www.dvr-scan.com/                 ]
+#       [  Repo: https://github.com/Breakthrough/DVR-Scan  ]
 #
-# Copyright (C) 2014-2022 Brandon Castellano <http://www.bcastell.com>.
-# PySceneDetect is licensed under the BSD 2-Clause License; see the
-# included LICENSE file, or visit one of the above pages for details.
+# Copyright (C) 2014-2023 Brandon Castellano <http://www.bcastell.com>.
+# DVR-Scan is licensed under the BSD 2-Clause License; see the included
+# LICENSE file, or visit one of the above pages for details.
 #
 """ ``dvr_scan.overlays`` Module
 
 This module contains various classes used to draw overlays onto video frames.
 """
 
+from enum import Enum
 from typing import Tuple
 
 import cv2
@@ -26,51 +27,79 @@ class TextOverlay(object):
     Text is currently anchored to the top left of the frame.
     """
 
+    class Corner(Enum):
+        TopLeft = 1
+        TopRight = 2
+
     def __init__(self,
                  font: int = cv2.FONT_HERSHEY_SIMPLEX,
                  font_scale: float = 1.0,
-                 margin: int = 5,
+                 margin: int = 4,
+                 border: int = 4,
                  thickness: int = 2,
                  color: Tuple[int, int, int] = (255, 255, 255),
-                 bg_color: Tuple[int, int, int] = (0, 0, 0)):
+                 bg_color: Tuple[int, int, int] = (0, 0, 0),
+                 corner: Corner = Corner.TopLeft):
         """Initialize a TextOverlay with the given parameters.
 
         Arguments:
             font: Any of cv2.FONT_*.
             font_scale: Scale factor passed to OpenCV text rendering functions.
-            margin: Amount of padding added to the edges of the text.
+            margin: Amount of margin from edge of frame.
+            border: Amount of padding added within background box.
             thickness: Thickness of lines used to draw text.
-            color: Foreground color of the text.
-            bg_color: Background color behind the text, or None for no background.
+            color: Foreground color of the text (RGB).
+            bg_color: Background color behind the text, or None for no background (RGB).
         """
         self._font = font
         self._font_scale = font_scale
         self._margin = margin
+        self._border = border
         self._thickness = thickness
-        self._color = color
-        self._bg_color = bg_color
+        self._color = color[::-1]
+        self._bg_color = bg_color[::-1]
+        assert corner in (TextOverlay.Corner.TopLeft, TextOverlay.Corner.TopRight)
+        self._corner = corner
 
-    def draw(self, frame: numpy.ndarray, text: str, line: int = 0):
+    def draw(self, frame: numpy.ndarray, text: str):
         """Render text onto the given frame.
 
         Arguments:
             frame: Frame to render text onto.
             text: Text to render.
-            line: Offset in terms of lines of text to use for multiline strings.
+            line_spacing: Spacing defined as a ratio of line height.
         """
-        size = cv2.getTextSize(text, self._font, self._font_scale, self._thickness)
 
-        text_width = size[0][0]
-        text_height = size[0][1]
-        line_height = text_height + size[1] + self._margin
+        lines = text.splitlines()
+        sizes = [
+            cv2.getTextSize(text, self._font, self._font_scale, self._thickness) for text in lines
+        ]
+        line_spacing = max(size[0][1] for size in sizes)
+        max_width = max(size[0][0] for size in sizes)
+        total_height = sum(size[0][1] for size in sizes) + (line_spacing * (len(sizes) - 1))
 
-        text_pos = (self._margin, self._margin + size[0][1] + line * line_height)
         if self._bg_color:
-            cv2.rectangle(frame, (self._margin, self._margin),
-                          (self._margin + text_width, self._margin + text_height + 2),
-                          self._bg_color, -1)
-        cv2.putText(frame, text, text_pos, self._font, self._font_scale, self._color,
-                    self._thickness)
+            rect_width = max_width + (2 * self._border)
+            rect_height = total_height + (2 * self._border)
+            if self._corner == TextOverlay.Corner.TopLeft:
+                top_left = (self._margin, self._margin)
+                bottom_right = (self._margin + rect_width, self._margin + rect_height)
+            elif self._corner == TextOverlay.Corner.TopRight:
+                top_left = (max(0, frame.shape[1] - (self._margin + max_width)), self._margin)
+                bottom_right = (max(0, frame.shape[1] - self._margin), self._margin + rect_height)
+            cv2.rectangle(frame, top_left, bottom_right, self._bg_color, -1)
+
+        if self._corner == TextOverlay.Corner.TopLeft:
+            x_offset = self._margin + self._border
+        elif self._corner == TextOverlay.Corner.TopRight:
+            x_offset = max(0, frame.shape[1] - (self._margin + self._border + max_width))
+        y_offset = self._margin + self._border
+
+        for (text, size) in zip(lines, sizes):
+            text_pos = (x_offset, y_offset + size[0][1])
+            cv2.putText(frame, text, text_pos, self._font, self._font_scale, self._color,
+                        self._thickness)
+            y_offset += size[0][1] + line_spacing
 
 
 class BoundingBoxOverlay(object):
@@ -99,22 +128,21 @@ class BoundingBoxOverlay(object):
         Arguments:
             min_size_ratio: Minimum size of resulting bounding box relative to frame size.
             thickness_ratio: Box edge thickness relative to the frame size.
-            color: Color to use for drawing edges of the bounding box.
+            color: Color to use for drawing edges of the bounding box (RGB).
             smoothing: Amount of temporal smoothing, in frames. Values <= 1 indicate no smoothing.
         """
         self._min_size_ratio = min_size_ratio
         self._thickness_ratio = thickness_ratio
-        self._color = color
+        self._color = color[::-1]
 
         self._smoothing_amount = max(1, smoothing)
         self._smoothing_window = []
 
         self._downscale_factor = 1
-        self._roi = None
+        self._shift = (0, 0)
         self._frame_skip = 0
 
-    def set_corrections(self, downscale_factor: int, roi: Tuple[int, int, int, int],
-                        frame_skip: int):
+    def set_corrections(self, downscale_factor: int, shift: Tuple[int, int], frame_skip: int):
         """Set various correction factors which need to be compensated for when drawing the
         resulting bounding box onto a given target frame.
 
@@ -122,13 +150,12 @@ class BoundingBoxOverlay(object):
             downscale_factor: Integer downscale factor which was applied before calculating
                 the motion_mask passed to `update`. The resulting bounding box is upscaled
                 by this amount to match the original video frame scale.
-            roi: Area of original frame which was cropped before applying downscale_factor.
-                Used to offset resulting bounding box to correct location when rendering.
+            shift: Offset to apply to boxes when drawing on source frame.
             frame_skip: Amount of frames skipped for every processed frame. Used to correct
                 the smoothing amount.
         """
         self._downscale_factor = max(1, downscale_factor)
-        self._roi = roi
+        self._shift = shift
         # We're reducing the number of frames by 1 / (frame_skip + 1)
         self._frame_skip = frame_skip
 
@@ -156,10 +183,10 @@ class BoundingBoxOverlay(object):
         Arguments:
             motion_mask: Greyscale mask where non-zero pixels indicate motion.
         """
-        # TODO: Allow motion mask to be None, and also handle case where motion_mask might be
-        # entirely blank. In both of these cases case, instead of appending a new entry to the
-        # _smoothing_window, we should remove the oldest entry to compensate for the required
-        # smoothing without biasing the box to the top left.
+        # TODO: We can draw boxes around areas of the frame with motion by doing some kind of
+        # contour detection on the motion mask, but that might be computationally expensive. We can
+        # instead darken pixels of the frame without motion, and lighten (or adjust the colours) of
+        # those pixels that do.
         bounding_box = cv2.boundingRect(motion_mask)
         self._smoothing_window.append(bounding_box)
         # Correct smoothing amount for frame skip.
@@ -168,7 +195,7 @@ class BoundingBoxOverlay(object):
         self._smoothing_window = self._smoothing_window[-smoothing_amount:]
         return self._get_smoothed_window()
 
-    def draw(self, frame: numpy.ndarray, bounding_box: Tuple[int, int, int, int]):
+    def draw(self, frame: numpy.ndarray, bounding_box: Tuple[int, int, int, int], use_shift: bool):
         """Draw a bounding box onto a target frame using the provided ROI and downscale factor."""
         # Correct for downscale factor
         bounding_box = [side_len * self._downscale_factor for side_len in bounding_box]
@@ -183,9 +210,9 @@ class BoundingBoxOverlay(object):
         top_left = (top_left[0] - correction_x // 2, top_left[1] - correction_y // 2)
         bottom_right = (bottom_right[0] + correction_x // 2, bottom_right[1] + correction_y // 2)
         # Shift bounding box if ROI was set
-        if self._roi:
-            top_left = (top_left[0] + self._roi[0], top_left[1] + self._roi[1])
-            bottom_right = (bottom_right[0] + self._roi[0], bottom_right[1] + self._roi[1])
+        if self._shift and use_shift:
+            top_left = (top_left[0] + self._shift[0], top_left[1] + self._shift[1])
+            bottom_right = (bottom_right[0] + self._shift[0], bottom_right[1] + self._shift[1])
         # Ensure coordinates are positive. Values greater than frame size are okay, and should be
         # handled correctly by cv2.rectangle below. Note that we do not currently limit the
         # bounding box to fit within the ROI.

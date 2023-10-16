@@ -2,12 +2,12 @@
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
-#       [  Site: https://github.com/Breakthrough/DVR-Scan/   ]
-#       [  Documentation: http://dvr-scan.readthedocs.org/   ]
+#       [  Site: https://www.dvr-scan.com/                 ]
+#       [  Repo: https://github.com/Breakthrough/DVR-Scan  ]
 #
-# Copyright (C) 2014-2022 Brandon Castellano <http://www.bcastell.com>.
-# PySceneDetect is licensed under the BSD 2-Clause License; see the
-# included LICENSE file, or visit one of the above pages for details.
+# Copyright (C) 2014-2023 Brandon Castellano <http://www.bcastell.com>.
+# DVR-Scan is licensed under the BSD 2-Clause License; see the included
+# LICENSE file, or visit one of the above pages for details.
 #
 """``dvr_scan`` Module
 
@@ -19,7 +19,7 @@ main modules under `dvr_scan` are organized as follows:
 
   ``scanner``: scans a video for motion and extracts events
 
-  ``motion_detector``: motion detection algorithms
+  ``detector``: motion detection algorithms
 
   ``overlays``: overlays which can be drawn when outputting events
 
@@ -40,12 +40,10 @@ import pkgutil
 # packages are imported which might attempt to import the `cv2` module.
 import dvr_scan.opencv_loader as _
 
-# Top-level imports for easier access from the dvr_scan module.
 from dvr_scan.platform import init_logger
-from dvr_scan.scanner import ScanContext
 
 # Used for module/distribution identification.
-__version__ = '1.5.1'
+__version__ = '1.6'
 
 
 def get_license_info() -> str:
