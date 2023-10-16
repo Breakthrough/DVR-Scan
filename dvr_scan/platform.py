@@ -41,7 +41,7 @@ def get_icon_path() -> str:
         icon_path = os.path.join(app_folder, "dvr-scan.ico")
         if os.path.exists(icon_path):
             return icon_path
-    # TODO(v1.6): Figure out how to properly get icon path in the package. The folder will be
+    # TODO(v1.7): Figure out how to properly get icon path in the package. The folder will be
     # different in the final Windows build, may have to check if this is a frozen instance or not.
     # Also need to ensure the icon is included in the package metadata.
     # For Python distributions, may have to put dvr-scan.ico with the source files, and use

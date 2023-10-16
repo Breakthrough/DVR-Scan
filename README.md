@@ -32,7 +32,7 @@ Select a region to scan using [the region editor](https://www.dvr-scan.com/guide
 
     dvr-scan -i video.mp4 -r
 
-<img alt="example of region editor" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.6/docs/assets/region-editor-multiple.jpg" width="480"/>
+<img alt="example of region editor" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.6/docs/assets/region-editor-mask.jpg" width="480"/>
 
 Select a region to scan using command line (list of points as X Y):
 

@@ -319,6 +319,7 @@ CONFIG_MAP: ConfigDict = {
                                                          # Detection Parameters
     'bg-subtractor': 'MOG2',
     'threshold': 0.15,
+    'max-threshold': 255.0,
     'kernel-size': KernelSizeValue(),
     'downscale-factor': 0,
                                                          # TODO(v1.7): Remove, replaced with region files.

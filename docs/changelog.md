@@ -35,7 +35,7 @@ There are also several other bugfixes and improvements, such as improved seeking
  -detection-parameters)
  - [general] Noise reduction kernel can now be disabled by setting `-k`/`--kernel-size` to `0` ([#123](https://github.com/Breakthrough/DVR-Scan/issues/123))
  - [general] Include stack traces in logfiles when setting `--verbosity debug`
- - [bugfix] Fix CNT mode always treating first few frame as having motion [#119](https://github.com/Breakthrough/DVR-Scan/issues/119)
+ - [bugfix] Add `max-score` option to config file to fix CNT mode always treating first few frame as motion, default is 255.0 [#119](https://github.com/Breakthrough/DVR-Scan/issues/119)
  - [bugfix] Fix timecode format `HH:MM:SS[.nnn]` being rejected for start/end time ([#141](https://github.com/Breakthrough/DVR-Scan/issues/141))
  - [bugfix] Fix incorrect RGB mapping for config file (values were treated as BGR instead)
  - [other] Config option `timecode` has been renamed to `time-code` to match the command-line option

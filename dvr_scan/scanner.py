@@ -236,10 +236,7 @@ class MotionScanner:
         self._threshold = 0.15                    # -t/--threshold
         self._kernel_size = None                  # -k/--kernel-size
         self._downscale_factor = 1                # -df/--downscale-factor
-
-        # TODO(v1.6): Add ability to configure the rejection filter (_max_score_) by adding a
-        # threshold + amount option (e.g. ignore up to 2 frames in a row that are over score 100).
-        self._max_score = 255.0
+        self._max_threshold = 255.0               # max-threshold
 
         # Motion Event Parameters (set_event_params)
         self._min_event_len = None  # -l/--min-event-length
@@ -365,11 +362,13 @@ class MotionScanner:
         self,
         detector_type: DetectorType = DetectorType.MOG2,
         threshold: float = 0.15,
+        max_threshold: float = 255.0,
         kernel_size: int = -1,
         downscale_factor: int = 1,
     ):
         """Set detection parameters."""
         self._threshold = threshold
+        self._max_threshold = max_threshold
         self._subtractor_type = detector_type
         if downscale_factor < 0:
             raise ValueError("Downscale factor must be positive.")
@@ -638,7 +637,7 @@ class MotionScanner:
             frame_score = result.score
             # TODO(v1.6): Allow disabling the rejection filter or customizing amount of
             # consecutive frames it will ignore.
-            if frame_score >= self._max_score:
+            if frame_score >= self._max_threshold:
                 frame_score = 0
             above_threshold = frame_score >= self._threshold
             event_window.append(frame_score)

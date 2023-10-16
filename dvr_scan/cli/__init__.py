@@ -31,7 +31,7 @@ VERSION_STRING = f"""------------------------------------------------
 DVR-Scan {dvr_scan.__version__}
 ------------------------------------------------
 Copyright (C) 2016-2023 Brandon Castellano
-< https://github.com/Breakthrough/DVR-Scan >
+< https://www.dvr-scan.com >
 """
 
 # In the CLI, -so/--scan-only is a different flag than -m/--output-mode, whereas in the
