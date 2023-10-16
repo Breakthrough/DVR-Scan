@@ -97,12 +97,11 @@ Press `S` to save the current regions to a file, or `O` to load existing ones.  
 
 Regions are a set of points creating a closed shape. A rectangle will be created by default for you to modify.
 
-You can use the left mouse button to add a new point (keyboard: `A`) and right/middle mouse button (keyboard `X`) to delete a point. This allows you to create complex shapes, such as:
+You can use the left mouse button to add a new point (keyboard: `A`) and right/middle mouse button (keyboard `X`) to delete a point. You can left click to drag existing points. This allows creating complex shapes, such as:
 
 <img alt="example of non-rectangular region" src="../assets/region-editor-region.jpg"/>
 
 Regions can be created by pressing `T` and deleted by pressing `G`.
-or to click-and-drag an existing point.
 
 <img alt="example of region mask" src="../assets/region-editor-multiple.jpg"/>
 

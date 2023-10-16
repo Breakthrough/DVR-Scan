@@ -1,7 +1,20 @@
-
+# Build Python Source/Wheel Distributions of DVR-Scan
 name: Python Distribution
 
-on: [pull_request, push]
+on:
+  pull_request:
+    paths:
+      - dist/**
+      - dvr_scan/**
+      - tests/**
+  push:
+    paths:
+      - dist/**
+      - dvr_scan/**
+      - tests/**
+    tags:
+      - v*-release
+  workflow_dispatch:
 
 jobs:
   build:
