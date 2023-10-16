@@ -590,7 +590,7 @@ class MotionScanner:
 
         # Length of buffer we require in memory to keep track of all frames required for -l and -tb.
         buff_len = pre_event_len + min_event_len
-        event_end = FrameTimecode(timecode=0, fps=self._input.framerate)
+        event_end = self._input.position
         last_frame_above_threshold = 0
 
         if self._bounding_box:
@@ -847,6 +847,7 @@ class MotionScanner:
         timecode: FrameTimecode,
         frame_score: float,
         bounding_box: Optional[Tuple[int, int, int, int]],
+        use_shift=True,
     ):
         if not self._timecode_overlay is None:
             self._timecode_overlay.draw(frame, text=timecode.get_timecode())
@@ -854,7 +855,7 @@ class MotionScanner:
             to_display = "Frame: %04d\nScore: %3.2f" % (timecode.get_frames(), frame_score)
             self._metrics_overlay.draw(frame, text=to_display)
         if not self._bounding_box is None and not bounding_box is None:
-            self._bounding_box.draw(frame, bounding_box)
+            self._bounding_box.draw(frame, bounding_box, use_shift)
 
     def _on_mask_event(self, event: MotionMaskEvent):
         # Initialize the VideoWriter used for mask output.
@@ -863,7 +864,8 @@ class MotionScanner:
             self._mask_writer = self._init_video_writer(self._mask_file, resolution)
         # Write the motion mask to the output file.
         out_frame = cv2.cvtColor(event.motion_mask, cv2.COLOR_GRAY2BGR)
-        self._draw_overlays(out_frame, event.timecode, event.score, event.bounding_box)
+        self._draw_overlays(
+            out_frame, event.timecode, event.score, event.bounding_box, use_shift=False)
         self._mask_writer.write(out_frame)
 
     def _on_motion_event(self, event: MotionEvent):
