@@ -14,7 +14,7 @@
         <link rel="prev" href="../docs/">
       
       
-        <link rel="next" href="../resources/">
+        <link rel="next" href="../changelog/">
       
       <link rel="icon" href="../assets/dvr-scan.ico">
       <meta name="generator" content="mkdocs-1.5.2, mkdocs-material-9.1.21">
@@ -202,18 +202,6 @@
 
 
   <li class="md-tabs__item">
-    <a href=".." class="md-tabs__link">
-      Home
-    </a>
-  </li>
-
-      
-        
-  
-  
-
-
-  <li class="md-tabs__item">
     <a href="../download/" class="md-tabs__link">
       Download
     </a>
@@ -226,8 +214,8 @@
 
 
   <li class="md-tabs__item">
-    <a href="../changelog/" class="md-tabs__link">
-      Changelog
+    <a href="../guide/" class="md-tabs__link">
+      User Guide
     </a>
   </li>
 
@@ -254,6 +242,18 @@
   <li class="md-tabs__item">
     <a href="./" class="md-tabs__link md-tabs__link--active">
       FAQ
+    </a>
+  </li>
+
+      
+        
+  
+  
+
+
+  <li class="md-tabs__item">
+    <a href="../changelog/" class="md-tabs__link">
+      Changelog
     </a>
   </li>
 
@@ -329,21 +329,6 @@
   
   
     <li class="md-nav__item">
-      <a href=".." class="md-nav__link">
-        Home
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../download/" class="md-nav__link">
         Download
       </a>
@@ -359,8 +344,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../changelog/" class="md-nav__link">
-        Changelog
+      <a href="../guide/" class="md-nav__link">
+        User Guide
       </a>
     </li>
   
@@ -501,6 +486,21 @@
   
   
     <li class="md-nav__item">
+      <a href="../changelog/" class="md-nav__link">
+        Changelog
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../resources/" class="md-nav__link">
         Resources
       </a>
@@ -540,14 +540,24 @@
 <p>You can use a wildcard in the input path to select multiple videos:</p>
 <div class="highlight"><pre><span></span><code>dvr-scan -i folder/*.mp4
 </code></pre></div>
-<p>You can also specify multiple input video paths, which will be processed in the order they are specified.</p>
-<p>Note that multiple input videos are not supported when <code>-m</code>/<code>--output-mode</code> is set to <code>ffmpeg</code> or <code>copy</code>. You can use <code>ffmpeg</code> to <a href="https://trac.ffmpeg.org/wiki/Concatenate">concatenate all input videos</a> <em>before</em> using DVR-Scan as a workaround.</p>
+<p>You can also specify multiple paths directly.  Multiple inputs are not supported when <code>-m</code>/<code>--output-mode</code> is set to <code>ffmpeg</code> or <code>copy</code>. You can use <code>ffmpeg</code> to <a href="https://trac.ffmpeg.org/wiki/Concatenate">concatenate all input videos</a> <em>before</em> using DVR-Scan as a workaround.</p>
+<p>Note that DVR-Scan will <strong>concatenate</strong> the videos together <strong>in the order they are specified</strong> (or expanded if using wildcards). To avoid this, you can run DVR-Scan on each video in a loop. For example, on Windows:</p>
+<div class="highlight"><pre><span></span><code>for /F %i in (&#39;dir *.mp4 /b&#39;) do dvr-scan -i %i
+</code></pre></div>
+<p>Or on Linux/OSX:</p>
+<div class="highlight"><pre><span></span><code>target=&quot;/some/folder&quot;
+for f in &quot;$target&quot;*
+do
+   dvr-scan -i $f
+done
+</code></pre></div>
 <hr />
 <h3 id="how-can-i-improve-scanning-performance">How can I improve scanning performance?<a class="headerlink" href="#how-can-i-improve-scanning-performance" title="Permanent link">&para;</a></h3>
-<p>Adjusting <a href="../docs/#detection-options">motion detection parameters</a> can have a large effect on performance:</p>
+<p>Adjusting <a href="../docs/#motion-settings">motion detection settings</a> can have a large effect on performance:</p>
 <ul>
-<li><code>-roi</code>: If a region of interest is set</li>
-<li>Setting the output mode <code>-m</code>/<code>--output-mode</code> to either <code>ffmpeg</code> or <code>copy</code> can also improve performance compared to the default (<code>opencv</code>).  Limiting detection to a specific region of the frame with the <code>-roi</code> flag will also make processing faster.</li>
+<li>Limiting detection to a specific region of the frame with the region editor will also improve performance</li>
+<li>Setting the output mode to either <code>ffmpeg</code> or <code>copy</code> can also improve performance compared to the default (<code>opencv</code>)</li>
+<li>Downscaling high resolution videos can also improve performance greatly, at the expense of accuracy</li>
 </ul>
 <hr />
 <h3 id="how-can-i-join-several-videos-together-when-processing">How can I join several videos together when processing?<a class="headerlink" href="#how-can-i-join-several-videos-together-when-processing" title="Permanent link">&para;</a></h3>

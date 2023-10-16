@@ -11,7 +11,7 @@
       
       
       
-        <link rel="prev" href="../changelog/">
+        <link rel="prev" href="../guide/">
       
       
         <link rel="next" href="../faq/">
@@ -202,18 +202,6 @@
 
 
   <li class="md-tabs__item">
-    <a href=".." class="md-tabs__link">
-      Home
-    </a>
-  </li>
-
-      
-        
-  
-  
-
-
-  <li class="md-tabs__item">
     <a href="../download/" class="md-tabs__link">
       Download
     </a>
@@ -226,8 +214,8 @@
 
 
   <li class="md-tabs__item">
-    <a href="../changelog/" class="md-tabs__link">
-      Changelog
+    <a href="../guide/" class="md-tabs__link">
+      User Guide
     </a>
   </li>
 
@@ -254,6 +242,18 @@
   <li class="md-tabs__item">
     <a href="../faq/" class="md-tabs__link">
       FAQ
+    </a>
+  </li>
+
+      
+        
+  
+  
+
+
+  <li class="md-tabs__item">
+    <a href="../changelog/" class="md-tabs__link">
+      Changelog
     </a>
   </li>
 
@@ -329,21 +329,6 @@
   
   
     <li class="md-nav__item">
-      <a href=".." class="md-nav__link">
-        Home
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../download/" class="md-nav__link">
         Download
       </a>
@@ -359,8 +344,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../changelog/" class="md-nav__link">
-        Changelog
+      <a href="../guide/" class="md-nav__link">
+        User Guide
       </a>
     </li>
   
@@ -472,8 +457,8 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#region-of-interest" class="md-nav__link">
-    Region of Interest
+  <a href="#regions" class="md-nav__link">
+    Regions
   </a>
   
 </li>
@@ -509,13 +494,6 @@
   
     <nav class="md-nav" aria-label="Config File">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#template" class="md-nav__link">
-    Template
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#options" class="md-nav__link">
@@ -587,6 +565,21 @@
   
   
     <li class="md-nav__item">
+      <a href="../changelog/" class="md-nav__link">
+        Changelog
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../resources/" class="md-nav__link">
         Resources
       </a>
@@ -621,7 +614,7 @@
     Show help message and all options and default values. Will also show any options overriden by your <a href="#config-file">user config file</a>, if set.</p>
 </li>
 <li>
-<p><b><pre>-v, --version</pre></b>
+<p><b><pre>-V, --version</pre></b>
     Show version information.</p>
 </li>
 <li>
@@ -640,7 +633,7 @@
     Suppress all console output except for final cutting list.</p>
 </li>
 <li>
-<p><b><pre>--verbosity</pre></b>
+<p><b><pre>-v, --verbosity</pre></b>
     Set verbosity of output messages, must be one of: <b><pre>debug, info, warning, error</pre></b>
     <span class="dvr-scan-default">
     <div class="highlight"><pre><span></span><code>--verbosity info
@@ -656,7 +649,7 @@
 </li>
 <li>
 <p><b><pre>-c settings.cfg, --config settings.cfg</pre></b>
-    Path to config file. If not set, tries to load one automatically from the user settings folder. See the <a href="#config-file">config file documentation</a> for details.</p>
+    Path to config file. If not set, tries to load one automatically from the user settings folder (run <code>dvr-scan --help</code> to see the exact path for your system). See the <a href="#config-file">config file documentation</a> for what options can be specified.</p>
 </li>
 </ul>
 <h4 id="seekingduration">Seeking/Duration<a class="headerlink" href="#seekingduration" title="Permanent link">&para;</a></h4>
@@ -702,6 +695,11 @@
 </code></pre></div>
 </span></p>
 </li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Multiple input files are not supported when <code>-m</code>/<code>--output-mode</code> is set to <code>ffmpeg</code> or <code>copy</code>. You can use <code>ffmpeg</code> to <a href="https://trac.ffmpeg.org/wiki/Concatenate">concatenate all input videos</a> <em>before</em> using DVR-Scan, or <a href="../guide/#multiple-videos">run DVR-Scan in a for-loop</a>.</p>
+</div>
+<ul>
 <li>
 <p><b><pre>-o video.avi, --output video.avi</pre></b> Save all motion events to a single file, instead of the default (one file per event). Only supported with the default output mode (<code>opencv</code>). Requires <code>.avi</code> extension.</p>
 </li>
@@ -765,7 +763,7 @@
 </span></p>
 </li>
 <li>
-<p><b><pre>-k size, --kernel-size size</pre></b> Size in pixels of the noise reduction kernel. Must be an <em>odd</em> integer at least <code>3</code> or greater. By default, selects automatically based on input resolution (<code>-1</code> implies <code>auto</code>). Auto kernel sizes are 7 for 1080p or greater, 5 for 720p and 3 for 480p. Kernel size can be increased to filter out smaller movements from a scene.
+<p><b><pre>-k size, --kernel-size size</pre></b> Noise reduction kernel size, in pixels.  Kernel size can be increased to filter out smaller movements from a scene. Must be an <em>odd</em> integer at least <code>3</code> or greater. Can also be set to <code>0</code> to disable, or <code>-1</code> to select automatically based on input resolution. Auto sizes are <code>7</code> for 1080p or higher, <code>5</code> for 720p, and <code>3</code> for 480p or lower.
 <span class="dvr-scan-example">
 <div class="highlight"><pre><span></span><code>--kernel-size 5
 </code></pre></div>
@@ -773,24 +771,40 @@
 </li>
 </ul>
 <hr />
-<h5 id="region-of-interest">Region of Interest<a class="headerlink" href="#region-of-interest" title="Permanent link">&para;</a></h5>
-<p>Detection can be limited to a specific region of the frame using the <code>-roi</code> flag.</p>
+<h5 id="regions">Regions<a class="headerlink" href="#regions" title="Permanent link">&para;</a></h5>
+<p>Detection can be limited to specific regions of the frame. This can be done interactively using the <code>-r/--region-editor</code> flag, or by providing a list (<code>-a/--add-region</code>) or file (<code>-R/--load-region</code>) containing polygon data.</p>
+<p>Regions are specified as a list of points (X, Y) forming a closed polygon (shape with at least 3 points). For example, a triangle is defined as <code>0 0 100 0 50 50</code>. Multiple regions can be combined, and the result can also be saved to a file using <code>-s/--save-region</code>.</p>
 <div class="admonition tip">
-<p class="admonition-title">Setting a region of interest improves scanning performance.</p>
+<p class="admonition-title">Setting a smaller region of interest can improve scanning performance.</p>
 </div>
 <ul>
 <li>
-<p><b><pre>-roi</pre></b> Show pop-up window to select a region of interest using the mouse.  The first frame will be displayed.</p>
-</li>
-<li>
-<p><b><pre>-roi x0 y0 w h</pre></b> Rectangle specified by coordinate of top-left corner <code>x0</code>, <code>y0</code> and size <code>w</code>, <code>h</code>. The top left corner of the video is <code>0</code>, <code>0</code>.
+<p><b><pre>-r, --region-editor</pre></b> Display region editor before processing. Press <code>H</code> to show controls in your terminal. See <a href="../guide/#region-editor">the user guide</a> for more details.
 <span class="dvr-scan-example">
-<div class="highlight"><pre><span></span><code>-roi 50 75 100 100
+<div class="highlight"><pre><span></span><code>dvr-scan -i video.mp4 -r
 </code></pre></div>
 </span></p>
 </li>
 <li>
-<p><b><pre>-roi width height</pre></b> Same as <code>-roi</code>, but ensures selection window is no larger than <code>height</code> x <code>width</code>.  Useful for processing videos larger than the monitor resolution.</p>
+<p><b><pre>-a, --add-region</pre></b>Add a region to the scan. Regions are defined by a list of points (min. 3) that enclose the scanning region.
+<span class="dvr-scan-example">
+<div class="highlight"><pre><span></span><code>dvr-scan -i video.mp4 -a 50 50 100 50 75 75
+</code></pre></div>
+</span></p>
+</li>
+<li>
+<p><b><pre>-s, --save-region</pre></b>Save region data for this scan. Include all regions added or loaded via command line, and any edits made with the region editor if launched.
+<span class="dvr-scan-example">
+<div class="highlight"><pre><span></span><code>dvr-scan -i video.mp4 -r -s regions.txt
+</code></pre></div>
+</span></p>
+</li>
+<li>
+<p><b><pre>-R, --load-region</pre></b>Load region data an existing file.
+<span class="dvr-scan-example">
+<div class="highlight"><pre><span></span><code>dvr-scan -i video.mp4 -R regions.txt
+</code></pre></div>
+</span></p>
 </li>
 </ul>
 <hr />
@@ -818,61 +832,39 @@
 </ul>
 <hr />
 <h3 id="overlays">Overlays<a class="headerlink" href="#overlays" title="Permanent link">&para;</a></h3>
-<!-- SHOW EXAMPLE VIA GIF -->
+<p><img alt="overlay example" src="../assets/bounding-box.gif"/></p>
 <div class="admonition note">
-<p class="admonition-title">Overlays are only supported with the default output mode (<a href="#inputoutput"><code>-m opencv</code></a>).</p>
+<p class="admonition-title">Overlays are only supported with the default output mode (<a href="#output"><code>-m opencv</code></a>).</p>
 </div>
 <ul>
 <li>
 <p><b><pre>-bb, --bounding-box</pre></b> Draw a bounding box around the areas where motion is detected.
 <br/>An optional amount of time for temporal smoothing can also be specified (e.g. <code>-bb 0.1s</code>). The default smoothing amount is 0.1 seconds. If set to 0 (<code>-bb 0</code>), smoothing is disabled.
-<br/>The color, thickness, and minimum size can be set with a <a href="#config-file#bounding-box-overlay">config file</a>.</p>
+<br/>The color, thickness, and minimum size can be set with a <a href="#overlays_1">config file</a>.</p>
 </li>
 <li>
 <p><b><pre>-tc, --time-code</pre></b>  Draw time code of each frame on the top left corner.
-<br/>Text properties (e.g. color, font size, margin) can be set with a <a href="#config-file#timecode-overlay">config file</a>.</p>
+<br/>Text properties (e.g. color, font size, margin) can be set with a <a href="#overlays_1">config file</a>.</p>
+</li>
+<li>
+<p><b><pre>-fm, --frame-metrics</pre></b>  Draw frame metrics, including motion score, on the top right corner.
+<br/>Text properties (e.g. color, font size, margin) can be set with a <a href="config_file.md#text-overlays">config file</a>.</p>
 </li>
 </ul>
 <hr />
 <h2 id="config-file"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.4.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M320 464c8.8 0 16-7.2 16-16V160h-80c-17.7 0-32-14.3-32-32V48H64c-8.8 0-16 7.2-16 16v384c0 8.8 7.2 16 16 16h256zM0 64C0 28.7 28.7 0 64 0h165.5c17 0 33.3 6.7 45.3 18.7l90.5 90.5c12 12 18.7 28.3 18.7 45.3V448c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V64z"/></svg></span>Config File<a class="headerlink" href="#config-file" title="Permanent link">&para;</a></h2>
-<p>Many of DVR-Scan's options and defaults can be set using a config file.  This page describes all possible config options, but you can also download <a href="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.5/dvr-scan.cfg">the <code>dvr-scan.cfg</code> config template</a> as a starting point.</p>
-<p>A config file path can be specified via the <code>-c</code>/<code>--config</code> option. DVR-Scan also looks for a <code>dvr-scan.cfg</code> file in the following locations:</p>
-<ul>
-<li>Windows: <code>C:/Users/%USERNAME%/AppData/Local/DVR-Scan/dvr-scan.cfg</code></li>
-<li>Linux: <code>~/.config/DVR-Scan/dvr-scan.cfg</code> or <code>$XDG_CONFIG_HOME/dvr-scan.cfg</code></li>
-<li>OSX: <code>~/Library/Preferences/DVR-Scan/dvr-scan.cfg</code></li>
-</ul>
-<p>Run <code>dvr-scan --help</code> to see the exact path on your system which will be used (it will be listed under the help text for the <code>-c</code>/<code>--config</code> option).</p>
+<p>Settings are specified one per line as <code>option = value</code>. Lines starting with <code>#</code> are ignored as comments. The <a href="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.6/dvr-scan.cfg"><code>dvr-scan.cfg</code> config template</a> can be saved and used as a starting point (it includes the information in this section as comments).</p>
 <p>Configuration options are set as <code>option = value</code>, and lines starting with <code>#</code> are ignored as comments. For example:</p>
 <div class="highlight"><pre><span></span><code># This is an example of a DVR-Scan config file.
 # Lines starting with # are treated as comments.
-output-mode = COPY
-min-event-length = 0.25s
+time-before-event = 0.5s
+time-post-event = 2.0s
 bounding-box = yes
-bounding-box-color = 0, 255, 0
+bounding-box-color = 0xFF0000
 </code></pre></div>
-<hr />
-<h3 id="template">Template<a class="headerlink" href="#template" title="Permanent link">&para;</a></h3>
-<p>You can download <a href="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.5/dvr-scan.cfg">the <code>dvr-scan.cfg</code> template</a> to use as a starting point for creating a config file from scratch.</p>
 <hr />
 <h3 id="options">Options<a class="headerlink" href="#options" title="Permanent link">&para;</a></h3>
 <ul>
-<li>
-<p><b><pre>quiet-mode</pre></b>
-    Suppress all console output: (<code>yes</code> or <code>no</code>). Only a final comma-separated list of timecodes will be printed if set to <code>yes</code>.
-    <span class="dvr-scan-default">
-    <div class="highlight"><pre><span></span><code>quiet-mode = no
-</code></pre></div>
-    </span></p>
-</li>
-<li>
-<p><b><pre>verbosity</pre></b>
-    Verbosity of console output: (<code>debug</code>, <code>info</code>, <code>warning</code>, <code>error</code>).
-    <span class="dvr-scan-default">
-    <div class="highlight"><pre><span></span><code>verbosity = info
-</code></pre></div>
-    </span></p>
-</li>
 <li>
 <p><b><pre>output-dir</pre></b>
     Directory to output all created files. If unset, files will be created in the current working directory.
@@ -889,6 +881,11 @@ bounding-box-color = 0, 255, 0
 </code></pre></div>
     </span></p>
 </li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Multiple input files are not supported when <code>-m</code>/<code>--output-mode</code> is set to <code>ffmpeg</code> or <code>copy</code>. You can use <code>ffmpeg</code> to <a href="https://trac.ffmpeg.org/wiki/Concatenate">concatenate all input videos</a> <em>before</em> using DVR-Scan, or <a href="../guide/#multiple-videos">run DVR-Scan in a for-loop</a>.</p>
+</div>
+<ul>
 <li>
 <p><b><pre>ffmpeg-input-args</pre></b>
     Arguments added before the input to <code>ffmpeg</code> when <em>output-mode</em> is <em>ffmpeg</em> or <em>copy</em>. Note that <em>-y</em> and <em>-nostdin</em> are always added.
@@ -906,10 +903,26 @@ bounding-box-color = 0, 255, 0
     </span></p>
 </li>
 <li>
-<p><b><pre>opencv-fourcc</pre></b>
+<p><b><pre>opencv-codec</pre></b>
     Four-letter identifier of the encoder/video codec to use when <em>output-mode</em> is <em>opencv</em>. Must be one of: (<code>XVID</code>, <code>MP4V</code>, <code>MP42</code>, <code>H264</code>).
     <span class="dvr-scan-default">
-    <div class="highlight"><pre><span></span><code>opencv-fourcc = XVID
+    <div class="highlight"><pre><span></span><code>opencv-codec = XVID
+</code></pre></div>
+    </span></p>
+</li>
+<li>
+<p><b><pre>verbosity</pre></b>
+    Verbosity of console output: (<code>debug</code>, <code>info</code>, <code>warning</code>, <code>error</code>).
+    <span class="dvr-scan-default">
+    <div class="highlight"><pre><span></span><code>verbosity = info
+</code></pre></div>
+    </span></p>
+</li>
+<li>
+<p><b><pre>quiet-mode</pre></b>
+    Suppress all console output: (<code>yes</code> or <code>no</code>). Only a final comma-separated list of timecodes will be printed if set to <code>yes</code>.
+    <span class="dvr-scan-default">
+    <div class="highlight"><pre><span></span><code>quiet-mode = no
 </code></pre></div>
     </span></p>
 </li>
@@ -945,7 +958,7 @@ bounding-box-color = 0, 255, 0
 </ul>
 <hr />
 <h4 id="detection_1">Detection<a class="headerlink" href="#detection_1" title="Permanent link">&para;</a></h4>
-<p>The following options control motion detection.  A more comprehensive description of each option can be found <a href="#detection-options">under the respective command line options</a>.</p>
+<p>The following options control motion detection.  A more comprehensive description of each option can be found <a href="#detection">under the respective command line options</a>.</p>
 <ul>
 <li>
 <p><b><pre>bg-subtractor</pre></b>
@@ -964,8 +977,16 @@ bounding-box-color = 0, 255, 0
     </span></p>
 </li>
 <li>
+<p><b><pre>max-threshold</pre></b>
+     Scores of this amount or higher are ignored. 255.0 is the maximum score, so values greater than 255.0 will disable the filter.
+    <span class="dvr-scan-default">
+    <div class="highlight"><pre><span></span><code>max-threshold = 255.0
+</code></pre></div>
+    </span></p>
+</li>
+<li>
 <p><b><pre>kernel-size</pre></b>
-    Size (in pixels) of the noise reduction kernel. Must be an odd integer greater than 1, or -1 to auto-set based on video resolution.
+    Size (in pixels) of the noise reduction kernel. Size must be an odd number starting from 3, 0 to disable, or -1 to auto-set based on video resolution.
     <span class="dvr-scan-default">
     <div class="highlight"><pre><span></span><code>kernel-size = -1
 </code></pre></div>
@@ -999,67 +1020,14 @@ bounding-box-color = 0, 255, 0
 <hr />
 <h4 id="overlays_1">Overlays<a class="headerlink" href="#overlays_1" title="Permanent link">&para;</a></h4>
 <p>Color values can be specified as either <code>(R,G,B)</code> or in hex as <code>0xFFFFFF</code>. Time values can be given in seconds as a number followed by <code>s</code> (<code>123s</code> or <code>123.45s</code>), or as number of frames (e.g. <code>1234</code>).</p>
-<h5>Timecode Overlay</h5>
-
-<ul>
-<li>
-<p><b><pre>time-code</pre></b>
-    Enable timecode overlay: (<code>yes</code> or <code>no</code>).
-    <span class="dvr-scan-default">
-    <div class="highlight"><pre><span></span><code>time-code = no
-</code></pre></div>
-    </span></p>
-</li>
-<li>
-<p><b><pre>time-code-margin</pre></b>
-    Margin from edge in pixels.
-    <span class="dvr-scan-default">
-    <div class="highlight"><pre><span></span><code>time-code-margin = 5
-</code></pre></div>
-    </span></p>
-</li>
-<li>
-<p><b><pre>time-code-font-scale</pre></b>
-    Scale factor for text size.
-    <span class="dvr-scan-default">
-    <div class="highlight"><pre><span></span><code>time-code-font-scale = 2.0
-</code></pre></div>
-    </span></p>
-</li>
-<li>
-<p><b><pre>time-code-font-thickness</pre></b>
-    Thickness of font (integer values only).
-    <span class="dvr-scan-default">
-    <div class="highlight"><pre><span></span><code>time-code-font-thickness = 2
-</code></pre></div>
-    </span></p>
-</li>
-<li>
-<p><b><pre>time-code-font-color</pre></b>
-    Text color specified as <code>R, G, B</code>.
-    <span class="dvr-scan-default">
-    <div class="highlight"><pre><span></span><code>time-code-font-color = 255, 255, 255
-</code></pre></div>
-    </span></p>
-</li>
-<li>
-<p><b><pre>time-code-bg-color</pre></b>
-    Background color specified as <code>R, G, B</code>.
-    <span class="dvr-scan-default">
-    <div class="highlight"><pre><span></span><code>time-code-bg-color = 0, 0, 0
-</code></pre></div>
-    </span></p>
-</li>
-</ul>
-<hr />
 <h5>Bounding Box</h5>
 
 <ul>
 <li>
 <p><pre>bounding-box</pre></b>
     Enable bounding box: (<code>yes</code> or <code>no</code>).
-    <span class="dvr-scan-default">
-    <div class="highlight"><pre><span></span><code>bounding-box = no
+    <span class="dvr-scan-example">
+    <div class="highlight"><pre><span></span><code>bounding-box = yes
 </code></pre></div>
     </span></p>
 </li>
@@ -1092,6 +1060,75 @@ bounding-box-color = 0, 255, 0
     Minimum side length of bounding box, relative to largest edge of input video.
     <span class="dvr-scan-default">
     <div class="highlight"><pre><span></span><code>bounding-box-min-size = 0.032
+</code></pre></div>
+    </span></p>
+</li>
+</ul>
+<hr />
+<h5>Text Overlays</h5>
+
+<ul>
+<li>
+<p><b><pre>time-code</pre></b>
+    Enable timecode overlay: (<code>yes</code> or <code>no</code>). Draws timecode on top left of each frame.
+    <span class="dvr-scan-example">
+    <div class="highlight"><pre><span></span><code>time-code = yes
+</code></pre></div>
+    </span></p>
+</li>
+<li>
+<p><b><pre>frame-metrics</pre></b>
+    Enable frame metrics overlay: (<code>yes</code> or <code>no</code>). Draws frame metrics, including motion score, on top right of each frame.
+    <span class="dvr-scan-example">
+    <div class="highlight"><pre><span></span><code>frame-metrics = yes
+</code></pre></div>
+    </span></p>
+</li>
+<li>
+<p><b><pre>text-border</pre></b>
+    Margin from edge in pixels.
+    <span class="dvr-scan-default">
+    <div class="highlight"><pre><span></span><code>text-margin = 5
+</code></pre></div>
+    </span></p>
+</li>
+<li>
+<p><b><pre>text-margin</pre></b>
+    Margin from edge in pixels.
+    <span class="dvr-scan-default">
+    <div class="highlight"><pre><span></span><code>text-margin = 5
+</code></pre></div>
+    </span></p>
+</li>
+<li>
+<p><b><pre>text-font-scale</pre></b>
+    Scale factor for text size.
+    <span class="dvr-scan-default">
+    <div class="highlight"><pre><span></span><code>text-font-scale = 2.0
+</code></pre></div>
+    </span></p>
+</li>
+<li>
+<p><b><pre>text-font-thickness</pre></b>
+    Thickness of font (integer values only).
+    <span class="dvr-scan-default">
+    <div class="highlight"><pre><span></span><code>text-font-thickness = 2
+</code></pre></div>
+    </span></p>
+</li>
+<li>
+<p><b><pre>text-font-color</pre></b>
+    Text color specified as <code>R, G, B</code>.
+    <span class="dvr-scan-default">
+    <div class="highlight"><pre><span></span><code>text-font-color = 255, 255, 255
+</code></pre></div>
+    </span></p>
+</li>
+<li>
+<p><b><pre>text-bg-color</pre></b>
+    Background color specified as <code>R, G, B</code>.
+    <span class="dvr-scan-default">
+    <div class="highlight"><pre><span></span><code>text-bg-color = 0, 0, 0
 </code></pre></div>
     </span></p>
 </li>
