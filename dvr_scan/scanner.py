@@ -31,15 +31,11 @@ from scenedetect import FrameTimecode
 from scenedetect.platform import FakeTqdmObject
 from tqdm import tqdm
 
-from dvr_scan.detector import MotionDetector, Rectangle
+from dvr_scan.detector import MotionDetector
 from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
 from dvr_scan.platform import get_filename, get_min_screen_bounds, is_ffmpeg_available
 from dvr_scan.region import SelectionWindow, Point, Size, bound_point, load_regions
-from dvr_scan.subtractor import (
-    SubtractorMOG2,
-    SubtractorCNT,
-    SubtractorCudaMOG2,
-)
+from dvr_scan.subtractor import SubtractorMOG2, SubtractorCNT, SubtractorCudaMOG2
 from dvr_scan.video_joiner import VideoJoiner
 
 logger = logging.getLogger('dvr_scan')

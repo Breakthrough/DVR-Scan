@@ -9,11 +9,12 @@
 
 #### Release Notes
 
-This version of DVR-Scan includes a new region editor ([user guide](https://www.dvr-scan.com/guide/#region-editor))
+DVR-Scan greatly improves masking capabilities with the new region editor([user guide](https://www.dvr-scan.com/guide/#region-editor)):
 
 <img alt="example of region editor" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.6/docs/assets/region-editor-multiple.jpg" width="480"/>
+<img alt="example of region editor" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.6/docs/assets/region-editor-mask.jpg" width="480"/>
 
-Multiple regions can now be defined with any shape, size, and complexity. Region data can be saved to a file and loaded again.
+Multiple regions can now be defined with any shape, size, and complexity. Region data can be saved to a file and loaded again. Regions can also be specified by command line.
 
 There are also several other bugfixes and improvements, such as improved seeking performance.
 

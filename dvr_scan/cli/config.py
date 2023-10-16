@@ -30,7 +30,6 @@ from platformdirs import user_config_dir
 from scenedetect.frame_timecode import FrameTimecode
 
 from dvr_scan.scanner import DEFAULT_FFMPEG_INPUT_ARGS, DEFAULT_FFMPEG_OUTPUT_ARGS
-from dvr_scan.detector import Rectangle
 
 # Backwards compatibility for config options that were renamed/replaced.
 MIGRATED_CONFIG_OPTION: Dict[str, str] = {

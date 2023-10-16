@@ -20,12 +20,11 @@ which provides an argparse-based CLI used by the DVR-Scan application.
 """
 
 import argparse
-import os
 from typing import List, Optional
 
 import dvr_scan
 from dvr_scan.cli.config import ConfigRegistry, CHOICE_MAP, USER_CONFIG_FILE_PATH
-from dvr_scan.region import Point, RegionValidator
+from dvr_scan.region import RegionValidator
 
 # Version string shown for the -v/--version CLI argument.
 VERSION_STRING = f"""------------------------------------------------
