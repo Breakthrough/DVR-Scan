@@ -48,7 +48,7 @@ Use `ffmpeg` to extract events:
 
     dvr-scan -i video.mp4 -m ffmpeg
 
-See [the documentation](docs.md) for a complete list of all command-line and configuration file options which can be set. You can also type `dvr-scan --help` for an overview of command line options. Some program options can also be set [using a config file](docs.md#config-file).
+See [the documentation](https://www.dvr-scan.com/docs) for a complete list of all command-line and configuration file options which can be set. You can also type `dvr-scan --help` for an overview of command line options. Some program options can also be set [using a config file](https://www.dvr-scan.com/docs/#config-file).
 
 ------------------------------------------------
 
