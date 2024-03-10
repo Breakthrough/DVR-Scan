@@ -9,11 +9,11 @@ After [downloading](download.md), you should have the `dvr-scan` command availab
 
 To extract all motion events from a video, you can start with:
 
-    dvr_scan -i video.mp4
+    dvr-scan -i video.mp4
 
 This will produce output events in your working directory starting with the prefix `video.DSME_` (e.g. `video.DSME_0001.avi`). If you want to limit scanning to a particular part of the video frame, you can use the [region editor](#region-editor):
 
-    dvr_scan -i video.mp4 -r
+    dvr-scan -i video.mp4 -r
 
 DVR-Scan should provide good results for most use cases, but can be fine tuned for specific use cases. There are two main categories of these settings: [detection and sensitivity](docs.md#detection), and [event parameters](docs.md#events).
 
@@ -29,11 +29,11 @@ These settings will be used by default each time you run DVR-Scan, unless you ov
 
 You can specify multiple input videos as long as they have the same resolution and framerate:
 
-    dvr_scan -i video1.mp4 video2.mp4 video*.mp4
+    dvr-scan -i video1.mp4 video2.mp4 video*.mp4
 
 Wildcards are also supported:
 
-    dvr_scan -i video*.mp4
+    dvr-scan -i video*.mp4
 
 Note that this will **concatenate** the videos together *in the order they are specified*.
 
