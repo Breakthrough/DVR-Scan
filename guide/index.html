@@ -558,10 +558,10 @@
 <p class="admonition-title">For portable versions, replace <code>dvr-scan</code> with the path to <code>dvr-scan.exe</code> in the extracted files on your system.</p>
 </div>
 <p>To extract all motion events from a video, you can start with:</p>
-<pre><code>dvr_scan -i video.mp4
+<pre><code>dvr-scan -i video.mp4
 </code></pre>
 <p>This will produce output events in your working directory starting with the prefix <code>video.DSME_</code> (e.g. <code>video.DSME_0001.avi</code>). If you want to limit scanning to a particular part of the video frame, you can use the <a href="#region-editor">region editor</a>:</p>
-<pre><code>dvr_scan -i video.mp4 -r
+<pre><code>dvr-scan -i video.mp4 -r
 </code></pre>
 <p>DVR-Scan should provide good results for most use cases, but can be fine tuned for specific use cases. There are two main categories of these settings: <a href="../docs/#detection">detection and sensitivity</a>, and <a href="../docs/#events">event parameters</a>.</p>
 <p>See <a href="../docs/">the documentation</a> for a complete list of all command-line and configuration file options which can be set. You can also type <code>dvr-scan --help</code> for an overview of command line options. Lastly, most program options can be set <a href="../docs/#config-file">using a config file</a>.  DVR-Scan also looks for a <code>dvr-scan.cfg</code> file in the following locations:</p>
@@ -573,10 +573,10 @@
 <p>These settings will be used by default each time you run DVR-Scan, unless you override them.</p>
 <h3 id="multiple-videos">Multiple Videos<a class="headerlink" href="#multiple-videos" title="Permanent link">&para;</a></h3>
 <p>You can specify multiple input videos as long as they have the same resolution and framerate:</p>
-<pre><code>dvr_scan -i video1.mp4 video2.mp4 video*.mp4
+<pre><code>dvr-scan -i video1.mp4 video2.mp4 video*.mp4
 </code></pre>
 <p>Wildcards are also supported:</p>
-<pre><code>dvr_scan -i video*.mp4
+<pre><code>dvr-scan -i video*.mp4
 </code></pre>
 <p>Note that this will <strong>concatenate</strong> the videos together <em>in the order they are specified</em>.</p>
 <p>This can be undesirable for some types of footage being analyzed.  For example, if a folder contains different dashcam footage clips, a significant amount of time can pass between clips (e.g. when the vehicle is shut off).  This can result in DVR-Scan generating false events between videos.</p>
