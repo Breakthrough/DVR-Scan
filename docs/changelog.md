@@ -46,6 +46,9 @@ There are also several other bugfixes and improvements, such as improved seeking
     - `time-code-font-color` is now `text-font-color`
     - `time-code-bg-color` is now `text-bg-color`
 
+#### Known Issues
+
+ - Some prebuilt archives include documentation which references the `load-region` config option with the incorrect name (`region-file`) [#153](https://github.com/Breakthrough/DVR-Scan/issues/153)
 
 ----------------------------------------------------------
 
