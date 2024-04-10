@@ -579,7 +579,7 @@ class MotionScanner:
             self._subtractor_type.name,
             str(kernel_size) if kernel_size else 'off',
             ' (auto)' if self._kernel_size == -1 else '',
-            str(self._learningRate) if self._learningRate != -1 else '(auto)',
+            str(self._learningRate) if self._learningRate != -1 else 'auto',
         )
 
         # Correct event length parameters to account frame skip.
