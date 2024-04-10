@@ -240,6 +240,7 @@ class MotionScanner:
         self._threshold = 0.15                    # -t/--threshold
         self._kernel_size = None                  # -k/--kernel-size
         self._downscale_factor = 1                # -df/--downscale-factor
+        self._learningRate = -1                   # learning-rate
 
         # TODO(v1.6): Add ability to configure the rejection filter (_max_score_) by adding a
         # threshold + amount option (e.g. ignore up to 2 frames in a row that are over score 100).
@@ -371,6 +372,7 @@ class MotionScanner:
         threshold: float = 0.15,
         kernel_size: int = -1,
         downscale_factor: int = 1,
+        learningRate: int = -1,
     ):
         """Set detection parameters."""
         self._threshold = threshold
@@ -380,6 +382,7 @@ class MotionScanner:
         self._downscale_factor = max(downscale_factor, 1)
         assert kernel_size == -1 or kernel_size == 0 or kernel_size >= 3
         self._kernel_size = kernel_size
+        self._learningRate = learningRate
 
     def set_regions(self,
                     region_editor: bool = False,
@@ -566,16 +569,17 @@ class MotionScanner:
 
         # Create background subtractor and motion detector.
         detector = MotionDetector(
-            subtractor=self._subtractor_type.value(kernel_size=kernel_size),
+            subtractor=self._subtractor_type.value(kernel_size=kernel_size, learningRate=self._learningRate),
             frame_size=self._input.resolution,
             downscale=self._downscale_factor,
             regions=self._regions)
 
         logger.info(
-            'Using subtractor %s with kernel_size = %s%s',
+            'Using subtractor %s with kernel_size = %s%s and learning_rate = %s',
             self._subtractor_type.name,
             str(kernel_size) if kernel_size else 'off',
             ' (auto)' if self._kernel_size == -1 else '',
+            str(self._learningRate) if self._learningRate != -1 else '(auto)',
         )
 
         # Correct event length parameters to account frame skip.

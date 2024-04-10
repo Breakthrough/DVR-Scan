@@ -366,6 +366,14 @@ The following options control motion detection.  A more comprehensive descriptio
     ```
     </span>
 
+ * <b><pre>learning-rate</pre></b>
+    The value between 0 and 1 that indicates how fast the background model is learnt. Negative parameter value makes the algorithm to use some automatically chosen learning rate. 0 means that the background model is not updated at all, 1 means that the background model is completely reinitialized from the last frame.
+    <span class="dvr-scan-default">
+    ```
+    learning-rate = -1
+    ```
+    </span>
+
  * <b><pre>region-of-interest</pre></b>
     Region of interest of the form `(x, y), (w, h)`, where `x, y` is the top left corner, and w, h is the width/height in pixels.
     <span class="dvr-scan-example">
