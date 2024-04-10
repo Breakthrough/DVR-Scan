@@ -372,7 +372,7 @@ class MotionScanner:
         threshold: float = 0.15,
         kernel_size: int = -1,
         downscale_factor: int = 1,
-        learningRate: int = -1,
+        learningRate: float = -1,
     ):
         """Set detection parameters."""
         self._threshold = threshold
