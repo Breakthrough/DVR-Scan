@@ -268,7 +268,7 @@ def run_dvr_scan(settings: ProgramSettings) -> ty.List[ty.Tuple[FrameTimecode, F
         threshold=settings.get('threshold'),
         kernel_size=settings.get('kernel-size'),
         downscale_factor=settings.get('downscale-factor'),
-        learningRate=settings.get('learning-rate'),
+        learning_rate=settings.get('learning-rate'),
     )
 
     scanner.set_event_params(

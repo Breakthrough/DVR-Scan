@@ -372,7 +372,7 @@ class MotionScanner:
         threshold: float = 0.15,
         kernel_size: int = -1,
         downscale_factor: int = 1,
-        learningRate: float = -1,
+        learning_rate: float = -1,
     ):
         """Set detection parameters."""
         self._threshold = threshold
@@ -382,7 +382,7 @@ class MotionScanner:
         self._downscale_factor = max(downscale_factor, 1)
         assert kernel_size == -1 or kernel_size == 0 or kernel_size >= 3
         self._kernel_size = kernel_size
-        self._learningRate = learningRate
+        self._learning_rate = learning_rate
 
     def set_regions(self,
                     region_editor: bool = False,
@@ -569,7 +569,7 @@ class MotionScanner:
 
         # Create background subtractor and motion detector.
         detector = MotionDetector(
-            subtractor=self._subtractor_type.value(kernel_size=kernel_size, learningRate=self._learningRate),
+            subtractor=self._subtractor_type.value(kernel_size=kernel_size, learning_rate=self._learning_rate),
             frame_size=self._input.resolution,
             downscale=self._downscale_factor,
             regions=self._regions)
@@ -579,7 +579,7 @@ class MotionScanner:
             self._subtractor_type.name,
             str(kernel_size) if kernel_size else 'off',
             ' (auto)' if self._kernel_size == -1 else '',
-            str(self._learningRate) if self._learningRate != -1 else 'auto',
+            str(self._learning_rate) if self._learning_rate != -1 else 'auto',
         )
 
         # Correct event length parameters to account frame skip.

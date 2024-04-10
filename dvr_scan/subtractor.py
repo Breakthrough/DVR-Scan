@@ -53,7 +53,7 @@ class SubtractorMOG2(Subtractor):
         history: int = 500,
         variance_threshold: int = 16,
         detect_shadows: bool = False,
-        learningRate: float = -1,
+        learning_rate: float = -1,
     ):
         if kernel_size < 0 or (kernel_size > 1 and kernel_size % 2 == 0):
             raise ValueError("kernel_size must be >= 0")
@@ -66,11 +66,11 @@ class SubtractorMOG2(Subtractor):
         )
         # Default shadow value is 127, set to 0 so they are discarded before filtering.
         self._subtractor.setShadowValue(0)
-        self._learningRate = learningRate
+        self._learning_rate = learning_rate
 
     def apply(self, frame: numpy.ndarray) -> numpy.ndarray:
         frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        frame_mask = self._subtractor.apply(frame_gray, learningRate=self._learningRate)
+        frame_mask = self._subtractor.apply(frame_gray, learningRate=self._learning_rate)
         if not self._kernel is None:
             frame_filt = cv2.morphologyEx(frame_mask, cv2.MORPH_OPEN, self._kernel)
         else:
@@ -92,7 +92,7 @@ class SubtractorCNT(SubtractorMOG2):
         use_history: bool = True,
         max_pixel_stability: int = 15 * 60,
         is_parallel: bool = True,
-        learningRate: float = -1,
+        learning_rate: float = -1,
     ):
         if kernel_size < 0 or (kernel_size > 1 and kernel_size % 2 == 0):
             raise ValueError("kernel_size must be odd integer >= 1 or zero (0)")
@@ -104,7 +104,7 @@ class SubtractorCNT(SubtractorMOG2):
             maxPixelStability=max_pixel_stability,
             isParallel=is_parallel,
         )
-        self._learningRate = learningRate
+        self._learning_rate = learning_rate
 
     @staticmethod
     def is_available():
@@ -120,7 +120,7 @@ class SubtractorCudaMOG2(SubtractorMOG2):
         history: int = 500,
         variance_threshold: int = 16,
         detect_shadows: bool = False,
-        learningRate: float = -1,
+        learning_rate: float = -1,
     ):
         if kernel_size < 0 or (kernel_size > 1 and kernel_size % 2 == 0):
             raise ValueError("kernel_size must be odd integer >= 1 or zero (0)")
@@ -134,14 +134,14 @@ class SubtractorCudaMOG2(SubtractorMOG2):
         )
         # Default shadow value is 127, set to 0 so they are discarded before filtering.
         self._subtractor.setShadowValue(0)
-        self._learningRate = learningRate
+        self._learning_rate = learning_rate
 
     def apply(self, frame: numpy.ndarray) -> numpy.ndarray:
         stream = cv2.cuda_Stream()
         frame_rgb_dev = cv2.cuda_GpuMat()
         frame_rgb_dev.upload(frame, stream=stream)
         frame_gray_dev = cv2.cuda.cvtColor(frame_rgb_dev, cv2.COLOR_BGR2GRAY, stream=stream)
-        frame_mask_dev = self._subtractor.apply(frame_gray_dev, self._learningRate, stream=stream)
+        frame_mask_dev = self._subtractor.apply(frame_gray_dev, self._learning_rate, stream=stream)
         if not self._filter is None:
             frame_filt_dev = self._filter.apply(frame_mask_dev, stream=stream)
         else:
