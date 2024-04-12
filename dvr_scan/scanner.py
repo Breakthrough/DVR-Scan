@@ -569,7 +569,8 @@ class MotionScanner:
 
         # Create background subtractor and motion detector.
         detector = MotionDetector(
-            subtractor=self._subtractor_type.value(kernel_size=kernel_size, learning_rate=self._learning_rate),
+            subtractor=self._subtractor_type.value(
+                kernel_size=kernel_size, learning_rate=self._learning_rate),
             frame_size=self._input.resolution,
             downscale=self._downscale_factor,
             regions=self._regions)
