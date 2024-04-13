@@ -43,7 +43,7 @@ import dvr_scan.opencv_loader as _
 from dvr_scan.platform import init_logger
 
 # Used for module/distribution identification.
-__version__ = '1.6'
+__version__ = '1.6.1-dev0'
 
 
 def get_license_info() -> str:

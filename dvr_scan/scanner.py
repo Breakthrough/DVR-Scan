@@ -377,6 +377,13 @@ class MotionScanner:
         self._downscale_factor = max(downscale_factor, 1)
         assert kernel_size == -1 or kernel_size == 0 or kernel_size >= 3
         self._kernel_size = kernel_size
+        # TODO: Also allow ability to customize history size, as this is another factor that
+        # influences how quickly the background model is updated. When calculated automatically,
+        # OpenCV sets learning rate as:
+        #
+        #     learning_rate = 1.0 / min(num_frames, history_length)
+        #
+        # We should also investigate how this works for CNT and other subtractors.
         self._learning_rate = learning_rate
 
     def set_regions(self,

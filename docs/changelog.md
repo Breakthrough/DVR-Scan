@@ -5,6 +5,10 @@
 
 ## DVR-Scan 1.6
 
+### 1.6.1 (In Development)
+
+ - [improvement] Add `learning-rate` config option to adjust how the background model is updated
+
 ### 1.6 (October 15, 2023)
 
 #### Release Notes
