@@ -17,7 +17,7 @@ This module manages the DVR-Scan program control flow, starting with `run_dvr_sc
 import argparse
 import glob
 import logging
-import os
+import sys
 import time
 import typing as ty
 
@@ -27,7 +27,6 @@ import dvr_scan
 from dvr_scan.cli import get_cli_parser
 from dvr_scan.cli.config import ConfigRegistry, ConfigLoadFailure, RegionValueDeprecated
 from dvr_scan.overlays import TextOverlay, BoundingBoxOverlay
-from dvr_scan.detector import MotionDetector, Rectangle
 from dvr_scan.scanner import DetectorType, OutputMode, MotionScanner
 from dvr_scan.platform import init_logger
 
@@ -179,11 +178,17 @@ def parse_settings(args: ty.List[str] = None) -> ty.Optional[ProgramSettings]:
         logger.error('Error: Unknown background subtraction type: %s', detector_type)
         return None
     if not bg_subtractor.value.is_available():
-        logger.error(
-            'Method %s is not available. To enable it, install a version of'
-            ' the OpenCV package `cv2` that includes support for it%s.', bg_subtractor.name,
-            ', or download the experimental CUDA-enabled build: https://www.dvr-scan.com/'
-            if 'CUDA' in bg_subtractor.name and os.name == 'nt' else '')
+        if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+            # This should only happen for MOG2_CUDA (currently).
+            assert bg_subtractor == DetectorType.MOG2_CUDA
+            logger.error(
+                "Method %s is not available. To enable it, use a CUDA-enabled build of DVR-Scan.",
+                bg_subtractor.name)
+        else:
+            logger.error(
+                "Method %s is not available. To enable CNT, you can try `pip install "
+                "opencv-contrib-python`. MOG2_CUDA requires building OpenCV with Python and CUDA "
+                "support enabled.", bg_subtractor.name)
         return None
 
     return settings
@@ -266,6 +271,7 @@ def run_dvr_scan(settings: ProgramSettings) -> ty.List[ty.Tuple[FrameTimecode, F
     scanner.set_detection_params(
         detector_type=DetectorType[settings.get('bg-subtractor').upper()],
         threshold=settings.get('threshold'),
+        max_threshold=settings.get('max-threshold'),
         kernel_size=settings.get('kernel-size'),
         downscale_factor=settings.get('downscale-factor'),
         learning_rate=settings.get('learning-rate'),

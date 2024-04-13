@@ -358,6 +358,14 @@ The following options control motion detection.  A more comprehensive descriptio
     ```
     </span>
 
+ * <b><pre>max-threshold</pre></b>
+     Scores of this amount or higher are ignored. 255.0 is the maximum score, so values greater than 255.0 will disable the filter.
+    <span class="dvr-scan-default">
+    ```
+    max-threshold = 255.0
+    ```
+    </span>
+
  * <b><pre>kernel-size</pre></b>
     Size (in pixels) of the noise reduction kernel. Size must be an odd number starting from 3, 0 to disable, or -1 to auto-set based on video resolution.
     <span class="dvr-scan-default">

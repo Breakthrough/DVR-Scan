@@ -1,5 +1,4 @@
 # Build Portable Windows EXE (x64) Distribution for DVR-Scan
-
 name: Windows Distribution
 
 on:

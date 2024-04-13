@@ -30,7 +30,6 @@ from platformdirs import user_config_dir
 from scenedetect.frame_timecode import FrameTimecode
 
 from dvr_scan.scanner import DEFAULT_FFMPEG_INPUT_ARGS, DEFAULT_FFMPEG_OUTPUT_ARGS
-from dvr_scan.detector import Rectangle
 
 # Backwards compatibility for config options that were renamed/replaced.
 MIGRATED_CONFIG_OPTION: Dict[str, str] = {
@@ -320,6 +319,7 @@ CONFIG_MAP: ConfigDict = {
                                                          # Detection Parameters
     'bg-subtractor': 'MOG2',
     'threshold': 0.15,
+    'max-threshold': 255.0,
     'kernel-size': KernelSizeValue(),
     'downscale-factor': 0,
     'learning-rate': float(-1),

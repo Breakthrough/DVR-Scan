@@ -1,4 +1,4 @@
-
+# Update www.dvr-scan.com
 name: Update Website
 
 on:
@@ -6,6 +6,7 @@ on:
     branches:
       - main
     paths:
+      - 'docs/**'
       - 'website/**'
   workflow_dispatch:
 
