@@ -452,6 +452,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#known-issues" class="md-nav__link">
+    Known Issues
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -472,7 +479,7 @@
         
           <li class="md-nav__item">
   <a href="#151-august-15-2022" class="md-nav__link">
-     1.5.1 (August 15, 2022)
+    1.5.1 (August 15, 2022)
   </a>
   
     <nav class="md-nav" aria-label="1.5.1 (August 15, 2022)">
@@ -520,7 +527,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#known-issues" class="md-nav__link">
+  <a href="#known-issues_1" class="md-nav__link">
     Known Issues
   </a>
   
@@ -567,7 +574,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#known-issues_1" class="md-nav__link">
+  <a href="#known-issues_2" class="md-nav__link">
     Known Issues
   </a>
   
@@ -601,7 +608,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#known-issues_2" class="md-nav__link">
+  <a href="#known-issues_3" class="md-nav__link">
     Known Issues
   </a>
   
@@ -648,7 +655,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#known-issues_3" class="md-nav__link">
+  <a href="#known-issues_4" class="md-nav__link">
     Known Issues
   </a>
   
@@ -688,7 +695,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#known-issues_4" class="md-nav__link">
+  <a href="#known-issues_5" class="md-nav__link">
     Known Issues
   </a>
   
@@ -728,7 +735,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#known-issues_5" class="md-nav__link">
+  <a href="#known-issues_6" class="md-nav__link">
     Known Issues
   </a>
   
@@ -856,6 +863,10 @@
 </ul>
 </li>
 </ul>
+<h4 id="known-issues">Known Issues<a class="headerlink" href="#known-issues" title="Permanent link">&para;</a></h4>
+<ul>
+<li>Some prebuilt archives include documentation which references the <code>load-region</code> config option with the incorrect name (<code>region-file</code>) <a href="https://github.com/Breakthrough/DVR-Scan/issues/153">#153</a></li>
+</ul>
 <hr />
 <h2 id="dvr-scan-15">DVR-Scan 1.5<a class="headerlink" href="#dvr-scan-15" title="Permanent link">&para;</a></h2>
 <h3 id="151-august-15-2022"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.4.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="m345 39.1 127.8 129.3c52.4 53 52.4 138.2 0 191.2l-112 113.3c-9.3 9.4-24.5 9.5-33.9.2s-9.5-24.5-.2-33.9l111.9-113.3c33.9-34.3 33.9-89.4 0-123.7L310.9 72.9c-9.3-9.4-9.2-24.6.2-33.9s24.6-9.2 33.9.2zM0 229.5V80c0-26.5 21.5-48 48-48h149.5c17 0 33.3 6.7 45.3 18.7l168 168c25 25 25 65.5 0 90.5L277.3 442.7c-25 25-65.5 25-90.5 0l-168-168C6.7 262.7 0 246.5 0 229.5zM144 144a32 32 0 1 0-64 0 32 32 0 1 0 64 0z"/></svg></span> 1.5.1 (August 15, 2022)<a class="headerlink" href="#151-august-15-2022" title="Permanent link">&para;</a></h3>
@@ -935,7 +946,7 @@
 <li>[enhancement] Progress bar now indicates how many events have been detected so far</li>
 <li>[enhancement] Change default value for <code>min_event_len</code> to 0.1 seconds, previously was 2 frames (<a href="https://github.com/Breakthrough/DVR-Scan/issues/91">#91</a>)</li>
 </ul>
-<h4 id="known-issues">Known Issues<a class="headerlink" href="#known-issues" title="Permanent link">&para;</a></h4>
+<h4 id="known-issues_1">Known Issues<a class="headerlink" href="#known-issues_1" title="Permanent link">&para;</a></h4>
 <ul>
 <li>Attempting to open multiple input videos will cause DVR-Scan to crash, fixed in v1.5.1 (<a href="https://github.com/Breakthrough/DVR-Scan/issues/95">#95</a>)</li>
 <li>Variable framerate videos (VFR) are not fully supported, and will yield incorrect timestamps (<a href="https://github.com/Breakthrough/DVR-Scan/issues/20">#20</a>)</li>
@@ -968,7 +979,7 @@
 </ul>
 </li>
 </ul>
-<h4 id="known-issues_1">Known Issues<a class="headerlink" href="#known-issues_1" title="Permanent link">&para;</a></h4>
+<h4 id="known-issues_2">Known Issues<a class="headerlink" href="#known-issues_2" title="Permanent link">&para;</a></h4>
 <ul>
 <li>Variable framerate videos (VFR) are not fully supported, and will yield incorrect timestamps (<a href="https://github.com/Breakthrough/DVR-Scan/issues/20">#20</a>)</li>
 <li>Using <code>-st</code>/<code>--start-time</code> will yield incorrect results</li>
@@ -1005,7 +1016,7 @@
 <li>[bugfix] The <code>-l</code>/<code>--min-event-length</code> and <code>-tp</code>/<code>--time-post-event</code> parameters are now adjusted to compensate for <code>-fs</code>/<code>--frame-skip</code> if set (<a href="https://github.com/Breakthrough/DVR-Scan/issues/70">#70</a>)</li>
 <li>[bugfix] An erroneus event (false positive) is no longer generated at the beginning of a video when <code>-l</code>/<code>--min-event-length</code> is equal to 1 frame</li>
 </ul>
-<h4 id="known-issues_2">Known Issues<a class="headerlink" href="#known-issues_2" title="Permanent link">&para;</a></h4>
+<h4 id="known-issues_3">Known Issues<a class="headerlink" href="#known-issues_3" title="Permanent link">&para;</a></h4>
 <ul>
 <li>Variable framerate videos (VFR) are not fully supported, and will yield incorrect timestamps (<a href="https://github.com/Breakthrough/DVR-Scan/issues/20">#20</a>)</li>
 <li>When using <code>-fs</code>/<code>--frame-skip</code>, event start times do not include all of <code>-tb</code>/<code>--time-before-event</code> (<a href="https://github.com/Breakthrough/DVR-Scan/issues/68">#68</a>, <a href="https://github.com/Breakthrough/DVR-Scan/issues/70">#70</a>)</li>
@@ -1027,7 +1038,7 @@
 </li>
 <li>[bugfix] When using the <code>-o</code>/<code>--output</code> argument, a file is no longer written to disk if no motion events are found in the input file (<a href="https://github.com/Breakthrough/DVR-Scan/issues/50">#50</a>)</li>
 </ul>
-<h4 id="known-issues_3">Known Issues<a class="headerlink" href="#known-issues_3" title="Permanent link">&para;</a></h4>
+<h4 id="known-issues_4">Known Issues<a class="headerlink" href="#known-issues_4" title="Permanent link">&para;</a></h4>
 <ul>
 <li>Variable framerate videos (VFR) are not fully supported, and will yield incorrect timestamps (<a href="https://github.com/Breakthrough/DVR-Scan/issues/20">#20</a>)</li>
 <li>Using the <code>-roi</code> flag with high resolution videos can result in the window exceeding the size of the monitor (<a href="https://github.com/Breakthrough/DVR-Scan/issues/59">#59</a>)</li>
@@ -1046,7 +1057,7 @@
 <li>[api] Refactor ScanContext class for better usage from Python (<a href="https://github.com/Breakthrough/DVR-Scan/issues/33">#33</a>)</li>
 <li>[api] Use named logger rather than print statements (<a href="https://github.com/Breakthrough/DVR-Scan/issues/35">#35</a>)</li>
 </ul>
-<h4 id="known-issues_4">Known Issues<a class="headerlink" href="#known-issues_4" title="Permanent link">&para;</a></h4>
+<h4 id="known-issues_5">Known Issues<a class="headerlink" href="#known-issues_5" title="Permanent link">&para;</a></h4>
 <ul>
 <li>When using the <code>-o</code>/<code>--output</code> argument, a file is still written to disk even if no motion events are discovered in the input file (<a href="https://github.com/Breakthrough/DVR-Scan/issues/50">#50</a>)</li>
 <li>Variable framerate videos (VFR) are not fully supported, and will yield incorrect timestamps (<a href="https://github.com/Breakthrough/DVR-Scan/issues/20">#20</a>)</li>
@@ -1060,7 +1071,7 @@
 <li>[bugfix] Fixed broken OpenCV compatibility layer causing issues with OpenCV 3.0+</li>
 <li>[general] Released project on pip, pinned OpenCV version requirement</li>
 </ul>
-<h4 id="known-issues_5">Known Issues<a class="headerlink" href="#known-issues_5" title="Permanent link">&para;</a></h4>
+<h4 id="known-issues_6">Known Issues<a class="headerlink" href="#known-issues_6" title="Permanent link">&para;</a></h4>
 <ul>
 <li>Quiet mode (<code>-q/--quiet</code>) does not work correctly</li>
 <li>Variable framerate videos (VFR) are not fully supported, and will yield incorrect timestamps (<a href="https://github.com/Breakthrough/DVR-Scan/issues/20">#20</a>)</li>
