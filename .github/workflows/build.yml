@@ -14,6 +14,10 @@ on:
       - dist/**
       - dvr_scan/**
       - tests/**
+    branches:
+      - main
+      - develop
+      - 'releases/**'
     tags:
       - v*-release
   workflow_dispatch:
@@ -26,7 +30,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-13, macos-14, ubuntu-20.04, ubuntu-latest, windows-latest]
+        # TODO(v1.6.1): Add macos-14 builder.
+        os: [macos-13, ubuntu-20.04, ubuntu-latest, windows-latest]
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
     steps:
