@@ -51,7 +51,7 @@ jobs:
 
       - name: Create Mask File
         run: |
-          python -m dvr_scan -i tests/resources/traffic_camera.mp4 -mo mask.avi -fm -so --add-region 631 532 841 532 841 659 631 659 --min-event-length 4 --time-before-event 0
+          python -m dvr_scan -i tests/resources/traffic_camera.mp4 -mo mask.avi -fm -so --add-region 631 532 841 532 841 659 631 659 --min-event-length 4 --time-before-event 0 -k 0
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
