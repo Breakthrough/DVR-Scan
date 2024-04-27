@@ -2,6 +2,8 @@
 name: Python Distribution
 
 on:
+  schedule:
+    - cron: '0 0 * * *'
   pull_request:
     paths:
       - dist/**
@@ -21,8 +23,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-20.04, ubuntu-latest, windows-latest]
-        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+        os: [macos-12, macos-14, ubuntu-20.04, ubuntu-latest, windows-latest]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]
+        exclude:
+          - os: macos-14
+            python-version: "3.7"
 
     steps:
       - uses: actions/checkout@v3
@@ -69,7 +74,7 @@ jobs:
           python -m pip uninstall -y dvr-scan
 
       - name: Upload Package
-        if: ${{ matrix.python-version == '3.11' && matrix.os == 'ubuntu-latest' }}
+        if: ${{ matrix.python-version == '3.12' && matrix.os == 'ubuntu-latest' }}
         uses: actions/upload-artifact@v3
         with:
           name: dvr-scan-dist
