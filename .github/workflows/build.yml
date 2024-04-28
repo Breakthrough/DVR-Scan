@@ -30,8 +30,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        # TODO(v1.6.1): Add macos-14 builder.
-        os: [macos-14]
+        os: [macos-13, macos-14, ubuntu-20.04, ubuntu-latest, windows-latest]
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
     steps:
@@ -45,19 +44,40 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          python -m pip install --upgrade pip build wheel virtualenv
-          pip install opencv-python-headless opencv-contrib-python-headless --only-binary :all:
-          pip install -r requirements_headless.txt
+          python -m pip install --upgrade pip
+          python -m pip install --upgrade build wheel virtualenv
+          python -m pip install opencv-python-headless opencv-contrib-python-headless --only-binary :all:
+          python -m pip install -r requirements_headless.txt
 
-      - name: Create Mask File
+      - name: Unit Test
         run: |
-          python -m dvr_scan -i tests/resources/traffic_camera.mp4 -mo mask.avi -fm -so --add-region 631 532 841 532 841 659 631 659 --min-event-length 4 --time-before-event 0 -k 0
+          python -m pytest tests/
 
-      - name: Upload Artifact
+      - name: Build Package
+        shell: bash
+        run: |
+          python -m build
+          echo "dvr_scan_version=`python -c \"import dvr_scan; print(dvr_scan.__version__.replace('-', '.'))\"`" >> "$GITHUB_ENV"
+
+      - name: Smoke Test (Source)
+        run: |
+          python -m pip install dist/dvr_scan-${{ env.dvr_scan_version }}.tar.gz
+          python -m dvr_scan --version
+          python -m dvr_scan -i tests/resources/simple_movement.mp4 -so -df 4 -et 100
+          python -m pip uninstall -y dvr-scan
+
+      - name: Smoke Test (Wheel)
+        run: |
+          python -m pip install dist/dvr_scan-${{ env.dvr_scan_version }}-py3-none-any.whl
+          python -m dvr_scan --version
+          python -m dvr_scan -i tests/resources/simple_movement.mp4 -so -df 4 -et 100
+          python -m pip uninstall -y dvr-scan
+
+      - name: Upload Package
+        if: ${{ matrix.python-version == '3.12' && matrix.os == 'ubuntu-latest' }}
         uses: actions/upload-artifact@v3
         with:
-          name: macos-14-test-file
-          path: mask.avi
-      #- name: Unit Test
-      #  run: |
-      #    python -m pytest tests/
+          name: dvr-scan-dist
+          path: |
+            dist/*.tar.gz
+            dist/*.whl

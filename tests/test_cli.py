@@ -15,6 +15,7 @@ Tests high level usage of the DVR-Scan command line interface.
 """
 
 import os
+import platform
 import subprocess
 from typing import List
 
@@ -25,6 +26,8 @@ from dvr_scan import opencv_loader as _
 from scenedetect.video_splitter import is_ffmpeg_available
 
 from dvr_scan.subtractor import SubtractorCNT, SubtractorCudaMOG2
+
+MACHINE_ARCH = platform.machine().upper()
 
 # TODO: Open extracted motion events and validate the actual frames.
 
@@ -40,12 +43,15 @@ BASE_COMMAND = [
     '4',
     '--time-before-event',
     '0',
+    '--threshold',
+    '0.2',
 ]
 BASE_COMMAND_NUM_EVENTS = 3
 
 TEST_CONFIG_FILE = """
 min-event-length = 4
 time-before-event = 0
+threshold = 0.2
 """
 
 # TODO: Need to generate goldens for CNT/MOG2_CUDA, as their output can differ slightly.
@@ -59,8 +65,12 @@ BASE_COMMAND_EVENT_LIST_GOLDEN = """
 -------------------------------------------------------------
 """[1:]
 
+# On some ARM chips (e.g. Apple M1), results are slightly different, so we allow a 1 frame
+# delta on the events for those platforms.
 BASE_COMMAND_TIMECODE_LIST_GOLDEN = """
-00:00:00.360,00:00:05.960,00:00:14.320,00:00:19.640,00:00:21.680,00:00:23.040
+00:00:00.400,00:00:05.960,00:00:14.320,00:00:19.640,00:00:21.680,00:00:23.040
+"""[1:] if not ('ARM' in MACHINE_ARCH or 'AARCH' in MACHINE_ARCH) else """
+00:00:00.400,00:00:06.000,00:00:14.320,00:00:19.640,00:00:21.680,00:00:23.040
 """[1:]
 
 
