@@ -7,6 +7,12 @@
 
 ### 1.6.1 (In Development)
 
+#### Release Notes
+
+Includes various usability enhancements identified since the region editor was launched, and several bugfixes. Minimum supported Python version is now 3.8 (previous versions may continue to work but are not officially supported).
+
+#### Changelog
+
  - [improvement] Add `learning-rate` config option to adjust how the background model is updated
 
 ### 1.6 (October 15, 2023)

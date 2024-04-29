@@ -6,6 +6,6 @@ opencv-python
 opencv-contrib-python
 platformdirs
 pytest
-scenedetect
+scenedetect>=0.6.2
 screeninfo
 tqdm

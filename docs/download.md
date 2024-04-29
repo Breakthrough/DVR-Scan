@@ -20,7 +20,7 @@ hide:
 
         pip install dvr-scan[opencv-headless]==1.6
 
-DVR-Scan is [available on PyPI](https://pypi.org/project/dvr-scan/) can be installed using `pip install dvr-scan[opencv]`. DVR-Scan works on Windows, Linux, and OSX, and requires Python 3.7 or higher.
+DVR-Scan is [available on PyPI](https://pypi.org/project/dvr-scan/) can be installed using `pip install dvr-scan[opencv]`. DVR-Scan works on Windows, Linux, and OSX, and requires Python 3.8 or higher.
 
 If want to use an existing OpenCV installation or require a non-PyPI version, you can omit the extras from `pip install`. You can also build and install DVR-Scan [from source](#source-code).
 
@@ -42,13 +42,13 @@ The installer is recommended for most users.  Windows builds include all require
 
 <h3>CUDA®-Enabled Builds (Experimental)</h3>
 
-Nvidia CUDA® builds are available, but still early in development. This version may not be the latest, and should be considered experimental. Not all GPU versions may be supported.
+Nvidia CUDA® builds experimental and outdated due to difficulty producing binary distributions covering all systems and GPU architectures. If you require CUDA support, the Python version of DVR-Scan is compatible with any CUDA® enabled version of the `opencv-python` module.  You can get better performance or use DVR-Scan on a wider variety of GPUs if you build the module on your system, with the latest SDK version.
 
 !!! cuda-download "**1.5.1 (Not Latest)**<span class="dvr-scan-release-date">:fontawesome-solid-triangle-exclamation:</span>"
 
     <div class="buttongrid buttongrid-download">[:fontawesome-solid-flask: &nbsp; CUDA® Build `.zip`](https://github.com/Breakthrough/DVR-Scan/releases/download/v1.5.1-release/dvr-scan-1.5.1-win64-cuda.zip){ .md-button #changelog-button }</div>
 
-Make sure to set `-b MOG2_CUDA` when running DVR-Scan (e.g. `dvr-scan -i video.mp4 -b MOG2_CUDA`). CUDA builds are done infrequently and may not be up to date.  The Python version of DVR-Scan is compatible with any CUDA® enabled version of the `opencv-python` module.  You can get better performance or use DVR-Scan on a wider variety of GPUs if you build the module on your system. with the latest SDK version.
+Make sure to set `-b MOG2_CUDA` when running DVR-Scan (e.g. `dvr-scan -i video.mp4 -b MOG2_CUDA`).
 
 
 ## Source Code
