@@ -496,7 +496,8 @@ class MotionScanner:
                 frame=frame_for_crop,
                 initial_shapes=self._regions,
                 initial_scale=scale_factor,
-                debug_mode=self._debug_mode)
+                debug_mode=self._debug_mode,
+                video_path=self._input.paths[0])
             save_was_specified = bool(self._save_region)
             if not regions.run(warn_if_notkinter=not save_was_specified):
                 return False
