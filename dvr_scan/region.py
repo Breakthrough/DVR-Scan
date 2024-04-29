@@ -268,8 +268,7 @@ class SelectionWindow:
             self._rescale()
         self._settings = SelectionWindowSettings()
         self._video_path = video_path
-        # Add initial history point for undo.
-        self._commit()
+        self._commit()                      # Add initial history point for undo.
 
     @property
     def shapes(self) -> ty.Iterable[ty.Iterable[Point]]:
