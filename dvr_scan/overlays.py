@@ -195,7 +195,7 @@ class BoundingBoxOverlay(object):
         self._smoothing_window = self._smoothing_window[-smoothing_amount:]
         return self._get_smoothed_window()
 
-    def draw(self, frame: numpy.ndarray, bounding_box: Tuple[int, int, int, int]):
+    def draw(self, frame: numpy.ndarray, bounding_box: Tuple[int, int, int, int], use_shift: bool):
         """Draw a bounding box onto a target frame using the provided ROI and downscale factor."""
         # Correct for downscale factor
         bounding_box = [side_len * self._downscale_factor for side_len in bounding_box]
@@ -210,7 +210,7 @@ class BoundingBoxOverlay(object):
         top_left = (top_left[0] - correction_x // 2, top_left[1] - correction_y // 2)
         bottom_right = (bottom_right[0] + correction_x // 2, bottom_right[1] + correction_y // 2)
         # Shift bounding box if ROI was set
-        if self._shift:
+        if self._shift and use_shift:
             top_left = (top_left[0] + self._shift[0], top_left[1] + self._shift[1])
             bottom_right = (bottom_right[0] + self._shift[0], bottom_right[1] + self._shift[1])
         # Ensure coordinates are positive. Values greater than frame size are okay, and should be

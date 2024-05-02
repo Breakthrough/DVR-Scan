@@ -6,5 +6,5 @@ opencv-python-headless
 opencv-contrib-python-headless
 platformdirs
 pytest
-scenedetect
+scenedetect>=0.6.2
 tqdm

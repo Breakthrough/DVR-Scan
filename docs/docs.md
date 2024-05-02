@@ -358,11 +358,27 @@ The following options control motion detection.  A more comprehensive descriptio
     ```
     </span>
 
+ * <b><pre>max-threshold</pre></b>
+     Scores of this amount or higher are ignored. 255.0 is the maximum score, so values greater than 255.0 will disable the filter.
+    <span class="dvr-scan-default">
+    ```
+    max-threshold = 255.0
+    ```
+    </span>
+
  * <b><pre>kernel-size</pre></b>
     Size (in pixels) of the noise reduction kernel. Size must be an odd number starting from 3, 0 to disable, or -1 to auto-set based on video resolution.
     <span class="dvr-scan-default">
     ```
     kernel-size = -1
+    ```
+    </span>
+
+ * <b><pre>learning-rate</pre></b>
+    The value between 0 and 1 that indicates how fast the background model is learnt. Negative parameter value makes the algorithm to use some automatically chosen learning rate. 0 means that the background model is not updated at all, 1 means that the background model is completely reinitialized from the last frame.
+    <span class="dvr-scan-default">
+    ```
+    learning-rate = -1
     ```
     </span>
 

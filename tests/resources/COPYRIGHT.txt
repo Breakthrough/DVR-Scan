@@ -1,0 +1,15 @@
+simple_movement.mp4:
+    Original work.
+    Brandon Castellano
+
+traffic_camera.mp4:
+    "Road traffic video for object recognition": https://www.youtube.com/watch?v=wqctLW0Hb_0
+    Andrey Nikishaev - https://www.youtube.com/@AndreyNikishaev
+
+issue62.mp4:
+    https://github.com/Breakthrough/DVR-Scan/issues/62
+    Daniel - https://github.com/dany123
+
+issue53_brightness_change.avi:
+    https://github.com/Breakthrough/DVR-Scan/issues/53
+    Julian Chennales - https://github.com/jchennales

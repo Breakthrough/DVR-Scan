@@ -240,7 +240,7 @@ def load_regions(path: ty.AnyStr) -> ty.Iterable[RegionValidator]:
 class SelectionWindow:
 
     def __init__(self, frame: np.ndarray, initial_shapes: ty.Optional[ty.List[ty.List[Point]]],
-                 initial_scale: ty.Optional[int], debug_mode: bool):
+                 initial_scale: ty.Optional[int], debug_mode: bool, video_path: str):
         self._source_frame = frame.copy()   # Frame before downscaling
         self._source_size = Size(w=frame.shape[1], h=frame.shape[0])
         self._scale: int = 1 if initial_scale is None else initial_scale
@@ -267,7 +267,8 @@ class SelectionWindow:
         if self._scale > 1:
             self._rescale()
         self._settings = SelectionWindowSettings()
-        self._commit()
+        self._video_path = video_path
+        self._commit()                      # Add initial history point for undo.
 
     @property
     def shapes(self) -> ty.Iterable[ty.Iterable[Point]]:
@@ -319,8 +320,10 @@ class SelectionWindow:
     def _emit_points(self):
         region_info = []
         for shape in self._regions:
-            region_info.append("--region %s" % " ".join(f"{x} {y}" for x, y in shape))
-        logger.info("Region data for CLI:\n%s", " ".join(region_info))
+            region_info.append("-a %s" % " ".join(f"{x} {y}" for x, y in shape))
+        data = " ".join(region_info)
+        logger.info("Command to scan region:\n"
+                    f"dvr-scan -i {self._video_path} {data}")
 
     def _draw(self):
         if self._recalculate:

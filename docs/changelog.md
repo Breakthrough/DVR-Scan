@@ -5,19 +5,32 @@
 
 ## DVR-Scan 1.6
 
-### 1.6 (In Development)
+### 1.6.1 (In Development)
 
 #### Release Notes
 
-This version of DVR-Scan includes a much requested feature: multiple regions of interest.  Not only can you select multiple regions, but they can be any shape or complexity (see [user guide](https://dvr-scan.readthedocs.io/en/develop/guide/#region-editor)):
+Includes various usability enhancements identified since the region editor was launched, and several bugfixes. Minimum supported Python version is now 3.8 (previous versions may continue to work but are not officially supported).
 
-<img alt="example of region editor" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/develop/docs/assets/region-editor-multiple.jpg" width="480"/>
+#### Changelog
+
+ - [improvement] Add `learning-rate` config option to adjust how the background model is updated
+
+### 1.6 (October 15, 2023)
+
+#### Release Notes
+
+DVR-Scan greatly improves masking capabilities with the new region editor ([user guide](https://www.dvr-scan.com/guide/#region-editor)):
+
+<img alt="example of region editor" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.6/docs/assets/region-editor-multiple.jpg" width="480"/>
+<img alt="example of region editor" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.6/docs/assets/region-editor-mask.jpg" width="480"/>
+
+Multiple regions can now be defined with any shape, size, and complexity. Region data can be saved to a file and loaded again. Regions can also be specified by command line.
 
 There are also several other bugfixes and improvements, such as improved seeking performance.
 
 #### Changelog
 
- - [feature] [New region editor](https://dvr-scan.readthedocs.io/en/develop/guide/#region-editor) `-r`/`--region-editor` allows creation of multiple regions without shape restrictions, replaces `-roi`/`--region-of-interest`
+ - [feature] [New region editor](https://www.dvr-scan.com/guide/#region-editor) `-r`/`--region-editor` allows creation of multiple regions without shape restrictions, replaces `-roi`/`--region-of-interest`
  - [feature] Multiple regions of interest (rectangular or polygonal) can now be created:
     - Using the new region editor by adding the `-r`/`--region-editor` flag: `dvr-scan -i video.mp4 -r`
     - New `-a`/`--add-region` replaces `-roi`/`--region-of-interest` option: `dvr-scan -i video.mp4 -a 5 5 20 5 20 20 5 20`
@@ -32,7 +45,7 @@ There are also several other bugfixes and improvements, such as improved seeking
  -detection-parameters)
  - [general] Noise reduction kernel can now be disabled by setting `-k`/`--kernel-size` to `0` ([#123](https://github.com/Breakthrough/DVR-Scan/issues/123))
  - [general] Include stack traces in logfiles when setting `--verbosity debug`
- - [bugfix] Fix CNT mode always treating first few frame as having motion [#119](https://github.com/Breakthrough/DVR-Scan/issues/119)
+ - [bugfix] Add `max-score` option to config file to fix CNT mode always treating first few frame as motion, default is 255.0 [#119](https://github.com/Breakthrough/DVR-Scan/issues/119)
  - [bugfix] Fix timecode format `HH:MM:SS[.nnn]` being rejected for start/end time ([#141](https://github.com/Breakthrough/DVR-Scan/issues/141))
  - [bugfix] Fix incorrect RGB mapping for config file (values were treated as BGR instead)
  - [other] Config option `timecode` has been renamed to `time-code` to match the command-line option
@@ -43,6 +56,9 @@ There are also several other bugfixes and improvements, such as improved seeking
     - `time-code-font-color` is now `text-font-color`
     - `time-code-bg-color` is now `text-bg-color`
 
+#### Known Issues
+
+ - Some prebuilt archives include documentation which references the `load-region` config option with the incorrect name (`region-file`) [#153](https://github.com/Breakthrough/DVR-Scan/issues/153)
 
 ----------------------------------------------------------
 

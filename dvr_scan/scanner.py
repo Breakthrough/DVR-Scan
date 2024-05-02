@@ -31,15 +31,11 @@ from scenedetect import FrameTimecode
 from scenedetect.platform import FakeTqdmObject
 from tqdm import tqdm
 
-from dvr_scan.detector import MotionDetector, Rectangle
+from dvr_scan.detector import MotionDetector
 from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
 from dvr_scan.platform import get_filename, get_min_screen_bounds, is_ffmpeg_available
 from dvr_scan.region import SelectionWindow, Point, Size, bound_point, load_regions
-from dvr_scan.subtractor import (
-    SubtractorMOG2,
-    SubtractorCNT,
-    SubtractorCudaMOG2,
-)
+from dvr_scan.subtractor import SubtractorMOG2, SubtractorCNT, SubtractorCudaMOG2
 from dvr_scan.video_joiner import VideoJoiner
 
 logger = logging.getLogger('dvr_scan')
@@ -240,10 +236,8 @@ class MotionScanner:
         self._threshold = 0.15                    # -t/--threshold
         self._kernel_size = None                  # -k/--kernel-size
         self._downscale_factor = 1                # -df/--downscale-factor
-
-        # TODO(v1.6): Add ability to configure the rejection filter (_max_score_) by adding a
-        # threshold + amount option (e.g. ignore up to 2 frames in a row that are over score 100).
-        self._max_score = 255.0
+        self._learningRate = -1                   # learning-rate
+        self._max_threshold = 255.0               # max-threshold
 
         # Motion Event Parameters (set_event_params)
         self._min_event_len = None  # -l/--min-event-length
@@ -369,17 +363,28 @@ class MotionScanner:
         self,
         detector_type: DetectorType = DetectorType.MOG2,
         threshold: float = 0.15,
+        max_threshold: float = 255.0,
         kernel_size: int = -1,
         downscale_factor: int = 1,
+        learning_rate: float = -1,
     ):
         """Set detection parameters."""
         self._threshold = threshold
+        self._max_threshold = max_threshold
         self._subtractor_type = detector_type
         if downscale_factor < 0:
             raise ValueError("Downscale factor must be positive.")
         self._downscale_factor = max(downscale_factor, 1)
         assert kernel_size == -1 or kernel_size == 0 or kernel_size >= 3
         self._kernel_size = kernel_size
+        # TODO: Also allow ability to customize history size, as this is another factor that
+        # influences how quickly the background model is updated. When calculated automatically,
+        # OpenCV sets learning rate as:
+        #
+        #     learning_rate = 1.0 / min(num_frames, history_length)
+        #
+        # We should also investigate how this works for CNT and other subtractors.
+        self._learning_rate = learning_rate
 
     def set_regions(self,
                     region_editor: bool = False,
@@ -491,7 +496,8 @@ class MotionScanner:
                 frame=frame_for_crop,
                 initial_shapes=self._regions,
                 initial_scale=scale_factor,
-                debug_mode=self._debug_mode)
+                debug_mode=self._debug_mode,
+                video_path=self._input.paths[0])
             save_was_specified = bool(self._save_region)
             if not regions.run(warn_if_notkinter=not save_was_specified):
                 return False
@@ -566,16 +572,18 @@ class MotionScanner:
 
         # Create background subtractor and motion detector.
         detector = MotionDetector(
-            subtractor=self._subtractor_type.value(kernel_size=kernel_size),
+            subtractor=self._subtractor_type.value(
+                kernel_size=kernel_size, learning_rate=self._learning_rate),
             frame_size=self._input.resolution,
             downscale=self._downscale_factor,
             regions=self._regions)
 
         logger.info(
-            'Using subtractor %s with kernel_size = %s%s',
+            'Using subtractor %s with kernel_size = %s%s and learning_rate = %s',
             self._subtractor_type.name,
             str(kernel_size) if kernel_size else 'off',
             ' (auto)' if self._kernel_size == -1 else '',
+            str(self._learning_rate) if self._learning_rate != -1 else 'auto',
         )
 
         # Correct event length parameters to account frame skip.
@@ -595,7 +603,7 @@ class MotionScanner:
 
         # Length of buffer we require in memory to keep track of all frames required for -l and -tb.
         buff_len = pre_event_len + min_event_len
-        event_end = FrameTimecode(timecode=0, fps=self._input.framerate)
+        event_end = self._input.position
         last_frame_above_threshold = 0
 
         if self._bounding_box:
@@ -642,7 +650,7 @@ class MotionScanner:
             frame_score = result.score
             # TODO(v1.6): Allow disabling the rejection filter or customizing amount of
             # consecutive frames it will ignore.
-            if frame_score >= self._max_score:
+            if frame_score >= self._max_threshold:
                 frame_score = 0
             above_threshold = frame_score >= self._threshold
             event_window.append(frame_score)
@@ -852,6 +860,7 @@ class MotionScanner:
         timecode: FrameTimecode,
         frame_score: float,
         bounding_box: Optional[Tuple[int, int, int, int]],
+        use_shift=True,
     ):
         if not self._timecode_overlay is None:
             self._timecode_overlay.draw(frame, text=timecode.get_timecode())
@@ -859,7 +868,7 @@ class MotionScanner:
             to_display = "Frame: %04d\nScore: %3.2f" % (timecode.get_frames(), frame_score)
             self._metrics_overlay.draw(frame, text=to_display)
         if not self._bounding_box is None and not bounding_box is None:
-            self._bounding_box.draw(frame, bounding_box)
+            self._bounding_box.draw(frame, bounding_box, use_shift)
 
     def _on_mask_event(self, event: MotionMaskEvent):
         # Initialize the VideoWriter used for mask output.
@@ -868,7 +877,8 @@ class MotionScanner:
             self._mask_writer = self._init_video_writer(self._mask_file, resolution)
         # Write the motion mask to the output file.
         out_frame = cv2.cvtColor(event.motion_mask, cv2.COLOR_GRAY2BGR)
-        self._draw_overlays(out_frame, event.timecode, event.score, event.bounding_box)
+        self._draw_overlays(
+            out_frame, event.timecode, event.score, event.bounding_box, use_shift=False)
         self._mask_writer.write(out_frame)
 
     def _on_motion_event(self, event: MotionEvent):

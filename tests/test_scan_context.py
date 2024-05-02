@@ -14,12 +14,23 @@
 Validates functionality of the motion scanning context using various parameters.
 """
 
+import platform
+import typing as ty
+
 import pytest
 
-from dvr_scan.detector import Rectangle
 from dvr_scan.scanner import DetectorType, MotionScanner
 from dvr_scan.subtractor import SubtractorCNT, SubtractorCudaMOG2
 from dvr_scan.region import Point
+
+MACHINE_ARCH = platform.machine().upper()
+
+# On some ARM chips (e.g. Apple M1), results are slightly different, so we allow a 1 frame
+# delta on the events for those platforms.
+EVENT_FRAME_TOLERANCE = 1 if ('ARM' in MACHINE_ARCH or 'AARCH' in MACHINE_ARCH) else 0
+
+# Similar to ARM, the CUDA version gives slightly different results.
+CUDA_EVENT_TOLERANCE = 1
 
 # ROI within the frame used for the test case (see traffic_camera.txt for details).
 TRAFFIC_CAMERA_ROI = [
@@ -34,9 +45,6 @@ TRAFFIC_CAMERA_EVENTS = [
     (358, 491),
     (542, 576),
 ]
-
-# Allow up to 1 frame difference in ground truth due to different floating point handling.
-CUDA_EVENT_TOLERANCE = 1
 
 TRAFFIC_CAMERA_EVENTS_TIME_PRE_5 = [
     (3, 149),
@@ -69,6 +77,20 @@ CORRUPT_VIDEO_EVENTS = [
 ]
 
 
+def compare_event_lists(a: ty.List[ty.Tuple[int, int]],
+                        b: ty.List[ty.Tuple[int, int]],
+                        tolerance: int = 0):
+    if tolerance == 0:
+        assert a == b
+        return
+    for i, (start, end) in enumerate(a):
+        start_matches = abs(start - b[i][0]) <= tolerance
+        end_matches = abs(end - b[i][1]) <= tolerance
+        assert start_matches and end_matches, (
+            f"Event mismatch at index {i} with tolerance {tolerance}.\n"
+            f"Actual = {a[i]}, Expected = {b[i]}")
+
+
 def test_scan_context(traffic_camera_video):
     """Test functionality of MotionScanner with default parameters (DetectorType.MOG2)."""
     scanner = MotionScanner([traffic_camera_video])
@@ -77,7 +99,7 @@ def test_scan_context(traffic_camera_video):
     scanner.set_event_params(min_event_len=4, time_pre_event=0)
     event_list = scanner.scan().event_list
     event_list = [(event.start.frame_num, event.end.frame_num) for event in event_list]
-    assert event_list == TRAFFIC_CAMERA_EVENTS
+    compare_event_lists(event_list, TRAFFIC_CAMERA_EVENTS, EVENT_FRAME_TOLERANCE)
 
 
 @pytest.mark.skipif(not SubtractorCudaMOG2.is_available(), reason="CUDA module not available.")
@@ -90,12 +112,7 @@ def test_scan_context_cuda(traffic_camera_video):
     event_list = scanner.scan().event_list
     assert len(event_list) == len(TRAFFIC_CAMERA_EVENTS)
     event_list = [(event.start.frame_num, event.end.frame_num) for event in event_list]
-    for i, event in enumerate(event_list):
-        start_matches = abs(event.start - TRAFFIC_CAMERA_EVENTS[i][0]) <= CUDA_EVENT_TOLERANCE
-        end_matches = abs(event.start - TRAFFIC_CAMERA_EVENTS[i][0]) <= CUDA_EVENT_TOLERANCE
-        assert start_matches and end_matches, (
-            "Event mismatch at index %d with tolerance %d:\n Actual:   %s\n Expected: %s" %
-            (i, CUDA_EVENT_TOLERANCE, str(event), str(TRAFFIC_CAMERA_EVENTS[i])))
+    compare_event_lists(event_list, TRAFFIC_CAMERA_EVENTS, CUDA_EVENT_TOLERANCE)
 
 
 @pytest.mark.skipif(not SubtractorCNT.is_available(), reason="CNT algorithm not available.")
@@ -107,7 +124,7 @@ def test_scan_context_cnt(traffic_camera_video):
     scanner.set_event_params(min_event_len=3, time_pre_event=0)
     event_list = scanner.scan().event_list
     event_list = [(event.start.frame_num, event.end.frame_num) for event in event_list]
-    assert event_list == TRAFFIC_CAMERA_EVENTS_CNT
+    compare_event_lists(event_list, TRAFFIC_CAMERA_EVENTS_CNT, EVENT_FRAME_TOLERANCE)
 
 
 def test_pre_event_shift(traffic_camera_video):
@@ -117,7 +134,7 @@ def test_pre_event_shift(traffic_camera_video):
     scanner.set_event_params(min_event_len=4, time_pre_event=6)
     event_list = scanner.scan().event_list
     event_list = [(event.start.frame_num, event.end.frame_num) for event in event_list]
-    assert event_list == TRAFFIC_CAMERA_EVENTS_TIME_PRE_5
+    compare_event_lists(event_list, TRAFFIC_CAMERA_EVENTS_TIME_PRE_5, EVENT_FRAME_TOLERANCE)
 
 
 def test_pre_event_shift_with_frame_skip(traffic_camera_video):
@@ -148,7 +165,7 @@ def test_post_event_shift(traffic_camera_video):
     event_list = scanner.scan().event_list
     assert len(event_list) == len(TRAFFIC_CAMERA_EVENTS_TIME_POST_40)
     event_list = [(event.start.frame_num, event.end.frame_num) for event in event_list]
-    assert all([x == y for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS_TIME_POST_40)])
+    compare_event_lists(event_list, TRAFFIC_CAMERA_EVENTS_TIME_POST_40, EVENT_FRAME_TOLERANCE)
 
 
 def test_post_event_shift_with_frame_skip(traffic_camera_video):
@@ -180,7 +197,7 @@ def test_decode_corrupt_video(corrupt_video):
     scanner.set_regions(regions=[CORRUPT_VIDEO_ROI])
     event_list = scanner.scan().event_list
     event_list = [(event.start.frame_num, event.end.frame_num) for event in event_list]
-    assert event_list == CORRUPT_VIDEO_EVENTS
+    compare_event_lists(event_list, CORRUPT_VIDEO_EVENTS, EVENT_FRAME_TOLERANCE)
 
 
 def test_start_end_time(traffic_camera_video):
@@ -192,7 +209,7 @@ def test_start_end_time(traffic_camera_video):
     event_list = scanner.scan().event_list
     event_list = [(event.start.frame_num, event.end.frame_num) for event in event_list]
     # The set duration should only cover the middle event.
-    assert event_list == TRAFFIC_CAMERA_EVENTS[1:2]
+    compare_event_lists(event_list, TRAFFIC_CAMERA_EVENTS[1:2], EVENT_FRAME_TOLERANCE)
 
 
 def test_start_duration(traffic_camera_video):
@@ -204,4 +221,4 @@ def test_start_duration(traffic_camera_video):
     event_list = scanner.scan().event_list
     event_list = [(event.start.frame_num, event.end.frame_num) for event in event_list]
     # The set duration should only cover the middle event.
-    assert event_list == TRAFFIC_CAMERA_EVENTS[1:2]
+    compare_event_lists(event_list, TRAFFIC_CAMERA_EVENTS[1:2], EVENT_FRAME_TOLERANCE)

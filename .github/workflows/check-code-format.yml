@@ -1,16 +1,17 @@
-# Use YAPF to format DVR-Scan.
+# Use YAPF to check DVR-Scan formatting (run `yapf -i -r dvr_scan tests` locally to fix)
 name: Check Code Format
 
 on:
   pull_request:
     paths:
+      - .style.yapf
       - dvr_scan/**
       - tests/**
   push:
     paths:
+      - .style.yapf
       - dvr_scan/**
       - tests/**
-
 
 jobs:
   build:
@@ -22,7 +23,7 @@ jobs:
       - name: Set up Python 3.x
         uses: actions/setup-python@v3
         with:
-          python-version: '3.x'
+          python-version: '3.12'
 
       - name: Update pip
         run: python -m pip install --upgrade pip
