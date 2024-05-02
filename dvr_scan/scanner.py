@@ -236,7 +236,7 @@ class MotionScanner:
         self._threshold = 0.15                    # -t/--threshold
         self._kernel_size = None                  # -k/--kernel-size
         self._downscale_factor = 1                # -df/--downscale-factor
-        self._learningRate = -1                   # learning-rate
+        self._learning_rate = -1                   # learning-rate
         self._max_threshold = 255.0               # max-threshold
 
         # Motion Event Parameters (set_event_params)
