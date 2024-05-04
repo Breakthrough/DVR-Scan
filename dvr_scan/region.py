@@ -30,6 +30,7 @@ from dvr_scan.platform import HAS_TKINTER, IS_WINDOWS, temp_tk_window, set_icon
 if HAS_TKINTER:
     import tkinter
     import tkinter.filedialog
+    import tkinter.messagebox
 
 # TODO(v1.6): Update screenshots to reflect release title.
 _WINDOW_NAME = "DVR-Scan Region Editor"
@@ -268,7 +269,9 @@ class SelectionWindow:
             self._rescale()
         self._settings = SelectionWindowSettings()
         self._video_path = video_path
+        self._persisted = False
         self._commit()                      # Add initial history point for undo.
+        self._persisted = True              # Don't count the initial history for saving.
 
     @property
     def shapes(self) -> ty.Iterable[ty.Iterable[Point]]:
@@ -309,13 +312,18 @@ class SelectionWindow:
             logger.debug("Redo: [%d/%d]", self._history_pos, len(self._history) - 1)
 
     def _commit(self):
+        # TODO: Make it so if we edit a snapshot, that adds a new entry in the buffer, instead of
+        # rewriting history from that point.
+        # Take a copy of the current state and put it in the history buffer.
         snapshot = deepcopy(Snapshot(regions=self._regions, active_shape=self._active_shape))
         self._history = self._history[self._history_pos:]
         self._history.insert(0, snapshot)
         self._history = self._history[:MAX_HISTORY_SIZE]
         self._history_pos = 0
+        # Update state.
         self._recalculate = True
         self._redraw = True
+        self._persisted = False
 
     def _emit_points(self):
         region_info = []
@@ -458,6 +466,7 @@ class SelectionWindow:
             cv2.resizeWindow(_WINDOW_NAME, width=self._frame_size.w, height=self._frame_size.h)
         cv2.imshow(_WINDOW_NAME, mat=self._frame)
         cv2.setMouseCallback(_WINDOW_NAME, on_mouse=self._handle_mouse_input)
+        set_icon(_WINDOW_NAME)
 
     def _breakpoint(self):
         if self._debug_mode:
@@ -469,7 +478,7 @@ class SelectionWindow:
             KEYBIND_DOWNSCALE_INC: lambda: self._adjust_downscale(1),
             KEYBIND_DOWNSCALE_DEC: lambda: self._adjust_downscale(-1),
             KEYBIND_HELP: lambda: show_controls(),
-            KEYBIND_LOAD: lambda: self._load(),
+            KEYBIND_LOAD: lambda: self._prompt_load(),
             KEYBIND_MASK: lambda: self._toggle_mask(),
             KEYBIND_OUTPUT_LIST: lambda: self._emit_points(),
             KEYBIND_POINT_ADD: lambda: self._add_point(),
@@ -480,7 +489,7 @@ class SelectionWindow:
             KEYBIND_REGION_PREVIOUS: lambda: self._prev_region(),
             KEYBIND_REDO: lambda: self._redo(),
             KEYBIND_TOGGLE_AA: lambda: self._toggle_antialiasing(),
-            KEYBIND_SAVE: lambda: self._save(),
+            KEYBIND_SAVE: lambda: self._prompt_save(),
             KEYBIND_UNDO: lambda: self._undo(),
             KEYBIND_WINDOW_MODE: lambda: self._toggle_window_mode(),
             chr(KEYCODE_WINDOWS_REDO): lambda: self._redo(),
@@ -492,19 +501,23 @@ class SelectionWindow:
             logger.debug("Creating window for frame (scale = %d)", self._scale)
             self._init_window()
             check_tkinter_support(warn_if_notkinter)
-            set_icon(_WINDOW_NAME)
             regions_valid = False
             logger.info(f"Region editor active. Press {KEYBIND_HELP} to show controls.")
             keyboard_callbacks = self._create_keymap()
             while True:
                 if not cv2.getWindowProperty(_WINDOW_NAME, cv2.WND_PROP_VISIBLE):
                     logger.debug("Main window closed.")
-                    break
+                    if self._prompt_save_on_quit():
+                        break
+                    logger.debug("Re-initializing window.")
+                    self._init_window()
+                    continue
                 self._draw()
                 key = cv2.waitKey(MAX_UPDATE_RATE_NORMAL
                                   if not self._dragging else MAX_UPDATE_RATE_DRAGGING) & 0xFF
                 if key == KEYCODE_ESCAPE:
-                    break
+                    if self._prompt_save_on_quit():
+                        break
                 elif key in (KEYCODE_SPACE, KEYCODE_RETURN):
                     regions_valid = True
                     break
@@ -527,7 +540,7 @@ class SelectionWindow:
             scale if scale < MAX_DOWNSCALE_FACTOR else MAX_DOWNSCALE_FACTOR)
         self._rescale()
 
-    def _save(self):
+    def _prompt_save(self):
         if not HAS_TKINTER:
             logger.debug("Cannot show file dialog.")
             return
@@ -540,13 +553,47 @@ class SelectionWindow:
                 confirmoverwrite=True,
             )
         if save_path:
-            with open(save_path, "wt") as region_file:
-                for shape in self._regions:
-                    region_file.write(" ".join(f"{x} {y}" for x, y in shape))
-                    region_file.write("\n")
-            logger.info('Saved region to: %s', save_path)
+            self._save(save_path)
 
-    def _load(self):
+    def _prompt_save_on_quit(self):
+        """Returns True if we should quit the program, False if we should not quit."""
+        if self._persisted:
+            return True
+        if not HAS_TKINTER:
+            logger.debug("Cannot show file dialog.")
+            return True
+        with temp_tk_window() as _:
+            should_save = tkinter.messagebox.askyesnocancel(
+                title="DVR-Scan",
+                message="You have unsaved changes.\nDo you want to save?",
+                icon=tkinter.messagebox.WARNING)
+            if should_save is None:
+                return False
+            if should_save:
+                save_path = None
+                with temp_tk_window() as _:
+                    save_path = tkinter.filedialog.asksaveasfilename(
+                        title="DVR-Scan: Save Region",
+                        filetypes=[("Region File", "*.txt")],
+                        defaultextension=".txt",
+                        confirmoverwrite=True,
+                    )
+                if not save_path:
+                    return False
+                self._save(save_path)
+            else:
+                logger.debug("Quitting with unsaved changes.")
+        return True
+
+    def _save(self, path):
+        with open(path, "wt") as region_file:
+            for shape in self._regions:
+                region_file.write(" ".join(f"{x} {y}" for x, y in shape))
+                region_file.write("\n")
+        logger.info('Saved region to: %s', path)
+        self._persisted = True
+
+    def _prompt_load(self):
         if not HAS_TKINTER:
             logger.debug("Cannot show file dialog.")
             return
@@ -580,6 +627,7 @@ class SelectionWindow:
                 [bound_point(point, self._source_size) for point in shape] for shape in regions
             ]
             self._commit()
+            self._persisted = True
             self._active_shape = 0 if len(self._regions) > 0 else None
 
     def _delete_point(self):

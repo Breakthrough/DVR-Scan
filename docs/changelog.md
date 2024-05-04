@@ -14,6 +14,7 @@ Includes various usability enhancements identified since the region editor was l
 #### Changelog
 
  - [improvement] Add `learning-rate` config option to adjust how the background model is updated
+ - [bugfix] The region editor will now ask before quitting if there are unsaved changes
 
 ### 1.6 (October 15, 2023)
 
