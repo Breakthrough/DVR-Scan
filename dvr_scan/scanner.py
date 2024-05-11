@@ -34,7 +34,7 @@ from tqdm import tqdm
 from dvr_scan.detector import MotionDetector
 from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
 from dvr_scan.platform import get_filename, get_min_screen_bounds, is_ffmpeg_available
-from dvr_scan.region import SelectionWindow, Point, Size, bound_point, load_regions
+from dvr_scan.region import RegionEditor, Point, Size, bound_point, load_regions
 from dvr_scan.subtractor import SubtractorMOG2, SubtractorCNT, SubtractorCudaMOG2
 from dvr_scan.video_joiner import VideoJoiner
 
@@ -492,23 +492,17 @@ class MotionScanner:
                     factor_h = frame_h / float(max_h) if max_h > 0 and frame_h > max_h else 1
                     factor_w = frame_w / float(max_w) if max_w > 0 and frame_w > max_w else 1
                     scale_factor = round(max(factor_h, factor_w))
-            regions = SelectionWindow(
+            regions = RegionEditor(
                 frame=frame_for_crop,
                 initial_shapes=self._regions,
                 initial_scale=scale_factor,
                 debug_mode=self._debug_mode,
-                video_path=self._input.paths[0])
-            save_was_specified = bool(self._save_region)
-            if not regions.run(warn_if_notkinter=not save_was_specified):
+                video_path=self._input.paths[0],
+                save_path=self._save_region)
+            if not regions.run():
                 return False
-
             self._regions = list(regions.shapes)
-        if self._regions:
-            logger.info(f"Limiting detection to {len(self._regions)} "
-                        f"region{'s' if len(self._regions) > 1 else ''}.")
-        else:
-            logger.debug("No regions selected.")
-        if self._save_region:
+        elif self._save_region:
             regions = self._regions if self._regions else [[
                 Point(0, 0),
                 Point(self._input.resolution[0] - 1, 0),
@@ -523,6 +517,11 @@ class MotionScanner:
                     region_file.write(" ".join(f"{x} {y}" for x, y in shape))
                     region_file.write("\n")
             logger.info(f"Saved region data to: {path}")
+        if self._regions:
+            logger.info(f"Limiting detection to {len(self._regions)} "
+                        f"region{'s' if len(self._regions) > 1 else ''}.")
+        else:
+            logger.debug("No regions selected.")
         return True
 
     def _create_progress_bar(self) -> tqdm:

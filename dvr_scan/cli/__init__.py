@@ -435,6 +435,9 @@ def get_cli_parser(user_config: ConfigRegistry):
             "of 3 or more points forming a closed shape inside the video. Coordinate 0 0 is top "
             "left of the frame, and WIDTH-1 HEIGHT-1 is bottom right. Can be specified multiple "
             "times to add more regions."))
+
+    # TODO: Consider merging the load/save region options into a single --region-file option.
+
     parser.add_argument(
         "-R",
         "--load-region",
@@ -447,10 +450,10 @@ def get_cli_parser(user_config: ConfigRegistry):
     parser.add_argument(
         "-s",
         "--save-region",
-        metavar="FILE.txt",
+        metavar="REGIONS.txt",
         type=str,
-        help=("Save detection regions to FILE.txt before processing. If FILE.txt exists it will be "
-              "overwritten. Allows loading same regions using -R/--load-region."))
+        help=("Save regions before processing. If REGIONS.txt exists it will be overwritten. "
+              "The region editor will save regions here instead of asking for a path."))
 
     parser.add_argument(
         '-b',
