@@ -223,8 +223,9 @@ class MotionScanner:
         self._output_mode: OutputMode = None           # -m/--output-mode / -so/--scan-only
         self._ffmpeg_input_args: Optional[str] = None  # input args for OutputMode.FFMPEG/COPY
         self._ffmpeg_output_args: Optional[str] = None # output args for OutputMode.FFMPEG
-                                                       # TODO: Replace uses of self._output_dir with a helper function called "get_output_path".
         self._output_dir: AnyStr = ''                  # -d/--directory
+                                                       # TODO: Replace uses of self._output_dir with
+                                                       # a helper function called "get_output_path".
 
         # Overlay Parameters (set_overlays)
         self._timecode_overlay = None # -tc/--time-code, None or TextOverlay
@@ -264,6 +265,7 @@ class MotionScanner:
         self._decode_thread_exception = None
         self._encode_thread_exception = None
         self._video_writer: Optional[cv2.VideoWriter] = None
+        self._mask_size: Tuple[int, int] = None
         self._mask_writer: Optional[cv2.VideoWriter] = None
         self._num_events: int = 0
 
@@ -834,8 +836,14 @@ class MotionScanner:
         return cv2.VideoWriter(path, self._fourcc, effective_framerate, frame_size)
 
     def _on_encode_frame_event(self, event: EncodeFrameEvent):
-        # Got a frame we need to export, create a new VideoWriter if we don't have one (i.e. this
-        # is the first event, or the previous event finished).
+        size = (event.frame_rgb.shape[1], event.frame_rgb.shape[0])
+        if size != self._input.resolution:
+            time = event.timecode
+            video = self._input.resolution
+            logger.warn(
+                f"WARNING: Failed to write event at frame {time.frame_num} [{time.get_timecode()}] "
+                f"due to size mismatch: {size[0]}x{size[1]}, expected {video[0]}x{video[1]}")
+            return
         if self._video_writer is None:
             # Use the first input video name as a filename template.
             video_name = get_filename(path=self._input.paths[0], include_extension=False)
@@ -845,12 +853,11 @@ class MotionScanner:
                     EVENT_NUMBER='%04d' % (1 + self._num_events),
                     EXTENSION='avi',
                 ))
-            resolution = (event.frame_rgb.shape[1], event.frame_rgb.shape[0])
-            assert resolution == self._input.resolution
-            self._video_writer = self._init_video_writer(output_path, resolution)
-        # Render all overlays onto frame in-place.
+            self._video_writer = self._init_video_writer(output_path, size)
+        # *NOTE*: Overlays are currently rendered in-place by modifying the event itself.
         self._draw_overlays(event.frame_rgb, event.timecode, event.score, event.bounding_box)
         # Encode and write frame to disk.
+
         self._video_writer.write(event.frame_rgb)
 
     def _draw_overlays(
@@ -872,9 +879,17 @@ class MotionScanner:
     def _on_mask_event(self, event: MotionMaskEvent):
         # Initialize the VideoWriter used for mask output.
         if self._mask_writer is None:
-            resolution = event.motion_mask.shape[1], event.motion_mask.shape[0]
-            self._mask_writer = self._init_video_writer(self._mask_file, resolution)
+            self._mask_size = event.motion_mask.shape[1], event.motion_mask.shape[0]
+            self._mask_writer = self._init_video_writer(self._mask_file, self._mask_size)
         # Write the motion mask to the output file.
+        size = (event.motion_mask.shape[1], event.motion_mask.shape[0])
+        if size != self._mask_size:
+            time = event.timecode
+            logger.warn(
+                f"WARNING: Failed to write mask at frame {time.frame_num} [{time.get_timecode()}] "
+                f"due to size mismatch: {size[0]}x{size[1]}, "
+                f" expected {self._mask_size[0]}x{self._mask_size[1]}")
+            return
         out_frame = cv2.cvtColor(event.motion_mask, cv2.COLOR_GRAY2BGR)
         self._draw_overlays(
             out_frame, event.timecode, event.score, event.bounding_box, use_shift=False)
