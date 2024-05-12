@@ -5,7 +5,7 @@
 #       [  Site: https://www.dvr-scan.com/                 ]
 #       [  Repo: https://github.com/Breakthrough/DVR-Scan  ]
 #
-# Copyright (C) 2014-2023 Brandon Castellano <http://www.bcastell.com>.
+# Copyright (C) 2014-2024 Brandon Castellano <http://www.bcastell.com>.
 # DVR-Scan is licensed under the BSD 2-Clause License; see the included
 # LICENSE file, or visit one of the above pages for details.
 #
@@ -21,7 +21,8 @@ import sys
 # On Windows, make sure we include any required DLL paths.
 if os.name == 'nt':
     # If we're running a frozen version of the app, the EXE path should include all required DLLs.
-    # TODO(v1.6): This path might need to be updated with the latest version of Pyinstaller.
+    # TODO(v1.6.1): Check if this is necessary, the latest version of PyInstaller has moved where
+    # the DLL paths are.
     if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
         os.add_dll_directory(os.path.abspath(os.path.dirname(sys.executable)))
     # If CUDA is installed, include those DLLs in the search paths.

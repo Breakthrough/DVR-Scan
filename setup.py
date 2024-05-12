@@ -6,7 +6,7 @@
 #       [  Site: https://www.dvr-scan.com/                 ]
 #       [  Repo: https://github.com/Breakthrough/DVR-Scan  ]
 #
-# Copyright (C) 2014-2023 Brandon Castellano <http://www.bcastell.com>.
+# Copyright (C) 2014-2024 Brandon Castellano <http://www.bcastell.com>.
 #
 """ DVR-Scan setup.py - DEPRECATED.
 

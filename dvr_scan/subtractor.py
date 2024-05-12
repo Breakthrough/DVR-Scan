@@ -5,7 +5,7 @@
 #       [  Site: https://www.dvr-scan.com/                 ]
 #       [  Repo: https://github.com/Breakthrough/DVR-Scan  ]
 #
-# Copyright (C) 2014-2023 Brandon Castellano <http://www.bcastell.com>.
+# Copyright (C) 2014-2024 Brandon Castellano <http://www.bcastell.com>.
 # DVR-Scan is licensed under the BSD 2-Clause License; see the included
 # LICENSE file, or visit one of the above pages for details.
 #
@@ -138,9 +138,9 @@ class SubtractorCudaMOG2(SubtractorMOG2):
 
     def apply(self, frame: numpy.ndarray) -> numpy.ndarray:
         stream = cv2.cuda_Stream()
-        frame_rgb_dev = cv2.cuda_GpuMat()
-        frame_rgb_dev.upload(frame, stream=stream)
-        frame_gray_dev = cv2.cuda.cvtColor(frame_rgb_dev, cv2.COLOR_BGR2GRAY, stream=stream)
+        frame_bgr_dev = cv2.cuda_GpuMat()
+        frame_bgr_dev.upload(frame, stream=stream)
+        frame_gray_dev = cv2.cuda.cvtColor(frame_bgr_dev, cv2.COLOR_BGR2GRAY, stream=stream)
         frame_mask_dev = self._subtractor.apply(frame_gray_dev, self._learning_rate, stream=stream)
         if not self._filter is None:
             frame_filt_dev = self._filter.apply(frame_mask_dev, stream=stream)
