@@ -289,18 +289,10 @@ def run_dvr_scan(settings: ProgramSettings) -> ty.List[ty.Tuple[FrameTimecode, F
         duration=settings.get_arg('duration'),
     )
 
-    # If the user specified some regions on the command line, ignore the load-regions setting in the
-    # config file.
-    load_region = settings.get_arg('load-region')
-    if load_region is None:
-        load_region = settings.config.get_value('load-region', ignore_default=True)
-        if not settings.get_arg('regions') is None:
-            load_region = None
-
     scanner.set_regions(
-        region_editor=settings.get_arg('region-editor'),
+        region_editor=settings.get('region-editor'),
         regions=settings.get_arg('regions'),
-        load_region=load_region,
+        load_region=settings.get('load-region'),
         save_region=settings.get_arg('save-region'),
         roi_deprecated=settings.get('region-of-interest'),
     )
@@ -312,8 +304,8 @@ def run_dvr_scan(settings: ProgramSettings) -> ty.List[ty.Tuple[FrameTimecode, F
         logging.debug("Exiting early, scan() returned None.")
         return
     processing_time = time.time() - processing_start
-    # Display results and performance.
 
+    # Display results and performance.
     processing_rate = float(result.num_frames) / processing_time
     logger.info("Processed %d frames read in %3.1f secs (avg %3.1f FPS).", result.num_frames,
                 processing_time, processing_rate)

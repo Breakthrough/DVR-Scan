@@ -13,11 +13,13 @@ Includes various usability enhancements identified since the region editor was l
 
 #### Changelog
 
+ - [bugfix] Fix `region-editor` config file option having no effect
  - [bugfix] The region editor now always prompts on any unsaved changes
  - [bugfix] Corrupt frames are no longer encoded and are skipped when encoding ([#151](https://github.com/Breakthrough/DVR-Scan/issues/151))
  -detection-parameters)
  - [general] The region editor no longer prompts for a save path if `-s`/`--save-region` was specified
  - [general] Add `learning-rate` config option to adjust how the background model is updated
+ - [general] Regions added via command line are now be merged with those loaded from the `load-region` config option
 
 
 ### 1.6 (October 15, 2023)
