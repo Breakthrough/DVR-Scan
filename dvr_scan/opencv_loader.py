@@ -20,14 +20,11 @@ import sys
 
 # On Windows, make sure we include any required DLL paths.
 if os.name == 'nt':
-    # If we're running a frozen version of the app, the EXE path should include all required DLLs.
-    # TODO(v1.6.1): Check if this is necessary, the latest version of PyInstaller has moved where
-    # the DLL paths are.
-    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
-        os.add_dll_directory(os.path.abspath(os.path.dirname(sys.executable)))
     # If CUDA is installed, include those DLLs in the search paths.
-    if 'CUDA_PATH' in os.environ and os.path.exists(os.environ['CUDA_PATH']):
-        os.add_dll_directory(os.path.abspath(os.path.join(os.environ['CUDA_PATH'], 'bin')))
+    CUDA_PATH = os.environ['CUDA_PATH'] if 'CUDA_PATH' in os.environ else None
+    if CUDA_PATH and os.path.exists(CUDA_PATH):
+        CUDA_BIN_PATH = os.path.abspath(os.path.join(CUDA_PATH, 'bin'))
+        os.add_dll_directory(CUDA_BIN_PATH)
 
 # OpenCV is a required package, but we don't have it as an explicit dependency since we
 # need to support both opencv-python and opencv-python-headless. Include some additional

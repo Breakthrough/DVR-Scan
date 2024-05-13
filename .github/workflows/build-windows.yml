@@ -55,18 +55,18 @@ jobs:
         run: |
           pyinstaller dist/dvr-scan.spec
 
-      - name: Assemble Portable Distribution
+      - name: Assemble Distribution
         run: |
           python dist/create_win64_release.py
           7z e -odist/ffmpeg ffmpeg-6.0-full_build.7z LICENSE -r
           Move-Item -Path ffmpeg.exe -Destination dist/dvr-scan/ffmpeg.exe
           Move-Item -Path dist/ffmpeg/LICENSE -Destination dist/dvr-scan/LICENSE-FFMPEG -Force
 
-      - name: Test Portable Distribution
+      - name: Test Distribution
         run: |
           ./dist/dvr-scan/dvr-scan -i tests/resources/simple_movement.mp4 -et 5s -df 3
 
-      - name: Upload Artifact
+      - name: Upload
         uses: actions/upload-artifact@v3
         with:
           name: DVR-Scan-win64_portable
@@ -83,8 +83,9 @@ jobs:
           name: DVR-Scan-win64_portable
           path: build
 
-      - name: Test
+      - name: Test Artifact
         run: |
           ./build/dvr-scan --version
+          ./build/dvr-scan --license
           ./build/dvr-scan -i tests/resources/simple_movement.mp4 -so -et 5s -df 3
           ./build/dvr-scan -i tests/resources/simple_movement.mp4 -et 5s -df 3 -m copy
