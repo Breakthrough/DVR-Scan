@@ -5,20 +5,23 @@
 
 ## DVR-Scan 1.6
 
-### 1.6.1 (In Development)
+### 1.6.1 (TBD)
 
 #### Release Notes
 
-Includes various usability enhancements identified since the region editor was launched, and several bugfixes. Minimum supported Python version is now 3.8 (previous versions may continue to work but are not officially supported).
+DVR-Scan 1.6.1 includes some important fixes and improvements for the region editor. Minimum supported Python version is now 3.8.
 
 #### Changelog
 
+ - [bugfix] Corrupt frames are no longer encoded and are skipped when encoding [#151](https://github.com/Breakthrough/DVR-Scan/issues/151)
  - [bugfix] Fix `region-editor` config file option having no effect [#154](https://github.com/Breakthrough/DVR-Scan/issues/154)
  - [bugfix] The region editor now always prompts on any unsaved changes [#161](https://github.com/Breakthrough/DVR-Scan/issues/161)
- - [bugfix] Corrupt frames are no longer encoded and are skipped when encoding [#151](https://github.com/Breakthrough/DVR-Scan/issues/151)
  - [general] The region editor no longer prompts for a save path if `-s`/`--save-region` was specified
- - [general] Add `learning-rate` config option to adjust how the background model is updated
  - [general] Regions added via command line are now be merged with those loaded from the `load-region` config option
+ - [general] Add new `learning-rate` [config option](https://www.dvr-scan.com/docs/#config-file) to control how fast the background model is updated
+    - Value between `0.0` and `1.0` controls how much weight is placed on next frame, or `-1` for auto
+    - `0.0` implies no update to the model, `1.0` will re-initialize it completely on each frame
+    - Default value of `-1` is for automatic, which is unchanged from previous releases
 
 
 ### 1.6 (October 15, 2023)
