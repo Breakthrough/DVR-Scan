@@ -31,7 +31,7 @@ If want to use an existing OpenCV installation or require a non-PyPI version, yo
 
 !!! windows-download "**1.6.1**<span class="dvr-scan-release-date">May 18, 2024</span>"
 
-    <div class="buttongrid buttongrid-download">[:fontawesome-solid-download: &nbsp; Installer `.msi`](https://github.com/Breakthrough/DVR-Scan/releases/download/v1.6-release/dvr-scan-1.6.1-win64.msi){ .md-button #download-button }[:fontawesome-solid-file-zipper: &nbsp; Portable `.zip`](https://github.com/Breakthrough/DVR-Scan/releases/download/v1.6.1-release/dvr-scan-1.6.1-win64.zip){ .md-button #changelog-button }</div>
+    <div class="buttongrid buttongrid-download">[:fontawesome-solid-download: &nbsp; Installer `.msi`](https://github.com/Breakthrough/DVR-Scan/releases/download/v1.6.1-release/dvr-scan-1.6.1-win64.msi){ .md-button #download-button }[:fontawesome-solid-file-zipper: &nbsp; Portable `.zip`](https://github.com/Breakthrough/DVR-Scan/releases/download/v1.6.1-release/dvr-scan-1.6.1-win64.zip){ .md-button #changelog-button }</div>
 
 
 The installer is recommended for most users.  Windows builds include all required dependencies to run DVR-Scan.  Only 64-bit builds are available.
