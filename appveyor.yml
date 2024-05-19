@@ -34,6 +34,7 @@ install:
   - 'SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%'
   - python --version
   - python -m pip install --upgrade pip
+  - python -m pip install --upgrade build wheel virtualenv
   - python -m pip install -r dist/requirements_windows.txt
 
 
