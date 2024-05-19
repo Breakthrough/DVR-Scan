@@ -5,7 +5,7 @@
 
 ## DVR-Scan 1.6
 
-### 1.6.1 (TBD)
+### 1.6.1 (May 18, 2024)
 
 #### Release Notes
 
