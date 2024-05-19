@@ -54,9 +54,9 @@ for file_glob in FILE_GLOBS:
     for file_path in glob.glob(os.path.join(BASE_PATH, file_glob)):
         os.remove(file_path)
 
+# Collect self dependencies.
 # TODO: See if the following can be added to COLLECT instead of including
 # these files as part of the .spec file Analysis step.
-
 for f in glob.glob(os.path.join(BASE_PATH, "dvr-scan/*")):
     shutil.move(f, DIST_PATH)
 

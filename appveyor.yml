@@ -42,8 +42,9 @@ install:
   - echo * *                          BUILDING WINDOWS EXE                           * *
   - echo * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
   # Build Windows .EXE and create Windows distribution
+  - python dist/pre_release.py
   - pyinstaller dist/dvr-scan.spec
-  - python dist/create_win64_release.py
+  - python dist/post_release.py
   - appveyor DownloadFile https://github.com/GyanD/codexffmpeg/releases/download/6.0/ffmpeg-6.0-full_build.7z
   - 7z e ffmpeg-6.0-full_build.7z -odist/ffmpeg ffmpeg.exe LICENSE -r
   - move dist\ffmpeg\ffmpeg.exe dist\dvr-scan\
