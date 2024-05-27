@@ -22,7 +22,7 @@
     <ROW Property="BannerBitmap" Value="banner.jpg" MultiBuildValue="DefaultBuild:installer_banner.jpg" Type="1" MsiKey="BannerBitmap"/>
     <ROW Property="DialogBitmap" Value="dialog.jpg" MultiBuildValue="DefaultBuild:installer_logo.jpg" Type="1" MsiKey="DialogBitmap"/>
     <ROW Property="Manufacturer" Value="Brandon Castellano"/>
-    <ROW Property="ProductCode" Value="1033:{A98E59D9-DB3B-4145-B366-6C04232BE8ED} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{7DF674E7-6D3D-4A24-83E0-6576813639A5} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="DVR-Scan"/>
     <ROW Property="ProductVersion" Value="1.6" Options="32"/>
