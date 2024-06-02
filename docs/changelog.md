@@ -3,6 +3,13 @@
 
 ----------------------------------------------------------
 
+## DVR-Scan 1.7
+
+### 1.7 (In Development)
+
+ - [general] Add new `variance-threshold` [config option](https://www.dvr-scan.com/docs/#config-file) to control how MOG2 controls which pixels are described by the current background model [#163](https://github.com/Breakthrough/DVR-Scan/issues/163)
+
+
 ## DVR-Scan 1.6
 
 ### 1.6.1 (May 18, 2024)

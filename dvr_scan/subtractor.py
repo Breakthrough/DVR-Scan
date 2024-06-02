@@ -93,7 +93,7 @@ class SubtractorCNT(SubtractorMOG2):
         max_pixel_stability: int = 15 * 60,
         is_parallel: bool = True,
         learning_rate: float = -1,
-        variance_threshold = None,
+        variance_threshold: float = None,
     ):
         if kernel_size < 0 or (kernel_size > 1 and kernel_size % 2 == 0):
             raise ValueError("kernel_size must be odd integer >= 1 or zero (0)")

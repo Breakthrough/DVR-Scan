@@ -575,6 +575,8 @@ class MotionScanner:
             kernel_size = _scale_kernel_size(self._kernel_size, self._downscale_factor)
 
         # Create background subtractor and motion detector.
+        # TODO(v1.7): Don't set or log unused parameter variance_threshold
+        # if CNT is used.
         detector = MotionDetector(
             subtractor=self._subtractor_type.value(
                 variance_threshold=self._variance_threshold,
