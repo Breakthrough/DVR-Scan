@@ -51,7 +51,7 @@ class SubtractorMOG2(Subtractor):
         self,
         kernel_size: int,
         history: int = 500,
-        variance_threshold: int = 16,
+        variance_threshold: float = 16.0,
         detect_shadows: bool = False,
         learning_rate: float = -1,
     ):
@@ -93,6 +93,7 @@ class SubtractorCNT(SubtractorMOG2):
         max_pixel_stability: int = 15 * 60,
         is_parallel: bool = True,
         learning_rate: float = -1,
+        variance_threshold = None,
     ):
         if kernel_size < 0 or (kernel_size > 1 and kernel_size % 2 == 0):
             raise ValueError("kernel_size must be odd integer >= 1 or zero (0)")
@@ -118,7 +119,7 @@ class SubtractorCudaMOG2(SubtractorMOG2):
         self,
         kernel_size: int,
         history: int = 500,
-        variance_threshold: int = 16,
+        variance_threshold: float = 16.0,
         detect_shadows: bool = False,
         learning_rate: float = -1,
     ):

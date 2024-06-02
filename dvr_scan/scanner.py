@@ -235,9 +235,10 @@ class MotionScanner:
         # Motion Detection Parameters (set_detection_params)
         self._subtractor_type = DetectorType.MOG2 # -b/--bg-subtractor
         self._threshold = 0.15                    # -t/--threshold
+        self._variance_threshold = 16.0           # variance-threshold
         self._kernel_size = None                  # -k/--kernel-size
         self._downscale_factor = 1                # -df/--downscale-factor
-        self._learningRate = -1                   # learning-rate
+        self._learning_rate = -1                  # learning-rate
         self._max_threshold = 255.0               # max-threshold
 
         # Motion Event Parameters (set_event_params)
@@ -366,6 +367,7 @@ class MotionScanner:
         detector_type: DetectorType = DetectorType.MOG2,
         threshold: float = 0.15,
         max_threshold: float = 255.0,
+        variance_threshold: float = 16.0,
         kernel_size: int = -1,
         downscale_factor: int = 1,
         learning_rate: float = -1,
@@ -379,6 +381,7 @@ class MotionScanner:
         self._downscale_factor = max(downscale_factor, 1)
         assert kernel_size == -1 or kernel_size == 0 or kernel_size >= 3
         self._kernel_size = kernel_size
+        self._variance_threshold = variance_threshold
         # TODO: Also allow ability to customize history size, as this is another factor that
         # influences how quickly the background model is updated. When calculated automatically,
         # OpenCV sets learning rate as:
@@ -574,16 +577,19 @@ class MotionScanner:
         # Create background subtractor and motion detector.
         detector = MotionDetector(
             subtractor=self._subtractor_type.value(
-                kernel_size=kernel_size, learning_rate=self._learning_rate),
+                variance_threshold=self._variance_threshold,
+                kernel_size=kernel_size,
+                learning_rate=self._learning_rate),
             frame_size=self._input.resolution,
             downscale=self._downscale_factor,
             regions=self._regions)
 
         logger.info(
-            'Using subtractor %s with kernel_size = %s%s and learning_rate = %s',
+            'Using subtractor %s with kernel_size = %s%s, variance_threshold = %s and learning_rate = %s',
             self._subtractor_type.name,
             str(kernel_size) if kernel_size else 'off',
             ' (auto)' if self._kernel_size == -1 else '',
+            str(self._variance_threshold) if self._variance_threshold != 16.0 else 'auto',
             str(self._learning_rate) if self._learning_rate != -1 else 'auto',
         )
 

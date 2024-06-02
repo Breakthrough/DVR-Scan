@@ -366,6 +366,16 @@ The following options control motion detection.  A more comprehensive descriptio
     ```
     </span>
 
+ * <b><pre>variance-threshold</pre></b>
+     Threshold on the distance between the pixel and the model to decide whether a pixel is well described by the background model. This parameter does not affect
+     the background update.<br />
+     The threshold is not used by the CNT subtractor.
+    <span class="dvr-scan-default">
+    ```
+    variance-threshold = 16
+    ```
+    </span>
+
  * <b><pre>kernel-size</pre></b>
     Size (in pixels) of the noise reduction kernel. Size must be an odd number starting from 3, 0 to disable, or -1 to auto-set based on video resolution.
     <span class="dvr-scan-default">

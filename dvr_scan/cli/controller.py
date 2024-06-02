@@ -272,6 +272,7 @@ def run_dvr_scan(settings: ProgramSettings) -> ty.List[ty.Tuple[FrameTimecode, F
         detector_type=DetectorType[settings.get('bg-subtractor').upper()],
         threshold=settings.get('threshold'),
         max_threshold=settings.get('max-threshold'),
+        variance_threshold=settings.get('variance-threshold'),
         kernel_size=settings.get('kernel-size'),
         downscale_factor=settings.get('downscale-factor'),
         learning_rate=settings.get('learning-rate'),
