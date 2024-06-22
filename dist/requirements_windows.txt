@@ -2,8 +2,8 @@
 # DVR-Scan Requirements for Windows Build
 #
 numpy
-opencv-python==4.8.0.74
-opencv-contrib-python==4.8.0.74
+opencv-python==4.10.0.84
+opencv-contrib-python==4.10.0.84
 platformdirs
 pyinstaller>=6.0
 pytest

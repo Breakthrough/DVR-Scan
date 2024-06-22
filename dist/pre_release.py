@@ -47,7 +47,7 @@ StringFileInfo(
   StringTable(
     u'040904B0',
     [StringStruct(u'CompanyName', u'github.com/Breakthrough'),
-    StringStruct(u'FileDescription', u'dvr-scan.readthedocs.io'),
+    StringStruct(u'FileDescription', u'www.dvr-scan.com'),
     StringStruct(u'FileVersion', u'{VERSION}'),
     StringStruct(u'InternalName', u'DVR-Scan'),
     StringStruct(u'LegalCopyright', u'Copyright © 2024 Brandon Castellano'),
