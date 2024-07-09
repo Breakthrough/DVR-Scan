@@ -284,6 +284,10 @@ def run_dvr_scan(settings: ProgramSettings) -> ty.List[ty.Tuple[FrameTimecode, F
         time_post_event=settings.get('time-post-event'),
     )
 
+    scanner.set_thumbnail_params(
+        thumbnails=settings.get('thumbnails'),
+    )
+
     scanner.set_video_time(
         start_time=settings.get_arg('start-time'),
         end_time=settings.get_arg('end-time'),

@@ -640,6 +640,13 @@ def get_cli_parser(user_config: ConfigRegistry):
     )
 
     parser.add_argument(
+        '--thumbnails',
+        metavar='method',
+        type=str,
+        help=('Produce event thumbnail(s).'),
+    )
+
+    parser.add_argument(
         '-v',
         '--verbosity',
         metavar='type',
