@@ -315,7 +315,7 @@ CONFIG_MAP: ConfigDict = {
     'min-event-length': TimecodeValue('0.1s'),
     'time-before-event': TimecodeValue('1.5s'),
     'time-post-event': TimecodeValue('2.0s'),
-    'use-pts' : False,
+    'use-pts': False,
 
                                                          # Detection Parameters
     'bg-subtractor': 'MOG2',
