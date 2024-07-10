@@ -282,6 +282,7 @@ def run_dvr_scan(settings: ProgramSettings) -> ty.List[ty.Tuple[FrameTimecode, F
         min_event_len=settings.get('min-event-length'),
         time_pre_event=settings.get('time-before-event'),
         time_post_event=settings.get('time-post-event'),
+        use_pts=settings.get('use-pts'),
     )
 
     scanner.set_video_time(
