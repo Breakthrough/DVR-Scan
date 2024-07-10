@@ -84,6 +84,10 @@ class VideoJoiner:
         """Current position of the video including presentation time of the current frame."""
         return self._position + 1
 
+    @property
+    def position_ms(self) -> float:
+        return self._cap.position_ms
+
     def read(self, decode: bool = True) -> Optional[numpy.ndarray]:
         """Read/decode the next frame."""
         next = self._cap.read(decode=decode)
