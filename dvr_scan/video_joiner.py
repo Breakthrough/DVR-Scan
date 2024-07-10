@@ -53,6 +53,7 @@ class VideoJoiner:
         # Initialize position now that the framerate is valid.
         self._position: FrameTimecode = FrameTimecode(0, self.framerate)
         self._last_cap_pos: FrameTimecode = FrameTimecode(0, self.framerate)
+        self._last_position_ms: float = 0
 
     @property
     def paths(self) -> List[AnyStr]:
@@ -88,8 +89,16 @@ class VideoJoiner:
     def position_ms(self) -> float:
         return self._cap.position_ms
 
+    @property
+    def last_position_ms(self) -> float:
+        return self._last_position_ms
+
     def read(self, decode: bool = True) -> Optional[numpy.ndarray]:
         """Read/decode the next frame."""
+
+        #  I get the feeling when you run off the end of a file the position_ms returns 0.
+        self._last_position_ms = self._cap.position_ms
+
         next = self._cap.read(decode=decode)
         if next is False:
             if (self._curr_cap_index + 1) < len(self._paths):
