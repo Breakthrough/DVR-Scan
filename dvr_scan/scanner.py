@@ -736,6 +736,7 @@ class MotionScanner:
                             event_end = FrameTimecode(
                                 (last_frame_above_threshold_ms / 1000) +
                                 self._post_event_len.get_seconds(), self._input.framerate)
+                            #print("event end %f start %f" % (event_end.get_seconds(), event_start.get_seconds()))
                             assert event_end.get_seconds() >= event_start.get_seconds()
                         event_list.append(MotionEvent(start=event_start, end=event_end))
                         if self._output_mode != OutputMode.SCAN_ONLY:
@@ -816,7 +817,7 @@ class MotionScanner:
                 event_end = FrameTimecode(self._input.position.frame_num, self._input.framerate)
             else:
                 event_end = FrameTimecode(
-                    (self._input.last_position_ms / 1000) + self._post_event_len.get_seconds(),
+                    (self._input.position_ms / 1000) + self._post_event_len.get_seconds(),
                     self._input.framerate)
             event_list.append(MotionEvent(start=event_start, end=event_end))
             if self._output_mode != OutputMode.SCAN_ONLY:
