@@ -348,7 +348,7 @@ CONFIG_MAP: ConfigDict = {
     'bounding-box-thickness': 0.0032,
     'bounding-box-min-size': 0.032,
 
-    'thumbnails' : 'highscore',
+    'thumbnails' : None,
 }
 """Mapping of valid configuration file parameters and their default values or placeholders.
 The types of these values are used when decoding the configuration file. Valid choices for

@@ -643,6 +643,7 @@ def get_cli_parser(user_config: ConfigRegistry):
         '--thumbnails',
         metavar='method',
         type=str,
+        default=None,
         help=('Produce event thumbnail(s).'),
     )
 
