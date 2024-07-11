@@ -347,8 +347,7 @@ CONFIG_MAP: ConfigDict = {
     'bounding-box-color': RGBValue(0xFF0000),
     'bounding-box-thickness': 0.0032,
     'bounding-box-min-size': 0.032,
-
-    'thumbnails' : None,
+    'thumbnails': None,
 }
 """Mapping of valid configuration file parameters and their default values or placeholders.
 The types of these values are used when decoding the configuration file. Valid choices for
@@ -360,8 +359,7 @@ CHOICE_MAP: Dict[str, List[str]] = {
     'output-mode': ['scan_only', 'opencv', 'copy', 'ffmpeg'],
     'verbosity': ['debug', 'info', 'warning', 'error'],
     'bg-subtractor': ['MOG2', 'CNT', 'MOG2_CUDA'],
-    'thumbnails' : ['highscore'],
-
+    'thumbnails': ['highscore'],
 }
 """Mapping of string options which can only be of a particular set of values. We use a list instead
 of a set to preserve order when generating error contexts. Values are case-insensitive, and must be

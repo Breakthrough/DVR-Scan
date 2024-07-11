@@ -439,8 +439,7 @@ class MotionScanner:
         self._pre_event_len = FrameTimecode(time_pre_event, self._input.framerate)
         self._post_event_len = FrameTimecode(time_post_event, self._input.framerate)
 
-    def set_thumbnail_params(self,
-                         thumbnails: str = None):
+    def set_thumbnail_params(self, thumbnails: str = None):
         self._thumbnails = thumbnails
 
     def set_video_time(self,
@@ -677,8 +676,8 @@ class MotionScanner:
             above_threshold = frame_score >= self._threshold
 
             if above_threshold and frame_score > self._highscore:
-               self._highscore = frame_score
-               self._highframe = frame.frame_bgr
+                self._highscore = frame_score
+                self._highframe = frame.frame_bgr
 
             event_window.append(frame_score)
             # The first frame fed to the detector can sometimes produce unreliable results due
@@ -722,9 +721,11 @@ class MotionScanner:
                     if num_frames_post_event >= post_event_len:
                         in_motion_event = False
 
-                        logger.debug("event %d high score %f" % (1+self._num_events, self._highscore))
+                        logger.debug("event %d high score %f" %
+                                     (1 + self._num_events, self._highscore))
                         if self._thumbnails == "highscore":
-                            video_name = get_filename(path=self._input.paths[0], include_extension=False)
+                            video_name = get_filename(
+                                path=self._input.paths[0], include_extension=False)
                             output_path = (
                                 self._comp_file if self._comp_file else OUTPUT_FILE_TEMPLATE.format(
                                     VIDEO_NAME=video_name,
@@ -814,7 +815,7 @@ class MotionScanner:
             event_end = FrameTimecode(self._input.position.frame_num, self._input.framerate)
             event_list.append(MotionEvent(start=event_start, end=event_end))
 
-            logger.debug("event %d high score %f" % (1+self._num_events, self._highscore))
+            logger.debug("event %d high score %f" % (1 + self._num_events, self._highscore))
             if self._thumbnails == "highscore":
                 video_name = get_filename(path=self._input.paths[0], include_extension=False)
                 output_path = (
