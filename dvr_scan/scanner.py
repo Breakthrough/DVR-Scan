@@ -270,9 +270,15 @@ class MotionScanner:
         self._mask_writer: Optional[cv2.VideoWriter] = None
         self._num_events: int = 0
 
+        # Thumbnail production (set_thumbnail_params)
+        self._thumbnails = None
+        self._highscore = 0
+        self._highframe = None
+
         # Make sure we initialize defaults now that we loaded the input videos.
         self.set_detection_params()
         self.set_event_params()
+        self.set_thumbnail_params()
         self.set_video_time()
 
     @property
@@ -432,6 +438,9 @@ class MotionScanner:
         self._min_event_len = FrameTimecode(min_event_len, self._input.framerate)
         self._pre_event_len = FrameTimecode(time_pre_event, self._input.framerate)
         self._post_event_len = FrameTimecode(time_post_event, self._input.framerate)
+
+    def set_thumbnail_params(self, thumbnails: str = None):
+        self._thumbnails = thumbnails
 
     def set_video_time(self,
                        start_time: Optional[Union[int, float, str]] = None,
@@ -665,6 +674,11 @@ class MotionScanner:
             if frame_score >= self._max_threshold:
                 frame_score = 0
             above_threshold = frame_score >= self._threshold
+
+            if above_threshold and frame_score > self._highscore:
+                self._highscore = frame_score
+                self._highframe = frame.frame_bgr
+
             event_window.append(frame_score)
             # The first frame fed to the detector can sometimes produce unreliable results due
             # to it not having any previous information to compare against.
@@ -706,6 +720,24 @@ class MotionScanner:
                     num_frames_post_event += 1
                     if num_frames_post_event >= post_event_len:
                         in_motion_event = False
+
+                        logger.debug("event %d high score %f" %
+                                     (1 + self._num_events, self._highscore))
+                        if self._thumbnails == "highscore":
+                            video_name = get_filename(
+                                path=self._input.paths[0], include_extension=False)
+                            output_path = (
+                                self._comp_file if self._comp_file else OUTPUT_FILE_TEMPLATE.format(
+                                    VIDEO_NAME=video_name,
+                                    EVENT_NUMBER='%04d' % (1 + self._num_events),
+                                    EXTENSION='jpg',
+                                ))
+                            if self._output_dir:
+                                output_path = os.path.join(self._output_dir, output_path)
+                            cv2.imwrite(output_path, self._highframe)
+                            self._highscore = 0
+                            self._highframe = None
+
                         # Calculate event end based on the last frame we had with motion plus
                         # the post event length time. We also need to compensate for the number
                         # of frames that we skipped that could have had motion.
@@ -782,6 +814,22 @@ class MotionScanner:
             # curr_pos already includes the presentation duration of the frame.
             event_end = FrameTimecode(self._input.position.frame_num, self._input.framerate)
             event_list.append(MotionEvent(start=event_start, end=event_end))
+
+            logger.debug("event %d high score %f" % (1 + self._num_events, self._highscore))
+            if self._thumbnails == "highscore":
+                video_name = get_filename(path=self._input.paths[0], include_extension=False)
+                output_path = (
+                    self._comp_file if self._comp_file else OUTPUT_FILE_TEMPLATE.format(
+                        VIDEO_NAME=video_name,
+                        EVENT_NUMBER='%04d' % (1 + self._num_events),
+                        EXTENSION='jpg',
+                    ))
+                if self._output_dir:
+                    output_path = os.path.join(self._output_dir, output_path)
+                cv2.imwrite(output_path, self._highframe)
+                self._highscore = 0
+                self._highframe = None
+
             if self._output_mode != OutputMode.SCAN_ONLY:
                 encode_queue.put(MotionEvent(start=event_start, end=event_end))
 
