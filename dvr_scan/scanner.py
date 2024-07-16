@@ -817,8 +817,7 @@ class MotionScanner:
             if not self._use_pts:
                 event_end = FrameTimecode(self._input.position.frame_num, self._input.framerate)
             else:
-                event_end = FrameTimecode((pts / 1000) + self._post_event_len.get_seconds(),
-                                          self._input.framerate)
+                event_end = FrameTimecode((pts / 1000), self._input.framerate)
             event_list.append(MotionEvent(start=event_start, end=event_end))
             if self._output_mode != OutputMode.SCAN_ONLY:
                 encode_queue.put(MotionEvent(start=event_start, end=event_end))
