@@ -245,6 +245,7 @@ class MotionScanner:
         self._min_event_len = None  # -l/--min-event-length
         self._pre_event_len = None  # -tb/--time-before-event
         self._post_event_len = None # -tp/--time-post-event
+        self._use_pts = None        # --use_pts
 
         # Region Parameters (set_region)
         self._region_editor = False             # -w/--region-window
@@ -432,12 +433,14 @@ class MotionScanner:
     def set_event_params(self,
                          min_event_len: Union[int, float, str] = '0.1s',
                          time_pre_event: Union[int, float, str] = '1.5s',
-                         time_post_event: Union[int, float, str] = '2s'):
+                         time_post_event: Union[int, float, str] = '2s',
+                         use_pts: bool = False):
         """Set motion event parameters."""
         assert self._input.framerate is not None
         self._min_event_len = FrameTimecode(min_event_len, self._input.framerate)
         self._pre_event_len = FrameTimecode(time_pre_event, self._input.framerate)
         self._post_event_len = FrameTimecode(time_post_event, self._input.framerate)
+        self._use_pts = use_pts
 
     def set_thumbnail_params(self, thumbnails: str = None):
         self._thumbnails = thumbnails
@@ -568,7 +571,11 @@ class MotionScanner:
         # Seek to starting position if required.
         if self._start_time is not None:
             self._input.seek(self._start_time)
-        start_frame = self._input.position.frame_num
+
+        if not self._use_pts:
+            start_frame = self._input.position.frame_num
+        else:
+            start_frame_ms = self._input.position_ms
 
         # Show ROI selection window if required.
         if not self._handle_regions():
@@ -616,13 +623,20 @@ class MotionScanner:
         # shifting the event start time. Instead of using `-l`/`--min-event-len` directly, we
         # need to compensate for rounding errors when we corrected it for frame skip. This is
         # important as this affects the number of frames we consider for the actual motion event.
-        start_event_shift: int = (
-            self._pre_event_len.frame_num + min_event_len * (self._frame_skip + 1))
+        if not self._use_pts:
+            start_event_shift: int = (
+                self._pre_event_len.frame_num + min_event_len * (self._frame_skip + 1))
+        else:
+            start_event_shift_ms: float = (
+                (self._pre_event_len.get_seconds() + self._min_event_len.get_seconds()) * 1000)
 
         # Length of buffer we require in memory to keep track of all frames required for -l and -tb.
         buff_len = pre_event_len + min_event_len
         event_end = self._input.position
-        last_frame_above_threshold = 0
+        if not self._use_pts:
+            last_frame_above_threshold = 0
+        else:
+            last_frame_above_threshold_ms = 0
 
         if self._bounding_box:
             self._bounding_box.set_corrections(
@@ -660,6 +674,7 @@ class MotionScanner:
             if frame is None:
                 break
             assert frame.frame_bgr is not None
+            pts = frame.timecode.get_seconds() * 1000
             frame_size = (frame.frame_bgr.shape[1], frame.frame_bgr.shape[0])
             if frame_size != self._input.resolution:
                 time = frame.timecode
@@ -710,7 +725,10 @@ class MotionScanner:
                 # If this frame still has motion, reset the post-event window.
                 if above_threshold:
                     num_frames_post_event = 0
-                    last_frame_above_threshold = frame.timecode.frame_num
+                    if not self._use_pts:
+                        last_frame_above_threshold = frame.timecode.frame_num
+                    else:
+                        last_frame_above_threshold_ms = pts
                 # Otherwise, we wait until the post-event window has passed before ending
                 # this motion event and start looking for a new one.
                 #
@@ -742,10 +760,16 @@ class MotionScanner:
                         # the post event length time. We also need to compensate for the number
                         # of frames that we skipped that could have had motion.
                         # We also add 1 to include the presentation duration of the last frame.
-                        event_end = FrameTimecode(
-                            1 + last_frame_above_threshold + self._post_event_len.frame_num +
-                            self._frame_skip, self._input.framerate)
-                        assert event_end.frame_num >= event_start.frame_num
+                        if not self._use_pts:
+                            event_end = FrameTimecode(
+                                1 + last_frame_above_threshold + self._post_event_len.frame_num +
+                                self._frame_skip, self._input.framerate)
+                            assert event_end.frame_num >= event_start.frame_num
+                        else:
+                            event_end = FrameTimecode((last_frame_above_threshold_ms / 1000) +
+                                                      self._post_event_len.get_seconds(),
+                                                      self._input.framerate)
+                            assert event_end.get_seconds() >= event_start.get_seconds()
                         event_list.append(MotionEvent(start=event_start, end=event_end))
                         if self._output_mode != OutputMode.SCAN_ONLY:
                             encode_queue.put(MotionEvent(start=event_start, end=event_end))
@@ -781,9 +805,19 @@ class MotionScanner:
                     num_frames_post_event = 0
                     frames_since_last_event = frame.timecode.frame_num - event_end.frame_num
                     last_frame_above_threshold = frame.timecode.frame_num
-                    shift_amount = min(frames_since_last_event, start_event_shift)
-                    shifted_start = max(start_frame, frame.timecode.frame_num + 1 - shift_amount)
-                    event_start = FrameTimecode(shifted_start, self._input.framerate)
+
+                    if not self._use_pts:
+                        shift_amount = min(frames_since_last_event, start_event_shift)
+                        shifted_start = max(start_frame,
+                                            frame.timecode.frame_num + 1 - shift_amount)
+                        event_start = FrameTimecode(shifted_start, self._input.framerate)
+                    else:
+                        ms_since_last_event = pts - (event_end.get_seconds() * 1000)
+                        last_frame_above_threshold_ms = pts
+                        #  TODO:  not sure all of this is actually necessary?
+                        shift_amount_ms = min(ms_since_last_event, start_event_shift_ms)
+                        shifted_start_ms = max(start_frame_ms, pts - shift_amount_ms)
+                        event_start = FrameTimecode(shifted_start_ms / 1000, self._input.framerate)
                     # Send buffered frames to encode thread.
                     for encode_frame in buffered_frames:
                         # We have to be careful here. Since we're putting multiple items
@@ -812,7 +846,10 @@ class MotionScanner:
         # compute the duration and ending timecode and add it to the event list.
         if in_motion_event and not self._stop.is_set():
             # curr_pos already includes the presentation duration of the frame.
-            event_end = FrameTimecode(self._input.position.frame_num, self._input.framerate)
+            if not self._use_pts:
+                event_end = FrameTimecode(self._input.position.frame_num, self._input.framerate)
+            else:
+                event_end = FrameTimecode((pts / 1000), self._input.framerate)
             event_list.append(MotionEvent(start=event_start, end=event_end))
 
             logger.debug("event %d high score %f" % (1 + self._num_events, self._highscore))
@@ -868,8 +905,12 @@ class MotionScanner:
                 # self._input.position points to the time at the end of the current frame (i.e. the
                 # first frame has a frame_num of 1), so we correct that for presentation time.
                 assert self._input.position.frame_num > 0
-                presentation_time = FrameTimecode(
-                    timecode=self._input.position.frame_num - 1, fps=self._input.framerate)
+                if not self._use_pts:
+                    presentation_time = FrameTimecode(
+                        timecode=self._input.position.frame_num - 1, fps=self._input.framerate)
+                else:
+                    presentation_time = FrameTimecode(self._input.position_ms / 1000,
+                                                      self._input.framerate)
                 if not self._stop.is_set():
                     decode_queue.put(DecodeEvent(frame_bgr, presentation_time))
 

@@ -32,6 +32,8 @@ EVENT_FRAME_TOLERANCE = 1 if ('ARM' in MACHINE_ARCH or 'AARCH' in MACHINE_ARCH) 
 # Similar to ARM, the CUDA version gives slightly different results.
 CUDA_EVENT_TOLERANCE = 1
 
+PTS_EVENT_TOLERANCE = 1
+
 # ROI within the frame used for the test case (see traffic_camera.txt for details).
 TRAFFIC_CAMERA_ROI = [
     Point(631, 532),
@@ -100,6 +102,17 @@ def test_scan_context(traffic_camera_video):
     event_list = scanner.scan().event_list
     event_list = [(event.start.frame_num, event.end.frame_num) for event in event_list]
     compare_event_lists(event_list, TRAFFIC_CAMERA_EVENTS, EVENT_FRAME_TOLERANCE)
+
+
+def test_scan_context_use_pts(traffic_camera_video):
+    """Test scanner 'use_pts' option to change how timekeeping is done."""
+    scanner = MotionScanner([traffic_camera_video])
+    scanner.set_detection_params()
+    scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
+    scanner.set_event_params(min_event_len=4, time_pre_event=0, use_pts=True)
+    event_list = scanner.scan().event_list
+    event_list = [(event.start.frame_num, event.end.frame_num) for event in event_list]
+    compare_event_lists(event_list, TRAFFIC_CAMERA_EVENTS, PTS_EVENT_TOLERANCE)
 
 
 @pytest.mark.skipif(not SubtractorCudaMOG2.is_available(), reason="CUDA module not available.")
