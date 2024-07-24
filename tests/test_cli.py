@@ -83,7 +83,6 @@ def test_info_commands():
 
 def test_default(tmp_path):
     """Test with all default arguments."""
-    tmp_path = str(tmp_path)                     # Hack for Python 3.7 builder.
     output = subprocess.check_output(
         args=DVR_SCAN_COMMAND + BASE_COMMAND + [
             '--output-dir',
@@ -101,7 +100,6 @@ def test_default(tmp_path):
 def test_concatenate(tmp_path):
     """Test with setting -o/--output to concatenate all events to a single file."""
     ouptut_file_name = 'motion_events.avi'
-    tmp_path = str(tmp_path)                     # Hack for Python 3.7 builder.
     output = subprocess.check_output(
         args=DVR_SCAN_COMMAND + BASE_COMMAND + [
             '--output-dir',
@@ -122,7 +120,6 @@ def test_concatenate(tmp_path):
 
 def test_scan_only(tmp_path):
     """Test -so/--scan-only."""
-    tmp_path = str(tmp_path)                     # Hack for Python 3.7 builder.
     output = subprocess.check_output(
         args=DVR_SCAN_COMMAND + BASE_COMMAND + [
             '--output-dir',
@@ -142,7 +139,6 @@ def test_scan_only(tmp_path):
 
 def test_quiet_mode(tmp_path):
     """Test -q/--quiet."""
-    tmp_path = str(tmp_path)                     # Hack for Python 3.7 builder.
     output = subprocess.check_output(
         args=DVR_SCAN_COMMAND + BASE_COMMAND + [
             '--output-dir',
@@ -156,7 +152,6 @@ def test_quiet_mode(tmp_path):
 
 def test_mog2(tmp_path):
     """Test -b/--bg-subtractor MOG2 (the default)."""
-    tmp_path = str(tmp_path)                                        # Hack for Python 3.7 builder.
     assert subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND + [
         '--output-dir',
         tmp_path,
@@ -169,7 +164,6 @@ def test_mog2(tmp_path):
 @pytest.mark.skipif(not SubtractorCNT.is_available(), reason="CNT not available")
 def test_cnt(tmp_path):
     """Test -b/--bg-subtractor CNT."""
-    tmp_path = str(tmp_path)                                        # Hack for Python 3.7 builder.
     assert subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND + [
         '--output-dir',
         tmp_path,
@@ -182,7 +176,6 @@ def test_cnt(tmp_path):
 @pytest.mark.skipif(not SubtractorCudaMOG2.is_available(), reason="MOG2_CUDA not available")
 def test_mog2_cuda(tmp_path):
     """Test -b/--bg-subtractor MOG2_CUDA."""
-    tmp_path = str(tmp_path)                                        # Hack for Python 3.7 builder.
     assert subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND + [
         '--output-dir',
         tmp_path,
@@ -194,7 +187,6 @@ def test_mog2_cuda(tmp_path):
 
 def test_overlays(tmp_path):
     """Test overlays -bb/--bounding-box, --fm/--frame-metrics, and -tc/--time-code."""
-    tmp_path = str(tmp_path)                                        # Hack for Python 3.7 builder.
     assert subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND + [
         '--output-dir',
         tmp_path,
@@ -207,7 +199,6 @@ def test_overlays(tmp_path):
 
 def test_mask_output(tmp_path):
     """Test mask output -mo/--mask-output."""
-    tmp_path = str(tmp_path)                                        # Hack for Python 3.7 builder.
     assert subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND + [
         '--output-dir',
         tmp_path,
@@ -221,7 +212,6 @@ def test_mask_output(tmp_path):
 
 def test_config_file(tmp_path):
     """Test using a config file to set the same parameters as in BASE_COMMAND."""
-    tmp_path = str(tmp_path) # Hack for Python 3.7 builder.
     cfg_path = os.path.join(tmp_path, 'config.cfg')
     with open(cfg_path, 'w') as file:
         file.write(TEST_CONFIG_FILE)
@@ -243,7 +233,6 @@ def test_config_file(tmp_path):
 @pytest.mark.skipif(not is_ffmpeg_available(), reason="ffmpeg not available")
 def test_ffmpeg_mode(tmp_path):
     """Test -m/--mode ffmpeg."""
-    tmp_path = str(tmp_path)                                        # Hack for Python 3.7 builder.
     assert subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND + [
         '--output-dir',
         tmp_path,
@@ -256,7 +245,6 @@ def test_ffmpeg_mode(tmp_path):
 @pytest.mark.skipif(not is_ffmpeg_available(), reason="ffmpeg not available")
 def test_copy_mode(tmp_path):
     """Test -m/--mode copy."""
-    tmp_path = str(tmp_path)                                        # Hack for Python 3.7 builder.
     assert subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND + [
         '--output-dir',
         tmp_path,
@@ -268,7 +256,6 @@ def test_copy_mode(tmp_path):
 
 def test_deprecated_roi(tmp_path):
     """Test deprecated ROI translation."""
-    tmp_path = str(tmp_path)                     # Hack for Python 3.7 builder.
     output = subprocess.check_output(
         args=DVR_SCAN_COMMAND + BASE_COMMAND + [
             '--output-dir',
