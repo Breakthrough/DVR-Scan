@@ -23,7 +23,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        python-version: ["3.9"]
+        python-version: ["3.12"]
 
     steps:
       - uses: actions/checkout@v4
@@ -43,8 +43,13 @@ jobs:
         uses: dsaltares/fetch-gh-release-asset@1.1.2
         with:
           repo: 'GyanD/codexffmpeg'
-          version: 'tags/6.0'
-          file: 'ffmpeg-6.0-full_build.7z'
+          version: 'tags/7.0.1'
+          file: 'ffmpeg-7.0.1-full_build.7z'
+
+      - name: Unit Test
+        run: |
+          7z e ffmpeg-7.0.1-full_build.7z ffmpeg.exe -r
+          python -m pytest tests/
 
       - name: Build DVR-Scan
         run: |
@@ -54,7 +59,7 @@ jobs:
 
       - name: Assemble Distribution
         run: |
-          7z e -odist/ffmpeg ffmpeg-6.0-full_build.7z LICENSE -r
+          7z e -odist/ffmpeg ffmpeg-7.0.1-full_build.7z LICENSE -r
           Move-Item -Path ffmpeg.exe -Destination dist/dvr-scan/ffmpeg.exe
           Move-Item -Path dist/ffmpeg/LICENSE -Destination dist/dvr-scan/LICENSE-FFMPEG -Force
 
