@@ -49,6 +49,14 @@ jobs:
           python -m pip install opencv-python-headless opencv-contrib-python-headless --only-binary :all:
           python -m pip install -r requirements_headless.txt
 
+      - name: Setup FFmpeg
+        # TODO: This action currently does not work for non-x64 builders (e.g. macos-14):
+        # https://github.com/federicocarboni/setup-ffmpeg/issues/21
+        if: ${{ runner.arch == 'X64' }}
+        uses: ./.github/actions/setup-ffmpeg
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Unit Test
         run: |
           python -m pytest tests/

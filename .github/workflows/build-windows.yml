@@ -46,11 +46,6 @@ jobs:
           version: 'tags/6.0'
           file: 'ffmpeg-6.0-full_build.7z'
 
-      - name: Unit Test
-        run: |
-          7z e ffmpeg-6.0-full_build.7z ffmpeg.exe -r
-          python -m pytest tests/
-
       - name: Build DVR-Scan
         run: |
           python dist/pre_release.py
@@ -62,10 +57,6 @@ jobs:
           7z e -odist/ffmpeg ffmpeg-6.0-full_build.7z LICENSE -r
           Move-Item -Path ffmpeg.exe -Destination dist/dvr-scan/ffmpeg.exe
           Move-Item -Path dist/ffmpeg/LICENSE -Destination dist/dvr-scan/LICENSE-FFMPEG -Force
-
-      - name: Test Distribution
-        run: |
-          ./dist/dvr-scan/dvr-scan -i tests/resources/simple_movement.mp4 -et 5s -df 3
 
       - name: Upload
         uses: actions/upload-artifact@v3
