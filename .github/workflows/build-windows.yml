@@ -68,7 +68,7 @@ jobs:
           ./dist/dvr-scan/dvr-scan -i tests/resources/simple_movement.mp4 -et 5s -df 3
 
       - name: Upload
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: DVR-Scan-win64_portable
           path: dist/dvr-scan
