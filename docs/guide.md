@@ -81,7 +81,7 @@ Frame numbers will be accurate, but timestamps will not.  This can yield incorre
 
 ## :fontawesome-solid-crop-simple:Region Editor
 
-With the Region Editor, you can limit motion detection to specific areas of the frame.  You can launch the region editor when starting DVR-Scan by adding `-r`/`--region-editor`:
+With the Region Editor, you can limit motion detection to specific areas of the frame.  You can launch the region editor by by adding `-r`/`--region-editor` to the DVR-Scan command:
 
     dvr-scan -i video.mp4 -r
 
@@ -89,9 +89,9 @@ The region editor will open and display a rectangle over the first frame:
 
 <img alt="region editor startup window" src="../assets/region-editor-start.jpg"/>
 
-You can use the mouse to add or move points when editing regions. Left click to add a new point, or drag an existing one. Left/middle click can be used to delete a point (see [controls](#controls)).
+You can use the mouse to add or move points when editing regions. Left click to add a new point, or to drag an existing one. Right click (middle on Linux) can be used to delete a point. See [controls](#Controls) below for all mouse and keyboard inputs.
 
-Press `S` to save the current regions to a file, or `O` to load existing ones.  When you are satisfied with the region, press **space bar or enter to start processing** the video.  You can press **escape to quit** the program without saving.
+Press `S` to save the current regions to a file, or `O` to load existing ones. When you are ready, press **space bar or enter to start processing**.
 
 ### Regions
 
