@@ -19,11 +19,11 @@ import os
 import sys
 
 # On Windows, make sure we include any required DLL paths.
-if os.name == 'nt':
+if os.name == "nt":
     # If CUDA is installed, include those DLLs in the search paths.
-    CUDA_PATH = os.environ['CUDA_PATH'] if 'CUDA_PATH' in os.environ else None
+    CUDA_PATH = os.environ["CUDA_PATH"] if "CUDA_PATH" in os.environ else None
     if CUDA_PATH and os.path.exists(CUDA_PATH):
-        CUDA_BIN_PATH = os.path.abspath(os.path.join(CUDA_PATH, 'bin'))
+        CUDA_BIN_PATH = os.path.abspath(os.path.join(CUDA_PATH, "bin"))
         os.add_dll_directory(CUDA_BIN_PATH)
 
 # OpenCV is a required package, but we don't have it as an explicit dependency since we
@@ -34,5 +34,5 @@ try:
 except ModuleNotFoundError as ex:
     raise ModuleNotFoundError(
         "OpenCV could not be found, try installing opencv-python:\n\npip install opencv-python",
-        name='cv2',
+        name="cv2",
     ) from ex

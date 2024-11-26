@@ -39,22 +39,22 @@ PROMPT_MESSAGE = "You have unsaved changes.\nDo you want to save?"
 SAVE_TITLE = "Save Region File"
 LOAD_TITLE = "Load Region File"
 
-KEYCODE_ESCAPE = ord('\x1b')
-KEYCODE_RETURN = ord('\r')
-KEYCODE_SPACE = ord(' ')
+KEYCODE_ESCAPE = ord("\x1b")
+KEYCODE_RETURN = ord("\r")
+KEYCODE_SPACE = ord(" ")
 # Control + Z/Y for undo/redo only seem to work on Windows.
 KEYCODE_WINDOWS_UNDO = 26
 KEYCODE_WINDOWS_REDO = 25
 
-DEFAULT_WINDOW_MODE = (cv2.WINDOW_AUTOSIZE if IS_WINDOWS else cv2.WINDOW_KEEPRATIO)
+DEFAULT_WINDOW_MODE = cv2.WINDOW_AUTOSIZE if IS_WINDOWS else cv2.WINDOW_KEEPRATIO
 """Minimum height/width for a ROI created using the mouse."""
 
 MIN_SIZE = 16
 """Minimum height/width for a ROI created using the mouse."""
 
-logger = getLogger('dvr_scan')
-Point = namedtuple("Point", ['x', 'y'])
-Size = namedtuple("Size", ['w', 'h'])
+logger = getLogger("dvr_scan")
+Point = namedtuple("Point", ["x", "y"])
+Size = namedtuple("Size", ["w", "h"])
 InputRectangle = ty.Tuple[Point, Point]
 
 
@@ -74,11 +74,11 @@ def warn_if_tkinter_missing():
 class RegionValidator:
     """Validator for a set of points representing a closed polygon."""
 
-    _IGNORE_CHARS = [',', '/', '(', ')', '[', ']']
+    _IGNORE_CHARS = [",", "/", "(", ")", "[", "]"]
     """Characters to ignore."""
 
     def __init__(self, value: str):
-        translation_table = str.maketrans({char: ' ' for char in RegionValidator._IGNORE_CHARS})
+        translation_table = str.maketrans({char: " " for char in RegionValidator._IGNORE_CHARS})
         values = value.translate(translation_table).split()
         if not all([val.isdigit() for val in values]):
             raise ValueError("Regions can only contain numbers and the following characters:"
@@ -98,7 +98,7 @@ class RegionValidator:
         return repr(self.value)
 
     def __str__(self) -> str:
-        return ", ".join(f'P({x},{y})' for x, y in self._value)
+        return ", ".join(f"P({x},{y})" for x, y in self._value)
 
 
 # TODO(v1.7): Allow controlling some of these settings in the config file.
@@ -129,24 +129,24 @@ MAX_UPDATE_RATE_DRAGGING = 5
 HOVER_DISPLAY_DISTANCE = 260**2
 MAX_DOWNSCALE_AA_LEVEL = 4
 
-KEYBIND_BREAKPOINT = 'b'
-KEYBIND_DOWNSCALE_INC = 'w'
-KEYBIND_DOWNSCALE_DEC = 'e'
-KEYBIND_HELP = 'h'
-KEYBIND_LOAD = 'o'
-KEYBIND_MASK = 'm'
-KEYBIND_OUTPUT_LIST = 'c'
-KEYBIND_POINT_ADD = 'a'
-KEYBIND_POINT_DELETE = 'x'
-KEYBIND_REGION_ADD = 't'
-KEYBIND_REGION_DELETE = 'g'
-KEYBIND_REGION_NEXT = 'l'
-KEYBIND_REGION_PREVIOUS = 'k'
-KEYBIND_REDO = 'y'
-KEYBIND_TOGGLE_AA = 'q'
-KEYBIND_SAVE = 's'
-KEYBIND_UNDO = 'z'
-KEYBIND_WINDOW_MODE = 'r'
+KEYBIND_BREAKPOINT = "b"
+KEYBIND_DOWNSCALE_INC = "w"
+KEYBIND_DOWNSCALE_DEC = "e"
+KEYBIND_HELP = "h"
+KEYBIND_LOAD = "o"
+KEYBIND_MASK = "m"
+KEYBIND_OUTPUT_LIST = "c"
+KEYBIND_POINT_ADD = "a"
+KEYBIND_POINT_DELETE = "x"
+KEYBIND_REGION_ADD = "t"
+KEYBIND_REGION_DELETE = "g"
+KEYBIND_REGION_NEXT = "l"
+KEYBIND_REGION_PREVIOUS = "k"
+KEYBIND_REDO = "y"
+KEYBIND_TOGGLE_AA = "q"
+KEYBIND_SAVE = "s"
+KEYBIND_UNDO = "z"
+KEYBIND_WINDOW_MODE = "r"
 
 
 def control_handle_radius(scale: int):
@@ -183,7 +183,7 @@ def show_controls():
     """Display keyboard/mouse controls."""
     # Right click is disabled on Linux/OSX due to a context manager provided by the UI framework
     # showing up when right clicking.
-    _WINDOWS_ONLY = 'Right, ' if IS_WINDOWS else ''
+    _WINDOWS_ONLY = "Right, " if IS_WINDOWS else ""
 
     logger.info(f"""ROI Window Controls:
 
@@ -235,7 +235,7 @@ def bound_point(point: Point, size: Size):
 
 def load_regions(path: ty.AnyStr) -> ty.Iterable[RegionValidator]:
     region_data = None
-    with open(path, 'rt') as file:
+    with open(path, "rt") as file:
         region_data = file.readlines()
     if region_data:
         return list(
@@ -294,8 +294,8 @@ class RegionEditor:
 
     @property
     def active_region(self) -> ty.Optional[ty.List[Point]]:
-        return self._regions[self._active_shape] if (not self._active_shape is None
-                                                     and bool(self._regions)) else None
+        return (self._regions[self._active_shape] if
+                (not self._active_shape is None and bool(self._regions)) else None)
 
     def _rescale(self):
         assert self._scale > 0
@@ -303,8 +303,13 @@ class RegionEditor:
         self._frame = self._original_frame.copy()
         self._frame_size = Size(w=self._frame.shape[1], h=self._frame.shape[0])
         self._redraw = True
-        logger.debug("Resize: scale = 1/%d%s, res = %d x %d", self._scale,
-                     ' (off)' if self._scale == 1 else '', self._frame_size.w, self._frame_size.h)
+        logger.debug(
+            "Resize: scale = 1/%d%s, res = %d x %d",
+            self._scale,
+            " (off)" if self._scale == 1 else "",
+            self._frame_size.w,
+            self._frame_size.h,
+        )
 
     def _undo(self):
         if self._history_pos < (len(self._history) - 1):
@@ -372,7 +377,9 @@ class RegionEditor:
             points = np.array([shape], np.int32)
             if self._scale > 1:
                 points = points // self._scale
-            line_type = cv2.LINE_AA if self._settings.use_aa and self._scale <= MAX_DOWNSCALE_AA_LEVEL else cv2.LINE_4
+            line_type = (
+                cv2.LINE_AA
+                if self._settings.use_aa and self._scale <= MAX_DOWNSCALE_AA_LEVEL else cv2.LINE_4)
             #
             if not self._settings.mask_source:
                 frame = cv2.polylines(
@@ -381,14 +388,22 @@ class RegionEditor:
                     isClosed=True,
                     color=self._settings.line_color,
                     thickness=thickness,
-                    lineType=line_type)
+                    lineType=line_type,
+                )
         if not self._hover_point is None and not self._settings.mask_source:
-            first, mid, last = ((self._hover_point - 1) % len(self.active_region),
-                                self._hover_point,
-                                (self._hover_point + 1) % len(self.active_region))
+            first, mid, last = (
+                (self._hover_point - 1) % len(self.active_region),
+                self._hover_point,
+                (self._hover_point + 1) % len(self.active_region),
+            )
             points = np.array(
-                [[self.active_region[first], self.active_region[mid], self.active_region[last]]],
-                np.int32)
+                [[
+                    self.active_region[first],
+                    self.active_region[mid],
+                    self.active_region[last],
+                ]],
+                np.int32,
+            )
             if self._scale > 1:
                 points = points // self._scale
             frame = cv2.polylines(
@@ -398,13 +413,17 @@ class RegionEditor:
                 color=self._settings.hover_color
                 if not self._dragging else self._settings.hover_color_alt,
                 thickness=thickness_active,
-                lineType=line_type)
-        elif not self._nearest_points is None and self._settings.highlight_insert and not self._settings.mask_source:
-
-            points = np.array([[
-                self.active_region[self._nearest_points[0]],
-                self.active_region[self._nearest_points[1]]
-            ]], np.int32)
+                lineType=line_type,
+            )
+        elif (not self._nearest_points is None and self._settings.highlight_insert
+              and not self._settings.mask_source):
+            points = np.array(
+                [[
+                    self.active_region[self._nearest_points[0]],
+                    self.active_region[self._nearest_points[1]],
+                ]],
+                np.int32,
+            )
             if self._scale > 1:
                 points = points // self._scale
             frame = cv2.polylines(
@@ -413,7 +432,8 @@ class RegionEditor:
                 isClosed=False,
                 color=self._settings.hover_color,
                 thickness=thickness_active,
-                lineType=line_type)
+                lineType=line_type,
+            )
 
         if not self.active_region is None:
             radius = control_handle_radius(self._scale)
@@ -421,12 +441,22 @@ class RegionEditor:
                 color = self._settings.line_color_alt
                 if not self._hover_point is None:
                     if self._hover_point == i:
-                        color = self._settings.hover_color_alt if not self._dragging else self._settings.interact_color
+                        color = (
+                            self._settings.hover_color_alt
+                            if not self._dragging else self._settings.interact_color)
                 elif not self._nearest_points is None and i in self._nearest_points:
-                    color = self._settings.hover_color if self._dragging else self._settings.interact_color
+                    color = (
+                        self._settings.hover_color
+                        if self._dragging else self._settings.interact_color)
                 start, end = (
-                    Point((point.x // self._scale) - radius, (point.y // self._scale) - radius),
-                    Point((point.x // self._scale) + radius, (point.y // self._scale) + radius),
+                    Point(
+                        (point.x // self._scale) - radius,
+                        (point.y // self._scale) - radius,
+                    ),
+                    Point(
+                        (point.x // self._scale) + radius,
+                        (point.y // self._scale) + radius,
+                    ),
                 )
                 cv2.rectangle(
                     frame,
@@ -448,14 +478,14 @@ class RegionEditor:
             a_sq = min(self._mouse_dist[i], self._mouse_dist[next])
             c_sq = max(self._mouse_dist[i], self._mouse_dist[next])
             b_sq = self._segment_dist[i]
-            assert a_sq > 0 # Should never hit this since we check _hovering_over first.
+            assert (a_sq > 0)                            # Should never hit this since we check _hovering_over first.
             if b_sq == 0:
-                            # Two adjacent points are overlapping, just skip this one.
+                                                         # Two adjacent points are overlapping, just skip this one.
                 continue
             a, b = math.sqrt(a_sq), math.sqrt(b_sq)
             cos_C = ((a_sq + b_sq) - c_sq) / (2.0 * a * b)
-                            # If cos_C is between [0,1] the triangle is acute. If it's not, just take the distance
-                            # of the closest point.
+                                                         # If cos_C is between [0,1] the triangle is acute. If it's not, just take the distance
+                                                         # of the closest point.
             dist = int(a_sq - (int(a * cos_C)**2)) if cos_C > 0 else a_sq
             if dist < nearest_dist or (dist == nearest_dist and cos_C > largest_cosine):
                 nearest_seg, nearest_dist, largest_cosine = i, dist, cos_C
@@ -463,7 +493,10 @@ class RegionEditor:
         self._settings.highlight_insert = nearest_dist <= HOVER_DISPLAY_DISTANCE
         if last != self._settings.highlight_insert:
             self._redraw = True
-        self._nearest_points = (nearest_seg, (nearest_seg + 1) % len(self.active_region))
+        self._nearest_points = (
+            nearest_seg,
+            (nearest_seg + 1) % len(self.active_region),
+        )
 
     def _hovering_over(self) -> ty.Optional[int]:
         min_i = 0
@@ -472,8 +505,8 @@ class RegionEditor:
                 min_i = i
         # If we've shrunk the image, we need to compensate for the size difference in the image.
         # The control handles remain the same size but the image is smaller
-        return min_i if self._mouse_dist[min_i] <= (4 * control_handle_radius(self._scale) *
-                                                    self._scale)**2 else None
+        return (min_i if self._mouse_dist[min_i] <= (4 * control_handle_radius(self._scale) *
+                                                     self._scale)**2 else None)
 
     def _init_window(self):
         cv2.namedWindow(WINDOW_TITLE, self._settings.window_mode)
@@ -530,8 +563,10 @@ class RegionEditor:
                     self._init_window()
                     continue
                 self._draw()
-                key = cv2.waitKey(MAX_UPDATE_RATE_NORMAL
-                                  if not self._dragging else MAX_UPDATE_RATE_DRAGGING) & 0xFF
+                key = (
+                    cv2.waitKey(
+                        MAX_UPDATE_RATE_NORMAL if not self._dragging else MAX_UPDATE_RATE_DRAGGING)
+                    & 0xFF)
                 if key == KEYCODE_ESCAPE:
                     if self._prompt_save_on_quit():
                         break
@@ -539,8 +574,8 @@ class RegionEditor:
                     if self._prompt_save_on_quit():
                         should_scan = True
                         break
-                elif key >= ord('0') and key <= ord('9'):
-                    self._select_region((key - ord('1')) % 10)
+                elif key >= ord("0") and key <= ord("9"):
+                    self._select_region((key - ord("1")) % 10)
                 elif chr(key) in keyboard_callbacks:
                     keyboard_callbacks[chr(key)]()
                 elif key != 0xFF and self._debug_mode:
@@ -589,7 +624,10 @@ class RegionEditor:
             return True
         with temp_tk_window() as _:
             should_save = tkinter.messagebox.askyesnocancel(
-                title=PROMPT_TITLE, message=PROMPT_MESSAGE, icon=tkinter.messagebox.WARNING)
+                title=PROMPT_TITLE,
+                message=PROMPT_MESSAGE,
+                icon=tkinter.messagebox.WARNING,
+            )
             if should_save is None:
                 return False
             if should_save and not self._save():
@@ -617,7 +655,7 @@ class RegionEditor:
             for shape in self._regions:
                 region_file.write(" ".join(f"{x} {y}" for x, y in shape))
                 region_file.write("\n")
-        logger.info('Saved region data to: %s', path)
+        logger.info("Saved region data to: %s", path)
         self._persisted = True
         return True
 
@@ -647,9 +685,12 @@ class RegionEditor:
                 reason = "Could not parse region file!"
             logger.error(f"Error loading region from {load_path}: {reason}")
         else:
-            logger.debug("Loaded %d region%s from region file:\n%s", len(regions),
-                         's' if len(regions) > 1 else '',
-                         "\n".join(f"[{i}] = {points}" for i, points in enumerate(regions)))
+            logger.debug(
+                "Loaded %d region%s from region file:\n%s",
+                len(regions),
+                "s" if len(regions) > 1 else "",
+                "\n".join(f"[{i}] = {points}" for i, points in enumerate(regions)),
+            )
 
             self._regions = [
                 [bound_point(point, self._source_size) for point in shape] for shape in regions
@@ -665,7 +706,7 @@ class RegionEditor:
                 x, y = self.active_region[hover]
                 del self.active_region[hover]
                 self._hover_point = None
-                logger.debug("Del: [%d] = %s", hover, f'P({x},{y})')
+                logger.debug("Del: [%d] = %s", hover, f"P({x},{y})")
                 self._commit()
             else:
                 logger.error("Cannot remove point, shape must have at least 3 points.")
@@ -691,7 +732,8 @@ class RegionEditor:
             self._settings.window_mode = cv2.WINDOW_KEEPRATIO
         logger.debug(
             "Window Mode: %s",
-            "KEEPRATIO" if self._settings.window_mode == cv2.WINDOW_KEEPRATIO else "AUTOSIZE")
+            "KEEPRATIO" if self._settings.window_mode == cv2.WINDOW_KEEPRATIO else "AUTOSIZE",
+        )
         self._init_window()
 
     def _add_point(self) -> bool:
@@ -769,12 +811,12 @@ class RegionEditor:
                         or self._curr_mouse_pos != self._drag_start):
                     self.active_region[self._hover_point] = self._curr_mouse_pos
                     x, y = self.active_region[self._hover_point]
-                    logger.debug("Add: [%d] = %s", self._hover_point, f'P({x},{y})')
+                    logger.debug("Add: [%d] = %s", self._hover_point, f"P({x},{y})")
                     self._commit()
                 self._redraw = True
             self._dragging = False
 
-        elif event == cv2.EVENT_MBUTTONDOWN or IS_WINDOWS and event == cv2.EVENT_RBUTTONDOWN:
+        elif (event == cv2.EVENT_MBUTTONDOWN or IS_WINDOWS and event == cv2.EVENT_RBUTTONDOWN):
             self._delete_point()
 
         # Only draw again if we aren't dragging (too many events to draw on each one), or if
@@ -787,7 +829,10 @@ class RegionEditor:
             return
 
         # Add a box around the current mouse position that's roughly 20% of the frame.
-        width, height = max(1, self._source_size.w // 10), max(1, self._source_size.h // 10)
+        width, height = (
+            max(1, self._source_size.w // 10),
+            max(1, self._source_size.h // 10),
+        )
 
         top_left = Point(x=self._curr_mouse_pos.x - width, y=self._curr_mouse_pos.y - height)
         points = [

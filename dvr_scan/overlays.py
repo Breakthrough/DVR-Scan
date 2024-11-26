@@ -9,13 +9,13 @@
 # DVR-Scan is licensed under the BSD 2-Clause License; see the included
 # LICENSE file, or visit one of the above pages for details.
 #
-""" ``dvr_scan.overlays`` Module
+"""``dvr_scan.overlays`` Module
 
 This module contains various classes used to draw overlays onto video frames.
 """
 
+import typing as ty
 from enum import Enum
-from typing import Tuple
 
 import cv2
 import numpy
@@ -31,15 +31,17 @@ class TextOverlay(object):
         TopLeft = 1
         TopRight = 2
 
-    def __init__(self,
-                 font: int = cv2.FONT_HERSHEY_SIMPLEX,
-                 font_scale: float = 1.0,
-                 margin: int = 4,
-                 border: int = 4,
-                 thickness: int = 2,
-                 color: Tuple[int, int, int] = (255, 255, 255),
-                 bg_color: Tuple[int, int, int] = (0, 0, 0),
-                 corner: Corner = Corner.TopLeft):
+    def __init__(
+            self,
+            font: int = cv2.FONT_HERSHEY_SIMPLEX,
+            font_scale: float = 1.0,
+            margin: int = 4,
+            border: int = 4,
+            thickness: int = 2,
+            color: ty.Tuple[int, int, int] = (255, 255, 255),
+            bg_color: ty.Tuple[int, int, int] = (0, 0, 0),
+            corner: Corner = Corner.TopLeft,
+    ):
         """Initialize a TextOverlay with the given parameters.
 
         Arguments:
@@ -85,8 +87,14 @@ class TextOverlay(object):
                 top_left = (self._margin, self._margin)
                 bottom_right = (self._margin + rect_width, self._margin + rect_height)
             elif self._corner == TextOverlay.Corner.TopRight:
-                top_left = (max(0, frame.shape[1] - (self._margin + max_width)), self._margin)
-                bottom_right = (max(0, frame.shape[1] - self._margin), self._margin + rect_height)
+                top_left = (
+                    max(0, frame.shape[1] - (self._margin + max_width)),
+                    self._margin,
+                )
+                bottom_right = (
+                    max(0, frame.shape[1] - self._margin),
+                    self._margin + rect_height,
+                )
             cv2.rectangle(frame, top_left, bottom_right, self._bg_color, -1)
 
         if self._corner == TextOverlay.Corner.TopLeft:
@@ -95,10 +103,17 @@ class TextOverlay(object):
             x_offset = max(0, frame.shape[1] - (self._margin + self._border + max_width))
         y_offset = self._margin + self._border
 
-        for (text, size) in zip(lines, sizes):
+        for text, size in zip(lines, sizes):
             text_pos = (x_offset, y_offset + size[0][1])
-            cv2.putText(frame, text, text_pos, self._font, self._font_scale, self._color,
-                        self._thickness)
+            cv2.putText(
+                frame,
+                text,
+                text_pos,
+                self._font,
+                self._font_scale,
+                self._color,
+                self._thickness,
+            )
             y_offset += size[0][1] + line_spacing
 
 
@@ -112,17 +127,19 @@ class BoundingBoxOverlay(object):
     DEFAULT_THICKNESS_RATIO: float = 0.0032
     """Thickness of bounding box lines relative to largest dimension of the video frame."""
 
-    DEFAULT_COLOUR: Tuple[int, int, int] = (0, 0, 255)
+    DEFAULT_COLOUR: ty.Tuple[int, int, int] = (0, 0, 255)
     """Bounding box colour. Tuple of (B, G, R) values in [0, 255]"""
 
     DEFAULT_SMOOTHING: int = 5
     """Number of frames to use for smoothing/averaging. Values <= 1 indicate no smoothing."""
 
-    def __init__(self,
-                 min_size_ratio: float = DEFAULT_MIN_SIZE_RATIO,
-                 thickness_ratio: float = DEFAULT_THICKNESS_RATIO,
-                 color: Tuple[int, int, int] = DEFAULT_COLOUR,
-                 smoothing: int = DEFAULT_SMOOTHING):
+    def __init__(
+        self,
+        min_size_ratio: float = DEFAULT_MIN_SIZE_RATIO,
+        thickness_ratio: float = DEFAULT_THICKNESS_RATIO,
+        color: ty.Tuple[int, int, int] = DEFAULT_COLOUR,
+        smoothing: int = DEFAULT_SMOOTHING,
+    ):
         """Initialize a BoundingBoxOverlay with the given parameters.
 
         Arguments:
@@ -142,7 +159,7 @@ class BoundingBoxOverlay(object):
         self._shift = (0, 0)
         self._frame_skip = 0
 
-    def set_corrections(self, downscale_factor: int, shift: Tuple[int, int], frame_skip: int):
+    def set_corrections(self, downscale_factor: int, shift: ty.Tuple[int, int], frame_skip: int):
         """Set various correction factors which need to be compensated for when drawing the
         resulting bounding box onto a given target frame.
 
@@ -159,7 +176,7 @@ class BoundingBoxOverlay(object):
         # We're reducing the number of frames by 1 / (frame_skip + 1)
         self._frame_skip = frame_skip
 
-    def _get_smoothed_window(self) -> Tuple[int, int, int, int]:
+    def _get_smoothed_window(self) -> ty.Tuple[int, int, int, int]:
         """Average all cached bounding boxes based on the temporal smoothing factor.
 
         Returns:
@@ -195,12 +212,20 @@ class BoundingBoxOverlay(object):
         self._smoothing_window = self._smoothing_window[-smoothing_amount:]
         return self._get_smoothed_window()
 
-    def draw(self, frame: numpy.ndarray, bounding_box: Tuple[int, int, int, int], use_shift: bool):
+    def draw(
+        self,
+        frame: numpy.ndarray,
+        bounding_box: ty.Tuple[int, int, int, int],
+        use_shift: bool,
+    ):
         """Draw a bounding box onto a target frame using the provided ROI and downscale factor."""
         # Correct for downscale factor
         bounding_box = [side_len * self._downscale_factor for side_len in bounding_box]
         top_left = (bounding_box[0], bounding_box[1])
-        bottom_right = (bounding_box[0] + bounding_box[2], bounding_box[1] + bounding_box[3])
+        bottom_right = (
+            bounding_box[0] + bounding_box[2],
+            bounding_box[1] + bounding_box[3],
+        )
         max_frame_side = max(frame.shape[0], frame.shape[1])
         thickness = max(2, 2 * (round(self._thickness_ratio * max_frame_side // 2)))
         # If bounding box is too small, pad the bounding box by the specified ratio.
@@ -208,11 +233,17 @@ class BoundingBoxOverlay(object):
         correction_x = max(0, min_side_len - bounding_box[2])
         correction_y = max(0, min_side_len - bounding_box[3])
         top_left = (top_left[0] - correction_x // 2, top_left[1] - correction_y // 2)
-        bottom_right = (bottom_right[0] + correction_x // 2, bottom_right[1] + correction_y // 2)
+        bottom_right = (
+            bottom_right[0] + correction_x // 2,
+            bottom_right[1] + correction_y // 2,
+        )
         # Shift bounding box if ROI was set
         if self._shift and use_shift:
             top_left = (top_left[0] + self._shift[0], top_left[1] + self._shift[1])
-            bottom_right = (bottom_right[0] + self._shift[0], bottom_right[1] + self._shift[1])
+            bottom_right = (
+                bottom_right[0] + self._shift[0],
+                bottom_right[1] + self._shift[1],
+            )
         # Ensure coordinates are positive. Values greater than frame size are okay, and should be
         # handled correctly by cv2.rectangle below. Note that we do not currently limit the
         # bounding box to fit within the ROI.

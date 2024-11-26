@@ -34,5 +34,5 @@ def test_decode_multiple(traffic_camera_video):
     assert video.total_frames == TRAFFIC_CAMERA_VIDEO_TOTAL_FRAMES * splice_amount
     while not video.read(False) is None:
         pass
-    assert video.position.get_frames() == TRAFFIC_CAMERA_VIDEO_TOTAL_FRAMES * splice_amount
+    assert (video.position.get_frames() == TRAFFIC_CAMERA_VIDEO_TOTAL_FRAMES * splice_amount)
     assert video.decode_failures == 0

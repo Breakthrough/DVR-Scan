@@ -27,7 +27,7 @@ MACHINE_ARCH = platform.machine().upper()
 
 # On some ARM chips (e.g. Apple M1), results are slightly different, so we allow a 1 frame
 # delta on the events for those platforms.
-EVENT_FRAME_TOLERANCE = 1 if ('ARM' in MACHINE_ARCH or 'AARCH' in MACHINE_ARCH) else 0
+EVENT_FRAME_TOLERANCE = 1 if ("ARM" in MACHINE_ARCH or "AARCH" in MACHINE_ARCH) else 0
 
 # Similar to ARM, the CUDA version gives slightly different results.
 CUDA_EVENT_TOLERANCE = 1
@@ -117,7 +117,7 @@ def test_scan_context_use_pts(traffic_camera_video):
 
 @pytest.mark.skipif(not SubtractorCudaMOG2.is_available(), reason="CUDA module not available.")
 def test_scan_context_cuda(traffic_camera_video):
-    """ Test functionality of MotionScanner with the DetectorType.MOG2_CUDA. """
+    """Test functionality of MotionScanner with the DetectorType.MOG2_CUDA."""
     scanner = MotionScanner([traffic_camera_video])
     scanner.set_detection_params(detector_type=DetectorType.MOG2_CUDA)
     scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
@@ -130,7 +130,7 @@ def test_scan_context_cuda(traffic_camera_video):
 
 @pytest.mark.skipif(not SubtractorCNT.is_available(), reason="CNT algorithm not available.")
 def test_scan_context_cnt(traffic_camera_video):
-    """ Test basic functionality of MotionScanner using the CNT algorithm. """
+    """Test basic functionality of MotionScanner using the CNT algorithm."""
     scanner = MotionScanner([traffic_camera_video])
     scanner.set_detection_params(detector_type=DetectorType.CNT)
     scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
@@ -141,7 +141,7 @@ def test_scan_context_cnt(traffic_camera_video):
 
 
 def test_pre_event_shift(traffic_camera_video):
-    """ Test setting time_pre_event. """
+    """Test setting time_pre_event."""
     scanner = MotionScanner([traffic_camera_video])
     scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
     scanner.set_event_params(min_event_len=4, time_pre_event=6)
@@ -151,7 +151,7 @@ def test_pre_event_shift(traffic_camera_video):
 
 
 def test_pre_event_shift_with_frame_skip(traffic_camera_video):
-    """ Test setting time_pre_event when using frame_skip. """
+    """Test setting time_pre_event when using frame_skip."""
     for frame_skip in range(1, 6):
         scanner = MotionScanner([traffic_camera_video], frame_skip=frame_skip)
         scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
@@ -169,7 +169,7 @@ def test_pre_event_shift_with_frame_skip(traffic_camera_video):
 
 
 def test_post_event_shift(traffic_camera_video):
-    """ Test setting time_post_event. """
+    """Test setting time_post_event."""
 
     scanner = MotionScanner([traffic_camera_video])
     scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
@@ -182,7 +182,7 @@ def test_post_event_shift(traffic_camera_video):
 
 
 def test_post_event_shift_with_frame_skip(traffic_camera_video):
-    """ Test setting time_post_event. """
+    """Test setting time_post_event."""
     for frame_skip in range(1, 6):
         scanner = MotionScanner([traffic_camera_video], frame_skip=frame_skip)
         scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
@@ -214,7 +214,7 @@ def test_decode_corrupt_video(corrupt_video):
 
 
 def test_start_end_time(traffic_camera_video):
-    """ Test basic functionality of MotionScanner with start and stop times defined. """
+    """Test basic functionality of MotionScanner with start and stop times defined."""
     scanner = MotionScanner([traffic_camera_video])
     scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
     scanner.set_event_params(min_event_len=4, time_pre_event=0)
@@ -226,7 +226,7 @@ def test_start_end_time(traffic_camera_video):
 
 
 def test_start_duration(traffic_camera_video):
-    """ Test basic functionality of MotionScanner with start and duration defined. """
+    """Test basic functionality of MotionScanner with start and duration defined."""
     scanner = MotionScanner([traffic_camera_video])
     scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
     scanner.set_event_params(min_event_len=4, time_pre_event=0)

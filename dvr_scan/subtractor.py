@@ -57,8 +57,8 @@ class SubtractorMOG2(Subtractor):
     ):
         if kernel_size < 0 or (kernel_size > 1 and kernel_size % 2 == 0):
             raise ValueError("kernel_size must be >= 0")
-        self._kernel = numpy.ones(
-            (kernel_size, kernel_size), numpy.uint8) if kernel_size > 1 else None
+        self._kernel = (
+            numpy.ones((kernel_size, kernel_size), numpy.uint8) if kernel_size > 1 else None)
         self._subtractor = cv2.createBackgroundSubtractorMOG2(
             history=history,
             varThreshold=variance_threshold,
@@ -79,7 +79,7 @@ class SubtractorMOG2(Subtractor):
 
     @staticmethod
     def is_available():
-        return hasattr(cv2, 'createBackgroundSubtractorMOG2')
+        return hasattr(cv2, "createBackgroundSubtractorMOG2")
 
 
 class SubtractorCNT(SubtractorMOG2):
@@ -97,8 +97,8 @@ class SubtractorCNT(SubtractorMOG2):
     ):
         if kernel_size < 0 or (kernel_size > 1 and kernel_size % 2 == 0):
             raise ValueError("kernel_size must be odd integer >= 1 or zero (0)")
-        self._kernel = numpy.ones(
-            (kernel_size, kernel_size), numpy.uint8) if kernel_size > 1 else None
+        self._kernel = (
+            numpy.ones((kernel_size, kernel_size), numpy.uint8) if kernel_size > 1 else None)
         self._subtractor = cv2.bgsegm.createBackgroundSubtractorCNT(
             minPixelStability=min_pixel_stability,
             useHistory=use_history,
@@ -109,7 +109,7 @@ class SubtractorCNT(SubtractorMOG2):
 
     @staticmethod
     def is_available():
-        return hasattr(cv2, 'bgsegm') and hasattr(cv2.bgsegm, 'createBackgroundSubtractorCNT')
+        return hasattr(cv2, "bgsegm") and hasattr(cv2.bgsegm, "createBackgroundSubtractorCNT")
 
 
 class SubtractorCudaMOG2(SubtractorMOG2):
@@ -125,9 +125,12 @@ class SubtractorCudaMOG2(SubtractorMOG2):
     ):
         if kernel_size < 0 or (kernel_size > 1 and kernel_size % 2 == 0):
             raise ValueError("kernel_size must be odd integer >= 1 or zero (0)")
-        self._filter = cv2.cuda.createMorphologyFilter(
-            cv2.MORPH_OPEN, cv2.CV_8UC1, numpy.ones(
-                (kernel_size, kernel_size), numpy.uint8)) if kernel_size > 1 else None
+        self._filter = (
+            cv2.cuda.createMorphologyFilter(
+                cv2.MORPH_OPEN,
+                cv2.CV_8UC1,
+                numpy.ones((kernel_size, kernel_size), numpy.uint8),
+            ) if kernel_size > 1 else None)
         self._subtractor = cv2.cuda.createBackgroundSubtractorMOG2(
             history=history,
             varThreshold=variance_threshold,
@@ -153,4 +156,4 @@ class SubtractorCudaMOG2(SubtractorMOG2):
 
     @staticmethod
     def is_available():
-        return hasattr(cv2, 'cuda') and hasattr(cv2.cuda, 'createBackgroundSubtractorMOG2')
+        return hasattr(cv2, "cuda") and hasattr(cv2.cuda, "createBackgroundSubtractorMOG2")

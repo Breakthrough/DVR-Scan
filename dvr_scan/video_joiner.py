@@ -9,7 +9,7 @@
 # DVR-Scan is licensed under the BSD 2-Clause License; see the included
 # LICENSE file, or visit one of the above pages for details.
 #
-""" ``dvr_scan.video_joiner`` Module
+"""``dvr_scan.video_joiner`` Module
 
 Contains a helper class to concatenate multiple videos and treat it as a single,
 contiguous video file.
@@ -27,7 +27,7 @@ from scenedetect.video_stream import VideoOpenFailure
 
 FRAMERATE_DELTA_TOLERANCE: float = 0.1
 
-logger = logging.getLogger('dvr_scan')
+logger = logging.getLogger("dvr_scan")
 
 
 # TODO: Replace this with the equivalent from PySceneDetect when available.
@@ -112,7 +112,7 @@ class VideoJoiner:
     def seek(self, target: FrameTimecode):
         """Seek to the target offset. Only seeking forward is supported (i.e. `target` must be
         greater than the current `position`."""
-        if len(self._paths) == 1 or self._curr_cap_index == 0 and target <= self._cap.duration:
+        if (len(self._paths) == 1 or self._curr_cap_index == 0 and target <= self._cap.duration):
             self._cap.seek(target)
         else:
             # TODO: This is ineffient if we have multiple input videos.
@@ -136,13 +136,23 @@ class VideoJoiner:
             # Set the resolution/framerate based on the first video.
             if not opened_video:
                 self._cap = cap
-                logger.info("Opened video %s (%d x %d at %2.3f FPS).", video_name,
-                            cap.frame_size[0], cap.frame_size[1], cap.frame_rate)
+                logger.info(
+                    "Opened video %s (%d x %d at %2.3f FPS).",
+                    video_name,
+                    cap.frame_size[0],
+                    cap.frame_size[1],
+                    cap.frame_rate,
+                )
                 opened_video = True
                 continue
             # Otherwise, validate the appended video's parameters.
-            logger.info("Appending video %s (%d x %d at %2.3f FPS).", video_name, cap.frame_size[0],
-                        cap.frame_size[1], cap.frame_rate)
+            logger.info(
+                "Appending video %s (%d x %d at %2.3f FPS).",
+                video_name,
+                cap.frame_size[0],
+                cap.frame_size[1],
+                cap.frame_rate,
+            )
             if cap.frame_size != self._cap.frame_size:
                 logger.error("Error: Video resolution does not match the first input.")
                 raise VideoOpenFailure("Video resolutions must match to be concatenated!")
@@ -155,6 +165,6 @@ class VideoJoiner:
         self._paths = validated_paths
 
         if unsupported_codec:
-            logger.error('Unsupported or invalid codec, output may be incorrect. Possible fixes:\n'
-                         '  - Re-encode the input video with ffmpeg\n'
-                         '  - Update OpenCV (pip install --upgrade opencv-python)')
+            logger.error("Unsupported or invalid codec, output may be incorrect. Possible fixes:\n"
+                         "  - Re-encode the input video with ffmpeg\n"
+                         "  - Update OpenCV (pip install --upgrade opencv-python)")

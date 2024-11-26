@@ -36,7 +36,7 @@ except ImportError:
 
 # TODO(v1.7): Figure out how to make icon work on Linux. Might need a PNG version.
 def get_icon_path() -> str:
-    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
         app_folder = os.path.abspath(os.path.dirname(sys.executable))
         icon_path = os.path.join(app_folder, "dvr-scan.ico")
         if os.path.exists(icon_path):
@@ -54,7 +54,7 @@ def get_icon_path() -> str:
 
 HAS_TKINTER = not tkinter is None
 
-IS_WINDOWS = os.name == 'nt'
+IS_WINDOWS = os.name == "nt"
 
 if IS_WINDOWS:
     import ctypes
@@ -68,22 +68,24 @@ def get_min_screen_bounds():
     if not screeninfo is None:
         try:
             monitors = screeninfo.get_monitors()
-            return (int(0.9 * min(m.height for m in monitors)),
-                    int(0.9 * min(m.width for m in monitors)))
+            return (
+                int(0.9 * min(m.height for m in monitors)),
+                int(0.9 * min(m.width for m in monitors)),
+            )
         except screeninfo.common.ScreenInfoError as ex:
-            logging.getLogger('dvr_scan').warning("Unable to get screen resolution: %s", ex)
+            logging.getLogger("dvr_scan").warning("Unable to get screen resolution: %s", ex)
     return None
 
 
-def is_ffmpeg_available(ffmpeg_path: AnyStr = 'ffmpeg'):
-    """ Is ffmpeg Available: Gracefully checks if ffmpeg command is available.
+def is_ffmpeg_available(ffmpeg_path: AnyStr = "ffmpeg"):
+    """Is ffmpeg Available: Gracefully checks if ffmpeg command is available.
 
     Returns:
         True if `ffmpeg` can be invoked, False otherwise.
     """
     ret_val = None
     try:
-        ret_val = subprocess.call([ffmpeg_path, '-v', 'quiet'])
+        ret_val = subprocess.call([ffmpeg_path, "-v", "quiet"])
     except OSError:
         return False
     if ret_val is not None and ret_val != 1:
@@ -91,8 +93,13 @@ def is_ffmpeg_available(ffmpeg_path: AnyStr = 'ffmpeg'):
     return True
 
 
-def _init_logger_impl(logger: logging.Logger, log_level: int, format_str: str, show_stdout: bool,
-                      log_file: Optional[str]):
+def _init_logger_impl(
+    logger: logging.Logger,
+    log_level: int,
+    format_str: str,
+    show_stdout: bool,
+    log_file: Optional[str],
+):
     logger.handlers = []
     logger.setLevel(log_level)
     # Add stdout handler if required.
@@ -110,9 +117,11 @@ def _init_logger_impl(logger: logging.Logger, log_level: int, format_str: str, s
         logger.addHandler(handler)
 
 
-def init_logger(log_level: int = logging.INFO,
-                show_stdout: bool = False,
-                log_file: Optional[str] = None) -> logging.Logger:
+def init_logger(
+    log_level: int = logging.INFO,
+    show_stdout: bool = False,
+    log_file: Optional[str] = None,
+) -> logging.Logger:
     """Initializes logging for DVR-Scan. The logger instance used is named 'dvr_scan'.
     By default the logger has no handlers to suppress output. All existing log handlers
     are replaced every time this function is invoked.
@@ -124,25 +133,25 @@ def init_logger(log_level: int = logging.INFO,
         log_file: If set, add handler to dump log messages to given file path.
     """
     # Format of log messages depends on verbosity.
-    format_str = '[DVR-Scan] %(message)s'
+    format_str = "[DVR-Scan] %(message)s"
     if log_level == logging.DEBUG:
-        format_str = '%(levelname)s: %(module)s.%(funcName)s(): %(message)s'
-    _init_logger_impl(logging.getLogger('dvr_scan'), log_level, format_str, show_stdout, log_file)
+        format_str = "%(levelname)s: %(module)s.%(funcName)s(): %(message)s"
+    _init_logger_impl(logging.getLogger("dvr_scan"), log_level, format_str, show_stdout, log_file)
     # The `scenedetect` package also has useful log messages when opening and decoding videos.
     # We still want to make sure we can tell the messages apart, so we add a short prefix [::].
-    format_str = '[DVR-Scan] :: %(message)s'
+    format_str = "[DVR-Scan] :: %(message)s"
     if log_level == logging.DEBUG:
-        format_str = '%(levelname)s: [scenedetect] %(module)s.%(funcName)s(): %(message)s'
+        format_str = ("%(levelname)s: [scenedetect] %(module)s.%(funcName)s(): %(message)s")
     _init_logger_impl(
-        logging.getLogger('pyscenedetect'), log_level, format_str, show_stdout, log_file)
-    return logging.getLogger('dvr_scan')
+        logging.getLogger("pyscenedetect"), log_level, format_str, show_stdout, log_file)
+    return logging.getLogger("dvr_scan")
 
 
 def get_filename(path: AnyStr, include_extension: bool) -> AnyStr:
     """Get filename of the given path, optionally excluding extension."""
     filename = os.path.basename(path)
     if not include_extension:
-        dot_position = filename.rfind('.')
+        dot_position = filename.rfind(".")
         if dot_position > 0:
             filename = filename[:dot_position]
     return filename

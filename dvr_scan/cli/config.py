@@ -33,12 +33,12 @@ from dvr_scan.scanner import DEFAULT_FFMPEG_INPUT_ARGS, DEFAULT_FFMPEG_OUTPUT_AR
 
 # Backwards compatibility for config options that were renamed/replaced.
 MIGRATED_CONFIG_OPTION: Dict[str, str] = {
-    'timecode': 'time-code',
-    'timecode-margin': 'text-margin',
-    'timecode-font-scale': 'text-font-scale',
-    'timecode-font-thickness': 'text-font-thickness',
-    'timecode-font-color': 'text-font-color',
-    'timecode-bg-color': 'text-bg-color',
+    "timecode": "time-code",
+    "timecode-margin": "text-margin",
+    "timecode-font-scale": "text-font-scale",
+    "timecode-font-thickness": "text-font-thickness",
+    "timecode-font-color": "text-font-color",
+    "timecode-bg-color": "text-bg-color",
 }
 
 DEPRECATED_CONFIG_OPTION: Dict[str, str] = {
@@ -58,7 +58,7 @@ class ValidatedValue(ABC):
 
     @staticmethod
     @abstractmethod
-    def from_config(config_value: str, default: 'ValidatedValue') -> 'ValidatedValue':
+    def from_config(config_value: str, default: "ValidatedValue") -> "ValidatedValue":
         """Validate and get the user-specified configuration option.
 
         Raises:
@@ -96,12 +96,12 @@ class TimecodeValue(ValidatedValue):
         return str(self.value)
 
     @staticmethod
-    def from_config(config_value: str, default: 'TimecodeValue') -> 'TimecodeValue':
+    def from_config(config_value: str, default: "TimecodeValue") -> "TimecodeValue":
         try:
             return TimecodeValue(config_value)
         except ValueError as ex:
             raise OptionParseFailure(
-                'Timecodes must be in frames (1234), seconds (123.4s), or HH:MM:SS (00:02:03.400).'
+                "Timecodes must be in frames (1234), seconds (123.4s), or HH:MM:SS (00:02:03.400)."
             ) from ex
 
 
@@ -142,7 +142,7 @@ class RangeValue(ValidatedValue):
         return str(self.value)
 
     @staticmethod
-    def from_config(config_value: str, default: 'RangeValue') -> 'RangeValue':
+    def from_config(config_value: str, default: "RangeValue") -> "RangeValue":
         try:
             return RangeValue(
                 value=int(config_value) if isinstance(default.value, int) else float(config_value),
@@ -150,7 +150,7 @@ class RangeValue(ValidatedValue):
                 max_val=default.max_val,
             )
         except ValueError as ex:
-            raise OptionParseFailure('Value must be between %s and %s.' %
+            raise OptionParseFailure("Value must be between %s and %s." %
                                      (default.min_val, default.max_val)) from ex
 
 
@@ -158,7 +158,6 @@ class KernelSizeValue(ValidatedValue):
     """Validator for kernel sizes (odd integer > 1, 0 for off, or -1 for auto size)."""
 
     def __init__(self, value: int = -1):
-
         value = int(value)
         if not value in (-1, 0) and (value < 3 or value % 2 == 0):
             raise ValueError()
@@ -173,30 +172,30 @@ class KernelSizeValue(ValidatedValue):
 
     def __str__(self) -> str:
         if self.value == -1:
-            return '-1 (auto)'
+            return "-1 (auto)"
         elif self.value == 0:
-            return '0 (off)'
+            return "0 (off)"
         return str(self.value)
 
     @staticmethod
-    def from_config(config_value: str, default: 'KernelSizeValue') -> 'KernelSizeValue':
+    def from_config(config_value: str, default: "KernelSizeValue") -> "KernelSizeValue":
         try:
             return KernelSizeValue(int(config_value))
         except ValueError as ex:
             raise OptionParseFailure(
-                'Size must be odd number starting from 3, 0 to disable, or -1 for auto.') from ex
+                "Size must be odd number starting from 3, 0 to disable, or -1 for auto.") from ex
 
 
 class RegionValueDeprecated(ValidatedValue):
     """Validator for deprecated region-of-interest values."""
 
-    _IGNORE_CHARS = [',', '/', '(', ')']
+    _IGNORE_CHARS = [",", "/", "(", ")"]
     """Characters to ignore."""
 
     def __init__(self, value: Optional[str] = None, allow_size: bool = False):
         if value is not None:
             translation_table = str.maketrans(
-                {char: ' ' for char in RegionValueDeprecated._IGNORE_CHARS})
+                {char: " " for char in RegionValueDeprecated._IGNORE_CHARS})
             values = value.translate(translation_table).split()
             valid_lengths = (2, 4) if allow_size else (4,)
             if not (len(values) in valid_lengths and all([val.isdigit() for val in values])
@@ -215,22 +214,27 @@ class RegionValueDeprecated(ValidatedValue):
 
     def __str__(self) -> str:
         if self.value is not None:
-            return '(%d,%d)/(%d,%d)' % (self.value[0], self.value[1], self.value[2], self.value[3])
+            return "(%d,%d)/(%d,%d)" % (
+                self.value[0],
+                self.value[1],
+                self.value[2],
+                self.value[3],
+            )
         return str(self.value)
 
     @staticmethod
-    def from_config(config_value: str, default: 'RegionValueDeprecated') -> 'RegionValueDeprecated':
+    def from_config(config_value: str, default: "RegionValueDeprecated") -> "RegionValueDeprecated":
         try:
             return RegionValueDeprecated(config_value)
         except ValueError as ex:
-            raise OptionParseFailure('ROI must be four positive integers of the form (x,y)/(w,h).'
-                                     ' Brackets, commas, slashes, and spaces are optional.') from ex
+            raise OptionParseFailure("ROI must be four positive integers of the form (x,y)/(w,h)."
+                                     " Brackets, commas, slashes, and spaces are optional.") from ex
 
 
 class RGBValue(ValidatedValue):
     """Validator for RGB values of the form (255, 255, 255) or 0xFFFFFF."""
 
-    _IGNORE_CHARS = [',', '/', '(', ')']
+    _IGNORE_CHARS = [",", "/", "(", ")"]
     """Characters to ignore."""
 
     def __init__(self, value: Union[int, str]):
@@ -244,11 +248,11 @@ class RGBValue(ValidatedValue):
                 # Continue trying to process it like the remaining types.
                 pass
         # Next try to convert values of the form '0xffffff'.
-        if not isinstance(value, int) and value[0:2] in ('0x', '0X'):
+        if not isinstance(value, int) and value[0:2] in ("0x", "0X"):
             value = int(value, base=16)
         # Finally try to process in the form '(255, 255, 255)'.
         if not isinstance(value, int):
-            translation_table = str.maketrans({char: ' ' for char in RGBValue._IGNORE_CHARS})
+            translation_table = str.maketrans({char: " " for char in RGBValue._IGNORE_CHARS})
             values = value.translate(translation_table).split()
             if not (len(values) == 3 and all([val.isdigit() for val in values])
                     and all([int(val) >= 0 for val in values])):
@@ -256,7 +260,7 @@ class RGBValue(ValidatedValue):
             value = int(values[0]) << 16 | int(values[1]) << 8 | int(values[2])
         assert isinstance(value, int)
         if value < 0x000000 or value > 0xFFFFFF:
-            raise ValueError('RGB value must be between 0x000000 and 0xFFFFFF.')
+            raise ValueError("RGB value must be between 0x000000 and 0xFFFFFF.")
         # Convert into tuple of (R, G, B)
         self._value = (
             (value & 0xFF0000) >> 16,
@@ -277,78 +281,71 @@ class RGBValue(ValidatedValue):
         return str(self.value)
 
     def __str__(self) -> str:
-        return '0x%06x' % self.value_as_int
+        return "0x%06x" % self.value_as_int
 
     @staticmethod
-    def from_config(config_value: str, default: 'RGBValue') -> 'RGBValue':
+    def from_config(config_value: str, default: "RGBValue") -> "RGBValue":
         try:
             return RGBValue(config_value)
         except ValueError as ex:
             raise OptionParseFailure(
-                'Color values must be in hex (0xFFFFFF) or R,G,B (255,255,255).') from ex
+                "Color values must be in hex (0xFFFFFF) or R,G,B (255,255,255).") from ex
 
 
 ConfigValue = Union[bool, int, float, str]
 ConfigDict = Dict[str, ConfigValue]
 
-_CONFIG_FILE_NAME: AnyStr = 'dvr-scan.cfg'
+_CONFIG_FILE_NAME: AnyStr = "dvr-scan.cfg"
 _CONFIG_FILE_DIR: AnyStr = user_config_dir("DVR-Scan", False)
 
 USER_CONFIG_FILE_PATH: AnyStr = os.path.join(_CONFIG_FILE_DIR, _CONFIG_FILE_NAME)
 
 # TODO: Replace these default values with those set in dvr_scan.context.
 CONFIG_MAP: ConfigDict = {
-
                                                          # General Options
-    'region-editor': False,
-    'quiet-mode': False,
-    'verbosity': 'info',
-
+    "region-editor": False,
+    "quiet-mode": False,
+    "verbosity": "info",
                                                          # Input/Output
-    'output-dir': '',
-    'output-mode': 'opencv',
-    'ffmpeg-input-args': DEFAULT_FFMPEG_INPUT_ARGS,
-    'ffmpeg-output-args': DEFAULT_FFMPEG_OUTPUT_ARGS,
-    'opencv-codec': 'XVID',
-
+    "output-dir": "",
+    "output-mode": "opencv",
+    "ffmpeg-input-args": DEFAULT_FFMPEG_INPUT_ARGS,
+    "ffmpeg-output-args": DEFAULT_FFMPEG_OUTPUT_ARGS,
+    "opencv-codec": "XVID",
                                                          # Motion Events
-    'min-event-length': TimecodeValue('0.1s'),
-    'time-before-event': TimecodeValue('1.5s'),
-    'time-post-event': TimecodeValue('2.0s'),
-    'use-pts': False,
-
+    "min-event-length": TimecodeValue("0.1s"),
+    "time-before-event": TimecodeValue("1.5s"),
+    "time-post-event": TimecodeValue("2.0s"),
+    "use-pts": False,
                                                          # Detection Parameters
-    'bg-subtractor': 'MOG2',
-    'threshold': 0.15,
-    'max-threshold': 255.0,
-    'variance-threshold': 16.0,
-    'kernel-size': KernelSizeValue(),
-    'downscale-factor': 0,
-    'learning-rate': float(-1),
+    "bg-subtractor": "MOG2",
+    "threshold": 0.15,
+    "max-threshold": 255.0,
+    "variance-threshold": 16.0,
+    "kernel-size": KernelSizeValue(),
+    "downscale-factor": 0,
+    "learning-rate": float(-1),
                                                          # TODO(v1.7): Remove, replaced with region files.
-    'region-of-interest': RegionValueDeprecated(),
-    'load-region': '',
-    'frame-skip': 0,
-
+    "region-of-interest": RegionValueDeprecated(),
+    "load-region": "",
+    "frame-skip": 0,
                                                          # Overlays
-
                                                          # Text Overlays
-    'time-code': False,
-    'frame-metrics': False,
-    'text-border': 4,
-    'text-margin': 4,
-    'text-font-scale': 1.0,
-    'text-font-thickness': 2,
-    'text-font-color': RGBValue(0xFFFFFF),
-    'text-bg-color': RGBValue(0x000000),
-
+    "time-code": False,
+    "frame-metrics": False,
+    "text-border": 4,
+    "text-margin": 4,
+    "text-font-scale": 1.0,
+    "text-font-thickness": 2,
+    "text-font-color": RGBValue(0xFFFFFF),
+    "text-bg-color": RGBValue(0x000000),
                                                          # Bounding Box
-    'bounding-box': False,
-    'bounding-box-smooth-time': TimecodeValue('0.1s'),
-    'bounding-box-color': RGBValue(0xFF0000),
-    'bounding-box-thickness': 0.0032,
-    'bounding-box-min-size': 0.032,
-    'thumbnails': None,
+    "bounding-box": False,
+    "bounding-box-smooth-time": TimecodeValue("0.1s"),
+    "bounding-box-color": RGBValue(0xFF0000),
+    "bounding-box-thickness": 0.0032,
+    "bounding-box-min-size": 0.032,
+    "thumbnails": None,
 }
 """Mapping of valid configuration file parameters and their default values or placeholders.
 The types of these values are used when decoding the configuration file. Valid choices for
@@ -356,11 +353,11 @@ certain string options are stored in `CHOICE_MAP`."""
 
 # TODO: This should be a validator. These sub- lists should also be constants somewhere.
 CHOICE_MAP: Dict[str, List[str]] = {
-    'opencv-codec': ['XVID', 'MP4V', 'MP42', 'H264'],
-    'output-mode': ['scan_only', 'opencv', 'copy', 'ffmpeg'],
-    'verbosity': ['debug', 'info', 'warning', 'error'],
-    'bg-subtractor': ['MOG2', 'CNT', 'MOG2_CUDA'],
-    'thumbnails': ['highscore'],
+    "opencv-codec": ["XVID", "MP4V", "MP42", "H264"],
+    "output-mode": ["scan_only", "opencv", "copy", "ffmpeg"],
+    "verbosity": ["debug", "info", "warning", "error"],
+    "bg-subtractor": ["MOG2", "CNT", "MOG2_CUDA"],
+    "thumbnails": ["highscore"],
 }
 """Mapping of string options which can only be of a particular set of values. We use a list instead
 of a set to preserve order when generating error contexts. Values are case-insensitive, and must be
@@ -422,7 +419,7 @@ class ConfigRegistry:
         # Try to load and parse the config file at `path`.
         config = ConfigParser()
         try:
-            config_file_contents = '[%s]\n%s' % (DEFAULTSECT, open(path, 'r').read())
+            config_file_contents = "[%s]\n%s" % (DEFAULTSECT, open(path, "r").read())
             config.read_string(config_file_contents, source=path)
         except ParsingError as ex:
             raise ConfigLoadFailure(self._init_log, reason=ex)
@@ -439,11 +436,13 @@ class ConfigRegistry:
             if replacement in config[DEFAULTSECT]:
                 self._log(
                     logging.WARNING,
-                    f"WARNING: deprecated config option {migrated} was overriden by {replacement}.")
+                    f"WARNING: deprecated config option {migrated} was overriden by {replacement}.",
+                )
             else:
                 self._log(
                     logging.WARNING,
-                    f"WARNING: config option {migrated} is deprecated, use {replacement} instead.")
+                    f"WARNING: config option {migrated} is deprecated, use {replacement} instead.",
+                )
                 config[DEFAULTSECT][replacement] = config[DEFAULTSECT][migrated]
             del config[DEFAULTSECT][migrated]
         deprecated_options = [opt for opt in config[DEFAULTSECT] if opt in DEPRECATED_CONFIG_OPTION]
@@ -459,34 +458,38 @@ class ConfigRegistry:
         """
         if config.sections():
             self._log(
-                logging.ERROR, 'Invalid config file: must not contain any sections, found:\n  %s' %
-                (', '.join(['[%s]' % section for section in config.sections()])))
+                logging.ERROR,
+                "Invalid config file: must not contain any sections, found:\n  %s" %
+                (", ".join(["[%s]" % section for section in config.sections()])),
+            )
             return
 
         self._migrate_deprecated(config)
 
         for option in config[DEFAULTSECT]:
             if not option in CONFIG_MAP:
-                self._log(logging.ERROR, 'Unsupported config option: %s' % (option))
+                self._log(logging.ERROR, "Unsupported config option: %s" % (option))
                 continue
             try:
                 value_type = None
                 if isinstance(CONFIG_MAP[option], bool):
-                    value_type = 'yes/no value'
+                    value_type = "yes/no value"
                     self._config[option] = config.getboolean(DEFAULTSECT, option)
                     continue
                 elif isinstance(CONFIG_MAP[option], int):
-                    value_type = 'integer'
+                    value_type = "integer"
                     self._config[option] = config.getint(DEFAULTSECT, option)
                     continue
                 elif isinstance(CONFIG_MAP[option], float):
-                    value_type = 'number'
+                    value_type = "number"
                     self._config[option] = config.getfloat(DEFAULTSECT, option)
                     continue
             except ValueError as _:
-                self._log(logging.ERROR,
-                          'Invalid setting for %s. Value is not a valid %s.' % (option, value_type))
-                self._log(logging.DEBUG, '%s = %s' % (option, config.get(DEFAULTSECT, option)))
+                self._log(
+                    logging.ERROR,
+                    "Invalid setting for %s. Value is not a valid %s." % (option, value_type),
+                )
+                self._log(logging.DEBUG, "%s = %s" % (option, config.get(DEFAULTSECT, option)))
                 continue
 
             # Handle custom validation types.
@@ -498,22 +501,28 @@ class ConfigRegistry:
                     self._config[option] = option_type.from_config(
                         config_value=config_value, default=default)
                 except OptionParseFailure as ex:
-                    self._log(logging.ERROR,
-                              'Invalid setting for %s: %s\n%s' % (option, config_value, ex.error))
+                    self._log(
+                        logging.ERROR,
+                        "Invalid setting for %s: %s\n%s" % (option, config_value, ex.error),
+                    )
                 continue
 
             # If we didn't process the value as a given type, handle it as a string. We also
             # replace newlines with spaces, and strip any remaining leading/trailing whitespace.
             if value_type is None:
-                config_value = config.get(DEFAULTSECT, option).replace('\n', ' ').strip()
+                config_value = (config.get(DEFAULTSECT, option).replace("\n", " ").strip())
                 if option in CHOICE_MAP:
                     if config_value.lower() not in [
                             choice.lower() for choice in CHOICE_MAP[option]
                     ]:
                         self._log(
-                            logging.ERROR, 'Invalid setting for %s:\n  %s\nMust be one of: %s.' %
-                            (option, config.get(DEFAULTSECT, option), ', '.join(
-                                choice for choice in CHOICE_MAP[option])))
+                            logging.ERROR,
+                            "Invalid setting for %s:\n  %s\nMust be one of: %s." % (
+                                option,
+                                config.get(DEFAULTSECT, option),
+                                ", ".join(choice for choice in CHOICE_MAP[option]),
+                            ),
+                        )
                         continue
                 self._config[option] = config_value
                 continue
@@ -522,10 +531,12 @@ class ConfigRegistry:
         """True if the option is default, i.e. is NOT set by the user."""
         return not option in self._config
 
-    def get_value(self,
-                  option: str,
-                  override: Optional[ConfigValue] = None,
-                  ignore_default: bool = False) -> ConfigValue:
+    def get_value(
+        self,
+        option: str,
+        override: Optional[ConfigValue] = None,
+        ignore_default: bool = False,
+    ) -> ConfigValue:
         """Get the current setting or default value of the specified option."""
         assert option in CONFIG_MAP
         if override is not None:
@@ -552,11 +563,11 @@ class ConfigRegistry:
         is_flag = isinstance(CONFIG_MAP[option], bool)
         if option in self._config:
             if is_flag:
-                value_str = 'on' if self._config[option] else 'off'
+                value_str = "on" if self._config[option] else "off"
             else:
                 value_str = str(self._config[option])
-            return ' [setting: %s]' % (value_str)
+            return " [setting: %s]" % (value_str)
         if show_default is False or (show_default is None and is_flag
                                      and CONFIG_MAP[option] is False):
-            return ''
-        return ' [default: %s]' % (str(CONFIG_MAP[option]))
+            return ""
+        return " [default: %s]" % (str(CONFIG_MAP[option]))

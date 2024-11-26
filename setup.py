@@ -8,7 +8,7 @@
 #
 # Copyright (C) 2014-2024 Brandon Castellano <http://www.bcastell.com>.
 #
-""" DVR-Scan setup.py - DEPRECATED.
+"""DVR-Scan setup.py - DEPRECATED.
 
 Build using `python -m build` and install the resulting .whl using `pip`.
 """

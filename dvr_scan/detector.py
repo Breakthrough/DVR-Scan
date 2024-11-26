@@ -9,7 +9,7 @@
 # DVR-Scan is licensed under the BSD 2-Clause License; see the included
 # LICENSE file, or visit one of the above pages for details.
 #
-""" ``dvr_scan.detector`` Module
+"""``dvr_scan.detector`` Module
 
 Contains the motion detection algorithm (`MotionDetector`) for DVR-Scan.  It calculates a score that
 represents the relative amount of movement of consecutive frames in a video.
@@ -26,9 +26,9 @@ import numpy as np
 from dvr_scan.subtractor import Subtractor
 from dvr_scan.region import Point
 
-Rectangle = namedtuple("Rectangle", ['x', 'y', 'w', 'h'])
+Rectangle = namedtuple("Rectangle", ["x", "y", "w", "h"])
 
-logger = logging.getLogger('dvr_scan')
+logger = logging.getLogger("dvr_scan")
 
 
 @dataclass
@@ -46,16 +46,22 @@ class ProcessedFrame:
 class MotionDetector:
     """Detects motion on the input provided by the associated MotionScanner."""
 
-    def __init__(self, subtractor: Subtractor, frame_size: ty.Tuple[int, int], downscale: int,
-                 regions: ty.Optional[ty.Iterable[ty.Iterable[Rectangle]]]):
+    def __init__(
+        self,
+        subtractor: Subtractor,
+        frame_size: ty.Tuple[int, int],
+        downscale: int,
+        regions: ty.Optional[ty.Iterable[ty.Iterable[Rectangle]]],
+    ):
         self._subtractor = subtractor
         self._frame_size = frame_size
         self._downscale = downscale
         self._regions = list(regions) if not regions is None else []
         self._mask: np.ndarray = np.ones((0, 0))
-        self._area: ty.Tuple[Point, Point] = (Point(0, 0),
-                                              Point(self._frame_size[0] - 1,
-                                                    self._frame_size[1] - 1))
+        self._area: ty.Tuple[Point, Point] = (
+            Point(0, 0),
+            Point(self._frame_size[0] - 1, self._frame_size[1] - 1),
+        )
         if self._regions:
             # TODO: See if this can be done using a single color channel or in a bitmap
             mask = np.zeros((frame_size[1], frame_size[0], 3), dtype=np.uint8)
@@ -113,4 +119,5 @@ class MotionDetector:
         return ProcessedFrame(
             subtracted=subtracted,
             masked=motion_mask,
-            score=np.ma.sum(motion_mask) / float(np.ma.count(motion_mask)))
+            score=np.ma.sum(motion_mask) / float(np.ma.count(motion_mask)),
+        )
