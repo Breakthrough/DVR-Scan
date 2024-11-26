@@ -7,13 +7,11 @@ import dvr_scan
 VERSION = dvr_scan.__version__
 
 with open("dist/.version_info", "wb") as f:
-    v = VERSION.split(".")
-    assert len(v) <= 3
-
-    if len(v) == 3:
-        (maj, min, pat) = int(v[0]), int(v[1]), int(v[2])
-    else:
-        (maj, min, pat) = int(v[0]), int(v[1]), 0
+    elements = [int(elem) if elem.isnumeric() else 999 for elem in VERSION.split(".")]
+    assert 2 <= len(elements) <= 3
+    major = elements[0]
+    minor = elements[1]
+    patch = elements[2] if len(elements) == 3 else 0
 
     f.write(f"""# UTF-8
 #
@@ -23,8 +21,8 @@ VSVersionInfo(
   ffi=FixedFileInfo(
 # filevers and prodvers should be always a tuple with four items: (1, 2, 3, 4)
 # Set not needed items to zero 0.
-filevers=(0, {maj}, {min}, {pat}),
-prodvers=(0, {maj}, {min}, {pat}),
+filevers=(0, {major}, {minor}, {patch}),
+prodvers=(0, {major}, {minor}, {patch}),
 # Contains a bitmask that specifies the valid bits 'flags'r
 mask=0x3f,
 # Contains a bitmask that specifies the Boolean attributes of the file.
