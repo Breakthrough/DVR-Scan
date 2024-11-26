@@ -137,15 +137,12 @@
     <ROW Component="apimswincoredatetimel110.dll" ComponentId="{F6EA8D62-CBF8-42FC-A08C-76BDE74C5F0D}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincoredatetimel110.dll"/>
     <ROW Component="apimswincoredebugl110.dll" ComponentId="{2A2063C3-CD32-4582-BC84-0F7CE63DCAC7}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincoredebugl110.dll"/>
     <ROW Component="apimswincoreerrorhandlingl110.dll" ComponentId="{DBBDBF56-FA66-4A39-B040-B08D9EB04958}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincoreerrorhandlingl110.dll"/>
-    <ROW Component="apimswincorefibersl110.dll" ComponentId="{E174C7EC-91DC-4E18-BBE0-328341A64E48}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincorefibersl110.dll"/>
-    <ROW Component="apimswincorefibersl111.dll" ComponentId="{A87CC927-4E22-49EA-BC7C-40C53F83C0F1}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincorefibersl111.dll"/>
     <ROW Component="apimswincorefilel110.dll" ComponentId="{2B76B244-C58C-4C52-A28F-DDD7CD280367}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincorefilel110.dll"/>
     <ROW Component="apimswincorefilel120.dll" ComponentId="{5500B37D-662E-44C3-A043-56CD68D0CAF1}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincorefilel120.dll"/>
     <ROW Component="apimswincorefilel210.dll" ComponentId="{288CAC03-46E5-4771-B6E4-2E19DC19CF34}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincorefilel210.dll"/>
     <ROW Component="apimswincorehandlel110.dll" ComponentId="{8A20746B-7BB0-49EB-9B1B-5C3D5AFBBA02}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincorehandlel110.dll"/>
     <ROW Component="apimswincoreheapl110.dll" ComponentId="{7AA85ECC-5185-4A00-A9F9-916FAFB8AFAD}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincoreheapl110.dll"/>
     <ROW Component="apimswincoreinterlockedl110.dll" ComponentId="{E0987634-1646-4191-A36B-B5FE5B1F4CB2}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincoreinterlockedl110.dll"/>
-    <ROW Component="apimswincorekernel32legacyl111.dll" ComponentId="{6FF76AFD-BA02-4739-8157-1A938269AB6F}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincorekernel32legacyl111.dll"/>
     <ROW Component="apimswincorelibraryloaderl110.dll" ComponentId="{9ADEE4E5-E47F-40F9-84D6-4EB36B8594AD}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincorelibraryloaderl110.dll"/>
     <ROW Component="apimswincorelocalizationl120.dll" ComponentId="{608AD421-73A6-423C-80A5-4E1D6D11E402}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincorelocalizationl120.dll"/>
     <ROW Component="apimswincorememoryl110.dll" ComponentId="{1929E17A-A0CA-442E-9CCF-3C40480E62AD}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincorememoryl110.dll"/>
@@ -159,7 +156,6 @@
     <ROW Component="apimswincoresynchl110.dll" ComponentId="{5FD30DE2-CDBD-49BD-922F-506A36A405A3}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincoresynchl110.dll"/>
     <ROW Component="apimswincoresynchl120.dll" ComponentId="{9052FB07-3B1B-4E24-B1E8-3FE77B5DA69C}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincoresynchl120.dll"/>
     <ROW Component="apimswincoresysinfol110.dll" ComponentId="{8C03E757-9A4A-4459-96BE-C342D395FC88}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincoresysinfol110.dll"/>
-    <ROW Component="apimswincoresysinfol120.dll" ComponentId="{E4851425-74C3-4AF1-B87D-AF18CA1AB223}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincoresysinfol120.dll"/>
     <ROW Component="apimswincoretimezonel110.dll" ComponentId="{0DC3DAB9-8E2E-4401-A73C-CF1545A5BD09}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincoretimezonel110.dll"/>
     <ROW Component="apimswincoreutill110.dll" ComponentId="{31CF3837-AA9D-4E6C-B3DD-4648650288B9}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincoreutill110.dll"/>
     <ROW Component="apimswincrtconiol110.dll" ComponentId="{72200D37-9DFF-41E4-986B-319F7E6B4322}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincrtconiol110.dll"/>
