@@ -13,7 +13,7 @@ skip_non_tags: true
 
 environment:
   matrix:
-    - PYTHON: "C:\\Python39-x64"
+    - PYTHON: "C:\\Python313-x64"
   # Encrypted AdvancedInstaller License
   ai_license_secret:
     secure: MOkULlGPSi0C1Hg2PU1h2SZg/eyQnPQhRJ1XFlavfMKMOoX9hY4pSjpdgW3psSau

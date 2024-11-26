@@ -82,7 +82,7 @@ jobs:
           python -m pip uninstall -y dvr-scan
 
       - name: Upload Package
-        if: ${{ matrix.python-version == '3.12' && matrix.os == 'ubuntu-latest' }}
+        if: ${{ matrix.python-version == '3.13' && matrix.os == 'ubuntu-latest' }}
         uses: actions/upload-artifact@v3
         with:
           name: dvr-scan-dist
