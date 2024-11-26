@@ -219,15 +219,12 @@
     <ROW File="apimswincoredatetimel110.dll" Component_="apimswincoredatetimel110.dll" FileName="API-MS~2.DLL|api-ms-win-core-datetime-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-datetime-l1-1-0.dll" SelfReg="false"/>
     <ROW File="apimswincoredebugl110.dll" Component_="apimswincoredebugl110.dll" FileName="API-MS~3.DLL|api-ms-win-core-debug-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-debug-l1-1-0.dll" SelfReg="false"/>
     <ROW File="apimswincoreerrorhandlingl110.dll" Component_="apimswincoreerrorhandlingl110.dll" FileName="API-MS~4.DLL|api-ms-win-core-errorhandling-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-errorhandling-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincorefibersl110.dll" Component_="apimswincorefibersl110.dll" FileName="API-MS~5.DLL|api-ms-win-core-fibers-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-fibers-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincorefibersl111.dll" Component_="apimswincorefibersl111.dll" FileName="API-MS~6.DLL|api-ms-win-core-fibers-l1-1-1.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-fibers-l1-1-1.dll" SelfReg="false"/>
     <ROW File="apimswincorefilel110.dll" Component_="apimswincorefilel110.dll" FileName="API-MS~7.DLL|api-ms-win-core-file-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-file-l1-1-0.dll" SelfReg="false"/>
     <ROW File="apimswincorefilel120.dll" Component_="apimswincorefilel120.dll" FileName="API-MS~8.DLL|api-ms-win-core-file-l1-2-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-file-l1-2-0.dll" SelfReg="false"/>
     <ROW File="apimswincorefilel210.dll" Component_="apimswincorefilel210.dll" FileName="API-MS~9.DLL|api-ms-win-core-file-l2-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-file-l2-1-0.dll" SelfReg="false"/>
     <ROW File="apimswincorehandlel110.dll" Component_="apimswincorehandlel110.dll" FileName="API-M~10.DLL|api-ms-win-core-handle-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-handle-l1-1-0.dll" SelfReg="false"/>
     <ROW File="apimswincoreheapl110.dll" Component_="apimswincoreheapl110.dll" FileName="API-M~11.DLL|api-ms-win-core-heap-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-heap-l1-1-0.dll" SelfReg="false"/>
     <ROW File="apimswincoreinterlockedl110.dll" Component_="apimswincoreinterlockedl110.dll" FileName="API-M~12.DLL|api-ms-win-core-interlocked-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-interlocked-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincorekernel32legacyl111.dll" Component_="apimswincorekernel32legacyl111.dll" FileName="API-M~13.DLL|api-ms-win-core-kernel32-legacy-l1-1-1.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-kernel32-legacy-l1-1-1.dll" SelfReg="false"/>
     <ROW File="apimswincorelibraryloaderl110.dll" Component_="apimswincorelibraryloaderl110.dll" FileName="API-M~14.DLL|api-ms-win-core-libraryloader-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-libraryloader-l1-1-0.dll" SelfReg="false"/>
     <ROW File="apimswincorelocalizationl120.dll" Component_="apimswincorelocalizationl120.dll" FileName="API-M~15.DLL|api-ms-win-core-localization-l1-2-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-localization-l1-2-0.dll" SelfReg="false"/>
     <ROW File="apimswincorememoryl110.dll" Component_="apimswincorememoryl110.dll" FileName="API-M~16.DLL|api-ms-win-core-memory-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-memory-l1-1-0.dll" SelfReg="false"/>
@@ -241,7 +238,6 @@
     <ROW File="apimswincoresynchl110.dll" Component_="apimswincoresynchl110.dll" FileName="API-M~24.DLL|api-ms-win-core-synch-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-synch-l1-1-0.dll" SelfReg="false"/>
     <ROW File="apimswincoresynchl120.dll" Component_="apimswincoresynchl120.dll" FileName="API-M~25.DLL|api-ms-win-core-synch-l1-2-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-synch-l1-2-0.dll" SelfReg="false"/>
     <ROW File="apimswincoresysinfol110.dll" Component_="apimswincoresysinfol110.dll" FileName="API-M~26.DLL|api-ms-win-core-sysinfo-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-sysinfo-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincoresysinfol120.dll" Component_="apimswincoresysinfol120.dll" FileName="API-M~27.DLL|api-ms-win-core-sysinfo-l1-2-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-sysinfo-l1-2-0.dll" SelfReg="false"/>
     <ROW File="apimswincoretimezonel110.dll" Component_="apimswincoretimezonel110.dll" FileName="API-M~28.DLL|api-ms-win-core-timezone-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-timezone-l1-1-0.dll" SelfReg="false"/>
     <ROW File="apimswincoreutill110.dll" Component_="apimswincoreutill110.dll" FileName="API-M~29.DLL|api-ms-win-core-util-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-util-l1-1-0.dll" SelfReg="false"/>
     <ROW File="apimswincrtconiol110.dll" Component_="apimswincrtconiol110.dll" FileName="API-M~30.DLL|api-ms-win-crt-conio-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-crt-conio-l1-1-0.dll" SelfReg="false"/>
@@ -1400,15 +1396,12 @@
     <ROW Feature_="DVRScan" Component_="apimswincoredatetimel110.dll"/>
     <ROW Feature_="DVRScan" Component_="apimswincoredebugl110.dll"/>
     <ROW Feature_="DVRScan" Component_="apimswincoreerrorhandlingl110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincorefibersl110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincorefibersl111.dll"/>
     <ROW Feature_="DVRScan" Component_="apimswincorefilel110.dll"/>
     <ROW Feature_="DVRScan" Component_="apimswincorefilel120.dll"/>
     <ROW Feature_="DVRScan" Component_="apimswincorefilel210.dll"/>
     <ROW Feature_="DVRScan" Component_="apimswincorehandlel110.dll"/>
     <ROW Feature_="DVRScan" Component_="apimswincoreheapl110.dll"/>
     <ROW Feature_="DVRScan" Component_="apimswincoreinterlockedl110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincorekernel32legacyl111.dll"/>
     <ROW Feature_="DVRScan" Component_="apimswincorelibraryloaderl110.dll"/>
     <ROW Feature_="DVRScan" Component_="apimswincorelocalizationl120.dll"/>
     <ROW Feature_="DVRScan" Component_="apimswincorememoryl110.dll"/>
@@ -1423,7 +1416,6 @@
     <ROW Feature_="DVRScan" Component_="apimswincoresynchl110.dll"/>
     <ROW Feature_="DVRScan" Component_="apimswincoresynchl120.dll"/>
     <ROW Feature_="DVRScan" Component_="apimswincoresysinfol110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincoresysinfol120.dll"/>
     <ROW Feature_="DVRScan" Component_="apimswincoretimezonel110.dll"/>
     <ROW Feature_="DVRScan" Component_="apimswincoreutill110.dll"/>
     <ROW Feature_="DVRScan" Component_="apimswincrtconiol110.dll"/>
