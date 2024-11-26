@@ -18,6 +18,9 @@ on:
       - v*-release
   workflow_dispatch:
 
+env:
+  ffmpeg_version: "7.1"
+
 jobs:
   build:
     runs-on: windows-latest
@@ -43,12 +46,12 @@ jobs:
         uses: dsaltares/fetch-gh-release-asset@1.1.2
         with:
           repo: 'GyanD/codexffmpeg'
-          version: 'tags/7.0.1'
-          file: 'ffmpeg-7.0.1-full_build.7z'
+          version: 'tags/${{ env.ffmpeg_version }}'
+          file: 'ffmpeg-${{ env.ffmpeg_version }}-full_build.7z'
 
       - name: Unit Test
         run: |
-          7z e ffmpeg-7.0.1-full_build.7z ffmpeg.exe -r
+          7z e ffmpeg-${{ env.ffmpeg_version }}-full_build.7z ffmpeg.exe -r
           python -m pytest tests/
 
       - name: Build DVR-Scan
@@ -59,7 +62,7 @@ jobs:
 
       - name: Assemble Distribution
         run: |
-          7z e -odist/ffmpeg ffmpeg-7.0.1-full_build.7z LICENSE -r
+          7z e -odist/ffmpeg ffmpeg-${{ env.ffmpeg_version }}-full_build.7z LICENSE -r
           Move-Item -Path ffmpeg.exe -Destination dist/dvr-scan/ffmpeg.exe
           Move-Item -Path dist/ffmpeg/LICENSE -Destination dist/dvr-scan/LICENSE-FFMPEG -Force
 
