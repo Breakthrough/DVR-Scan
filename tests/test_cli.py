@@ -68,11 +68,15 @@ BASE_COMMAND_EVENT_LIST_GOLDEN = """
 
 # On some ARM chips (e.g. Apple M1), results are slightly different, so we allow a 1 frame
 # delta on the events for those platforms.
-BASE_COMMAND_TIMECODE_LIST_GOLDEN = ("""
+BASE_COMMAND_TIMECODE_LIST_GOLDEN = (
+    """
 00:00:00.400,00:00:05.960,00:00:14.320,00:00:19.640,00:00:21.680,00:00:23.040
-"""[1:] if not ("ARM" in MACHINE_ARCH or "AARCH" in MACHINE_ARCH) else """
+"""[1:]
+    if not ("ARM" in MACHINE_ARCH or "AARCH" in MACHINE_ARCH)
+    else """
 00:00:00.400,00:00:06.000,00:00:14.320,00:00:19.640,00:00:21.680,00:00:23.040
-"""[1:])
+"""[1:]
+)
 
 
 def test_info_commands():
@@ -85,7 +89,9 @@ def test_info_commands():
 def test_default(tmp_path):
     """Test with all default arguments."""
     output = subprocess.check_output(
-        args=DVR_SCAN_COMMAND + BASE_COMMAND + [
+        args=DVR_SCAN_COMMAND
+        + BASE_COMMAND
+        + [
             "--output-dir",
             tmp_path,
         ],
@@ -94,10 +100,8 @@ def test_default(tmp_path):
 
     # Make sure the correct # of events were detected.
     assert "Detected %d motion events in input." % (BASE_COMMAND_NUM_EVENTS) in output
-    assert (BASE_COMMAND_EVENT_LIST_GOLDEN
-            in output), "Output event list does not match test golden."
-    assert (BASE_COMMAND_TIMECODE_LIST_GOLDEN
-            in output), "Output timecodes do not match test golden."
+    assert BASE_COMMAND_EVENT_LIST_GOLDEN in output, "Output event list does not match test golden."
+    assert BASE_COMMAND_TIMECODE_LIST_GOLDEN in output, "Output timecodes do not match test golden."
     # TODO: Check filenames.
     assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS
 
@@ -106,7 +110,9 @@ def test_concatenate(tmp_path):
     """Test with setting -o/--output to concatenate all events to a single file."""
     ouptut_file_name = "motion_events.avi"
     output = subprocess.check_output(
-        args=DVR_SCAN_COMMAND + BASE_COMMAND + [
+        args=DVR_SCAN_COMMAND
+        + BASE_COMMAND
+        + [
             "--output-dir",
             tmp_path,
             "--output",
@@ -117,10 +123,8 @@ def test_concatenate(tmp_path):
 
     # Make sure the correct # of events were detected.
     assert "Detected %d motion events in input." % (BASE_COMMAND_NUM_EVENTS) in output
-    assert (BASE_COMMAND_EVENT_LIST_GOLDEN
-            in output), "Output event list does not match test golden."
-    assert (BASE_COMMAND_TIMECODE_LIST_GOLDEN
-            in output), "Output timecodes do not match test golden."
+    assert BASE_COMMAND_EVENT_LIST_GOLDEN in output, "Output event list does not match test golden."
+    assert BASE_COMMAND_TIMECODE_LIST_GOLDEN in output, "Output timecodes do not match test golden."
     generated_files = os.listdir(tmp_path)
     assert len(generated_files) == 1
     assert ouptut_file_name in generated_files
@@ -129,7 +133,9 @@ def test_concatenate(tmp_path):
 def test_scan_only(tmp_path):
     """Test -so/--scan-only."""
     output = subprocess.check_output(
-        args=DVR_SCAN_COMMAND + BASE_COMMAND + [
+        args=DVR_SCAN_COMMAND
+        + BASE_COMMAND
+        + [
             "--output-dir",
             tmp_path,
             "--scan-only",
@@ -142,16 +148,16 @@ def test_scan_only(tmp_path):
 
     # Make sure we didn't create a directory since we shouldn't write any files.
     assert len(os.listdir(tmp_path)) == 0, "Scan-only mode should not create any files."
-    assert (BASE_COMMAND_EVENT_LIST_GOLDEN
-            in output), "Output event list does not match test golden."
-    assert (BASE_COMMAND_TIMECODE_LIST_GOLDEN
-            in output), "Output timecodes do not match test golden."
+    assert BASE_COMMAND_EVENT_LIST_GOLDEN in output, "Output event list does not match test golden."
+    assert BASE_COMMAND_TIMECODE_LIST_GOLDEN in output, "Output timecodes do not match test golden."
 
 
 def test_quiet_mode(tmp_path):
     """Test -q/--quiet."""
     output = subprocess.check_output(
-        args=DVR_SCAN_COMMAND + BASE_COMMAND + [
+        args=DVR_SCAN_COMMAND
+        + BASE_COMMAND
+        + [
             "--output-dir",
             tmp_path,
             "--scan-only",
@@ -159,70 +165,100 @@ def test_quiet_mode(tmp_path):
         ],
         text=True,
     )
-    assert (BASE_COMMAND_TIMECODE_LIST_GOLDEN
-            in output), "Output timecodes do not match test golden."
+    assert BASE_COMMAND_TIMECODE_LIST_GOLDEN in output, "Output timecodes do not match test golden."
 
 
 def test_mog2(tmp_path):
     """Test -b/--bg-subtractor MOG2 (the default)."""
-    assert (subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND + [
-        "--output-dir",
-        tmp_path,
-    ]) == 0)
+    assert (
+        subprocess.call(
+            args=DVR_SCAN_COMMAND
+            + BASE_COMMAND
+            + [
+                "--output-dir",
+                tmp_path,
+            ]
+        )
+        == 0
+    )
 
     # Make sure the correct # of events were detected.
-    assert (len(
-        os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS), "Incorrect number of events found."
+    assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS, "Incorrect number of events found."
 
 
 @pytest.mark.skipif(not SubtractorCNT.is_available(), reason="CNT not available")
 def test_cnt(tmp_path):
     """Test -b/--bg-subtractor CNT."""
-    assert (subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND + [
-        "--output-dir",
-        tmp_path,
-        "--bg-subtractor",
-        "cnt",
-    ]) == 0)
-    assert (len(
-        os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS), "Incorrect number of events found."
+    assert (
+        subprocess.call(
+            args=DVR_SCAN_COMMAND
+            + BASE_COMMAND
+            + [
+                "--output-dir",
+                tmp_path,
+                "--bg-subtractor",
+                "cnt",
+            ]
+        )
+        == 0
+    )
+    assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS, "Incorrect number of events found."
 
 
 @pytest.mark.skipif(not SubtractorCudaMOG2.is_available(), reason="MOG2_CUDA not available")
 def test_mog2_cuda(tmp_path):
     """Test -b/--bg-subtractor MOG2_CUDA."""
-    assert (subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND + [
-        "--output-dir",
-        tmp_path,
-        "--bg-subtractor",
-        "mog2_cuda",
-    ]) == 0)
-    assert (len(
-        os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS), "Incorrect number of events found."
+    assert (
+        subprocess.call(
+            args=DVR_SCAN_COMMAND
+            + BASE_COMMAND
+            + [
+                "--output-dir",
+                tmp_path,
+                "--bg-subtractor",
+                "mog2_cuda",
+            ]
+        )
+        == 0
+    )
+    assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS, "Incorrect number of events found."
 
 
 def test_overlays(tmp_path):
     """Test overlays -bb/--bounding-box, --fm/--frame-metrics, and -tc/--time-code."""
-    assert (subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND + [
-        "--output-dir",
-        tmp_path,
-        "--bounding-box",
-        "--frame-metrics",
-        "--time-code",
-    ]) == 0)
-    assert (len(
-        os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS), "Incorrect number of events found."
+    assert (
+        subprocess.call(
+            args=DVR_SCAN_COMMAND
+            + BASE_COMMAND
+            + [
+                "--output-dir",
+                tmp_path,
+                "--bounding-box",
+                "--frame-metrics",
+                "--time-code",
+            ]
+        )
+        == 0
+    )
+    assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS, "Incorrect number of events found."
 
 
 def test_mask_output(tmp_path):
     """Test mask output -mo/--mask-output."""
-    assert (subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND + [
-        "--output-dir",
-        tmp_path,
-        "--scan-only",
-        "--mask-output",
-        "mask.avi",
-    ]) == 0)
+    assert (
+        subprocess.call(
+            args=DVR_SCAN_COMMAND
+            + BASE_COMMAND
+            + [
+                "--output-dir",
+                tmp_path,
+                "--scan-only",
+                "--mask-output",
+                "mask.avi",
+            ]
+        )
+        == 0
+    )
 
     assert os.listdir(tmp_path) == ["mask.avi"], "Only mask file should be created with -so -mo ..."
 
@@ -234,7 +270,9 @@ def test_config_file(tmp_path):
         file.write(TEST_CONFIG_FILE)
 
     output = subprocess.check_output(
-        args=DVR_SCAN_COMMAND + BASE_COMMAND[0:4] + [ # Only use the input from BASE_COMMAND.
+        args=DVR_SCAN_COMMAND
+        + BASE_COMMAND[0:4]
+        + [  # Only use the input from BASE_COMMAND.
             "--output-dir",
             tmp_path,
             "--config",
@@ -243,43 +281,55 @@ def test_config_file(tmp_path):
         text=True,
     )
 
-    assert (len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS + 1), "Incorrect amount of files."
-    assert (BASE_COMMAND_EVENT_LIST_GOLDEN
-            in output), "Output event list does not match test golden."
-    assert (BASE_COMMAND_TIMECODE_LIST_GOLDEN
-            in output), "Output timecodes do not match test golden."
+    assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS + 1, "Incorrect amount of files."
+    assert BASE_COMMAND_EVENT_LIST_GOLDEN in output, "Output event list does not match test golden."
+    assert BASE_COMMAND_TIMECODE_LIST_GOLDEN in output, "Output timecodes do not match test golden."
 
 
 @pytest.mark.skipif(not is_ffmpeg_available(), reason="ffmpeg not available")
 def test_ffmpeg_mode(tmp_path):
     """Test -m/--mode ffmpeg."""
-    assert (subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND + [
-        "--output-dir",
-        tmp_path,
-        "--output-mode",
-        "ffmpeg",
-    ]) == 0)
-    assert (len(
-        os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS), "Incorrect number of events found."
+    assert (
+        subprocess.call(
+            args=DVR_SCAN_COMMAND
+            + BASE_COMMAND
+            + [
+                "--output-dir",
+                tmp_path,
+                "--output-mode",
+                "ffmpeg",
+            ]
+        )
+        == 0
+    )
+    assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS, "Incorrect number of events found."
 
 
 @pytest.mark.skipif(not is_ffmpeg_available(), reason="ffmpeg not available")
 def test_copy_mode(tmp_path):
     """Test -m/--mode copy."""
-    assert (subprocess.call(args=DVR_SCAN_COMMAND + BASE_COMMAND + [
-        "--output-dir",
-        tmp_path,
-        "--output-mode",
-        "copy",
-    ]) == 0)
-    assert (len(
-        os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS), "Incorrect number of events found."
+    assert (
+        subprocess.call(
+            args=DVR_SCAN_COMMAND
+            + BASE_COMMAND
+            + [
+                "--output-dir",
+                tmp_path,
+                "--output-mode",
+                "copy",
+            ]
+        )
+        == 0
+    )
+    assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS, "Incorrect number of events found."
 
 
 def test_deprecated_roi(tmp_path):
     """Test deprecated ROI translation."""
     output = subprocess.check_output(
-        args=DVR_SCAN_COMMAND + BASE_COMMAND + [
+        args=DVR_SCAN_COMMAND
+        + BASE_COMMAND
+        + [
             "--output-dir",
             tmp_path,
             "--scan-only",

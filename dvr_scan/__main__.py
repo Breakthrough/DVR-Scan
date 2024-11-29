@@ -33,7 +33,7 @@ def main():
     if settings is None:
         sys.exit(EXIT_ERROR)
     logger = logging.getLogger("dvr_scan")
-    redirect = (FakeTqdmLoggingRedirect if settings.get("quiet-mode") else logging_redirect_tqdm)
+    redirect = FakeTqdmLoggingRedirect if settings.get("quiet-mode") else logging_redirect_tqdm
     debug_mode = settings.get("debug")
     show_traceback = logging.DEBUG == getattr(logging, settings.get("verbosity").upper())
     with redirect(loggers=[logger]):

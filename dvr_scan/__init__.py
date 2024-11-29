@@ -54,10 +54,14 @@ def get_license_info() -> str:
         if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
             app_folder = os.path.abspath(os.path.dirname(sys.executable))
             license_files = ["LICENSE", "LICENSE-THIRDPARTY"]
-            license_text = "\n".join([
-                open(os.path.join(app_folder, license_file), "rb").read().decode("ascii", "ignore")
-                for license_file in license_files
-            ])
+            license_text = "\n".join(
+                [
+                    open(os.path.join(app_folder, license_file), "rb")
+                    .read()
+                    .decode("ascii", "ignore")
+                    for license_file in license_files
+                ]
+            )
         # Use the LICENSE file included with the package distribution.
         else:
             license_text = pkgutil.get_data(__name__, "LICENSE").decode("ascii", "ignore")
@@ -65,9 +69,11 @@ def get_license_info() -> str:
     # During development this is normal since the package paths won't be correct.
     except FileNotFoundError:
         pass
-    return ("[DVR-Scan] Error: Missing LICENSE files.\n"
-            "See the following URL for license/copyright information:\n"
-            " < https://www.dvr-scan.com/resources >\n")
+    return (
+        "[DVR-Scan] Error: Missing LICENSE files.\n"
+        "See the following URL for license/copyright information:\n"
+        " < https://www.dvr-scan.com/resources >\n"
+    )
 
 
 # Initialize logger.

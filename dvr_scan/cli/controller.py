@@ -84,7 +84,8 @@ def _preprocess_args(args):
         original_roi = args.region_of_interest
         try:
             args.region_of_interest = RegionValueDeprecated(
-                value=" ".join(original_roi), allow_size=True).value
+                value=" ".join(original_roi), allow_size=True
+            ).value
         except ValueError:
             logger.error(
                 "Error: Invalid value for ROI: %s. ROI must be specified as a rectangle of"
@@ -203,7 +204,9 @@ def parse_settings(args: ty.List[str] = None) -> ty.Optional[ProgramSettings]:
 # to the option in MotionScanner should be done via properties, e.g. make a property in
 # ProgramSettings called 'output_dir' that just returns settings.get('output_dir'). These can then
 # be directly referenced from the MotionScanner.
-def run_dvr_scan(settings: ProgramSettings,) -> ty.List[ty.Tuple[FrameTimecode, FrameTimecode]]:
+def run_dvr_scan(
+    settings: ProgramSettings,
+) -> ty.List[ty.Tuple[FrameTimecode, FrameTimecode]]:
     """Run DVR-Scan scanning logic using validated `settings` from `parse_settings()`."""
 
     logger.info("Initializing scan context...")
@@ -215,7 +218,8 @@ def run_dvr_scan(settings: ProgramSettings,) -> ty.List[ty.Tuple[FrameTimecode, 
     )
 
     output_mode = (
-        OutputMode.SCAN_ONLY if settings.get_arg("scan-only") else settings.get("output-mode"))
+        OutputMode.SCAN_ONLY if settings.get_arg("scan-only") else settings.get("output-mode")
+    )
     scanner.set_output(
         comp_file=settings.get_arg("output"),
         mask_file=settings.get_arg("mask-output"),
@@ -259,7 +263,8 @@ def run_dvr_scan(settings: ProgramSettings,) -> ty.List[ty.Tuple[FrameTimecode, 
             smoothing_time = FrameTimecode(bounding_box_arg, scanner.framerate)
         else:
             smoothing_time = FrameTimecode(
-                settings.get("bounding-box-smooth-time"), scanner.framerate)
+                settings.get("bounding-box-smooth-time"), scanner.framerate
+            )
         bounding_box = BoundingBoxOverlay(
             min_size_ratio=settings.get("bounding-box-min-size"),
             thickness_ratio=settings.get("bounding-box-thickness"),
@@ -290,7 +295,9 @@ def run_dvr_scan(settings: ProgramSettings,) -> ty.List[ty.Tuple[FrameTimecode, 
         use_pts=settings.get("use-pts"),
     )
 
-    scanner.set_thumbnail_params(thumbnails=settings.get("thumbnails"),)
+    scanner.set_thumbnail_params(
+        thumbnails=settings.get("thumbnails"),
+    )
 
     scanner.set_video_time(
         start_time=settings.get_arg("start-time"),
@@ -333,12 +340,14 @@ def run_dvr_scan(settings: ProgramSettings,) -> ty.List[ty.Tuple[FrameTimecode, 
             "-------------------------------------------------------------",
         ]
         output_strs += [
-            "|  Event %4d  |  %s  |  %s  |  %s  |" % (
+            "|  Event %4d  |  %s  |  %s  |  %s  |"
+            % (
                 i + 1,
                 event.start.get_timecode(precision=1),
                 (event.end - event.start).get_timecode(precision=1),
                 event.end.get_timecode(precision=1),
-            ) for i, event in enumerate(result.event_list)
+            )
+            for i, event in enumerate(result.event_list)
         ]
         output_strs += ["-------------------------------------------------------------"]
         logger.info("List of motion events:\n%s", "\n".join(output_strs))

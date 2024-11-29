@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
+
 sys.path.append(os.path.abspath("."))
 
 import dvr_scan
+
 VERSION = dvr_scan.__version__
 
 with open("dist/.version_info", "wb") as f:
@@ -13,7 +15,8 @@ with open("dist/.version_info", "wb") as f:
     minor = elements[1]
     patch = elements[2] if len(elements) == 3 else 0
 
-    f.write(f"""# UTF-8
+    f.write(
+        f"""# UTF-8
 #
 # For more details about fixed file info 'ffi' see:
 # http://msdn.microsoft.com/en-us/library/ms646997.aspx
@@ -56,4 +59,5 @@ StringFileInfo(
 VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
   ]
 )
-""".encode())
+""".encode()
+    )

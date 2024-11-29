@@ -97,8 +97,9 @@ class VideoJoiner:
                 # Compensate for presentation time of last frame
                 self._position += 1
                 self._decode_failures += self._cap._decode_failures
-                logger.debug("End of current video, loading next: %s" %
-                             self._paths[self._curr_cap_index])
+                logger.debug(
+                    "End of current video, loading next: %s" % self._paths[self._curr_cap_index]
+                )
                 self._cap = VideoStreamCv2(self._paths[self._curr_cap_index])
                 self._last_cap_pos = self._cap.base_timecode
                 return self.read(decode=decode)
@@ -112,7 +113,7 @@ class VideoJoiner:
     def seek(self, target: FrameTimecode):
         """Seek to the target offset. Only seeking forward is supported (i.e. `target` must be
         greater than the current `position`."""
-        if (len(self._paths) == 1 or self._curr_cap_index == 0 and target <= self._cap.duration):
+        if len(self._paths) == 1 or self._curr_cap_index == 0 and target <= self._cap.duration:
             self._cap.seek(target)
         else:
             # TODO: This is ineffient if we have multiple input videos.
@@ -157,14 +158,17 @@ class VideoJoiner:
                 logger.error("Error: Video resolution does not match the first input.")
                 raise VideoOpenFailure("Video resolutions must match to be concatenated!")
             if abs(cap.frame_rate - self._cap.frame_rate) > FRAMERATE_DELTA_TOLERANCE:
-                logger.warning("Warning: framerate does not match first input."
-                               " Timecodes may be incorrect.")
+                logger.warning(
+                    "Warning: framerate does not match first input." " Timecodes may be incorrect."
+                )
             if round(cap.capture.get(cv2.CAP_PROP_FOURCC)) == 0:
                 unsupported_codec = True
 
         self._paths = validated_paths
 
         if unsupported_codec:
-            logger.error("Unsupported or invalid codec, output may be incorrect. Possible fixes:\n"
-                         "  - Re-encode the input video with ffmpeg\n"
-                         "  - Update OpenCV (pip install --upgrade opencv-python)")
+            logger.error(
+                "Unsupported or invalid codec, output may be incorrect. Possible fixes:\n"
+                "  - Re-encode the input video with ffmpeg\n"
+                "  - Update OpenCV (pip install --upgrade opencv-python)"
+            )

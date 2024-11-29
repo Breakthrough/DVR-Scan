@@ -141,9 +141,10 @@ def init_logger(
     # We still want to make sure we can tell the messages apart, so we add a short prefix [::].
     format_str = "[DVR-Scan] :: %(message)s"
     if log_level == logging.DEBUG:
-        format_str = ("%(levelname)s: [scenedetect] %(module)s.%(funcName)s(): %(message)s")
+        format_str = "%(levelname)s: [scenedetect] %(module)s.%(funcName)s(): %(message)s"
     _init_logger_impl(
-        logging.getLogger("pyscenedetect"), log_level, format_str, show_stdout, log_file)
+        logging.getLogger("pyscenedetect"), log_level, format_str, show_stdout, log_file
+    )
     return logging.getLogger("dvr_scan")
 
 

@@ -79,9 +79,9 @@ CORRUPT_VIDEO_EVENTS = [
 ]
 
 
-def compare_event_lists(a: ty.List[ty.Tuple[int, int]],
-                        b: ty.List[ty.Tuple[int, int]],
-                        tolerance: int = 0):
+def compare_event_lists(
+    a: ty.List[ty.Tuple[int, int]], b: ty.List[ty.Tuple[int, int]], tolerance: int = 0
+):
     if tolerance == 0:
         assert a == b
         return
@@ -90,7 +90,8 @@ def compare_event_lists(a: ty.List[ty.Tuple[int, int]],
         end_matches = abs(end - b[i][1]) <= tolerance
         assert start_matches and end_matches, (
             f"Event mismatch at index {i} with tolerance {tolerance}.\n"
-            f"Actual = {a[i]}, Expected = {b[i]}")
+            f"Actual = {a[i]}, Expected = {b[i]}"
+        )
 
 
 def test_scan_context(traffic_camera_video):
@@ -161,11 +162,12 @@ def test_pre_event_shift_with_frame_skip(traffic_camera_video):
         # The start times should not differ from the ground truth (non-frame-skipped) by the amount
         # of frames that we are skipping. End times can vary more since the default value of
         # time_post_event is relatively large.
-        assert all([
-            abs(x[0] - y[0]) <= frame_skip
-            for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS_TIME_PRE_5)
-        ]), "Comparison failure when frame_skip = %d" % (
-            frame_skip)
+        assert all(
+            [
+                abs(x[0] - y[0]) <= frame_skip
+                for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS_TIME_PRE_5)
+            ]
+        ), "Comparison failure when frame_skip = %d" % (frame_skip)
 
 
 def test_post_event_shift(traffic_camera_video):
@@ -191,16 +193,17 @@ def test_post_event_shift_with_frame_skip(traffic_camera_video):
         assert len(event_list) == len(TRAFFIC_CAMERA_EVENTS_TIME_POST_40)
         event_list = [(event.start.frame_num, event.end.frame_num) for event in event_list]
         # The calculated end times should not differ by more than frame_skip from the ground truth.
-        assert all([
-            abs(x[1] - y[1]) <= frame_skip
-            for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS_TIME_POST_40)
-        ]), "Comparison failure when frame_skip = %d" % (
-            frame_skip)
+        assert all(
+            [
+                abs(x[1] - y[1]) <= frame_skip
+                for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS_TIME_POST_40)
+            ]
+        ), "Comparison failure when frame_skip = %d" % (frame_skip)
         # The calculated end times must always be >= the ground truth's frame number, otherwise
         # we may be discarding frames containing motion due to skipping them.
-        assert all([x[1] >= y[1] for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS_TIME_POST_40)
-                   ]), "Comparison failure when frame_skip = %d" % (
-                       frame_skip)
+        assert all(
+            [x[1] >= y[1] for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS_TIME_POST_40)]
+        ), "Comparison failure when frame_skip = %d" % (frame_skip)
 
 
 def test_decode_corrupt_video(corrupt_video):
