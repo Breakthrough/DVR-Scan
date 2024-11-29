@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
@@ -23,7 +22,7 @@ import argparse
 from typing import List, Optional
 
 import dvr_scan
-from dvr_scan.cli.config import ConfigRegistry, CHOICE_MAP, USER_CONFIG_FILE_PATH
+from dvr_scan.cli.config import CHOICE_MAP, USER_CONFIG_FILE_PATH, ConfigRegistry
 from dvr_scan.region import RegionValidator
 
 # Version string shown for the -v/--version CLI argument.
@@ -83,8 +82,12 @@ def timecode_type_check(metavar: Optional[str] = None):
         # Timecode in HH:MM:SS[.nnn] format.
         elif ":" in value:
             tc_val = value.split(":")
-            if (len(tc_val) == 3 and tc_val[0].isdigit() and tc_val[1].isdigit()
-                    and tc_val[2].replace(".", "").isdigit()):
+            if (
+                len(tc_val) == 3
+                and tc_val[0].isdigit()
+                and tc_val[1].isdigit()
+                and tc_val[2].replace(".", "").isdigit()
+            ):
                 hrs, mins = int(tc_val[0]), int(tc_val[1])
                 secs = float(tc_val[2]) if "." in tc_val[2] else int(tc_val[2])
                 if hrs >= 0 and mins >= 0 and secs >= 0 and mins < 60 and secs < 60:
@@ -93,7 +96,8 @@ def timecode_type_check(metavar: Optional[str] = None):
             raise argparse.ArgumentTypeError(
                 f"invalid timecode: {value}\n"
                 "Timecode must be specified as number of frames (12345), seconds (number followed "
-                "by s, e.g. 123s or 123.45s), or timecode (HH:MM:SS[.nnn].")
+                "by s, e.g. 123s or 123.45s), or timecode (HH:MM:SS[.nnn]."
+            )
         return value
 
     return _type_checker
@@ -148,10 +152,11 @@ def _kernel_size_type_check(metavar: Optional[str] = None):
 
     def _type_checker(value):
         value = int(value)
-        if not value in (-1, 0) and (value < 3 or value % 2 == 0):
+        if value not in (-1, 0) and (value < 3 or value % 2 == 0):
             raise argparse.ArgumentTypeError(
                 "invalid choice: %d (%s must be an odd number starting from 3, 0 to disable, or "
-                "-1 for auto)" % (value, metavar))
+                "-1 for auto)" % (value, metavar)
+            )
         return value
 
     return _type_checker
@@ -207,9 +212,9 @@ def float_type_check(
     return _type_checker
 
 
-def string_type_check(valid_strings: List[str],
-                      case_sensitive: bool = True,
-                      metavar: Optional[str] = None):
+def string_type_check(
+    valid_strings: List[str], case_sensitive: bool = True, metavar: Optional[str] = None
+):
     """Creates an argparse type for a list of strings.
 
     The passed argument is declared valid if it is a valid string which exists
@@ -234,7 +239,7 @@ def string_type_check(valid_strings: List[str],
         valid = True
         if not case_sensitive:
             value = value.lower()
-        if not value in valid_strings:
+        if value not in valid_strings:
             valid = False
             case_msg = " (case sensitive)" if case_sensitive else ""
             msg = "invalid choice: %s (valid settings for %s%s are: %s)" % (
@@ -253,7 +258,6 @@ def string_type_check(valid_strings: List[str],
 class LicenseAction(argparse.Action):
     """argparse Action for displaying DVR-Scan license & copyright info."""
 
-    # pylint: disable=redefined-builtin, too-many-arguments
     def __init__(
         self,
         option_strings,
@@ -281,7 +285,6 @@ class LicenseAction(argparse.Action):
 class VersionAction(argparse.Action):
     """argparse Action for displaying DVR-Scan version."""
 
-    # pylint: disable=redefined-builtin, too-many-arguments
     def __init__(
         self,
         option_strings,
@@ -307,7 +310,7 @@ class VersionAction(argparse.Action):
 
 
 class RegionAction(argparse.Action):
-    DEFAULT_ERROR_MESSAGE = ("Region must be 3 or more points of the form X0 Y0 X1 Y1 X2 Y2 ...")
+    DEFAULT_ERROR_MESSAGE = "Region must be 3 or more points of the form X0 Y0 X1 Y1 X2 Y2 ..."
 
     def __init__(
         self,
@@ -342,15 +345,18 @@ class RegionAction(argparse.Action):
             region = RegionValidator(" ".join(values))
         except ValueError as ex:
             message = " ".join(str(arg) for arg in ex.args)
-            raise (argparse.ArgumentError(
-                self, message if message else RegionAction.DEFAULT_ERROR_MESSAGE)) from ex
+            raise (
+                argparse.ArgumentError(
+                    self, message if message else RegionAction.DEFAULT_ERROR_MESSAGE
+                )
+            ) from ex
 
         # Append this ROI to any existing ones, if any.
         # TODO(v1.7): Audit uses of the 'regions' constant for -a/--add-region, replace with a named
         # constant where possible.
         items = getattr(namespace, "regions", [])
         items += [region.value]
-        setattr(namespace, "regions", items)
+        namespace.regions = items
 
 
 # TODO: To help with debugging, add a `debug` option to the config file as well that, if set in the
@@ -371,7 +377,6 @@ def get_cli_parser(user_config: ConfigRegistry):
     )
 
     if hasattr(parser, "_optionals"):
-        # pylint: disable=protected-access
         parser._optionals.title = "arguments"
 
     parser.add_argument(
@@ -396,9 +401,11 @@ def get_cli_parser(user_config: ConfigRegistry):
         type=str,
         nargs="+",
         action="append",
-        help=("[REQUIRED] Path to input video. May specify multiple inputs with the same"
-              " resolution and framerate, or by specifying a wildcard/glob. Output"
-              " filenames are generated using the first video name only."),
+        help=(
+            "[REQUIRED] Path to input video. May specify multiple inputs with the same"
+            " resolution and framerate, or by specifying a wildcard/glob. Output"
+            " filenames are generated using the first video name only."
+        ),
     )
 
     parser.add_argument(
@@ -406,9 +413,11 @@ def get_cli_parser(user_config: ConfigRegistry):
         "--output-dir",
         metavar="path",
         type=str,
-        help=("If specified, write output files in the given directory. If path does not"
-              " exist, it  will be created. If unset, output files are written to the"
-              " current working directory."),
+        help=(
+            "If specified, write output files in the given directory. If path does not"
+            " exist, it  will be created. If unset, output files are written to the"
+            " current working directory."
+        ),
     )
 
     parser.add_argument(
@@ -416,9 +425,11 @@ def get_cli_parser(user_config: ConfigRegistry):
         "--output",
         metavar="video.avi",
         type=str,
-        help=("If specified, all motion events will be written to a single file"
-              " in order (if not specified, separate files are created for each event)."
-              " Filename MUST end with .avi. Only supported in output mode OPENCV."),
+        help=(
+            "If specified, all motion events will be written to a single file"
+            " in order (if not specified, separate files are created for each event)."
+            " Filename MUST end with .avi. Only supported in output mode OPENCV."
+        ),
     )
 
     parser.add_argument(
@@ -426,11 +437,14 @@ def get_cli_parser(user_config: ConfigRegistry):
         "--output-mode",
         metavar="mode",
         type=string_type_check(VALID_OUTPUT_MODES, False, "mode"),
-        help=("Set mode for generating output files. Certain features may not work with "
-              " all output modes. Must be one of: %s.%s" % (
-                  ", ".join(VALID_OUTPUT_MODES),
-                  user_config.get_help_string("output-mode"),
-              )),
+        help=(
+            "Set mode for generating output files. Certain features may not work with "
+            " all output modes. Must be one of: %s.%s"
+            % (
+                ", ".join(VALID_OUTPUT_MODES),
+                user_config.get_help_string("output-mode"),
+            )
+        ),
     )
 
     parser.add_argument(
@@ -438,8 +452,10 @@ def get_cli_parser(user_config: ConfigRegistry):
         "--scan-only",
         action="store_true",
         default=False,
-        help=("Only perform motion detection (does not write any files to disk)."
-              " If set, -m/--output-mode is ignored."),
+        help=(
+            "Only perform motion detection (does not write any files to disk)."
+            " If set, -m/--output-mode is ignored."
+        ),
     )
 
     parser.add_argument(
@@ -447,8 +463,9 @@ def get_cli_parser(user_config: ConfigRegistry):
         "--config",
         metavar="settings.cfg",
         type=str,
-        help=("Path to config file. If not set, tries to load one from %s" %
-              (USER_CONFIG_FILE_PATH)),
+        help=(
+            "Path to config file. If not set, tries to load one from %s" % (USER_CONFIG_FILE_PATH)
+        ),
     )
 
     parser.add_argument(
@@ -456,9 +473,11 @@ def get_cli_parser(user_config: ConfigRegistry):
         "--region-editor",
         dest="region_editor",
         action="store_true",
-        help=("Show region editor window. Motion detection will be limited to the enclosed area "
-              "during processing. Only single regions can be edited, but supports preview of "
-              "multiple regions if defined.%s" % user_config.get_help_string("region-editor")),
+        help=(
+            "Show region editor window. Motion detection will be limited to the enclosed area "
+            "during processing. Only single regions can be edited, but supports preview of "
+            "multiple regions if defined.%s" % user_config.get_help_string("region-editor")
+        ),
     )
 
     parser.add_argument(
@@ -472,7 +491,8 @@ def get_cli_parser(user_config: ConfigRegistry):
             "Limit motion detection to a region of the frame. The region is defined as a sequence "
             "of 3 or more points forming a closed shape inside the video. Coordinate 0 0 is top "
             "left of the frame, and WIDTH-1 HEIGHT-1 is bottom right. Can be specified multiple "
-            "times to add more regions."),
+            "times to add more regions."
+        ),
     )
 
     # TODO: Consider merging the load/save region options into a single --region-file option.
@@ -482,8 +502,10 @@ def get_cli_parser(user_config: ConfigRegistry):
         "--load-region",
         metavar="REGIONS.txt",
         type=str,
-        help=("Load region data from file. Each line must be a list of points in the format "
-              "specified by -a/--add-region. Each line is treated as a separate polygon."),
+        help=(
+            "Load region data from file. Each line must be a list of points in the format "
+            "specified by -a/--add-region. Each line is treated as a separate polygon."
+        ),
     )
 
     parser.add_argument(
@@ -491,8 +513,10 @@ def get_cli_parser(user_config: ConfigRegistry):
         "--save-region",
         metavar="REGIONS.txt",
         type=str,
-        help=("Save regions before processing. If REGIONS.txt exists it will be overwritten. "
-              "The region editor will save regions here instead of asking for a path."),
+        help=(
+            "Save regions before processing. If REGIONS.txt exists it will be overwritten. "
+            "The region editor will save regions here instead of asking for a path."
+        ),
     )
 
     parser.add_argument(
@@ -500,9 +524,11 @@ def get_cli_parser(user_config: ConfigRegistry):
         "--bg-subtractor",
         metavar="type",
         type=string_type_check(["MOG2", "CNT", "MOG2_CUDA"], False, "type"),
-        help=("The type of background subtractor to use, must be one of: "
-              " MOG2 (default), CNT (parallel), MOG2_CUDA (Nvidia GPU).%s") %
-        user_config.get_help_string("bg-subtractor"),
+        help=(
+            "The type of background subtractor to use, must be one of: "
+            " MOG2 (default), CNT (parallel), MOG2_CUDA (Nvidia GPU).%s"
+        )
+        % user_config.get_help_string("bg-subtractor"),
     )
 
     parser.add_argument(
@@ -510,11 +536,13 @@ def get_cli_parser(user_config: ConfigRegistry):
         "--threshold",
         metavar="value",
         type=float_type_check(0.0, None, "value"),
-        help=("Threshold representing amount of motion in a frame required to trigger"
-              " motion events. Lower values are more sensitive to motion. If too high,"
-              " some movement in the scene may not be detected, while too low of a"
-              " threshold can result in false detections.%s" %
-              (user_config.get_help_string("threshold"))),
+        help=(
+            "Threshold representing amount of motion in a frame required to trigger"
+            " motion events. Lower values are more sensitive to motion. If too high,"
+            " some movement in the scene may not be detected, while too low of a"
+            " threshold can result in false detections.%s"
+            % (user_config.get_help_string("threshold"))
+        ),
     )
 
     parser.add_argument(
@@ -522,10 +550,12 @@ def get_cli_parser(user_config: ConfigRegistry):
         "--kernel-size",
         metavar="size",
         type=_kernel_size_type_check(metavar="size"),
-        help=("Size in pixels of the noise reduction kernel. Must be odd number greater than 1, "
-              "0 to disable, or -1 to auto-set based on video resolution (default). If the kernel "
-              "size is set too large, some movement in the scene may not be detected.%s" %
-              (user_config.get_help_string("kernel-size"))),
+        help=(
+            "Size in pixels of the noise reduction kernel. Must be odd number greater than 1, "
+            "0 to disable, or -1 to auto-set based on video resolution (default). If the kernel "
+            "size is set too large, some movement in the scene may not be detected.%s"
+            % (user_config.get_help_string("kernel-size"))
+        ),
     )
 
     parser.add_argument(
@@ -533,9 +563,11 @@ def get_cli_parser(user_config: ConfigRegistry):
         "--min-event-length",
         metavar="time",
         type=timecode_type_check("time"),
-        help=("Length of time that must contain motion before triggering a new event. Can be"
-              " specified as frames (123), seconds (12.3s), or timecode (00:00:01).%s" %
-              user_config.get_help_string("min-event-length")),
+        help=(
+            "Length of time that must contain motion before triggering a new event. Can be"
+            " specified as frames (123), seconds (12.3s), or timecode (00:00:01).%s"
+            % user_config.get_help_string("min-event-length")
+        ),
     )
 
     parser.add_argument(
@@ -543,9 +575,11 @@ def get_cli_parser(user_config: ConfigRegistry):
         "--time-before-event",
         metavar="time",
         type=timecode_type_check("time"),
-        help=("Maximum amount of time to include before each event. Can be specified as"
-              " frames (123), seconds (12.3s), or timecode (00:00:01).%s" %
-              user_config.get_help_string("time-before-event")),
+        help=(
+            "Maximum amount of time to include before each event. Can be specified as"
+            " frames (123), seconds (12.3s), or timecode (00:00:01).%s"
+            % user_config.get_help_string("time-before-event")
+        ),
     )
 
     parser.add_argument(
@@ -553,10 +587,12 @@ def get_cli_parser(user_config: ConfigRegistry):
         "--time-post-event",
         metavar="time",
         type=timecode_type_check("time"),
-        help=("Maximum amount of time to include after each event. The event will end once no"
-              " motion has been detected for this period of time. Can be specified as frames (123),"
-              " seconds (12.3s), or timecode (00:00:01).%s" %
-              user_config.get_help_string("time-post-event")),
+        help=(
+            "Maximum amount of time to include after each event. The event will end once no"
+            " motion has been detected for this period of time. Can be specified as frames (123),"
+            " seconds (12.3s), or timecode (00:00:01).%s"
+            % user_config.get_help_string("time-post-event")
+        ),
     )
 
     parser.add_argument(
@@ -564,9 +600,11 @@ def get_cli_parser(user_config: ConfigRegistry):
         "--start-time",
         metavar="time",
         type=timecode_type_check("time"),
-        help=("Time to seek to in video before performing detection. Can be"
-              " given in number of frames (12345), seconds (number followed"
-              " by s, e.g. 123s or 123.45s), or timecode (HH:MM:SS[.nnn])."),
+        help=(
+            "Time to seek to in video before performing detection. Can be"
+            " given in number of frames (12345), seconds (number followed"
+            " by s, e.g. 123s or 123.45s), or timecode (HH:MM:SS[.nnn])."
+        ),
     )
 
     parser.add_argument(
@@ -574,8 +612,10 @@ def get_cli_parser(user_config: ConfigRegistry):
         "--duration",
         metavar="time",
         type=timecode_type_check("time"),
-        help=("Duration stop processing the input after (see -st for valid timecode formats)."
-              " Overrides -et."),
+        help=(
+            "Duration stop processing the input after (see -st for valid timecode formats)."
+            " Overrides -et."
+        ),
     )
 
     parser.add_argument(
@@ -603,27 +643,33 @@ def get_cli_parser(user_config: ConfigRegistry):
         type=timecode_type_check("smooth_time"),
         nargs="?",
         const=False,
-        help=("If set, draws a bounding box around the area where motion was detected. The amount"
-              " of temporal smoothing can be specified in either frames (12345) or seconds (number"
-              " followed by s, e.g. 123s or 123.45s). If omitted, defaults to 0.1s. If set to 0,"
-              " smoothing is disabled.%s" %
-              (user_config.get_help_string("bounding-box", show_default=False))),
+        help=(
+            "If set, draws a bounding box around the area where motion was detected. The amount"
+            " of temporal smoothing can be specified in either frames (12345) or seconds (number"
+            " followed by s, e.g. 123s or 123.45s). If omitted, defaults to 0.1s. If set to 0,"
+            " smoothing is disabled.%s"
+            % (user_config.get_help_string("bounding-box", show_default=False))
+        ),
     )
 
     parser.add_argument(
         "-tc",
         "--time-code",
         action="store_true",
-        help=("Draw time code in top left corner of each frame.%s" %
-              user_config.get_help_string("time-code", show_default=False)),
+        help=(
+            "Draw time code in top left corner of each frame.%s"
+            % user_config.get_help_string("time-code", show_default=False)
+        ),
     )
 
     parser.add_argument(
         "-fm",
         "--frame-metrics",
         action="store_true",
-        help=("Draw frame metrics in top right corner of each frame.%s" %
-              user_config.get_help_string("frame-metrics", show_default=False)),
+        help=(
+            "Draw frame metrics in top right corner of each frame.%s"
+            % user_config.get_help_string("frame-metrics", show_default=False)
+        ),
     )
 
     parser.add_argument(
@@ -631,8 +677,10 @@ def get_cli_parser(user_config: ConfigRegistry):
         "--mask-output",
         metavar="motion_mask.avi",
         type=str,
-        help=("Write a video containing the motion mask of each frame. Useful when tuning "
-              "detection parameters."),
+        help=(
+            "Write a video containing the motion mask of each frame. Useful when tuning "
+            "detection parameters."
+        ),
     )
 
     parser.add_argument(
@@ -640,11 +688,13 @@ def get_cli_parser(user_config: ConfigRegistry):
         "--downscale-factor",
         metavar="factor",
         type=int_type_check(0, None, "factor"),
-        help=("Integer factor to downscale (shrink) video before processing, to"
-              " improve performance. For example, if input video resolution"
-              " is 1024 x 400, and factor=2, each frame is reduced to"
-              " 1024/2 x 400/2=512 x 200 before processing.%s" %
-              (user_config.get_help_string("downscale-factor"))),
+        help=(
+            "Integer factor to downscale (shrink) video before processing, to"
+            " improve performance. For example, if input video resolution"
+            " is 1024 x 400, and factor=2, each frame is reduced to"
+            " 1024/2 x 400/2=512 x 200 before processing.%s"
+            % (user_config.get_help_string("downscale-factor"))
+        ),
     )
 
     parser.add_argument(
@@ -652,21 +702,25 @@ def get_cli_parser(user_config: ConfigRegistry):
         "--frame-skip",
         metavar="num_frames",
         type=int_type_check(0, None, "num_frames"),
-        help=("Number of frames to skip after processing a given frame."
-              " Improves performance, at expense of frame and time accuracy,"
-              " and may increase probability of missing motion events."
-              " If set, -l, -tb, and -tp will all be scaled relative to the source"
-              " framerate. Values above 1 or 2 are not recommended.%s" %
-              (user_config.get_help_string("frame-skip"))),
+        help=(
+            "Number of frames to skip after processing a given frame."
+            " Improves performance, at expense of frame and time accuracy,"
+            " and may increase probability of missing motion events."
+            " If set, -l, -tb, and -tp will all be scaled relative to the source"
+            " framerate. Values above 1 or 2 are not recommended.%s"
+            % (user_config.get_help_string("frame-skip"))
+        ),
     )
     parser.add_argument(
         "-q",
         "--quiet",
         dest="quiet_mode",
         action="store_true",
-        help=("Suppress all output except for final comma-separated list of motion events."
-              " Useful for computing or piping output directly into other programs/scripts.%s" %
-              user_config.get_help_string("quiet-mode")),
+        help=(
+            "Suppress all output except for final comma-separated list of motion events."
+            " Useful for computing or piping output directly into other programs/scripts.%s"
+            % user_config.get_help_string("quiet-mode")
+        ),
     )
 
     # Options that only take long-form.
@@ -675,8 +729,10 @@ def get_cli_parser(user_config: ConfigRegistry):
         "--logfile",
         metavar="file",
         type=str,
-        help=("Path to log file for writing application output. If FILE already exists, the program"
-              " output will be appended to the existing contents."),
+        help=(
+            "Path to log file for writing application output. If FILE already exists, the program"
+            " output will be appended to the existing contents."
+        ),
     )
 
     parser.add_argument(
@@ -692,10 +748,13 @@ def get_cli_parser(user_config: ConfigRegistry):
         "--verbosity",
         metavar="type",
         type=string_type_check(CHOICE_MAP["verbosity"], False, "type"),
-        help=("Amount of verbosity to use for log output. Must be one of: %s.%s" % (
-            ", ".join(CHOICE_MAP["verbosity"]),
-            user_config.get_help_string("verbosity"),
-        )),
+        help=(
+            "Amount of verbosity to use for log output. Must be one of: %s.%s"
+            % (
+                ", ".join(CHOICE_MAP["verbosity"]),
+                user_config.get_help_string("verbosity"),
+            )
+        ),
     )
 
     parser.add_argument(

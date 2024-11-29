@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
@@ -16,6 +15,7 @@ This file includes all pytest configuration for running DVR-Scan's tests.
 """
 
 import os
+
 import pytest
 
 #
@@ -31,8 +31,9 @@ def get_absolute_path(relative_path: str) -> str:
     """
     abs_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), relative_path)
     if not os.path.exists(abs_path):
-        raise FileNotFoundError("Test video file (%s) must be present to run test case!" %
-                                relative_path)
+        raise FileNotFoundError(
+            "Test video file (%s) must be present to run test case!" % relative_path
+        )
     return abs_path
 
 

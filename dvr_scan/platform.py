@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
@@ -14,11 +13,11 @@
 Provides logging and platform/operating system compatibility.
 """
 
-from contextlib import contextmanager
 import logging
 import os
 import subprocess
 import sys
+from contextlib import contextmanager
 from typing import AnyStr, Optional
 
 try:
@@ -52,7 +51,7 @@ def get_icon_path() -> str:
     return ""
 
 
-HAS_TKINTER = not tkinter is None
+HAS_TKINTER = tkinter is not None
 
 IS_WINDOWS = os.name == "nt"
 
@@ -65,7 +64,7 @@ def get_min_screen_bounds():
     """Attempts to get the minimum screen resolution of all monitors using the `screeninfo` package.
     Returns the minimum of all monitor's heights and widths with 10% padding, or None if the package
     is unavailable."""
-    if not screeninfo is None:
+    if screeninfo is not None:
         try:
             monitors = screeninfo.get_monitors()
             return (
@@ -141,9 +140,10 @@ def init_logger(
     # We still want to make sure we can tell the messages apart, so we add a short prefix [::].
     format_str = "[DVR-Scan] :: %(message)s"
     if log_level == logging.DEBUG:
-        format_str = ("%(levelname)s: [scenedetect] %(module)s.%(funcName)s(): %(message)s")
+        format_str = "%(levelname)s: [scenedetect] %(module)s.%(funcName)s(): %(message)s"
     _init_logger_impl(
-        logging.getLogger("pyscenedetect"), log_level, format_str, show_stdout, log_file)
+        logging.getLogger("pyscenedetect"), log_level, format_str, show_stdout, log_file
+    )
     return logging.getLogger("dvr_scan")
 
 

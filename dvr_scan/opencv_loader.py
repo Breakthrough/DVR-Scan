@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
@@ -15,8 +14,9 @@ Ensures required DLL files can be loaded by Python when importing OpenCV, and pr
 better error messaging in cases where the module isn't installed.
 """
 
+import importlib
+import importlib.util
 import os
-import sys
 
 # On Windows, make sure we include any required DLL paths.
 if os.name == "nt":
@@ -29,10 +29,9 @@ if os.name == "nt":
 # OpenCV is a required package, but we don't have it as an explicit dependency since we
 # need to support both opencv-python and opencv-python-headless. Include some additional
 # context with the exception if this is the case.
-try:
-    import cv2 as _
-except ModuleNotFoundError as ex:
+
+if not importlib.util.find_spec("cv2"):
     raise ModuleNotFoundError(
         "OpenCV could not be found, try installing opencv-python:\n\npip install opencv-python",
         name="cv2",
-    ) from ex
+    )

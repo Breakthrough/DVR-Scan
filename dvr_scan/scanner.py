@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
@@ -14,8 +13,6 @@
 Contains the motion scanning engine (`MotionScanner`) for DVR-Scan.
 """
 
-from dataclasses import dataclass
-from enum import Enum
 import logging
 import os
 import os.path
@@ -23,6 +20,8 @@ import queue
 import subprocess
 import sys
 import threading
+from dataclasses import dataclass
+from enum import Enum
 from typing import Any, AnyStr, List, Optional, Tuple, Union
 
 import cv2
@@ -34,8 +33,8 @@ from tqdm import tqdm
 from dvr_scan.detector import MotionDetector
 from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
 from dvr_scan.platform import get_filename, get_min_screen_bounds, is_ffmpeg_available
-from dvr_scan.region import RegionEditor, Point, Size, bound_point, load_regions
-from dvr_scan.subtractor import SubtractorMOG2, SubtractorCNT, SubtractorCudaMOG2
+from dvr_scan.region import Point, RegionEditor, Size, bound_point, load_regions
+from dvr_scan.subtractor import SubtractorCNT, SubtractorCudaMOG2, SubtractorMOG2
 from dvr_scan.video_joiner import VideoJoiner
 
 logger = logging.getLogger("dvr_scan")
@@ -225,54 +224,50 @@ class MotionScanner:
         # Scan state and options they come from:
 
         # Output Parameters (set_output)
-        self._comp_file: Optional[AnyStr] = None    # -o/--output
-        self._mask_file: Optional[AnyStr] = None    # -mo/--mask-output
-        self._fourcc: Any = None                    # opencv-codec
-        self._output_mode: OutputMode = None        # -m/--output-mode / -so/--scan-only
-        self._ffmpeg_input_args: Optional[str] = (
-            None                                    # input args for OutputMode.FFMPEG/COPY
-        )
-        self._ffmpeg_output_args: Optional[str] = (
-            None                                    # output args for OutputMode.FFMPEG
-        )
-        self._output_dir: AnyStr = ""               # -d/--directory
-                                                    # TODO: Replace uses of self._output_dir with
-                                                    # a helper function called "get_output_path".
+        self._comp_file: Optional[AnyStr] = None  # -o/--output
+        self._mask_file: Optional[AnyStr] = None  # -mo/--mask-output
+        self._fourcc: Any = None  # opencv-codec
+        self._output_mode: OutputMode = None  # -m/--output-mode / -so/--scan-only
+        self._ffmpeg_input_args: Optional[str] = None  # input args for OutputMode.FFMPEG/COPY
+        self._ffmpeg_output_args: Optional[str] = None  # output args for OutputMode.FFMPEG
+        self._output_dir: AnyStr = ""  # -d/--directory
+        # TODO: Replace uses of self._output_dir with
+        # a helper function called "get_output_path".
 
         # Overlay Parameters (set_overlays)
-        self._timecode_overlay = None # -tc/--time-code, None or TextOverlay
+        self._timecode_overlay = None  # -tc/--time-code, None or TextOverlay
         self._metrics_overlay = None  # -fm/--frame-metrics, None or TextOverlay
-        self._bounding_box = None     # -bb/--bounding-box, None or BoundingBoxOverlay
+        self._bounding_box = None  # -bb/--bounding-box, None or BoundingBoxOverlay
 
         # Motion Detection Parameters (set_detection_params)
-        self._subtractor_type = DetectorType.MOG2 # -b/--bg-subtractor
-        self._threshold = 0.15                    # -t/--threshold
-        self._variance_threshold = 16.0           # variance-threshold
-        self._kernel_size = None                  # -k/--kernel-size
-        self._downscale_factor = 1                # -df/--downscale-factor
-        self._learning_rate = -1                  # learning-rate
-        self._max_threshold = 255.0               # max-threshold
+        self._subtractor_type = DetectorType.MOG2  # -b/--bg-subtractor
+        self._threshold = 0.15  # -t/--threshold
+        self._variance_threshold = 16.0  # variance-threshold
+        self._kernel_size = None  # -k/--kernel-size
+        self._downscale_factor = 1  # -df/--downscale-factor
+        self._learning_rate = -1  # learning-rate
+        self._max_threshold = 255.0  # max-threshold
 
         # Motion Event Parameters (set_event_params)
         self._min_event_len = None  # -l/--min-event-length
         self._pre_event_len = None  # -tb/--time-before-event
-        self._post_event_len = None # -tp/--time-post-event
-        self._use_pts = None        # --use_pts
+        self._post_event_len = None  # -tp/--time-post-event
+        self._use_pts = None  # --use_pts
 
         # Region Parameters (set_region)
-        self._region_editor = False             # -w/--region-window
-        self._regions: List[List[Point]] = []   # -a/--add-region, -w/--region-window
-        self._load_region: Optional[str] = None # -R/--load-region
-        self._save_region: Optional[str] = None # -s/--save-region
+        self._region_editor = False  # -w/--region-window
+        self._regions: List[List[Point]] = []  # -a/--add-region, -w/--region-window
+        self._load_region: Optional[str] = None  # -R/--load-region
+        self._save_region: Optional[str] = None  # -s/--save-region
         self._max_roi_size_deprecated = None
         self._show_roi_window_deprecated = False
         self._roi_deprecated = None
 
         # Input Video Parameters (set_video_time)
-        self._input: VideoJoiner = VideoJoiner(input_videos) # -i/--input
-        self._frame_skip: int = frame_skip                   # -fs/--frame-skip
-        self._start_time: FrameTimecode = None               # -st/--start-time
-        self._end_time: FrameTimecode = None                 # -et/--end-time
+        self._input: VideoJoiner = VideoJoiner(input_videos)  # -i/--input
+        self._frame_skip: int = frame_skip  # -fs/--frame-skip
+        self._start_time: FrameTimecode = None  # -st/--start-time
+        self._end_time: FrameTimecode = None  # -et/--end-time
 
         # Internal Variables
         self._stop: threading.Event = threading.Event()
@@ -347,14 +342,15 @@ class MotionScanner:
         if not isinstance(output_mode, OutputMode):
             output_mode = OutputMode[output_mode.upper().replace("-", "_")]
         if len(self._input.paths) > 1 and output_mode not in (
-                OutputMode.SCAN_ONLY,
-                OutputMode.OPENCV,
+            OutputMode.SCAN_ONLY,
+            OutputMode.OPENCV,
         ):
             raise ValueError(
-                "input concatenation is only supported in `scan-only` or `opencv` mode.")
+                "input concatenation is only supported in `scan-only` or `opencv` mode."
+            )
         if comp_file is not None and output_mode != OutputMode.OPENCV:
             raise ValueError("output to single file is only supported with mode `opencv`")
-        if (output_mode in (OutputMode.FFMPEG, OutputMode.COPY) and not is_ffmpeg_available()):
+        if output_mode in (OutputMode.FFMPEG, OutputMode.COPY) and not is_ffmpeg_available():
             raise ValueError("ffmpeg is required to use output mode FFMPEG/COPY")
         self._comp_file = comp_file
         self._mask_file = mask_file
@@ -486,8 +482,9 @@ class MotionScanner:
 
     def _handle_regions(self) -> bool:
         # TODO(v2.0): Remove deprecated ROI selection handlers.
-        if (self._show_roi_window_deprecated) and (self._load_region or self._regions
-                                                   or self._region_editor):
+        if (self._show_roi_window_deprecated) and (
+            self._load_region or self._regions or self._region_editor
+        ):
             raise ValueError("Use -r/--region-editor instead of -roi.")
         if not self._select_roi_deprecated():
             return
@@ -497,7 +494,8 @@ class MotionScanner:
                 logger.error(f"File does not exist: {self._load_region}")
                 raise ValueError(
                     "Could not find specified region file. Ensure the specified path is valid "
-                    "and the file exists.")
+                    "and the file exists."
+                )
             try:
                 logger.info(f"Loading regions from file: {self._load_region}")
                 regions = load_regions(self._load_region)
@@ -515,9 +513,10 @@ class MotionScanner:
                 )
             self._regions += regions
         if self._regions:
-            self._regions = [[bound_point(point, Size(*self._input.resolution))
-                              for point in shape]
-                             for shape in self._regions]
+            self._regions = [
+                [bound_point(point, Size(*self._input.resolution)) for point in shape]
+                for shape in self._regions
+            ]
         if self._region_editor:
             logger.info("Selecting area of interest:")
             # TODO(v1.7): Ensure ROI window respects start time if set.
@@ -525,14 +524,14 @@ class MotionScanner:
             frame_for_crop = self._input.read()
             scale_factor = 1
             screen_bounds = get_min_screen_bounds()
-            if not screen_bounds is None:
+            if screen_bounds is not None:
                 max_w, max_h = screen_bounds[1], screen_bounds[0]
                 frame_w, frame_h = frame_for_crop.shape[1], frame_for_crop.shape[0]
                 if (max_h > 0 and frame_h > max_h) or (max_w > 0 and frame_w > max_w):
                     logger.debug("Max window size: %d x %d", max_w, max_h)
                     # Downscale the image if it's too large for the screen.
-                    factor_h = (frame_h / float(max_h) if max_h > 0 and frame_h > max_h else 1)
-                    factor_w = (frame_w / float(max_w) if max_w > 0 and frame_w > max_w else 1)
+                    factor_h = frame_h / float(max_h) if max_h > 0 and frame_h > max_h else 1
+                    factor_w = frame_w / float(max_w) if max_w > 0 and frame_w > max_w else 1
                     scale_factor = round(max(factor_h, factor_w))
             regions = RegionEditor(
                 frame=frame_for_crop,
@@ -547,23 +546,30 @@ class MotionScanner:
             self._regions = list(regions.shapes)
         elif self._save_region:
             regions = (
-                self._regions if self._regions else [[
-                    Point(0, 0),
-                    Point(self._input.resolution[0] - 1, 0),
-                    Point(self._input.resolution[0] - 1, self._input.resolution[1] - 1),
-                    Point(0, self._input.resolution[1] - 1),
-                ]])
+                self._regions
+                if self._regions
+                else [
+                    [
+                        Point(0, 0),
+                        Point(self._input.resolution[0] - 1, 0),
+                        Point(self._input.resolution[0] - 1, self._input.resolution[1] - 1),
+                        Point(0, self._input.resolution[1] - 1),
+                    ]
+                ]
+            )
             path = self._save_region
             if self._output_dir:
                 path = os.path.join(self._output_dir, path)
-            with open(path, "wt") as region_file:
+            with open(path, "w") as region_file:
                 for shape in self._regions:
                     region_file.write(" ".join(f"{x} {y}" for x, y in shape))
                     region_file.write("\n")
             logger.info(f"Saved region data to: {path}")
         if self._regions:
-            logger.info(f"Limiting detection to {len(self._regions)} "
-                        f"region{'s' if len(self._regions) > 1 else ''}.")
+            logger.info(
+                f"Limiting detection to {len(self._regions)} "
+                f"region{'s' if len(self._regions) > 1 else ''}."
+            )
         else:
             logger.debug("No regions selected.")
         return True
@@ -616,8 +622,9 @@ class MotionScanner:
         if self._kernel_size == -1:
             # Calculate size of noise reduction kernel. Even if an ROI is set, the auto factor is
             # set based on the original video's input resolution.
-            kernel_size = _recommended_kernel_size(self._input.resolution[0],
-                                                   self._downscale_factor)
+            kernel_size = _recommended_kernel_size(
+                self._input.resolution[0], self._downscale_factor
+            )
         else:
             kernel_size = _scale_kernel_size(self._kernel_size, self._downscale_factor)
 
@@ -636,7 +643,8 @@ class MotionScanner:
         )
 
         logger.info(
-            "Using subtractor %s with kernel_size = %s%s, variance_threshold = %s and learning_rate = %s",
+            "Using subtractor %s with kernel_size = %s%s, "
+            "variance_threshold = %s and learning_rate = %s",
             self._subtractor_type.name,
             str(kernel_size) if kernel_size else "off",
             " (auto)" if self._kernel_size == -1 else "",
@@ -658,10 +666,12 @@ class MotionScanner:
         # important as this affects the number of frames we consider for the actual motion event.
         if not self._use_pts:
             start_event_shift: int = self._pre_event_len.frame_num + min_event_len * (
-                self._frame_skip + 1)
+                self._frame_skip + 1
+            )
         else:
-            start_event_shift_ms: float = (self._pre_event_len.get_seconds() +
-                                           self._min_event_len.get_seconds()) * 1000
+            start_event_shift_ms: float = (
+                self._pre_event_len.get_seconds() + self._min_event_len.get_seconds()
+            ) * 1000
 
         # Length of buffer we require in memory to keep track of all frames required for -l and -tb.
         buff_len = pre_event_len + min_event_len
@@ -685,16 +695,17 @@ class MotionScanner:
         # main scanning loop below, otherwise it will interrupt the progress bar.
         logger.info(
             "Scanning %s for motion events...",
-            "%d input videos" %
-            len(self._input.paths) if len(self._input.paths) > 1 else "input video",
+            "%d input videos" % len(self._input.paths)
+            if len(self._input.paths) > 1
+            else "input video",
         )
 
-        progress_bar = (
-            FakeTqdmObject() if not self._show_progress else self._create_progress_bar())
+        progress_bar = FakeTqdmObject() if not self._show_progress else self._create_progress_bar()
 
         decode_queue = queue.Queue(MAX_DECODE_QUEUE_SIZE)
         decode_thread = threading.Thread(
-            target=MotionScanner._decode_thread, args=(self, decode_queue), daemon=True)
+            target=MotionScanner._decode_thread, args=(self, decode_queue), daemon=True
+        )
         decode_thread.start()
 
         encode_thread = None
@@ -721,7 +732,8 @@ class MotionScanner:
                 video_res = self._input.resolution
                 logger.warn(
                     f"WARNING: Frame {time.frame_num} [{time.get_timecode()}] has unexpected size: "
-                    f"{frame_size[0]}x{frame_size[1]}, expected {video_res[0]}x{video_res[1]}")
+                    f"{frame_size[0]}x{frame_size[1]}, expected {video_res[0]}x{video_res[1]}"
+                )
             result = detector.update(frame.frame_bgr)
             frame_score = result.score
             # TODO(1.7): Allow disabling the rejection filter or customizing amount of
@@ -749,7 +761,9 @@ class MotionScanner:
             if self._bounding_box:
                 bounding_box = (
                     self._bounding_box.update(result.subtracted)
-                    if above_threshold else self._bounding_box.clear())
+                    if above_threshold
+                    else self._bounding_box.clear()
+                )
 
             if self._mask_file and not self._stop.is_set():
                 encode_queue.put(
@@ -758,7 +772,8 @@ class MotionScanner:
                         timecode=frame.timecode,
                         score=frame_score,
                         bounding_box=bounding_box,
-                    ))
+                    )
+                )
 
             # Last frame was part of a motion event, or still within the post-event window.
             if in_motion_event:
@@ -779,17 +794,22 @@ class MotionScanner:
                     if num_frames_post_event >= post_event_len:
                         in_motion_event = False
 
-                        logger.debug("event %d high score %f" %
-                                     (1 + self._num_events, self._highscore))
+                        logger.debug(
+                            "event %d high score %f" % (1 + self._num_events, self._highscore)
+                        )
                         if self._thumbnails == "highscore":
                             video_name = get_filename(
-                                path=self._input.paths[0], include_extension=False)
+                                path=self._input.paths[0], include_extension=False
+                            )
                             output_path = (
-                                self._comp_file if self._comp_file else OUTPUT_FILE_TEMPLATE.format(
+                                self._comp_file
+                                if self._comp_file
+                                else OUTPUT_FILE_TEMPLATE.format(
                                     VIDEO_NAME=video_name,
                                     EVENT_NUMBER="%04d" % (1 + self._num_events),
                                     EXTENSION="jpg",
-                                ))
+                                )
+                            )
                             if self._output_dir:
                                 output_path = os.path.join(self._output_dir, output_path)
                             cv2.imwrite(output_path, self._highframe)
@@ -802,15 +822,17 @@ class MotionScanner:
                         # We also add 1 to include the presentation duration of the last frame.
                         if not self._use_pts:
                             event_end = FrameTimecode(
-                                1 + last_frame_above_threshold + self._post_event_len.frame_num +
-                                self._frame_skip,
+                                1
+                                + last_frame_above_threshold
+                                + self._post_event_len.frame_num
+                                + self._frame_skip,
                                 self._input.framerate,
                             )
                             assert event_end.frame_num >= event_start.frame_num
                         else:
                             event_end = FrameTimecode(
-                                (last_frame_above_threshold_ms / 1000) +
-                                self._post_event_len.get_seconds(),
+                                (last_frame_above_threshold_ms / 1000)
+                                + self._post_event_len.get_seconds(),
                                 self._input.framerate,
                             )
                             assert event_end.get_seconds() >= event_start.get_seconds()
@@ -826,7 +848,8 @@ class MotionScanner:
                             timecode=frame.timecode,
                             bounding_box=bounding_box,
                             score=frame_score,
-                        ))
+                        )
+                    )
             # Not already in a motion event, look for a new one.
             else:
                 # Buffer the required amount of frames and overlay data until we find an event.
@@ -837,23 +860,27 @@ class MotionScanner:
                             timecode=frame.timecode,
                             bounding_box=bounding_box,
                             score=frame_score,
-                        ))
+                        )
+                    )
                     buffered_frames = buffered_frames[-buff_len:]
                 # Start a new event once all frames in the event window have motion.
                 if len(event_window) >= min_event_len and all(
-                        score >= self._threshold for score in event_window):
+                    score >= self._threshold for score in event_window
+                ):
                     in_motion_event = True
                     progress_bar.set_description(
-                        PROGRESS_BAR_DESCRIPTION % (1 + len(event_list)), refresh=False)
+                        PROGRESS_BAR_DESCRIPTION % (1 + len(event_list)), refresh=False
+                    )
                     event_window = []
                     num_frames_post_event = 0
-                    frames_since_last_event = (frame.timecode.frame_num - event_end.frame_num)
+                    frames_since_last_event = frame.timecode.frame_num - event_end.frame_num
                     last_frame_above_threshold = frame.timecode.frame_num
 
                     if not self._use_pts:
                         shift_amount = min(frames_since_last_event, start_event_shift)
-                        shifted_start = max(start_frame,
-                                            frame.timecode.frame_num + 1 - shift_amount)
+                        shifted_start = max(
+                            start_frame, frame.timecode.frame_num + 1 - shift_amount
+                        )
                         event_start = FrameTimecode(shifted_start, self._input.framerate)
                     else:
                         ms_since_last_event = pts - (event_end.get_seconds() * 1000)
@@ -900,11 +927,14 @@ class MotionScanner:
             if self._thumbnails == "highscore":
                 video_name = get_filename(path=self._input.paths[0], include_extension=False)
                 output_path = (
-                    self._comp_file if self._comp_file else OUTPUT_FILE_TEMPLATE.format(
+                    self._comp_file
+                    if self._comp_file
+                    else OUTPUT_FILE_TEMPLATE.format(
                         VIDEO_NAME=video_name,
                         EVENT_NUMBER="%04d" % (1 + self._num_events),
                         EXTENSION="jpg",
-                    ))
+                    )
+                )
                 if self._output_dir:
                     output_path = os.path.join(self._output_dir, output_path)
                 cv2.imwrite(output_path, self._highframe)
@@ -920,7 +950,8 @@ class MotionScanner:
             encode_thread.join()
             if self._encode_thread_exception is not None:
                 raise self._encode_thread_exception[1].with_traceback(
-                    self._encode_thread_exception[2])
+                    self._encode_thread_exception[2]
+                )
 
         # Display an error if we got more than one decode failure / corrupt frame.
         # TODO: This will also fire if no frames are decoded. Add a check to make sure
@@ -939,7 +970,7 @@ class MotionScanner:
     def _decode_thread(self, decode_queue: queue.Queue):
         try:
             while not self._stop.is_set():
-                if (self._end_time is not None and self._input.position >= self._end_time):
+                if self._end_time is not None and self._input.position >= self._end_time:
                     break
                 for _ in range(self._frame_skip):
                     if self._input.read(decode=False) is None:
@@ -956,14 +987,14 @@ class MotionScanner:
                         fps=self._input.framerate,
                     )
                 else:
-                    presentation_time = FrameTimecode(self._input.position_ms / 1000,
-                                                      self._input.framerate)
+                    presentation_time = FrameTimecode(
+                        self._input.position_ms / 1000, self._input.framerate
+                    )
                 if not self._stop.is_set():
                     decode_queue.put(DecodeEvent(frame_bgr, presentation_time))
 
         # We'll re-raise any exceptions from the main thread.
-        # pylint: disable=bare-except
-        except:
+        except:  # noqa: E722
             self._stop.set()
             logger.critical("Fatal error: Exception raised in decode thread.")
             logger.debug(sys.exc_info())
@@ -971,15 +1002,16 @@ class MotionScanner:
         finally:
             # Make sure main thread stops processing loop.
             decode_queue.put(None)
-        # pylint: enable=bare-except
 
     def _init_video_writer(self, path: AnyStr, frame_size: Tuple[int, int]) -> cv2.VideoWriter:
         """Create a new cv2.VideoWriter using the correct framerate."""
         if self._output_dir:
             path = os.path.join(self._output_dir, path)
         effective_framerate = (
-            self._input.framerate if self._frame_skip < 1 else self._input.framerate /
-            (1 + self._frame_skip))
+            self._input.framerate
+            if self._frame_skip < 1
+            else self._input.framerate / (1 + self._frame_skip)
+        )
         return cv2.VideoWriter(path, self._fourcc, effective_framerate, frame_size)
 
     def _on_encode_frame_event(self, event: EncodeFrameEvent):
@@ -989,17 +1021,21 @@ class MotionScanner:
             video = self._input.resolution
             logger.warn(
                 f"WARNING: Failed to write event at frame {time.frame_num} [{time.get_timecode()}] "
-                f"due to size mismatch: {size[0]}x{size[1]}, expected {video[0]}x{video[1]}")
+                f"due to size mismatch: {size[0]}x{size[1]}, expected {video[0]}x{video[1]}"
+            )
             return
         if self._video_writer is None:
             # Use the first input video name as a filename template.
             video_name = get_filename(path=self._input.paths[0], include_extension=False)
             output_path = (
-                self._comp_file if self._comp_file else OUTPUT_FILE_TEMPLATE.format(
+                self._comp_file
+                if self._comp_file
+                else OUTPUT_FILE_TEMPLATE.format(
                     VIDEO_NAME=video_name,
                     EVENT_NUMBER="%04d" % (1 + self._num_events),
                     EXTENSION="avi",
-                ))
+                )
+            )
             self._video_writer = self._init_video_writer(output_path, size)
         # *NOTE*: Overlays are currently rendered in-place by modifying the event itself.
         self._draw_overlays(event.frame_bgr, event.timecode, event.score, event.bounding_box)
@@ -1015,15 +1051,15 @@ class MotionScanner:
         bounding_box: Optional[Tuple[int, int, int, int]],
         use_shift=True,
     ):
-        if not self._timecode_overlay is None:
+        if self._timecode_overlay is not None:
             self._timecode_overlay.draw(frame, text=timecode.get_timecode())
-        if not self._metrics_overlay is None:
+        if self._metrics_overlay is not None:
             to_display = "Frame: %04d\nScore: %3.2f" % (
                 timecode.get_frames(),
                 frame_score,
             )
             self._metrics_overlay.draw(frame, text=to_display)
-        if not self._bounding_box is None and not bounding_box is None:
+        if self._bounding_box is not None and bounding_box is not None:
             self._bounding_box.draw(frame, bounding_box, use_shift)
 
     def _on_mask_event(self, event: MotionMaskEvent):
@@ -1038,11 +1074,13 @@ class MotionScanner:
             logger.warn(
                 f"WARNING: Failed to write mask at frame {time.frame_num} [{time.get_timecode()}] "
                 f"due to size mismatch: {size[0]}x{size[1]}, "
-                f" expected {self._mask_size[0]}x{self._mask_size[1]}")
+                f" expected {self._mask_size[0]}x{self._mask_size[1]}"
+            )
             return
         out_frame = cv2.cvtColor(event.motion_mask, cv2.COLOR_GRAY2BGR)
         self._draw_overlays(
-            out_frame, event.timecode, event.score, event.bounding_box, use_shift=False)
+            out_frame, event.timecode, event.score, event.bounding_box, use_shift=False
+        )
         self._mask_writer.write(out_frame)
 
     def _on_motion_event(self, event: MotionEvent):
@@ -1058,15 +1096,20 @@ class MotionScanner:
         # Output motion event using Ffmpeg.
         output_args = (
             self._ffmpeg_output_args
-            if self._output_mode == OutputMode.FFMPEG else COPY_MODE_OUTPUT_ARGS)
+            if self._output_mode == OutputMode.FFMPEG
+            else COPY_MODE_OUTPUT_ARGS
+        )
         # Use the first input video name as a filename template.
         video_name = get_filename(path=self._input.paths[0], include_extension=False)
         output_path = (
-            self._comp_file if self._comp_file else OUTPUT_FILE_TEMPLATE.format(
+            self._comp_file
+            if self._comp_file
+            else OUTPUT_FILE_TEMPLATE.format(
                 VIDEO_NAME=video_name,
                 EVENT_NUMBER="%04d" % self._num_events,
                 EXTENSION="mp4",
-            ))
+            )
+        )
         if self._output_dir:
             output_path = os.path.join(self._output_dir, output_path)
         # Only log the args passed to ffmpeg on the first event, to reduce log spam.
@@ -1087,8 +1130,9 @@ class MotionScanner:
     def _encode_thread(self, encode_queue: queue.Queue):
         try:
             while True:
-                event: Optional[Union[EncodeFrameEvent, MotionMaskEvent,
-                                      MotionEvent]] = encode_queue.get()
+                event: Optional[Union[EncodeFrameEvent, MotionMaskEvent, MotionEvent]] = (
+                    encode_queue.get()
+                )
                 if event is None:
                     break
                 if isinstance(event, EncodeFrameEvent):
@@ -1098,8 +1142,7 @@ class MotionScanner:
                 elif isinstance(event, MotionEvent):
                     self._on_motion_event(event)
         # We'll re-raise any exceptions from the main thread.
-        # pylint: disable=bare-except
-        except:
+        except:  # noqa: E722
             self._stop.set()
             logger.critical("Fatal error: Exception raised in encode thread.")
             logger.debug(sys.exc_info())
@@ -1112,7 +1155,6 @@ class MotionScanner:
             # Unblock any waiting puts if we stopped early.
             while not encode_queue.empty():
                 _ = encode_queue.get_nowait()
-        # pylint: enable=bare-except
 
     # TODO(v2.0): Remove deprecated function, replaced by Region Editor.
     def _select_roi_deprecated(self) -> bool:
@@ -1120,7 +1162,8 @@ class MotionScanner:
         if self._show_roi_window_deprecated:
             logger.warning(
                 "**WARNING**: -roi/--region-of-interest is deprecated and will be removed.\n\n"
-                "Use -r/--region-editor instead.\n")
+                "Use -r/--region-editor instead.\n"
+            )
             logger.info("Selecting area of interest:")
             # TODO: We should process this frame.
             frame_for_crop = self._input.read()
@@ -1171,6 +1214,7 @@ class MotionScanner:
                 "**WARNING**: region-of-interest (-roi) is deprecated and will be removed.\n\n"
                 "You can use the following equivalent region:\n"
                 f"--add-region {region_arg}\n"
-                "For config files, save this region to a file and set the load-region option.\n")
+                "For config files, save this region to a file and set the load-region option.\n"
+            )
             self._regions += [region]
         return True

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
@@ -21,7 +20,7 @@ import cv2
 import numpy
 
 
-class TextOverlay(object):
+class TextOverlay:
     """Renders text onto video frames, primarily used for drawing timecodes.
 
     Text is currently anchored to the top left of the frame.
@@ -32,15 +31,15 @@ class TextOverlay(object):
         TopRight = 2
 
     def __init__(
-            self,
-            font: int = cv2.FONT_HERSHEY_SIMPLEX,
-            font_scale: float = 1.0,
-            margin: int = 4,
-            border: int = 4,
-            thickness: int = 2,
-            color: ty.Tuple[int, int, int] = (255, 255, 255),
-            bg_color: ty.Tuple[int, int, int] = (0, 0, 0),
-            corner: Corner = Corner.TopLeft,
+        self,
+        font: int = cv2.FONT_HERSHEY_SIMPLEX,
+        font_scale: float = 1.0,
+        margin: int = 4,
+        border: int = 4,
+        thickness: int = 2,
+        color: ty.Tuple[int, int, int] = (255, 255, 255),
+        bg_color: ty.Tuple[int, int, int] = (0, 0, 0),
+        corner: Corner = Corner.TopLeft,
     ):
         """Initialize a TextOverlay with the given parameters.
 
@@ -117,7 +116,7 @@ class TextOverlay(object):
             y_offset += size[0][1] + line_spacing
 
 
-class BoundingBoxOverlay(object):
+class BoundingBoxOverlay:
     """Calculates and draws a bounding box onto of video frames based on a binary mask
     representing areas of interest/motion."""
 
@@ -184,8 +183,7 @@ class BoundingBoxOverlay(object):
         """
         assert self._smoothing_window
         return [
-            round(sum([box[i]
-                       for box in self._smoothing_window]) / len(self._smoothing_window))
+            round(sum([box[i] for box in self._smoothing_window]) / len(self._smoothing_window))
             for i in range(4)
         ]
 

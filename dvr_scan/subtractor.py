@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
@@ -58,7 +57,8 @@ class SubtractorMOG2(Subtractor):
         if kernel_size < 0 or (kernel_size > 1 and kernel_size % 2 == 0):
             raise ValueError("kernel_size must be >= 0")
         self._kernel = (
-            numpy.ones((kernel_size, kernel_size), numpy.uint8) if kernel_size > 1 else None)
+            numpy.ones((kernel_size, kernel_size), numpy.uint8) if kernel_size > 1 else None
+        )
         self._subtractor = cv2.createBackgroundSubtractorMOG2(
             history=history,
             varThreshold=variance_threshold,
@@ -71,7 +71,7 @@ class SubtractorMOG2(Subtractor):
     def apply(self, frame: numpy.ndarray) -> numpy.ndarray:
         frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         frame_mask = self._subtractor.apply(frame_gray, learningRate=self._learning_rate)
-        if not self._kernel is None:
+        if self._kernel is not None:
             frame_filt = cv2.morphologyEx(frame_mask, cv2.MORPH_OPEN, self._kernel)
         else:
             frame_filt = frame_mask
@@ -98,7 +98,8 @@ class SubtractorCNT(SubtractorMOG2):
         if kernel_size < 0 or (kernel_size > 1 and kernel_size % 2 == 0):
             raise ValueError("kernel_size must be odd integer >= 1 or zero (0)")
         self._kernel = (
-            numpy.ones((kernel_size, kernel_size), numpy.uint8) if kernel_size > 1 else None)
+            numpy.ones((kernel_size, kernel_size), numpy.uint8) if kernel_size > 1 else None
+        )
         self._subtractor = cv2.bgsegm.createBackgroundSubtractorCNT(
             minPixelStability=min_pixel_stability,
             useHistory=use_history,
@@ -130,7 +131,10 @@ class SubtractorCudaMOG2(SubtractorMOG2):
                 cv2.MORPH_OPEN,
                 cv2.CV_8UC1,
                 numpy.ones((kernel_size, kernel_size), numpy.uint8),
-            ) if kernel_size > 1 else None)
+            )
+            if kernel_size > 1
+            else None
+        )
         self._subtractor = cv2.cuda.createBackgroundSubtractorMOG2(
             history=history,
             varThreshold=variance_threshold,
@@ -146,7 +150,7 @@ class SubtractorCudaMOG2(SubtractorMOG2):
         frame_bgr_dev.upload(frame, stream=stream)
         frame_gray_dev = cv2.cuda.cvtColor(frame_bgr_dev, cv2.COLOR_BGR2GRAY, stream=stream)
         frame_mask_dev = self._subtractor.apply(frame_gray_dev, self._learning_rate, stream=stream)
-        if not self._filter is None:
+        if self._filter is not None:
             frame_filt_dev = self._filter.apply(frame_mask_dev, stream=stream)
         else:
             frame_filt_dev = frame_mask_dev

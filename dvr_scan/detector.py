@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
@@ -15,16 +14,16 @@ Contains the motion detection algorithm (`MotionDetector`) for DVR-Scan.  It cal
 represents the relative amount of movement of consecutive frames in a video.
 """
 
-from collections import namedtuple
-from dataclasses import dataclass
 import logging
 import typing as ty
+from collections import namedtuple
+from dataclasses import dataclass
 
 import cv2
 import numpy as np
 
-from dvr_scan.subtractor import Subtractor
 from dvr_scan.region import Point
+from dvr_scan.subtractor import Subtractor
 
 Rectangle = namedtuple("Rectangle", ["x", "y", "w", "h"])
 
@@ -56,7 +55,7 @@ class MotionDetector:
         self._subtractor = subtractor
         self._frame_size = frame_size
         self._downscale = downscale
-        self._regions = list(regions) if not regions is None else []
+        self._regions = list(regions) if regions is not None else []
         self._mask: np.ndarray = np.ones((0, 0))
         self._area: ty.Tuple[Point, Point] = (
             Point(0, 0),
@@ -80,13 +79,14 @@ class MotionDetector:
                     max_x, max_y = max(max_x, point.x), max(max_y, point.y)
             self._area = (Point(min_x, min_y), Point(max_x, max_y))
             coverage = 100.0 * (active_pixels / float(frame_size[0] * frame_size[1]))
-            mask = mask[self._area[0].y:self._area[1].y, self._area[0].x:self._area[1].x]
+            mask = mask[self._area[0].y : self._area[1].y, self._area[0].x : self._area[1].x]
             logger.debug(
                 "Region Mask: area = ("
                 f"{self._area[0].x},{self._area[0].y}),({self._area[1].x},{self._area[1].y}"
-                f"), coverage = {coverage:.2f}%")
+                f"), coverage = {coverage:.2f}%"
+            )
             if self._downscale > 1:
-                mask = mask[::self._downscale, ::self._downscale]
+                mask = mask[:: self._downscale, :: self._downscale]
                 logger.debug(f"Mask Downscaled: size = {mask.shape[0]}, {mask.shape[1]}")
             self._mask = mask
 
@@ -101,11 +101,11 @@ class MotionDetector:
             cropped = frame
         else:
             cropped = frame[
-                self._area[0].y:self._area[1].y,
-                self._area[0].x:self._area[1].x,
+                self._area[0].y : self._area[1].y,
+                self._area[0].x : self._area[1].x,
             ]
         if self._downscale > 1:
-            return cropped[::self._downscale, ::self._downscale, :]
+            return cropped[:: self._downscale, :: self._downscale, :]
 
         return cropped
 
@@ -114,7 +114,8 @@ class MotionDetector:
         subtracted = self._subtractor.apply(frame)
         if not self._regions:
             return ProcessedFrame(
-                subtracted=subtracted, masked=subtracted, score=np.average(subtracted))
+                subtracted=subtracted, masked=subtracted, score=np.average(subtracted)
+            )
         motion_mask = np.ma.array(subtracted, mask=self._mask)
         return ProcessedFrame(
             subtracted=subtracted,
