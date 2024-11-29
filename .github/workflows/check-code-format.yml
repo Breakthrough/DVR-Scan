@@ -1,15 +1,13 @@
-# Use YAPF to check DVR-Scan formatting (run `yapf -i -r dvr_scan tests` locally to fix)
-name: Check Code Format
+# Check DVR-Scan code lint warnings and formatting.
+name: Static Analysis
 
 on:
   pull_request:
     paths:
-      - .style.yapf
       - dvr_scan/**
       - tests/**
   push:
     paths:
-      - .style.yapf
       - dvr_scan/**
       - tests/**
 
@@ -25,14 +23,21 @@ jobs:
         with:
           python-version: '3.13'
 
-      - name: Update pip
-        run: python -m pip install --upgrade pip
-      - name: Install yapf
-        run: python -m pip install --upgrade yapf toml
-      - name: Install DVR-Scan Dependencies
-        run: python -m pip install -r requirements_headless.txt
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --upgrade yapf toml
+          python -m pip install -r requirements_headless.txt
 
-      - name: Check Code Format (dvr_scan)
-        run: python -m yapf --diff --recursive dvr_scan/
-      - name: Check Code Format (tests)
-        run: python -m yapf --diff --recursive tests/
+      - name: Check Code Format (yapf)
+        if: ${{ hashFiles('.style.yapf') != '' }}
+        run: |
+          python -m yapf --diff --recursive dvr_scan/
+          python -m yapf --diff --recursive tests/
+
+      - name: Static Analysis (ruff)
+        if: ${{ hashFiles('.style.yapf') == '' }}
+        run: |
+          python -m pip install --upgrade ruff
+          python -m ruff check
+          python -m ruff format --check
