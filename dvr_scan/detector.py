@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
@@ -15,16 +14,16 @@ Contains the motion detection algorithm (`MotionDetector`) for DVR-Scan.  It cal
 represents the relative amount of movement of consecutive frames in a video.
 """
 
-from collections import namedtuple
-from dataclasses import dataclass
 import logging
 import typing as ty
+from collections import namedtuple
+from dataclasses import dataclass
 
 import cv2
 import numpy as np
 
-from dvr_scan.subtractor import Subtractor
 from dvr_scan.region import Point
+from dvr_scan.subtractor import Subtractor
 
 Rectangle = namedtuple("Rectangle", ["x", "y", "w", "h"])
 
@@ -56,7 +55,7 @@ class MotionDetector:
         self._subtractor = subtractor
         self._frame_size = frame_size
         self._downscale = downscale
-        self._regions = list(regions) if not regions is None else []
+        self._regions = list(regions) if regions is not None else []
         self._mask: np.ndarray = np.ones((0, 0))
         self._area: ty.Tuple[Point, Point] = (
             Point(0, 0),

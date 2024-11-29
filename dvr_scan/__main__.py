@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
@@ -15,13 +14,13 @@ Provides entry point for DVR-Scan's command-line interface (CLI).
 """
 
 import logging
-from subprocess import CalledProcessError
 import sys
-
-from dvr_scan.cli.controller import parse_settings, run_dvr_scan
+from subprocess import CalledProcessError
 
 from scenedetect import VideoOpenFailure
-from scenedetect.platform import logging_redirect_tqdm, FakeTqdmLoggingRedirect
+from scenedetect.platform import FakeTqdmLoggingRedirect, logging_redirect_tqdm
+
+from dvr_scan.cli.controller import parse_settings, run_dvr_scan
 
 EXIT_SUCCESS: int = 0
 EXIT_ERROR: int = 1
@@ -35,7 +34,7 @@ def main():
     logger = logging.getLogger("dvr_scan")
     redirect = FakeTqdmLoggingRedirect if settings.get("quiet-mode") else logging_redirect_tqdm
     debug_mode = settings.get("debug")
-    show_traceback = logging.DEBUG == getattr(logging, settings.get("verbosity").upper())
+    show_traceback = getattr(logging, settings.get("verbosity").upper()) == logging.DEBUG
     with redirect(loggers=[logger]):
         try:
             run_dvr_scan(settings)
@@ -47,7 +46,7 @@ def main():
             logger.critical("Failed to load input: %s", str(ex), exc_info=show_traceback)
             if debug_mode:
                 raise
-        except KeyboardInterrupt as ex:
+        except KeyboardInterrupt:
             logger.info("Stopping (interrupt received)...", exc_info=show_traceback)
             if debug_mode:
                 raise

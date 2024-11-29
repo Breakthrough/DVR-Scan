@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
@@ -32,7 +31,7 @@ def test_decode_multiple(traffic_camera_video):
     splice_amount = 3
     video = VideoJoiner([traffic_camera_video] * splice_amount)
     assert video.total_frames == TRAFFIC_CAMERA_VIDEO_TOTAL_FRAMES * splice_amount
-    while not video.read(False) is None:
+    while video.read(False) is not None:
         pass
     assert video.position.get_frames() == TRAFFIC_CAMERA_VIDEO_TOTAL_FRAMES * splice_amount
     assert video.decode_failures == 0

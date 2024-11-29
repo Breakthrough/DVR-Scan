@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
@@ -16,6 +15,7 @@ This file includes all pytest configuration for running DVR-Scan's tests.
 """
 
 import os
+
 import pytest
 
 #

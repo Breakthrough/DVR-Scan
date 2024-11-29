@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
@@ -21,7 +20,7 @@ import cv2
 import numpy
 
 
-class TextOverlay(object):
+class TextOverlay:
     """Renders text onto video frames, primarily used for drawing timecodes.
 
     Text is currently anchored to the top left of the frame.
@@ -117,7 +116,7 @@ class TextOverlay(object):
             y_offset += size[0][1] + line_spacing
 
 
-class BoundingBoxOverlay(object):
+class BoundingBoxOverlay:
     """Calculates and draws a bounding box onto of video frames based on a binary mask
     representing areas of interest/motion."""
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
@@ -19,9 +18,9 @@ import typing as ty
 
 import pytest
 
+from dvr_scan.region import Point
 from dvr_scan.scanner import DetectorType, MotionScanner
 from dvr_scan.subtractor import SubtractorCNT, SubtractorCudaMOG2
-from dvr_scan.region import Point
 
 MACHINE_ARCH = platform.machine().upper()
 

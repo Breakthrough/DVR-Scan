@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
@@ -16,7 +15,6 @@ better error messaging in cases where the module isn't installed.
 """
 
 import os
-import sys
 
 # On Windows, make sure we include any required DLL paths.
 if os.name == "nt":

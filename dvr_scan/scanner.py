@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
@@ -14,8 +13,6 @@
 Contains the motion scanning engine (`MotionScanner`) for DVR-Scan.
 """
 
-from dataclasses import dataclass
-from enum import Enum
 import logging
 import os
 import os.path
@@ -23,6 +20,8 @@ import queue
 import subprocess
 import sys
 import threading
+from dataclasses import dataclass
+from enum import Enum
 from typing import Any, AnyStr, List, Optional, Tuple, Union
 
 import cv2
@@ -34,8 +33,8 @@ from tqdm import tqdm
 from dvr_scan.detector import MotionDetector
 from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
 from dvr_scan.platform import get_filename, get_min_screen_bounds, is_ffmpeg_available
-from dvr_scan.region import RegionEditor, Point, Size, bound_point, load_regions
-from dvr_scan.subtractor import SubtractorMOG2, SubtractorCNT, SubtractorCudaMOG2
+from dvr_scan.region import Point, RegionEditor, Size, bound_point, load_regions
+from dvr_scan.subtractor import SubtractorCNT, SubtractorCudaMOG2, SubtractorMOG2
 from dvr_scan.video_joiner import VideoJoiner
 
 logger = logging.getLogger("dvr_scan")
@@ -525,7 +524,7 @@ class MotionScanner:
             frame_for_crop = self._input.read()
             scale_factor = 1
             screen_bounds = get_min_screen_bounds()
-            if not screen_bounds is None:
+            if screen_bounds is not None:
                 max_w, max_h = screen_bounds[1], screen_bounds[0]
                 frame_w, frame_h = frame_for_crop.shape[1], frame_for_crop.shape[0]
                 if (max_h > 0 and frame_h > max_h) or (max_w > 0 and frame_w > max_w):
@@ -561,7 +560,7 @@ class MotionScanner:
             path = self._save_region
             if self._output_dir:
                 path = os.path.join(self._output_dir, path)
-            with open(path, "wt") as region_file:
+            with open(path, "w") as region_file:
                 for shape in self._regions:
                     region_file.write(" ".join(f"{x} {y}" for x, y in shape))
                     region_file.write("\n")
@@ -1053,15 +1052,15 @@ class MotionScanner:
         bounding_box: Optional[Tuple[int, int, int, int]],
         use_shift=True,
     ):
-        if not self._timecode_overlay is None:
+        if self._timecode_overlay is not None:
             self._timecode_overlay.draw(frame, text=timecode.get_timecode())
-        if not self._metrics_overlay is None:
+        if self._metrics_overlay is not None:
             to_display = "Frame: %04d\nScore: %3.2f" % (
                 timecode.get_frames(),
                 frame_score,
             )
             self._metrics_overlay.draw(frame, text=to_display)
-        if not self._bounding_box is None and not bounding_box is None:
+        if self._bounding_box is not None and bounding_box is not None:
             self._bounding_box.draw(frame, bounding_box, use_shift)
 
     def _on_mask_event(self, event: MotionMaskEvent):

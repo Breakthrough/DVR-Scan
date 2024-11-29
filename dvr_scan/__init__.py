@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
@@ -33,13 +32,12 @@ There are also a few helper modules:
 """
 
 import os
-import sys
 import pkgutil
+import sys
 
 # Handle loading OpenCV. This **MUST** be first before any other DVR-Scan or third-party
 # packages are imported which might attempt to import the `cv2` module.
 import dvr_scan.opencv_loader as _
-
 from dvr_scan.platform import init_logger
 
 # Used for module/distribution identification.

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
@@ -129,7 +128,7 @@ class VideoJoiner:
             video_name = os.path.basename(video_path)
             try:
                 cap = VideoStreamCv2(video_path)
-            except VideoOpenFailure as ex:
+            except VideoOpenFailure:
                 logger.error("Error: Couldn't load video %s", video_path)
                 raise
             validated_paths.append(video_path)

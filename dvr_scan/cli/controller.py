@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
@@ -25,10 +24,10 @@ from scenedetect import FrameTimecode
 
 import dvr_scan
 from dvr_scan.cli import get_cli_parser
-from dvr_scan.cli.config import ConfigRegistry, ConfigLoadFailure, RegionValueDeprecated
-from dvr_scan.overlays import TextOverlay, BoundingBoxOverlay
-from dvr_scan.scanner import DetectorType, OutputMode, MotionScanner
+from dvr_scan.cli.config import ConfigLoadFailure, ConfigRegistry, RegionValueDeprecated
+from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
 from dvr_scan.platform import init_logger
+from dvr_scan.scanner import DetectorType, MotionScanner, OutputMode
 
 logger = logging.getLogger("dvr_scan")
 
@@ -77,7 +76,7 @@ def _preprocess_args(args):
             input_files += expanded
     args.input = input_files
     # -o/--output
-    if hasattr(args, "output") and not "." in args.output:
+    if hasattr(args, "output") and "." not in args.output:
         args.output += ".avi"
     # -roi/--region-of-interest
     if hasattr(args, "region_of_interest") and args.region_of_interest:

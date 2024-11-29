@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
@@ -14,18 +13,18 @@
 Regions are represented as a set of closed polygons defined by lists of points.
 """
 
+import math
+import os
+import typing as ty
 from collections import namedtuple
 from copy import deepcopy
 from dataclasses import dataclass
 from logging import getLogger
-import math
-import os
-import typing as ty
 
 import cv2
 import numpy as np
 
-from dvr_scan.platform import HAS_TKINTER, IS_WINDOWS, temp_tk_window, set_icon
+from dvr_scan.platform import HAS_TKINTER, IS_WINDOWS, set_icon, temp_tk_window
 
 if HAS_TKINTER:
     import tkinter
@@ -238,7 +237,7 @@ def bound_point(point: Point, size: Size):
 
 def load_regions(path: ty.AnyStr) -> ty.Iterable[RegionValidator]:
     region_data = None
-    with open(path, "rt") as file:
+    with open(path) as file:
         region_data = file.readlines()
     if region_data:
         return list(
@@ -299,7 +298,7 @@ class RegionEditor:
     def active_region(self) -> ty.Optional[ty.List[Point]]:
         return (
             self._regions[self._active_shape]
-            if (not self._active_shape is None and bool(self._regions))
+            if (self._active_shape is not None and bool(self._regions))
             else None
         )
 
@@ -397,7 +396,7 @@ class RegionEditor:
                     thickness=thickness,
                     lineType=line_type,
                 )
-        if not self._hover_point is None and not self._settings.mask_source:
+        if self._hover_point is not None and not self._settings.mask_source:
             first, mid, last = (
                 (self._hover_point - 1) % len(self.active_region),
                 self._hover_point,
@@ -426,7 +425,7 @@ class RegionEditor:
                 lineType=line_type,
             )
         elif (
-            not self._nearest_points is None
+            self._nearest_points is not None
             and self._settings.highlight_insert
             and not self._settings.mask_source
         ):
@@ -450,18 +449,18 @@ class RegionEditor:
                 lineType=line_type,
             )
 
-        if not self.active_region is None:
+        if self.active_region is not None:
             radius = control_handle_radius(self._scale)
             for i, point in enumerate(self.active_region):
                 color = self._settings.line_color_alt
-                if not self._hover_point is None:
+                if self._hover_point is not None:
                     if self._hover_point == i:
                         color = (
                             self._settings.hover_color_alt
                             if not self._dragging
                             else self._settings.interact_color
                         )
-                elif not self._nearest_points is None and i in self._nearest_points:
+                elif self._nearest_points is not None and i in self._nearest_points:
                     color = (
                         self._settings.hover_color
                         if self._dragging
@@ -680,7 +679,7 @@ class RegionEditor:
             if not self._settings.save_path:
                 return False
             path = self._settings.save_path
-        with open(path, "wt") as region_file:
+        with open(path, "w") as region_file:
             for shape in self._regions:
                 region_file.write(" ".join(f"{x} {y}" for x, y in shape))
                 region_file.write("\n")
@@ -729,7 +728,7 @@ class RegionEditor:
             self._active_shape = 0 if len(self._regions) > 0 else None
 
     def _delete_point(self):
-        if not self._hover_point is None and not self._dragging:
+        if self._hover_point is not None and not self._dragging:
             if len(self.active_region) > MIN_NUM_POINTS:
                 hover = self._hover_point
                 x, y = self.active_region[hover]
@@ -766,7 +765,7 @@ class RegionEditor:
         self._init_window()
 
     def _add_point(self) -> bool:
-        if not self._nearest_points is None:
+        if self._nearest_points is not None:
             insert_pos = (
                 1 + self._nearest_points[0]
                 if self._nearest_points[0] < self._nearest_points[1]
@@ -822,7 +821,7 @@ class RegionEditor:
                 logger.info(
                     f"No regions to edit, add a new one by pressing {KEYBIND_REGION_ADD.upper()}."
                 )
-            if not self._hover_point is None:
+            if self._hover_point is not None:
                 self._dragging = True
                 self._drag_start = self._curr_mouse_pos
                 self._redraw = True
@@ -839,7 +838,7 @@ class RegionEditor:
 
         elif event == cv2.EVENT_LBUTTONUP:
             if self._dragging:
-                assert not self._hover_point is None
+                assert self._hover_point is not None
                 if (
                     len(self.active_region) != len(self._history[self._history_pos].regions)
                     or self._curr_mouse_pos != self._drag_start

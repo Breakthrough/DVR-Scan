@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
@@ -23,7 +22,7 @@ import argparse
 from typing import List, Optional
 
 import dvr_scan
-from dvr_scan.cli.config import ConfigRegistry, CHOICE_MAP, USER_CONFIG_FILE_PATH
+from dvr_scan.cli.config import CHOICE_MAP, USER_CONFIG_FILE_PATH, ConfigRegistry
 from dvr_scan.region import RegionValidator
 
 # Version string shown for the -v/--version CLI argument.
@@ -153,7 +152,7 @@ def _kernel_size_type_check(metavar: Optional[str] = None):
 
     def _type_checker(value):
         value = int(value)
-        if not value in (-1, 0) and (value < 3 or value % 2 == 0):
+        if value not in (-1, 0) and (value < 3 or value % 2 == 0):
             raise argparse.ArgumentTypeError(
                 "invalid choice: %d (%s must be an odd number starting from 3, 0 to disable, or "
                 "-1 for auto)" % (value, metavar)
@@ -240,7 +239,7 @@ def string_type_check(
         valid = True
         if not case_sensitive:
             value = value.lower()
-        if not value in valid_strings:
+        if value not in valid_strings:
             valid = False
             case_msg = " (case sensitive)" if case_sensitive else ""
             msg = "invalid choice: %s (valid settings for %s%s are: %s)" % (
@@ -359,7 +358,7 @@ class RegionAction(argparse.Action):
         # constant where possible.
         items = getattr(namespace, "regions", [])
         items += [region.value]
-        setattr(namespace, "regions", items)
+        namespace.regions = items
 
 
 # TODO: To help with debugging, add a `debug` option to the config file as well that, if set in the

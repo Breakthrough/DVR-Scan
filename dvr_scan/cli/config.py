@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #         PySceneDetect: Python-Based Video Scene Detector
 #   ---------------------------------------------------------------
@@ -19,11 +18,11 @@ the constants defined here for use by the CLI/config file may differ from their 
 in the `dvr_scan` module.
 """
 
-from abc import ABC, abstractmethod
 import logging
 import os
 import os.path
-from configparser import ConfigParser, ParsingError, DEFAULTSECT
+from abc import ABC, abstractmethod
+from configparser import DEFAULTSECT, ConfigParser, ParsingError
 from typing import Any, AnyStr, Dict, List, Optional, Tuple, Union
 
 from platformdirs import user_config_dir
@@ -160,7 +159,7 @@ class KernelSizeValue(ValidatedValue):
 
     def __init__(self, value: int = -1):
         value = int(value)
-        if not value in (-1, 0) and (value < 3 or value % 2 == 0):
+        if value not in (-1, 0) and (value < 3 or value % 2 == 0):
             raise ValueError()
         self._value = value
 
@@ -431,7 +430,7 @@ class ConfigRegistry:
         # Try to load and parse the config file at `path`.
         config = ConfigParser()
         try:
-            config_file_contents = "[%s]\n%s" % (DEFAULTSECT, open(path, "r").read())
+            config_file_contents = "[%s]\n%s" % (DEFAULTSECT, open(path).read())
             config.read_string(config_file_contents, source=path)
         except ParsingError as ex:
             raise ConfigLoadFailure(self._init_log, reason=ex)
@@ -480,7 +479,7 @@ class ConfigRegistry:
         self._migrate_deprecated(config)
 
         for option in config[DEFAULTSECT]:
-            if not option in CONFIG_MAP:
+            if option not in CONFIG_MAP:
                 self._log(logging.ERROR, "Unsupported config option: %s" % (option))
                 continue
             try:
@@ -544,7 +543,7 @@ class ConfigRegistry:
 
     def is_default(self, option: str) -> bool:
         """True if the option is default, i.e. is NOT set by the user."""
-        return not option in self._config
+        return option not in self._config
 
     def get_value(
         self,

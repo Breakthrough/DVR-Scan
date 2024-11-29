@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #      DVR-Scan: Video Motion Event Detection & Extraction Tool
 #   --------------------------------------------------------------
@@ -20,12 +19,10 @@ import subprocess
 from typing import List
 
 import pytest
+from scenedetect.video_splitter import is_ffmpeg_available
 
 # We need to import the OpenCV loader before PySceneDetect as the latter imports OpenCV.
 # pylint: disable=wrong-import-order, unused-import, ungrouped-imports
-from dvr_scan import opencv_loader as _
-from scenedetect.video_splitter import is_ffmpeg_available
-
 from dvr_scan.subtractor import SubtractorCNT, SubtractorCudaMOG2
 
 MACHINE_ARCH = platform.machine().upper()
@@ -344,6 +341,6 @@ def test_deprecated_roi(tmp_path):
     )
     roi_path = os.path.join(tmp_path, "roi.txt")
     assert os.path.exists(roi_path)
-    with open(roi_path, "rt") as roi_file:
+    with open(roi_path) as roi_file:
         last_line_of_file = list(filter(None, roi_file.readlines()))[-1].strip()
     assert last_line_of_file == "10 20 20 20 20 35 10 35"
