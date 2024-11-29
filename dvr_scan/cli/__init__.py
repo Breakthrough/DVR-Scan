@@ -258,7 +258,6 @@ def string_type_check(
 class LicenseAction(argparse.Action):
     """argparse Action for displaying DVR-Scan license & copyright info."""
 
-    # pylint: disable=redefined-builtin, too-many-arguments
     def __init__(
         self,
         option_strings,
@@ -286,7 +285,6 @@ class LicenseAction(argparse.Action):
 class VersionAction(argparse.Action):
     """argparse Action for displaying DVR-Scan version."""
 
-    # pylint: disable=redefined-builtin, too-many-arguments
     def __init__(
         self,
         option_strings,
@@ -379,7 +377,6 @@ def get_cli_parser(user_config: ConfigRegistry):
     )
 
     if hasattr(parser, "_optionals"):
-        # pylint: disable=protected-access
         parser._optionals.title = "arguments"
 
     parser.add_argument(

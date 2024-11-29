@@ -37,17 +37,9 @@ select = [
     "I",
     # TODO - Add additional rule sets (https://docs.astral.sh/ruff/rules/):
     # pyupgrade
-    "UP",
+    #"UP",
     # flake8-simplify
-    "SIM",
-]
-ignore = [
-    # TODO: Determine if we should use __all__, a reudndant alias, or keep this suppressed.
-    #"F401",
-    # TODO: Line too long
-    #"E501",
-    # TODO: Do not assign a `lambda` expression, use a `def`
-    #"E731",
+    #"SIM",
 ]
 fixable = ["ALL"]
 unfixable = []

@@ -433,9 +433,9 @@ class ConfigRegistry:
             config_file_contents = "[%s]\n%s" % (DEFAULTSECT, open(path).read())
             config.read_string(config_file_contents, source=path)
         except ParsingError as ex:
-            raise ConfigLoadFailure(self._init_log, reason=ex)
+            raise ConfigLoadFailure(self._init_log, reason=ex) from ex
         except OSError as ex:
-            raise ConfigLoadFailure(self._init_log, reason=ex)
+            raise ConfigLoadFailure(self._init_log, reason=ex) from ex
         self._parse_config(config)
         if any(level >= logging.ERROR for level, _ in self._init_log):
             raise ConfigLoadFailure(self._init_log)

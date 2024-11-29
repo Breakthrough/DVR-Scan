@@ -161,7 +161,9 @@ def parse_settings(args: ty.List[str] = None) -> ty.Optional[ProgramSettings]:
             logger.debug("Error loading config file:", exc_info=config_load_error)
             if debug_mode:
                 raise config_load_error
-            return None
+            # Intentionally suppress the exception in release mode since we've already logged the
+            # failure reason to the user above. We can now exit with an error code.
+            return None  # noqa: B012
 
     if config.config_dict:
         logger.debug("Loaded configuration:\n%s", str(config.config_dict))

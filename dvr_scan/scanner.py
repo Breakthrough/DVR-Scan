@@ -643,7 +643,8 @@ class MotionScanner:
         )
 
         logger.info(
-            "Using subtractor %s with kernel_size = %s%s, variance_threshold = %s and learning_rate = %s",
+            "Using subtractor %s with kernel_size = %s%s, "
+            "variance_threshold = %s and learning_rate = %s",
             self._subtractor_type.name,
             str(kernel_size) if kernel_size else "off",
             " (auto)" if self._kernel_size == -1 else "",
@@ -993,8 +994,7 @@ class MotionScanner:
                     decode_queue.put(DecodeEvent(frame_bgr, presentation_time))
 
         # We'll re-raise any exceptions from the main thread.
-        # pylint: disable=bare-except
-        except:
+        except:  # noqa: E722
             self._stop.set()
             logger.critical("Fatal error: Exception raised in decode thread.")
             logger.debug(sys.exc_info())
@@ -1002,7 +1002,6 @@ class MotionScanner:
         finally:
             # Make sure main thread stops processing loop.
             decode_queue.put(None)
-        # pylint: enable=bare-except
 
     def _init_video_writer(self, path: AnyStr, frame_size: Tuple[int, int]) -> cv2.VideoWriter:
         """Create a new cv2.VideoWriter using the correct framerate."""
@@ -1143,8 +1142,7 @@ class MotionScanner:
                 elif isinstance(event, MotionEvent):
                     self._on_motion_event(event)
         # We'll re-raise any exceptions from the main thread.
-        # pylint: disable=bare-except
-        except:
+        except:  # noqa: E722
             self._stop.set()
             logger.critical("Fatal error: Exception raised in encode thread.")
             logger.debug(sys.exc_info())
@@ -1157,7 +1155,6 @@ class MotionScanner:
             # Unblock any waiting puts if we stopped early.
             while not encode_queue.empty():
                 _ = encode_queue.get_nowait()
-        # pylint: enable=bare-except
 
     # TODO(v2.0): Remove deprecated function, replaced by Region Editor.
     def _select_roi_deprecated(self) -> bool:

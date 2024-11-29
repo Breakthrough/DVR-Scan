@@ -22,7 +22,6 @@ import pytest
 from scenedetect.video_splitter import is_ffmpeg_available
 
 # We need to import the OpenCV loader before PySceneDetect as the latter imports OpenCV.
-# pylint: disable=wrong-import-order, unused-import, ungrouped-imports
 from dvr_scan.subtractor import SubtractorCNT, SubtractorCudaMOG2
 
 MACHINE_ARCH = platform.machine().upper()
@@ -323,7 +322,7 @@ def test_copy_mode(tmp_path):
 
 def test_deprecated_roi(tmp_path):
     """Test deprecated ROI translation."""
-    output = subprocess.check_output(
+    subprocess.check_output(
         args=DVR_SCAN_COMMAND
         + BASE_COMMAND
         + [

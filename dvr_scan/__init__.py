@@ -37,7 +37,7 @@ import sys
 
 # Handle loading OpenCV. This **MUST** be first before any other DVR-Scan or third-party
 # packages are imported which might attempt to import the `cv2` module.
-import dvr_scan.opencv_loader as _
+import dvr_scan.opencv_loader as _  # noqa: F401
 from dvr_scan.platform import init_logger
 
 # Used for module/distribution identification.
