@@ -4,6 +4,7 @@
 numpy
 opencv-python==4.10.0.84
 opencv-contrib-python==4.10.0.84
+pillow
 platformdirs
 pyinstaller>=6.0
 pytest
