@@ -6,11 +6,12 @@ a = Analysis(['../dvr_scan/__main__.py'],
              pathex=['.'],
              binaries=None,
              datas=[
-                ('../dvr-scan.cfg', 'dvr-scan'),
-                ('../*.md', 'dvr-scan'),
-                ('../dist/dvr-scan.ico', 'dvr-scan'),
-                ('../dvr_scan/LICENSE*', 'dvr-scan'),
-                ('../docs/*.md', 'dvr-scan/docs/')
+                ('../dvr_scan/dvr-scan.ico', 'dvr_scan'),
+                ('../dvr_scan/dvr-scan-logo.png', 'dvr_scan'),
+                ('../dvr-scan.cfg', 'dvr_scan/APP_FOLDER'),
+                ('../*.md', 'dvr_scan/APP_FOLDER'),
+                ('../dvr_scan/LICENSE*', 'dvr_scan/APP_FOLDER'),
+                ('../docs/*.md', 'dvr_scan/APP_FOLDER/docs/')
             ],
              hiddenimports=[],
              hookspath=[],
