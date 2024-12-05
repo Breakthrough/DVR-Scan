@@ -9,8 +9,8 @@ site/
 build/
 # Working directory for distribution assembly
 dist/dvr-scan/*
-dist/dvr-scan*
-dist/dvr_scan*
+dist/dvr-scan-*
+dist/dvr_scan-*
 
 # Location where docs are built before assembling distributions
 dvr_scan/docs/

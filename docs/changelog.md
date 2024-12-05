@@ -3,14 +3,15 @@
 
 ----------------------------------------------------------
 
-## DVR-Scan 1.7
+## DVR-Scan 1.6
 
-### 1.7 (In Development)
+### 1.6.2 (In Development)
 
  - [general] Add new `variance-threshold` [config option](https://www.dvr-scan.com/docs/#config-file) to control how MOG2 controls which pixels are described by the current background model [#163](https://github.com/Breakthrough/DVR-Scan/issues/163)
-
-
-## DVR-Scan 1.6
+ - [feature] Rework region editor to provide more consistent experience across all platforms
+    - The region editor is now much more usable and has UI controls in addition to keyboard shortcuts
+    - System-specific shortcuts like undo/redo now work as expected
+    - Various performance and usability improvements including zoom/pan and shape selection
 
 ### 1.6.1 (May 18, 2024)
 

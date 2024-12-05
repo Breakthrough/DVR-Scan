@@ -2,14 +2,13 @@
 
 block_cipher = None
 
-a = Analysis(['../dvr_scan/__main__.py'],
+cli = Analysis(['../dvr_scan/__main__.py'],
              pathex=['.'],
              binaries=None,
              datas=[
-                ('../dvr-scan.cfg', 'dvr-scan'),
-                ('../dist/dvr-scan.ico', 'dvr-scan'),
-                ('../dist/README.txt', 'dvr-scan'),
-                ('../dvr_scan/LICENSE*', 'dvr-scan'),
+                ('../dvr_scan/dvr-scan.ico', 'dvr_scan'),
+                ('../dvr_scan/dvr-scan-logo.png', 'dvr_scan'),
+                ('../dvr_scan/LICENSE*', 'dvr_scan'),
             ],
              hiddenimports=[],
              hookspath=[],
@@ -19,10 +18,11 @@ a = Analysis(['../dvr_scan/__main__.py'],
              win_private_assemblies=False,
              cipher=block_cipher)
 
-pyz = PYZ(a.pure, a.zipped_data,
+cli_pyz = PYZ(cli.pure, cli.zipped_data,
              cipher=block_cipher)
-exe = EXE(pyz,
-          a.scripts,
+
+cli_exe = EXE(cli_pyz,
+          cli.scripts,
           exclude_binaries=True,
           name='dvr-scan',
           debug=False,
@@ -30,11 +30,12 @@ exe = EXE(pyz,
           upx=True,
           console=True,
           version='.version_info',
-          icon='dvr-scan.ico')
-coll = COLLECT(exe,
-               a.binaries,
-               a.zipfiles,
-               a.datas,
+          icon='../dvr_scan/dvr-scan.ico')
+
+coll = COLLECT(cli_exe,
+               cli.binaries,
+               cli.zipfiles,
+               cli.datas,
                strip=False,
                upx=True,
                name='dvr-scan')

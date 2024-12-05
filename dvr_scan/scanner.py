@@ -32,10 +32,13 @@ from tqdm import tqdm
 
 from dvr_scan.detector import MotionDetector
 from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
-from dvr_scan.platform import get_filename, get_min_screen_bounds, is_ffmpeg_available
-from dvr_scan.region import Point, RegionEditor, Size, bound_point, load_regions
+from dvr_scan.platform import HAS_TKINTER, get_filename, get_min_screen_bounds, is_ffmpeg_available
+from dvr_scan.region import Point, Size, bound_point, load_regions
 from dvr_scan.subtractor import SubtractorCNT, SubtractorCudaMOG2, SubtractorMOG2
 from dvr_scan.video_joiner import VideoJoiner
+
+if HAS_TKINTER:
+    from dvr_scan.app.region_editor import RegionEditor
 
 logger = logging.getLogger("dvr_scan")
 
@@ -518,6 +521,10 @@ class MotionScanner:
                 for shape in self._regions
             ]
         if self._region_editor:
+            if not HAS_TKINTER:
+                logger.error("Error: Region editor requires Tcl/Tk support to run.")
+                raise SystemExit(1)
+
             logger.info("Selecting area of interest:")
             # TODO(v1.7): Ensure ROI window respects start time if set.
             # TODO(v1.7): We should process this frame (right now it gets skipped).

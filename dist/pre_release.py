@@ -91,6 +91,7 @@ def build_docs(use_local_images=True):
         index_path = tmp.joinpath("docs", "index.md")
         new_index = tmp.joinpath("docs", "index_docs.md")
         new_index.replace(index_path)
+        tmp.joinpath("docs", "download.md").unlink()
 
         mkdocs_path = tmp.joinpath("mkdocs.yml")
         curr_mkdocs_path = tmp.joinpath("docs", "mkdocs.yml")
@@ -143,6 +144,7 @@ def build_docs(use_local_images=True):
                 docs_build_path.joinpath(path).unlink(missing_ok=False)
 
         for to_remove in (
+            "requirements.txt",
             "sitemap.xml",
             "sitemap.xml.gz",
             "assets/images",
@@ -170,5 +172,9 @@ def build_docs(use_local_images=True):
 
 
 if __name__ == "__main__":
+    if not (len(sys.argv) == 1 or (len(sys.argv) == 2 and sys.argv[1] == "--use-local-images")):
+        print("Usage: pre_release.py [--use-local-images]")
+        raise SystemExit(1)
+
     write_version_info_for_windows_exe()
     build_docs(use_local_images=bool(len(sys.argv) == 2 and sys.argv[1] == "--use-local-images"))
