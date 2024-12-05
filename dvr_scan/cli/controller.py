@@ -24,7 +24,7 @@ from scenedetect import FrameTimecode
 
 import dvr_scan
 from dvr_scan.cli import get_cli_parser
-from dvr_scan.cli.config import ConfigLoadFailure, ConfigRegistry, RegionValueDeprecated
+from dvr_scan.config import ConfigLoadFailure, ConfigRegistry, RegionValueDeprecated
 from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
 from dvr_scan.platform import init_logger
 from dvr_scan.scanner import DetectorType, MotionScanner, OutputMode
@@ -53,7 +53,7 @@ class ProgramSettings:
         1. Argument specified via command line.
         2. Option set in the active config file (either explicit with -c/--config, or
            the dvr-scan.cfg file in the user's settings folder).
-        3. Default value specified in the config map (`dvr_scan.cli.config.CONFIG_MAP`).
+        3. Default value specified in the config map (`dvr_scan.config.CONFIG_MAP`).
         """
         arg_val = self.get_arg(option)
         if arg_val is not None:

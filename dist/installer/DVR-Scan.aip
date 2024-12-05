@@ -60,6 +60,7 @@
     <ROW Directory="LocalAppDataFolder" Directory_Parent="TARGETDIR" DefaultDir="LOCALA~1|LocalAppDataFolder" IsPseudoRoot="1"/>
     <ROW Directory="Mexico_Dir" Directory_Parent="tzdata_Dir" DefaultDir="Mexico"/>
     <ROW Directory="North_Dakota_Dir" Directory_Parent="America_Dir" DefaultDir="NORTH_~1|North_Dakota"/>
+    <ROW Directory="PIL_Dir" Directory_Parent="_internal_Dir" DefaultDir="PIL"/>
     <ROW Directory="Pacific_Dir" Directory_Parent="tzdata_Dir" DefaultDir="Pacific"/>
     <ROW Directory="SystemV_Dir" Directory_Parent="tzdata_Dir" DefaultDir="SystemV"/>
     <ROW Directory="TARGETDIR" DefaultDir="SourceDir"/>
@@ -71,6 +72,7 @@
     <ROW Directory="cv2_Dir" Directory_Parent="_internal_Dir" DefaultDir="cv2"/>
     <ROW Directory="data_Dir" Directory_Parent="cv2_Dir" DefaultDir="data"/>
     <ROW Directory="docs_Dir" Directory_Parent="APPDIR" DefaultDir="docs"/>
+    <ROW Directory="dvr_scan_Dir" Directory_Parent="_internal_Dir" DefaultDir="dvr_scan"/>
     <ROW Directory="encoding_Dir" Directory_Parent="_tcl_data_Dir" DefaultDir="encoding"/>
     <ROW Directory="fft_Dir" Directory_Parent="numpy_Dir" DefaultDir="fft"/>
     <ROW Directory="gapi_Dir" Directory_Parent="cv2_Dir" DefaultDir="gapi"/>
@@ -128,6 +130,7 @@
     <ROW Component="__init__.py_2" ComponentId="{CC81E13B-98B6-4123-B58B-508564936E49}" Directory_="mat_wrapper_Dir" Attributes="0" KeyPath="__init__.py_2" Type="0"/>
     <ROW Component="__init__.py_3" ComponentId="{19547ADA-5843-4723-8981-D734D6E2C993}" Directory_="typing_Dir" Attributes="0" KeyPath="__init__.py_4" Type="0"/>
     <ROW Component="__init__.py_4" ComponentId="{5C768E9C-4B68-4767-B916-01019FE7E779}" Directory_="utils_Dir" Attributes="0" KeyPath="__init__.py_5" Type="0"/>
+    <ROW Component="_imaging.cp313win_amd64.pyd" ComponentId="{F6A417D9-13CB-4037-9DED-F333659F273F}" Directory_="PIL_Dir" Attributes="256" KeyPath="_imaging.cp313win_amd64.pyd" Type="0"/>
     <ROW Component="_multiarray_tests.cp313win_amd64.pyd" ComponentId="{1B5C3446-2796-4F07-9C5A-029986CA6FD2}" Directory_="_core_Dir" Attributes="256" KeyPath="_multiarray_tests.cp313win_amd64.pyd" Type="0"/>
     <ROW Component="_pocketfft_umath.cp313win_amd64.pyd" ComponentId="{F38BD11F-54AE-410A-ACF9-057065D807F7}" Directory_="fft_Dir" Attributes="256" KeyPath="_pocketfft_umath.cp313win_amd64.pyd" Type="0"/>
     <ROW Component="_umath_linalg.cp313win_amd64.pyd" ComponentId="{9DDB3DD3-4795-4C0B-BD3B-106E2EBADAE0}" Directory_="linalg_Dir" Attributes="256" KeyPath="_umath_linalg.cp313win_amd64.pyd" Type="0"/>
@@ -182,6 +185,7 @@
     <ROW Component="cs.msg" ComponentId="{F24A8C57-F6F8-447B-93DA-551D1537AEB6}" Directory_="msgs_1_Dir" Attributes="0" KeyPath="cs.msg_1" Type="0"/>
     <ROW Component="dvrscan.cfg" ComponentId="{18A37A49-86C6-42DF-A130-DC5499CD6677}" Directory_="DVRScan_Dir" Attributes="16" KeyPath="dvrscan.cfg_1" Type="0"/>
     <ROW Component="dvrscan.exe" ComponentId="{BFAC0A4B-76D6-4EF9-B2B5-DFB8B5AC8885}" Directory_="APPDIR" Attributes="256" KeyPath="dvrscan.exe"/>
+    <ROW Component="dvrscanlogo.png" ComponentId="{05FD099E-40AB-476C-AD2D-300B5F4DE001}" Directory_="dvr_scan_Dir" Attributes="0" KeyPath="dvrscanlogo.png" Type="0"/>
     <ROW Component="ffmpeg.exe" ComponentId="{BBCE1F27-65DC-461F-B81C-CF84ED2D7201}" Directory_="APPDIR" Attributes="256" KeyPath="ffmpeg.exe"/>
     <ROW Component="http.tcl" ComponentId="{10B85E89-AAB5-47BE-9CCA-FA767C015062}" Directory_="http1.0_Dir" Attributes="0" KeyPath="http.tcl" Type="0"/>
     <ROW Component="libcrypto3.dll" ComponentId="{217DC358-8ADE-4E4C-8661-FB6C4FBA6EA7}" Directory_="_internal_Dir" Attributes="256" KeyPath="libcrypto3.dll"/>
@@ -214,7 +218,6 @@
     <ROW File="LICENSETHIRDPARTY" Component_="LICENSETHIRDPARTY" FileName="LICENS~2|LICENSE-THIRDPARTY" Attributes="0" SourcePath="..\dvr-scan\LICENSE-THIRDPARTY" SelfReg="false"/>
     <ROW File="README.md" Component_="LICENSE" FileName="README.md" Attributes="0" SourcePath="..\dvr-scan\README.md" SelfReg="false"/>
     <ROW File="dvrscan.cfg" Component_="LICENSE" FileName="dvr-scan.cfg" Attributes="0" SourcePath="..\dvr-scan\dvr-scan.cfg" SelfReg="false"/>
-    <ROW File="dvrscan.ico" Component_="LICENSE" FileName="dvr-scan.ico" Attributes="0" SourcePath="..\dvr-scan\dvr-scan.ico" SelfReg="false"/>
     <ROW File="apimswincoreconsolel110.dll" Component_="apimswincoreconsolel110.dll" FileName="API-MS~1.DLL|api-ms-win-core-console-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-console-l1-1-0.dll" SelfReg="false"/>
     <ROW File="apimswincoredatetimel110.dll" Component_="apimswincoredatetimel110.dll" FileName="API-MS~2.DLL|api-ms-win-core-datetime-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-datetime-l1-1-0.dll" SelfReg="false"/>
     <ROW File="apimswincoredebugl110.dll" Component_="apimswincoredebugl110.dll" FileName="API-MS~3.DLL|api-ms-win-core-debug-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-debug-l1-1-0.dll" SelfReg="false"/>
@@ -1233,6 +1236,13 @@
     <ROW File="index.md" Component_="changelog.md" FileName="index.md" Attributes="0" SourcePath="..\dvr-scan\docs\index.md" SelfReg="false"/>
     <ROW File="resources.md" Component_="changelog.md" FileName="RESOUR~1.MD|resources.md" Attributes="0" SourcePath="..\dvr-scan\docs\resources.md" SelfReg="false"/>
     <ROW File="dvrscan.cfg_1" Component_="dvrscan.cfg" FileName="dvr-scan.cfg" Attributes="0" SourcePath="..\dvr-scan\dvr-scan.cfg" SelfReg="false"/>
+    <ROW File="dvrscanlogo.png" Component_="dvrscanlogo.png" FileName="DVR-SC~1.PNG|dvr-scan-logo.png" Attributes="0" SourcePath="..\dvr-scan\_internal\dvr_scan\dvr-scan-logo.png" SelfReg="false"/>
+    <ROW File="dvrscan.ico_1" Component_="dvrscanlogo.png" FileName="dvr-scan.ico" Attributes="0" SourcePath="..\dvr-scan\_internal\dvr_scan\dvr-scan.ico" SelfReg="false"/>
+    <ROW File="_imaging.cp313win_amd64.pyd" Component_="_imaging.cp313win_amd64.pyd" FileName="_IMAGI~1.PYD|_imaging.cp313-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\PIL\_imaging.cp313-win_amd64.pyd" SelfReg="false"/>
+    <ROW File="_imagingcms.cp313win_amd64.pyd" Component_="_imaging.cp313win_amd64.pyd" FileName="_IMAGI~2.PYD|_imagingcms.cp313-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\PIL\_imagingcms.cp313-win_amd64.pyd" SelfReg="false"/>
+    <ROW File="_imagingmath.cp313win_amd64.pyd" Component_="_imaging.cp313win_amd64.pyd" FileName="_IMAGI~3.PYD|_imagingmath.cp313-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\PIL\_imagingmath.cp313-win_amd64.pyd" SelfReg="false"/>
+    <ROW File="_imagingtk.cp313win_amd64.pyd" Component_="_imaging.cp313win_amd64.pyd" FileName="_IMAGI~4.PYD|_imagingtk.cp313-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\PIL\_imagingtk.cp313-win_amd64.pyd" SelfReg="false"/>
+    <ROW File="_webp.cp313win_amd64.pyd" Component_="_imaging.cp313win_amd64.pyd" FileName="_WEBPC~1.PYD|_webp.cp313-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\PIL\_webp.cp313-win_amd64.pyd" SelfReg="false"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.AiPersistentDataComponent">
     <ROW PersistentRow="dvrscan.cfg_1" Type="0" Condition="1"/>
@@ -1495,6 +1505,8 @@
     <ROW Feature_="DVRScan" Component_="altTheme.tcl"/>
     <ROW Feature_="DVRScan" Component_="changelog.md"/>
     <ROW Feature_="DVRScan" Component_="dvrscan.cfg"/>
+    <ROW Feature_="DVRScan" Component_="dvrscanlogo.png"/>
+    <ROW Feature_="DVRScan" Component_="_imaging.cp313win_amd64.pyd"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiIconsComponent">
     <ROW Name="dvr_scan_icon.exe" SourcePath="dvr_scan_icon.ico" Index="0"/>
