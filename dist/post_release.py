@@ -17,14 +17,15 @@ DIRECTORY_GLOBS = [
     "imageio_ffmpeg",
     "importlib_metadata-*.dist-info",
     "matplotlib",
-    "PIL",
     "PyQt5",
     "pip-*.dist-info",
     "psutil",
     "pyinstaller-*.dist-info",
     "setuptools-*.dist-info",
     "tcl8",
+    "pywin32_system32",
     "wheel-*.dist-info",
+    "win32",
     "wx",
 ]
 
@@ -57,10 +58,10 @@ for file_glob in FILE_GLOBS:
 # Collect self dependencies.
 # TODO: See if the following can be added to COLLECT instead of including
 # these files as part of the .spec file Analysis step.
-for f in glob.glob(os.path.join(BASE_PATH, "dvr-scan/*")):
+APP_FOLDER = os.path.join(BASE_PATH, "dvr_scan/APP_FOLDER")
+for f in glob.glob(os.path.join(APP_FOLDER, "*")):
     shutil.move(f, DIST_PATH)
-
-os.rmdir(os.path.join(BASE_PATH, "dvr-scan"))
+os.rmdir(APP_FOLDER)
 
 
 def write_version_file():
