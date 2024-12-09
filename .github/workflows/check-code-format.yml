@@ -12,16 +12,23 @@ on:
       - tests/**
 
 jobs:
-  build:
+
+  static_analysis:
 
     runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      id-token: write
 
     steps:
+
       - uses: actions/checkout@v4
+
       - name: Set up Python 3.x
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+
 
       - name: Install Dependencies
         run: |
@@ -41,3 +48,10 @@ jobs:
           python -m pip install --upgrade ruff
           python -m ruff check
           python -m ruff format --check
+
+      - name: OSSF Scorecard action
+        uses: ossf/scorecard-action@v2.4.0
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
