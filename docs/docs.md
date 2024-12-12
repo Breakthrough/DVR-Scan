@@ -222,7 +222,7 @@ dvr-scan -i video.mp4 -R regions.txt
 <br/>Text properties (e.g. color, font size, margin) can be set with a [config file](#overlays_1).
 
  * <b><pre>-fm, --frame-metrics</pre></b>  Draw frame metrics, including motion score, on the top right corner.
-<br/>Text properties (e.g. color, font size, margin) can be set with a [config file](config_file.md#text-overlays).
+<br/>Text properties (e.g. color, font size, margin) can be set with a [config file](#config-file).
 
 ------------------------------------------------
 

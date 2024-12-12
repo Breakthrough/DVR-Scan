@@ -7,10 +7,9 @@ a = Analysis(['../dvr_scan/__main__.py'],
              binaries=None,
              datas=[
                 ('../dvr-scan.cfg', 'dvr-scan'),
-                ('../*.md', 'dvr-scan'),
                 ('../dist/dvr-scan.ico', 'dvr-scan'),
+                ('../dist/README.txt', 'dvr-scan'),
                 ('../dvr_scan/LICENSE*', 'dvr-scan'),
-                ('../docs/*.md', 'dvr-scan/docs/')
             ],
              hiddenimports=[],
              hookspath=[],

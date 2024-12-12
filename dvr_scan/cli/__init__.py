@@ -4,7 +4,7 @@
 #       [  Site: https://www.dvr-scan.com/                 ]
 #       [  Repo: https://github.com/Breakthrough/DVR-Scan  ]
 #
-# Copyright (C) 2014-2024 Brandon Castellano <http://www.bcastell.com>.
+# Copyright (C) 2014 Brandon Castellano <http://www.bcastell.com>.
 # DVR-Scan is licensed under the BSD 2-Clause License; see the included
 # LICENSE file, or visit one of the above pages for details.
 #
@@ -29,7 +29,7 @@ from dvr_scan.region import RegionValidator
 VERSION_STRING = f"""------------------------------------------------
 DVR-Scan {dvr_scan.__version__}
 ------------------------------------------------
-Copyright (C) 2016-2023 Brandon Castellano
+Copyright (C) 2016-2024 Brandon Castellano
 < https://www.dvr-scan.com >
 """
 

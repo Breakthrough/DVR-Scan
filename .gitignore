@@ -1,12 +1,21 @@
+# Python-specific
 *.pyc
 *.pyo
+*.egg-info/
+
+# Location of built documentation
 site/
+# Where distributions are assembled
 build/
+# Working directory for distribution assembly
 dist/dvr-scan/*
 dist/dvr-scan*
 dist/dvr_scan*
-*.egg-info/
-/tutorial-env/*
+
+# Location where docs are built before assembling distributions
+dvr_scan/docs/
+
+# Editors/environment
 .DS_Store
 .vs_code/
 .vscode/

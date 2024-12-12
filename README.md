@@ -52,5 +52,5 @@ See [the documentation](https://www.dvr-scan.com/docs) for a complete list of al
 
 ------------------------------------------------
 
-Copyright © 2016-2023 Brandon Castellano. All rights reserved.
+Copyright © 2016-2024 Brandon Castellano. All rights reserved.
 Licensed under BSD 2-Clause (see the LICENSE file for details).

@@ -3,7 +3,7 @@
 
 ## :fontawesome-solid-terminal:Running DVR-Scan
 
-After [downloading](download.md), you should have the `dvr-scan` command available on your system from a terminal or command prompt. Try running `dvr-scan --help`.
+After installation, the `dvr-scan` command should be available from a terminal or command prompt. Try running `dvr-scan --help`.
 
 !!! info "For portable versions, replace `dvr-scan` with the path to `dvr-scan.exe` in the extracted files on your system."
 
