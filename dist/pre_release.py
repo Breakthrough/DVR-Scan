@@ -130,7 +130,7 @@ def build_docs(use_local_images=True):
                 {path: f"https://www.dvr-scan.com/{path}" for path in delete_and_replace}
             )
 
-        for file in [Path(path) for path in docs_build_path.glob("**/**.html")]:
+        for file in [Path(path) for path in docs_build_path.glob("**/*.html")]:
             contents = file.read_text()
             for old, new in replacements.items():
                 contents = contents.replace(old, new)
