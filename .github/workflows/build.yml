@@ -47,7 +47,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install --upgrade build wheel virtualenv
           python -m pip install opencv-python-headless opencv-contrib-python-headless --only-binary :all:
-          python -m pip install -r requirements_headless.txt
+          python -m pip install -r requirements_headless.txt -r docs/requirements.txt
 
       - name: Setup FFmpeg
         # TODO: This action currently does not work for non-x64 builders (e.g. macos-14):

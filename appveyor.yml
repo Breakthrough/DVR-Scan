@@ -36,7 +36,7 @@ install:
   - python --version
   - python -m pip install --upgrade pip
   - python -m pip install --upgrade build wheel virtualenv
-  - python -m pip install -r dist/requirements_windows.txt
+  - python -m pip install -r dist/requirements_windows.txt -r docs/requirements.txt
 
 
   - echo * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
