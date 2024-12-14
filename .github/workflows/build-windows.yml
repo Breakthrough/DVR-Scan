@@ -56,7 +56,7 @@ jobs:
 
       - name: Build DVR-Scan
         run: |
-          python dist/pre_release.py
+          python dist/pre_release.py --use-local-images
           pyinstaller dist/dvr-scan.spec
           python dist/post_release.py
 

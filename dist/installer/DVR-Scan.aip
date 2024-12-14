@@ -76,13 +76,10 @@
     <ROW Directory="fft_Dir" Directory_Parent="numpy_Dir" DefaultDir="fft"/>
     <ROW Directory="gapi_Dir" Directory_Parent="cv2_Dir" DefaultDir="gapi"/>
     <ROW Directory="http1.0_Dir" Directory_Parent="_tcl_data_Dir" DefaultDir="http1.0"/>
-    <ROW Directory="images_1_Dir" Directory_Parent="assets_Dir" DefaultDir="images"/>
     <ROW Directory="images_Dir" Directory_Parent="_tk_data_Dir" DefaultDir="images"/>
     <ROW Directory="javascripts_Dir" Directory_Parent="assets_Dir" DefaultDir="JAVASC~1|javascripts"/>
     <ROW Directory="linalg_Dir" Directory_Parent="numpy_Dir" DefaultDir="linalg"/>
-    <ROW Directory="lunr_Dir" Directory_Parent="javascripts_Dir" DefaultDir="lunr"/>
     <ROW Directory="mat_wrapper_Dir" Directory_Parent="cv2_Dir" DefaultDir="MAT_WR~1|mat_wrapper"/>
-    <ROW Directory="min_Dir" Directory_Parent="lunr_Dir" DefaultDir="min"/>
     <ROW Directory="misc_Dir" Directory_Parent="cv2_Dir" DefaultDir="misc"/>
     <ROW Directory="msgs_1_Dir" Directory_Parent="_tk_data_Dir" DefaultDir="msgs"/>
     <ROW Directory="msgs_Dir" Directory_Parent="_tcl_data_Dir" DefaultDir="msgs"/>
@@ -90,13 +87,11 @@
     <ROW Directory="numpy_Dir" Directory_Parent="_internal_Dir" DefaultDir="numpy"/>
     <ROW Directory="opt0.4_Dir" Directory_Parent="_tcl_data_Dir" DefaultDir="opt0.4"/>
     <ROW Directory="random_Dir" Directory_Parent="numpy_Dir" DefaultDir="random"/>
-    <ROW Directory="search_Dir" Directory_Parent="docs_Dir" DefaultDir="search"/>
     <ROW Directory="stylesheets_Dir" Directory_Parent="assets_Dir" DefaultDir="STYLES~1|stylesheets"/>
     <ROW Directory="ttk_Dir" Directory_Parent="_tk_data_Dir" DefaultDir="ttk"/>
     <ROW Directory="typing_Dir" Directory_Parent="cv2_Dir" DefaultDir="typing"/>
     <ROW Directory="tzdata_Dir" Directory_Parent="_tcl_data_Dir" DefaultDir="tzdata"/>
     <ROW Directory="utils_Dir" Directory_Parent="cv2_Dir" DefaultDir="utils"/>
-    <ROW Directory="workers_Dir" Directory_Parent="javascripts_Dir" DefaultDir="workers"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCompsComponent">
     <ROW Component="ACT" ComponentId="{2895263F-BCBB-47C5-9DFB-B6B2F733B032}" Directory_="Australia_Dir" Attributes="0" KeyPath="ACT" Type="0"/>
@@ -185,32 +180,27 @@
     <ROW Component="base_library.zip" ComponentId="{591376F5-6EF4-4CFA-9F8C-6868755EDBC2}" Directory_="_internal_Dir" Attributes="0" KeyPath="base_library.zip" Type="0"/>
     <ROW Component="bgerror.tcl" ComponentId="{0ADD6EE5-B6B2-4353-A180-DFA0EE1A2C4A}" Directory_="_tk_data_Dir" Attributes="0" KeyPath="bgerror.tcl" Type="0"/>
     <ROW Component="bit_generator.cp313win_amd64.pyd" ComponentId="{48C60244-50BB-4AB1-B1BF-DE0764C43C1B}" Directory_="random_Dir" Attributes="256" KeyPath="bit_generator.cp313win_amd64.pyd" Type="0"/>
-    <ROW Component="boundingbox.gif" ComponentId="{883A15AC-8FC0-42F1-8ED2-21C8775DFC12}" Directory_="assets_Dir" Attributes="0" KeyPath="boundingbox.gif" Type="0"/>
-    <ROW Component="bundle.220ee61c.min.js" ComponentId="{B5836F04-68DF-4BA4-A500-90633CB797D5}" Directory_="javascripts_Dir" Attributes="0" KeyPath="bundle.220ee61c.min.js" Type="0"/>
+    <ROW Component="boundingbox.gif" ComponentId="{78D8A9E1-7B17-4A50-A7E4-44189661EE78}" Directory_="assets_Dir" Attributes="0" KeyPath="boundingbox.gif" Type="0"/>
+    <ROW Component="bundle.220ee61c.min.js" ComponentId="{DFC5F207-19F3-4B95-AA97-6F2B06E039D3}" Directory_="javascripts_Dir" Attributes="0" KeyPath="bundle.220ee61c.min.js" Type="0"/>
     <ROW Component="config3.py" ComponentId="{EF8F40CB-536B-495C-B5CD-62F9F4679790}" Directory_="cv2_Dir" Attributes="0" KeyPath="config3.py" Type="0"/>
     <ROW Component="cs.msg" ComponentId="{F24A8C57-F6F8-447B-93DA-551D1537AEB6}" Directory_="msgs_1_Dir" Attributes="0" KeyPath="cs.msg_1" Type="0"/>
     <ROW Component="dvrscan.cfg" ComponentId="{18A37A49-86C6-42DF-A130-DC5499CD6677}" Directory_="DVRScan_Dir" Attributes="16" KeyPath="dvrscan.cfg_1" Type="0"/>
     <ROW Component="dvrscan.exe" ComponentId="{BFAC0A4B-76D6-4EF9-B2B5-DFB8B5AC8885}" Directory_="APPDIR" Attributes="256" KeyPath="dvrscan.exe"/>
-    <ROW Component="favicon.png" ComponentId="{1CC83FCD-BE8C-4B31-AAFD-694B2ED8EA93}" Directory_="images_1_Dir" Attributes="0" KeyPath="favicon.png" Type="0"/>
     <ROW Component="ffmpeg.exe" ComponentId="{BBCE1F27-65DC-461F-B81C-CF84ED2D7201}" Directory_="APPDIR" Attributes="256" KeyPath="ffmpeg.exe"/>
-    <ROW Component="html" ComponentId="{115BB12B-6AB5-4A8C-A25B-C15664BC2CFC}" Directory_="docs_Dir" Attributes="0" KeyPath="html" Type="0"/>
+    <ROW Component="html" ComponentId="{4C35D225-4654-4A96-BABB-5A69EF7F4260}" Directory_="docs_Dir" Attributes="0" KeyPath="html" Type="0"/>
     <ROW Component="http.tcl" ComponentId="{10B85E89-AAB5-47BE-9CCA-FA767C015062}" Directory_="http1.0_Dir" Attributes="0" KeyPath="http.tcl" Type="0"/>
     <ROW Component="libcrypto3.dll" ComponentId="{217DC358-8ADE-4E4C-8661-FB6C4FBA6EA7}" Directory_="_internal_Dir" Attributes="256" KeyPath="libcrypto3.dll"/>
     <ROW Component="libffi8.dll" ComponentId="{E2ADC860-2FF8-4634-A616-AB74F5103DB8}" Directory_="_internal_Dir" Attributes="256" KeyPath="libffi8.dll"/>
     <ROW Component="libscipy_openblas64_c16e4918366c6bc1f1cd71e28ca36fc0.dll" ComponentId="{6437660F-0355-4E56-851D-FE94D382360C}" Directory_="numpy.libs_Dir" Attributes="256" KeyPath="libscipy_openblas64_c16e4918366c6bc1f1cd71e28ca36fc0.dll"/>
     <ROW Component="libssl3.dll" ComponentId="{E50AF281-3153-4180-8EFD-3B039ADF5261}" Directory_="_internal_Dir" Attributes="256" KeyPath="libssl3.dll"/>
     <ROW Component="logo.eps" ComponentId="{18D4B865-7A43-486B-9951-35FBCD4F90D0}" Directory_="images_Dir" Attributes="0" KeyPath="logo.eps" Type="0"/>
-    <ROW Component="lunr.ar.min.js" ComponentId="{29522062-C403-4365-9C27-C00E7F2C5BD5}" Directory_="min_Dir" Attributes="0" KeyPath="lunr.ar.min.js" Type="0"/>
-    <ROW Component="main.eebd395e.min.css" ComponentId="{8DDBF99D-9983-4009-96EF-6697EE30B48E}" Directory_="stylesheets_Dir" Attributes="0" KeyPath="main.eebd395e.min.css" Type="0"/>
+    <ROW Component="main.eebd395e.min.css" ComponentId="{8E8AC9A0-E064-4B93-AA98-7C1BA0837EFB}" Directory_="stylesheets_Dir" Attributes="0" KeyPath="main.eebd395e.min.css" Type="0"/>
     <ROW Component="msvcp140d64049c6e3865410a7dda6a7e9f0c575.dll" ComponentId="{0A267F79-5C8B-4BD7-A42D-199A50401204}" Directory_="numpy.libs_Dir" Attributes="256" KeyPath="msvcp140d64049c6e3865410a7dda6a7e9f0c575.dll"/>
     <ROW Component="opencv_videoio_ffmpeg4100_64.dll" ComponentId="{94837606-A833-41B8-B04A-16F00370A6B5}" Directory_="cv2_Dir" Attributes="256" KeyPath="opencv_videoio_ffmpeg4100_64.dll"/>
     <ROW Component="optparse.tcl" ComponentId="{1C134E5A-F6B7-4CBF-B0DE-F9D3AE9AC08A}" Directory_="opt0.4_Dir" Attributes="0" KeyPath="optparse.tcl" Type="0"/>
     <ROW Component="python3.dll" ComponentId="{04527781-5339-4B7E-A9F3-90577093D4AC}" Directory_="_internal_Dir" Attributes="256" KeyPath="python3.dll"/>
     <ROW Component="python313.dll" ComponentId="{A7D27ECC-A242-4E73-A251-6059D5629752}" Directory_="_internal_Dir" Attributes="256" KeyPath="python313.dll"/>
-    <ROW Component="search.74e28a9f.min.js" ComponentId="{F4193B03-B8A2-46CC-A4BD-FD3DB36FFA1F}" Directory_="workers_Dir" Attributes="0" KeyPath="search.74e28a9f.min.js" Type="0"/>
-    <ROW Component="search_index.json" ComponentId="{ECE24F19-5FFB-4329-B5A0-DFBB6CC0329A}" Directory_="search_Dir" Attributes="0" KeyPath="search_index.json" Type="0"/>
     <ROW Component="tcl86t.dll" ComponentId="{F9E2E239-BB05-457E-B51B-DB6E16FE5CE8}" Directory_="_internal_Dir" Attributes="256" KeyPath="tcl86t.dll"/>
-    <ROW Component="tinyseg.js" ComponentId="{66108447-581D-4D35-B72B-FA88F5BBD772}" Directory_="lunr_Dir" Attributes="0" KeyPath="tinyseg.js" Type="0"/>
     <ROW Component="tk86t.dll" ComponentId="{C1F2D69B-9839-4E7C-B935-22AEBF383370}" Directory_="_internal_Dir" Attributes="256" KeyPath="tk86t.dll"/>
     <ROW Component="ucrtbase.dll" ComponentId="{E734D082-69FC-4639-9C56-65679BBD24B9}" Directory_="_internal_Dir" Attributes="256" KeyPath="ucrtbase.dll"/>
     <ROW Component="version.py" ComponentId="{EE5301D9-2565-49A9-B582-E8858A9E0E84}" Directory_="misc_Dir" Attributes="0" KeyPath="version.py" Type="0"/>
@@ -1245,53 +1235,15 @@
     <ROW File="html" Component_="html" FileName="404~1.HTM|404.html" Attributes="0" SourcePath="..\dvr-scan\docs\404.html" SelfReg="false"/>
     <ROW File="boundingbox.gif" Component_="boundingbox.gif" FileName="BOUNDI~1.GIF|bounding-box.gif" Attributes="0" SourcePath="..\dvr-scan\docs\assets\bounding-box.gif" SelfReg="false"/>
     <ROW File="dvrscanlogo.png" Component_="boundingbox.gif" FileName="DVR-SC~1.PNG|dvr-scan-logo.png" Attributes="0" SourcePath="..\dvr-scan\docs\assets\dvr-scan-logo.png" SelfReg="false"/>
-    <ROW File="dvrscan.ico_1" Component_="boundingbox.gif" FileName="dvr-scan.ico" Attributes="0" SourcePath="..\dvr-scan\docs\assets\dvr-scan.ico" SelfReg="false"/>
+    <ROW File="dvrscan.ico_2" Component_="boundingbox.gif" FileName="dvr-scan.ico" Attributes="0" SourcePath="..\dvr-scan\docs\assets\dvr-scan.ico" SelfReg="false"/>
     <ROW File="dvrscan.png" Component_="boundingbox.gif" FileName="dvr-scan.png" Attributes="0" SourcePath="..\dvr-scan\docs\assets\dvr-scan.png" SelfReg="false"/>
-    <ROW File="favicon.png" Component_="favicon.png" FileName="favicon.png" Attributes="0" SourcePath="..\dvr-scan\docs\assets\images\favicon.png" SelfReg="false"/>
     <ROW File="bundle.220ee61c.min.js" Component_="bundle.220ee61c.min.js" FileName="BUNDLE~1.JS|bundle.220ee61c.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\bundle.220ee61c.min.js" SelfReg="false"/>
-    <ROW File="bundle.220ee61c.min.js.map" Component_="bundle.220ee61c.min.js" FileName="BUNDLE~1.MAP|bundle.220ee61c.min.js.map" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\bundle.220ee61c.min.js.map" SelfReg="false"/>
-    <ROW File="lunr.ar.min.js" Component_="lunr.ar.min.js" FileName="LUNRAR~1.JS|lunr.ar.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\min\lunr.ar.min.js" SelfReg="false"/>
-    <ROW File="lunr.da.min.js" Component_="lunr.ar.min.js" FileName="LUNRDA~1.JS|lunr.da.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\min\lunr.da.min.js" SelfReg="false"/>
-    <ROW File="lunr.de.min.js" Component_="lunr.ar.min.js" FileName="LUNRDE~1.JS|lunr.de.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\min\lunr.de.min.js" SelfReg="false"/>
-    <ROW File="lunr.du.min.js" Component_="lunr.ar.min.js" FileName="LUNRDU~1.JS|lunr.du.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\min\lunr.du.min.js" SelfReg="false"/>
-    <ROW File="lunr.es.min.js" Component_="lunr.ar.min.js" FileName="LUNRES~1.JS|lunr.es.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\min\lunr.es.min.js" SelfReg="false"/>
-    <ROW File="lunr.fi.min.js" Component_="lunr.ar.min.js" FileName="LUNRFI~1.JS|lunr.fi.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\min\lunr.fi.min.js" SelfReg="false"/>
-    <ROW File="lunr.fr.min.js" Component_="lunr.ar.min.js" FileName="LUNRFR~1.JS|lunr.fr.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\min\lunr.fr.min.js" SelfReg="false"/>
-    <ROW File="lunr.hi.min.js" Component_="lunr.ar.min.js" FileName="LUNRHI~1.JS|lunr.hi.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\min\lunr.hi.min.js" SelfReg="false"/>
-    <ROW File="lunr.hu.min.js" Component_="lunr.ar.min.js" FileName="LUNRHU~1.JS|lunr.hu.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\min\lunr.hu.min.js" SelfReg="false"/>
-    <ROW File="lunr.hy.min.js" Component_="lunr.ar.min.js" FileName="LUNRHY~1.JS|lunr.hy.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\min\lunr.hy.min.js" SelfReg="false"/>
-    <ROW File="lunr.it.min.js" Component_="lunr.ar.min.js" FileName="LUNRIT~1.JS|lunr.it.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\min\lunr.it.min.js" SelfReg="false"/>
-    <ROW File="lunr.ja.min.js" Component_="lunr.ar.min.js" FileName="LUNRJA~1.JS|lunr.ja.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\min\lunr.ja.min.js" SelfReg="false"/>
-    <ROW File="lunr.jp.min.js" Component_="lunr.ar.min.js" FileName="LUNRJP~1.JS|lunr.jp.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\min\lunr.jp.min.js" SelfReg="false"/>
-    <ROW File="lunr.kn.min.js" Component_="lunr.ar.min.js" FileName="LUNRKN~1.JS|lunr.kn.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\min\lunr.kn.min.js" SelfReg="false"/>
-    <ROW File="lunr.ko.min.js" Component_="lunr.ar.min.js" FileName="LUNRKO~1.JS|lunr.ko.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\min\lunr.ko.min.js" SelfReg="false"/>
-    <ROW File="lunr.multi.min.js" Component_="lunr.ar.min.js" FileName="LUNRMU~1.JS|lunr.multi.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\min\lunr.multi.min.js" SelfReg="false"/>
-    <ROW File="lunr.nl.min.js" Component_="lunr.ar.min.js" FileName="LUNRNL~1.JS|lunr.nl.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\min\lunr.nl.min.js" SelfReg="false"/>
-    <ROW File="lunr.no.min.js" Component_="lunr.ar.min.js" FileName="LUNRNO~1.JS|lunr.no.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\min\lunr.no.min.js" SelfReg="false"/>
-    <ROW File="lunr.pt.min.js" Component_="lunr.ar.min.js" FileName="LUNRPT~1.JS|lunr.pt.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\min\lunr.pt.min.js" SelfReg="false"/>
-    <ROW File="lunr.ro.min.js" Component_="lunr.ar.min.js" FileName="LUNRRO~1.JS|lunr.ro.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\min\lunr.ro.min.js" SelfReg="false"/>
-    <ROW File="lunr.ru.min.js" Component_="lunr.ar.min.js" FileName="LUNRRU~1.JS|lunr.ru.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\min\lunr.ru.min.js" SelfReg="false"/>
-    <ROW File="lunr.sa.min.js" Component_="lunr.ar.min.js" FileName="LUNRSA~1.JS|lunr.sa.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\min\lunr.sa.min.js" SelfReg="false"/>
-    <ROW File="lunr.stemmer.support.min.js" Component_="lunr.ar.min.js" FileName="LUNRST~1.JS|lunr.stemmer.support.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\min\lunr.stemmer.support.min.js" SelfReg="false"/>
-    <ROW File="lunr.sv.min.js" Component_="lunr.ar.min.js" FileName="LUNRSV~1.JS|lunr.sv.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\min\lunr.sv.min.js" SelfReg="false"/>
-    <ROW File="lunr.ta.min.js" Component_="lunr.ar.min.js" FileName="LUNRTA~1.JS|lunr.ta.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\min\lunr.ta.min.js" SelfReg="false"/>
-    <ROW File="lunr.te.min.js" Component_="lunr.ar.min.js" FileName="LUNRTE~1.JS|lunr.te.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\min\lunr.te.min.js" SelfReg="false"/>
-    <ROW File="lunr.th.min.js" Component_="lunr.ar.min.js" FileName="LUNRTH~1.JS|lunr.th.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\min\lunr.th.min.js" SelfReg="false"/>
-    <ROW File="lunr.tr.min.js" Component_="lunr.ar.min.js" FileName="LUNRTR~1.JS|lunr.tr.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\min\lunr.tr.min.js" SelfReg="false"/>
-    <ROW File="lunr.vi.min.js" Component_="lunr.ar.min.js" FileName="LUNRVI~1.JS|lunr.vi.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\min\lunr.vi.min.js" SelfReg="false"/>
-    <ROW File="lunr.zh.min.js" Component_="lunr.ar.min.js" FileName="LUNRZH~1.JS|lunr.zh.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\min\lunr.zh.min.js" SelfReg="false"/>
-    <ROW File="tinyseg.js" Component_="tinyseg.js" FileName="tinyseg.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\tinyseg.js" SelfReg="false"/>
-    <ROW File="wordcut.js" Component_="tinyseg.js" FileName="wordcut.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\lunr\wordcut.js" SelfReg="false"/>
-    <ROW File="search.74e28a9f.min.js" Component_="search.74e28a9f.min.js" FileName="SEARCH~1.JS|search.74e28a9f.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\workers\search.74e28a9f.min.js" SelfReg="false"/>
-    <ROW File="search.74e28a9f.min.js.map" Component_="search.74e28a9f.min.js" FileName="SEARCH~1.MAP|search.74e28a9f.min.js.map" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\workers\search.74e28a9f.min.js.map" SelfReg="false"/>
     <ROW File="regioneditormask.jpg" Component_="boundingbox.gif" FileName="REGION~1.JPG|region-editor-mask.jpg" Attributes="0" SourcePath="..\dvr-scan\docs\assets\region-editor-mask.jpg" SelfReg="false"/>
     <ROW File="regioneditormultiple.jpg" Component_="boundingbox.gif" FileName="REGION~2.JPG|region-editor-multiple.jpg" Attributes="0" SourcePath="..\dvr-scan\docs\assets\region-editor-multiple.jpg" SelfReg="false"/>
     <ROW File="regioneditorregion.jpg" Component_="boundingbox.gif" FileName="REGION~3.JPG|region-editor-region.jpg" Attributes="0" SourcePath="..\dvr-scan\docs\assets\region-editor-region.jpg" SelfReg="false"/>
     <ROW File="regioneditorstart.jpg" Component_="boundingbox.gif" FileName="REGION~4.JPG|region-editor-start.jpg" Attributes="0" SourcePath="..\dvr-scan\docs\assets\region-editor-start.jpg" SelfReg="false"/>
     <ROW File="main.eebd395e.min.css" Component_="main.eebd395e.min.css" FileName="MAINEE~1.CSS|main.eebd395e.min.css" Attributes="0" SourcePath="..\dvr-scan\docs\assets\stylesheets\main.eebd395e.min.css" SelfReg="false"/>
-    <ROW File="main.eebd395e.min.css.map" Component_="main.eebd395e.min.css" FileName="MAINEE~1.MAP|main.eebd395e.min.css.map" Attributes="0" SourcePath="..\dvr-scan\docs\assets\stylesheets\main.eebd395e.min.css.map" SelfReg="false"/>
     <ROW File="palette.ecc896b0.min.css" Component_="main.eebd395e.min.css" FileName="PALETT~1.CSS|palette.ecc896b0.min.css" Attributes="0" SourcePath="..\dvr-scan\docs\assets\stylesheets\palette.ecc896b0.min.css" SelfReg="false"/>
-    <ROW File="palette.ecc896b0.min.css.map" Component_="main.eebd395e.min.css" FileName="PALETT~1.MAP|palette.ecc896b0.min.css.map" Attributes="0" SourcePath="..\dvr-scan\docs\assets\stylesheets\palette.ecc896b0.min.css.map" SelfReg="false"/>
     <ROW File="changelog.html" Component_="html" FileName="CHANGE~1.HTM|changelog.html" Attributes="0" SourcePath="..\dvr-scan\docs\changelog.html" SelfReg="false"/>
     <ROW File="docs.html" Component_="html" FileName="DOCS~1.HTM|docs.html" Attributes="0" SourcePath="..\dvr-scan\docs\docs.html" SelfReg="false"/>
     <ROW File="download.html" Component_="html" FileName="DOWNLO~1.HTM|download.html" Attributes="0" SourcePath="..\dvr-scan\docs\download.html" SelfReg="false"/>
@@ -1299,9 +1251,6 @@
     <ROW File="guide.html" Component_="html" FileName="GUIDE~1.HTM|guide.html" Attributes="0" SourcePath="..\dvr-scan\docs\guide.html" SelfReg="false"/>
     <ROW File="index.html" Component_="html" FileName="INDEX~1.HTM|index.html" Attributes="0" SourcePath="..\dvr-scan\docs\index.html" SelfReg="false"/>
     <ROW File="resources.html" Component_="html" FileName="RESOUR~1.HTM|resources.html" Attributes="0" SourcePath="..\dvr-scan\docs\resources.html" SelfReg="false"/>
-    <ROW File="search_index.json" Component_="search_index.json" FileName="SEARCH~1.JSO|search_index.json" Attributes="0" SourcePath="..\dvr-scan\docs\search\search_index.json" SelfReg="false"/>
-    <ROW File="sitemap.xml" Component_="html" FileName="sitemap.xml" Attributes="0" SourcePath="..\dvr-scan\docs\sitemap.xml" SelfReg="false"/>
-    <ROW File="sitemap.xml.gz" Component_="html" FileName="SITEMA~1.GZ|sitemap.xml.gz" Attributes="0" SourcePath="..\dvr-scan\docs\sitemap.xml.gz" SelfReg="false"/>
     <ROW File="style.css" Component_="html" FileName="style.css" Attributes="0" SourcePath="..\dvr-scan\docs\style.css" SelfReg="false"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.AiPersistentDataComponent">
@@ -1566,13 +1515,8 @@
     <ROW Feature_="DVRScan" Component_="dvrscan.cfg"/>
     <ROW Feature_="DVRScan" Component_="html"/>
     <ROW Feature_="DVRScan" Component_="boundingbox.gif"/>
-    <ROW Feature_="DVRScan" Component_="favicon.png"/>
     <ROW Feature_="DVRScan" Component_="bundle.220ee61c.min.js"/>
-    <ROW Feature_="DVRScan" Component_="lunr.ar.min.js"/>
-    <ROW Feature_="DVRScan" Component_="tinyseg.js"/>
-    <ROW Feature_="DVRScan" Component_="search.74e28a9f.min.js"/>
     <ROW Feature_="DVRScan" Component_="main.eebd395e.min.css"/>
-    <ROW Feature_="DVRScan" Component_="search_index.json"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiIconsComponent">
     <ROW Name="dvr_scan_icon.exe" SourcePath="dvr_scan_icon.ico" Index="0"/>

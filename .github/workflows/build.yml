@@ -64,7 +64,9 @@ jobs:
       - name: Build Package
         shell: bash
         run: |
+          python dist/pre_release.py
           python -m build
+          python dist/post_release.py
           echo "dvr_scan_version=`python -c \"import dvr_scan; print(dvr_scan.__version__.replace('-', '.'))\"`" >> "$GITHUB_ENV"
 
       - name: Smoke Test (Source)

@@ -2,10 +2,12 @@ recursive-exclude .github *
 recursive-exclude dist *
 recursive-exclude tests *
 exclude *
-include README.md
-include LICENSE
-include dvr_scan/LICENSE
-include pyproject.toml
-include setup.cfg
-include dvr-scan.cfg
+recursive-include
 include dist/package-info.rst
+include dvr_scan/LICENSE
+recursive-include dvr_scan/docs
+include dvr-scan.cfg
+include LICENSE
+include pyproject.toml
+include README.md
+include setup.cfg
