@@ -33,6 +33,7 @@ def main():
         sys.exit(EXIT_ERROR)
     logger = logging.getLogger("dvr_scan")
     redirect = FakeTqdmLoggingRedirect if settings.get("quiet-mode") else logging_redirect_tqdm
+    # TODO: Use Python __debug__ mode instead of hard-coding as config option.
     debug_mode = settings.get("debug")
     show_traceback = getattr(logging, settings.get("verbosity").upper()) == logging.DEBUG
     with redirect(loggers=[logger]):
@@ -47,6 +48,7 @@ def main():
             if debug_mode:
                 raise
         except KeyboardInterrupt:
+            # TODO: This doesn't always work when the GUI is running.
             logger.info("Stopping (interrupt received)...", exc_info=show_traceback)
             if debug_mode:
                 raise

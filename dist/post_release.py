@@ -14,6 +14,7 @@
 import glob
 import os
 import shutil
+from pathlib import Path
 
 
 def finalize_exe_distribution():
@@ -29,17 +30,17 @@ def finalize_exe_distribution():
         "imageio_ffmpeg",
         "importlib_metadata-*.dist-info",
         "matplotlib",
-        "PIL",
         "PyQt5",
         "pip-*.dist-info",
         "psutil",
         "pyinstaller-*.dist-info",
         "setuptools-*.dist-info",
         "tcl8",
+        "pywin32_system32",
         "wheel-*.dist-info",
+        "win32",
         "wx",
     ]
-
     FILE_GLOBS = [
         "_bz2.pyd",
         "_decimal.pyd",
@@ -66,13 +67,15 @@ def finalize_exe_distribution():
         for file_path in glob.glob(os.path.join(BASE_PATH, file_glob)):
             os.remove(file_path)
 
-    # Collect self dependencies.
-    # TODO: See if the following can be added to COLLECT instead of including
-    # these files as part of the .spec file Analysis step.
-    for f in glob.glob(os.path.join(BASE_PATH, "dvr-scan/*")):
-        shutil.move(f, DIST_PATH)
-    os.rmdir(os.path.join(BASE_PATH, "dvr-scan"))
-    shutil.copytree("dvr_scan/docs", "dist/dvr-scan/docs", dirs_exist_ok=True)
+    shutil.copytree("dvr_scan/docs", Path(DIST_PATH).joinpath("docs"), dirs_exist_ok=True)
+
+    EXE_ASSETS = [
+        "dist/README.txt",
+        "dvr_scan/LICENSE",
+        "dvr-scan.cfg",
+    ]
+    for asset in EXE_ASSETS:
+        shutil.copy(asset, DIST_PATH)
 
 
 if __name__ == "__main__":

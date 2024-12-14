@@ -14,7 +14,7 @@ This module provides the command-line business logic for the `dvr-scan` command.
 starts the program by calling :py:func:`dvr_scan.cli.controller.run_dvr_scan`.
 
 Control logic can be found in :py:mod:`dvr_scan.cli.controller` and configuration file parsing
-is defined in :py:mod:`dvr_scan.cli.config`. This main module file defines :py:func:`get_cli_parser`
+is defined in :py:mod:`dvr_scan.config`. This main module file defines :py:func:`get_cli_parser`
 which provides an argparse-based CLI used by the DVR-Scan application.
 """
 
@@ -22,12 +22,12 @@ import argparse
 from typing import List, Optional
 
 import dvr_scan
-from dvr_scan.cli.config import CHOICE_MAP, USER_CONFIG_FILE_PATH, ConfigRegistry
+from dvr_scan.config import CHOICE_MAP, USER_CONFIG_FILE_PATH, ConfigRegistry
+from dvr_scan.platform import get_system_version_info
 from dvr_scan.region import RegionValidator
 
 # Version string shown for the -v/--version CLI argument.
-VERSION_STRING = f"""------------------------------------------------
-DVR-Scan {dvr_scan.__version__}
+VERSION_STRING = f"""DVR-Scan {dvr_scan.__version__}
 ------------------------------------------------
 Copyright (C) 2016-2024 Brandon Castellano
 < https://www.dvr-scan.com >
@@ -303,9 +303,7 @@ class VersionAction(argparse.Action):
         self.version = version
 
     def __call__(self, parser, namespace, values, option_string=None):
-        version = self.version
-        if version is None:
-            version = parser.version
+        version = f"{self.version}\n{get_system_version_info(separator_width=48)}\n"
         parser.exit(message=version)
 
 

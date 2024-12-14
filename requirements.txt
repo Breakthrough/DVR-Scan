@@ -4,6 +4,7 @@
 numpy
 opencv-python
 opencv-contrib-python
+pillow
 platformdirs
 pytest
 scenedetect>=0.6.2

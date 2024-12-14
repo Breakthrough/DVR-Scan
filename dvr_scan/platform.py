@@ -13,11 +13,12 @@
 Provides logging and platform/operating system compatibility.
 """
 
+import importlib
 import logging
 import os
+import platform
 import subprocess
 import sys
-from contextlib import contextmanager
 from typing import AnyStr, Optional
 
 try:
@@ -25,7 +26,7 @@ try:
 except ImportError:
     screeninfo = None
 
-from scenedetect.platform import get_and_create_path
+from scenedetect.platform import get_and_create_path, get_ffmpeg_version
 
 try:
     import tkinter
@@ -33,37 +34,14 @@ except ImportError:
     tkinter = None
 
 
-# TODO(v1.7): Figure out how to make icon work on Linux. Might need a PNG version.
-def get_icon_path() -> str:
-    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
-        app_folder = os.path.abspath(os.path.dirname(sys.executable))
-        icon_path = os.path.join(app_folder, "dvr-scan.ico")
-        if os.path.exists(icon_path):
-            return icon_path
-    # TODO(v1.7): Figure out how to properly get icon path in the package. The folder will be
-    # different in the final Windows build, may have to check if this is a frozen instance or not.
-    # Also need to ensure the icon is included in the package metadata.
-    # For Python distributions, may have to put dvr-scan.ico with the source files, and use
-    # os.path.dirname(sys.modules[package].__file__) (or just __file__ here).
-    for path in ("dvr-scan.ico", "dist/dvr-scan.ico"):
-        if os.path.exists(path):
-            return path
-    return ""
-
-
 HAS_TKINTER = tkinter is not None
-
-IS_WINDOWS = os.name == "nt"
-
-if IS_WINDOWS:
-    import ctypes
-    import ctypes.wintypes
 
 
 def get_min_screen_bounds():
     """Attempts to get the minimum screen resolution of all monitors using the `screeninfo` package.
     Returns the minimum of all monitor's heights and widths with 10% padding, or None if the package
     is unavailable."""
+    # TODO: See if we can replace this with Tkinter (`winfo_screenwidth` / `winfo_screenheight`).
     if screeninfo is not None:
         try:
             monitors = screeninfo.get_monitors()
@@ -157,42 +135,59 @@ def get_filename(path: AnyStr, include_extension: bool) -> AnyStr:
     return filename
 
 
-def set_icon(window_name: str):
-    icon_path = get_icon_path()
-    if not icon_path:
-        return
-    if not IS_WINDOWS:
-        # TODO: Set icon on Linux/OSX.
-        return
-    SendMessage = ctypes.windll.user32.SendMessageW
-    FindWindow = ctypes.windll.user32.FindWindowW
-    LoadImage = ctypes.windll.user32.LoadImageW
-    SetFocus = ctypes.windll.user32.SetFocus
-    IMAGE_ICON = 1
-    ICON_SMALL = 1
-    ICON_BIG = 1
-    LR_LOADFROMFILE = 0x00000010
-    LR_CREATEDIBSECTION = 0x00002000
-    WM_SETICON = 0x0080
-    hWnd = FindWindow(None, window_name)
-    hIcon = LoadImage(None, icon_path, IMAGE_ICON, 0, 0, LR_LOADFROMFILE | LR_CREATEDIBSECTION)
-    SendMessage(hWnd, WM_SETICON, ICON_SMALL, hIcon)
-    SendMessage(hWnd, WM_SETICON, ICON_BIG, hIcon)
-    SetFocus(hWnd)
+def get_system_version_info(separator_width: int = 40) -> str:
+    """Get the system's operating system, Python, packages, and external tool versions.
+    Useful for debugging or filing bug reports.
 
+    Used for the `scenedetect version -a` command.
+    """
+    output_template = "{:<8} {}"
+    line_separator = "-" * separator_width
+    not_found_str = "Not Installed"
+    out_lines = []
 
-@contextmanager
-def temp_tk_window():
-    """Used to provide a hidden Tk window as a root for pop-up dialog boxes to return focus to
-    main region window when destroyed."""
-    root = tkinter.Tk()
-    try:
-        root.withdraw()
-        # TODO: Set icon on Linux/OSX.
-        if IS_WINDOWS:
-            icon_path = get_icon_path()
-            if icon_path:
-                root.iconbitmap(os.path.abspath(icon_path))
-        yield root
-    finally:
-        root.destroy()
+    # System (Python, OS)
+    out_lines += ["System Info", line_separator]
+    out_lines += [
+        output_template.format(name, version)
+        for name, version in (
+            ("OS:", "%s" % platform.platform()),
+            ("Python:", "%s %s" % (platform.python_implementation(), platform.python_version())),
+            ("Arch:", " + ".join(platform.architecture())),
+        )
+    ]
+    output_template = "{:<16} {}"
+
+    # Third-Party Packages
+    out_lines += ["", "Packages", line_separator]
+    third_party_packages = (
+        "cv2",
+        "dvr_scan",
+        "numpy",
+        "platformdirs",
+        "PIL",
+        "scenedetect",
+        "screeninfo",
+        "tqdm",
+    )
+    for module_name in third_party_packages:
+        try:
+            module = importlib.import_module(module_name)
+            if hasattr(module, "__version__"):
+                out_lines.append(output_template.format(module_name, module.__version__))
+            else:
+                out_lines.append(output_template.format(module_name, not_found_str))
+        except ModuleNotFoundError:
+            out_lines.append(output_template.format(module_name, not_found_str))
+
+    # External Tools
+    out_lines += ["", "Tools", line_separator]
+
+    tool_version_info = (("ffmpeg", get_ffmpeg_version()),)
+
+    for tool_name, tool_version in tool_version_info:
+        out_lines.append(
+            output_template.format(tool_name, tool_version if tool_version else not_found_str)
+        )
+
+    return "\n".join(out_lines)

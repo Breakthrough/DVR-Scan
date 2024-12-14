@@ -31,7 +31,6 @@ There are also a few helper modules:
   ``platform``: library/platform specific helpers
 """
 
-import os
 import pkgutil
 import sys
 
@@ -46,32 +45,11 @@ __version__ = "1.6.2-dev0"
 
 def get_license_info() -> str:
     """Get license/copyright information for the package or standalone executable."""
-    try:
-        # If we're running a frozen/standalone executable distribution, make sure we include
-        # the license information for the third-party components we redistribute.
-        if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
-            app_folder = os.path.abspath(os.path.dirname(sys.executable))
-            license_files = ["LICENSE", "LICENSE-THIRDPARTY"]
-            license_text = "\n".join(
-                [
-                    open(os.path.join(app_folder, license_file), "rb")
-                    .read()
-                    .decode("ascii", "ignore")
-                    for license_file in license_files
-                ]
-            )
-        # Use the LICENSE file included with the package distribution.
-        else:
-            license_text = pkgutil.get_data(__name__, "LICENSE").decode("ascii", "ignore")
-        return license_text
-    # During development this is normal since the package paths won't be correct.
-    except FileNotFoundError:
-        pass
-    return (
-        "[DVR-Scan] Error: Missing LICENSE files.\n"
-        "See the following URL for license/copyright information:\n"
-        " < https://www.dvr-scan.com/resources >\n"
-    )
+    license_text = pkgutil.get_data(__name__, "LICENSE").decode()
+    # Include additional third-party license text if they were bundled into this release.
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        license_text += pkgutil.get_data(__name__, "LICENSE-THIRDPARTY").decode()
+    return license_text
 
 
 # Initialize logger.
