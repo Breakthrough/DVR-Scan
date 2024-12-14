@@ -135,6 +135,8 @@ def build_docs(use_local_images=True):
             contents = file.read_text()
             for old, new in replacements.items():
                 contents = contents.replace(old, new)
+            # HACK: Fix non-normalized paths.
+            contents = contents.replace("../", "")
             file.unlink(missing_ok=False)
             file.write_text(contents)
 
