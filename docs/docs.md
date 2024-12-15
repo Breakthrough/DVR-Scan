@@ -40,6 +40,10 @@ The following options control terminal output:
  * <b><pre>-c settings.cfg, --config settings.cfg</pre></b>
     Path to config file. If not set, tries to load one automatically from the user settings folder (run `dvr-scan --help` to see the exact path for your system). See the [config file documentation](#config-file) for what options can be specified.
 
+ * <b><pre>--use-pts</pre></b>
+    Use presentation time instead of frame number for timestamps. May improve timestamp accuracy with videos and network streams that may skip frames.
+
+
 #### Seeking/Duration
 
 All time values can be given as a timecode (`HH:MM:SS` or `HH:MM:SS.nnn`), in seconds as a number followed by `s` (`123s` or `123.45s`), or as number of frames (e.g. `1234`).
@@ -54,7 +58,6 @@ dvr-scan -i video.mp4 --start-time 00:35:52 --duration 00:05:00
  * <b><pre>-dt time, --duration time</pre></b> Maximum duration of input to process.
 
  * <b><pre>-et time, --end-time time</pre></b> Timecode to stop processing input.
-
 
 
 ### Output
@@ -83,6 +86,8 @@ dvr-scan -i video.mp4 --start-time 00:35:52 --duration 00:05:00
 
  * <b><pre>-mo mask.avi, --mask-output mask.avi</pre></b> Save a video containing the calculated motion mask on each frame. Useful for tuning motion detection. Requires `.avi` extension.
 
+ * <b><pre>--thumbnails highscore</pre></b> Save a thumbnail of the frame with the highest motion score for each event.
+
 
 ### Events
 
@@ -108,6 +113,7 @@ All time values can be given as a timecode (`HH:MM:SS` or `HH:MM:SS.nnn`), in se
 --time-post-event time 2.0s
 ```
 </span>
+
 
 ### Detection
 
@@ -250,6 +256,14 @@ bounding-box-color = 0xFF0000
     <span class="dvr-scan-example">
     ```
     output-dir = C:/temp/scanned/
+    ```
+    </span>
+
+ * <b><pre>use-pts</pre></b>
+    Use presentation time instead of frame number for timestamps. May improve timestamp accuracy with videos and network streams that may skip frames.
+    <span class="dvr-scan-example">
+    ```
+    use-pts = yes
     ```
     </span>
 

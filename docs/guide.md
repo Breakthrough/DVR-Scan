@@ -113,7 +113,7 @@ By enabling mask mode (Toggle Mask at the bottom right), you can see the exact a
 
 <img alt="[Mask Mode View]" src="../assets/region-editor-mask.jpg"/>
 
-Regions can be loaded/saved for reusing across videos or editing.
+Regions can be saved/loaded for reusing across videos or editing via the File menu.
 
 ### Controls
 

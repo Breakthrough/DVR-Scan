@@ -25,7 +25,7 @@ Scan `video.mp4` (separate clips for each event):
 
     dvr-scan -i video.mp4
 
-Only scan a region of interest ([see user guide](guide.md#region-editor) or hit `H` for controls):
+Only scan a region of interest ([see user guide](guide.md#region-editor) or hit `Ctrl + H` for controls):
 
     dvr-scan -i video.mp4 -r
 

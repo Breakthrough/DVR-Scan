@@ -20,10 +20,7 @@ hide:
 
         pip install dvr-scan[opencv-headless]==1.6.1
 
-DVR-Scan is [available on PyPI](https://pypi.org/project/dvr-scan/) can be installed using `pip install dvr-scan[opencv]`. DVR-Scan works on Windows, Linux, and OSX, and requires Python 3.8 or higher.
-
-If want to use an existing OpenCV installation or require a non-PyPI version, you can omit the extras from `pip install`. You can also build and install DVR-Scan [from source](#source-code).
-
+DVR-Scan works on Windows, Linux, and OSX, and requires Python 3.8 or higher. Linux users may need to install the `python3-tk` package (e.g. `sudo apt-get install python3-tk`) to run the region editor.
 
 -------------------------------
 
@@ -51,29 +48,9 @@ Nvidia CUDA® builds experimental and outdated due to difficulty producing binar
 Make sure to set `-b MOG2_CUDA` when running DVR-Scan (e.g. `dvr-scan -i video.mp4 -b MOG2_CUDA`).
 
 
-## Source Code
+## Source
 
-The source code for [DVR-Scan is available on Github](https://github.com/Breakthrough/DVR-Scan).  The following commands will download the required packages and build DVR-Scan from source:
-
-
-```
-python -m pip install --upgrade pip build wheel virtualenv setuptools==62.3.4
-python -m pip install -r requirements.txt
-python -m build
-```
-
-Once `python -m build` succeeds, there will be a Python distribution in the `dist/` folder which can be installed using `pip install`.
-
-<!--
--------------------------------
-
-## Third-Party
-
-Link to ffmpeg and other software.
-
--------------------------------
--->
-
+The source code for [DVR-Scan is available on Github](https://github.com/Breakthrough/DVR-Scan). It can be run directly from source (`python -m dvr_scan`), or built locally (`python -m build`).
 
 -------------------------------
 
@@ -81,4 +58,3 @@ Link to ffmpeg and other software.
 <h3>Code Signing Policy</h3>
 
 Free code signing provided by [SignPath.io](https://signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
-

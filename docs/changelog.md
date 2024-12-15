@@ -7,11 +7,19 @@
 
 ### 1.6.2 (In Development)
 
- - [general] Add new `variance-threshold` [config option](https://www.dvr-scan.com/docs/#config-file) to control how MOG2 controls which pixels are described by the current background model [#163](https://github.com/Breakthrough/DVR-Scan/issues/163)
- - [feature] Rework region editor to provide more consistent experience across all platforms
-    - The region editor is now much more usable and has UI controls in addition to keyboard shortcuts
+ - [feature] Vastly improved region editor UI:
+    - Reimplemented entire UI with Tcl/Tk to provide much more consistent experience across platforms
+    - All options now have dedicated UI controls in addition to keyboard shortcuts
     - System-specific shortcuts like undo/redo now work as expected
     - Various performance and usability improvements including zoom/pan and shape selection
+ - [feature] Add new `variance-threshold` [config option](https://www.dvr-scan.com/docs/#config-file) to control how MOG2 controls which pixels are described by the current background model [#163](https://github.com/Breakthrough/DVR-Scan/issues/163)
+ - [feature] Add new `--thumbnails` option to extract images from each event, use `--thumbnails highscore` to save frame with highest motion score [#159](https://github.com/Breakthrough/DVR-Scan/issues/159) (thanks @goatzillax)
+ - [bugfix] Fix incorrect framerate detection in Windows builds [#174](https://github.com/Breakthrough/DVR-Scan/issues/174)
+ - [general] Updates to Windows distributions:
+     - Python 3.9 -> Python 3.13
+     - OpenCV 4.10.0.82 -> 4.10.0.84
+     - Ffmpeg 6.0 -> 7.1
+
 
 ### 1.6.1 (May 18, 2024)
 
