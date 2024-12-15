@@ -19,19 +19,22 @@ which provides an argparse-based CLI used by the DVR-Scan application.
 """
 
 import argparse
-from typing import List, Optional
+import typing as ty
 
-import dvr_scan
+from dvr_scan import get_license_info
 from dvr_scan.config import CHOICE_MAP, USER_CONFIG_FILE_PATH, ConfigRegistry
-from dvr_scan.platform import HAS_MOG2_CUDA, get_system_version_info
+from dvr_scan.platform import HAS_MOG2_CUDA
 from dvr_scan.region import RegionValidator
-
-# Version string shown for the -v/--version CLI argument.
-VERSION_STRING = f"""DVR-Scan {dvr_scan.__version__}
-------------------------------------------------
-Copyright (C) 2016 Brandon Castellano
-< https://www.dvr-scan.com >
-"""
+from dvr_scan.shared import (
+    VERSION_STRING,
+    LicenseAction,
+    VersionAction,
+    float_type_check,
+    int_type_check,
+    kernel_size_type_check,
+    string_type_check,
+    timecode_type_check,
+)
 
 # In the CLI, -so/--scan-only is a different flag than -m/--output-mode, whereas in the
 # config file they are the same option. Therefore, we remove the scan only choice
@@ -42,272 +45,6 @@ VALID_OUTPUT_MODES = [mode for mode in CHOICE_MAP["output-mode"] if mode != SCAN
 
 
 BACKGROUND_SUBTRACTORS = ["MOG2", "CNT", "MOG2_CUDA"] if HAS_MOG2_CUDA else ["MOG2", "CNT"]
-
-
-def timecode_type_check(metavar: Optional[str] = None):
-    """Creates an argparse type for a user-inputted timecode.
-
-    The passed argument is declared valid if it meets one of three valid forms:
-      1) Standard timecode; in form HH:MM:SS or HH:MM:SS.nnn
-      2) Number of seconds; type # of seconds, followed by s (e.g. 54s, 0.001s)
-      3) Exact number of frames; type # of frames (e.g. 54, 1000)
-     valid integer which
-    is greater than or equal to min_val, and if max_val is specified,
-    less than or equal to max_val.
-
-    Returns:
-        A function which can be passed as an argument type, when calling
-        add_argument on an ArgumentParser object
-
-    Raises:
-        ArgumentTypeError: Passed argument must be integer within proper range.
-    """
-    metavar = "value" if metavar is None else metavar
-
-    def _type_checker(value):
-        valid = False
-        value = str(value).lower().strip()
-        # Integer number of frames.
-        if value.isdigit():
-            # All characters in string are digits, just parse as integer.
-            frames = int(value)
-            if frames >= 0:
-                valid = True
-                value = frames
-        # Integer or real/floating-point number of seconds.
-        elif value.endswith("s"):
-            secs = value[:-1]
-            if secs.replace(".", "").isdigit():
-                secs = float(secs)
-                if secs >= 0.0:
-                    valid = True
-                    value = secs
-        # Timecode in HH:MM:SS[.nnn] format.
-        elif ":" in value:
-            tc_val = value.split(":")
-            if (
-                len(tc_val) == 3
-                and tc_val[0].isdigit()
-                and tc_val[1].isdigit()
-                and tc_val[2].replace(".", "").isdigit()
-            ):
-                hrs, mins = int(tc_val[0]), int(tc_val[1])
-                secs = float(tc_val[2]) if "." in tc_val[2] else int(tc_val[2])
-                if hrs >= 0 and mins >= 0 and secs >= 0 and mins < 60 and secs < 60:
-                    valid = True
-        if not valid:
-            raise argparse.ArgumentTypeError(
-                f"invalid timecode: {value}\n"
-                "Timecode must be specified as number of frames (12345), seconds (number followed "
-                "by s, e.g. 123s or 123.45s), or timecode (HH:MM:SS[.nnn]."
-            )
-        return value
-
-    return _type_checker
-
-
-def int_type_check(min_val: int, max_val: Optional[int] = None, metavar: Optional[str] = None):
-    """Creates an argparse type for a range-limited integer.
-
-    The passed argument is declared valid if it is a valid integer which
-    is greater than or equal to min_val, and if max_val is specified,
-    less than or equal to max_val.
-
-    Returns:
-        A function which can be passed as an argument type, when calling
-        add_argument on an ArgumentParser object
-
-    Raises:
-        ArgumentTypeError: Passed argument must be integer within proper range.
-    """
-    metavar = "value" if metavar is None else metavar
-
-    def _type_checker(value):
-        value = int(value)
-        valid = True
-        msg = ""
-        if max_val is None:
-            if value < min_val:
-                valid = False
-            msg = "invalid choice: %d (%s must be at least %d)" % (
-                value,
-                metavar,
-                min_val,
-            )
-        else:
-            if value < min_val or value > max_val:
-                valid = False
-            msg = "invalid choice: %d (%s must be between %d and %d)" % (
-                value,
-                metavar,
-                min_val,
-                max_val,
-            )
-        if not valid:
-            raise argparse.ArgumentTypeError(msg)
-        return value
-
-    return _type_checker
-
-
-def _kernel_size_type_check(metavar: Optional[str] = None):
-    metavar = "value" if metavar is None else metavar
-
-    def _type_checker(value):
-        value = int(value)
-        if value not in (-1, 0) and (value < 3 or value % 2 == 0):
-            raise argparse.ArgumentTypeError(
-                "invalid choice: %d (%s must be an odd number starting from 3, 0 to disable, or "
-                "-1 for auto)" % (value, metavar)
-            )
-        return value
-
-    return _type_checker
-
-
-def float_type_check(
-    min_val: float,
-    max_val: Optional[float] = None,
-    metavar: Optional[str] = None,
-    default_str: Optional[str] = None,
-):
-    """Creates an argparse type for a range-limited float.
-
-    The passed argument is declared valid if it is a valid float which is
-    greater thanmin_val, and if max_val is specified, less than max_val.
-
-    Returns:
-        A function which can be passed as an argument type, when calling
-        add_argument on an ArgumentParser object
-
-    Raises:
-        ArgumentTypeError: Passed argument must be float within proper range.
-    """
-    metavar = "value" if metavar is None else metavar
-
-    def _type_checker(value):
-        if default_str and isinstance(value, str) and default_str == value:
-            return None
-        value = float(value)
-        valid = True
-        msg = ""
-        if max_val is None:
-            if value < min_val:
-                valid = False
-            msg = "invalid choice: %3.1f (%s must be greater than %3.1f)" % (
-                value,
-                metavar,
-                min_val,
-            )
-        else:
-            if value < min_val or value > max_val:
-                valid = False
-            msg = "invalid choice: %3.1f (%s must be between %3.1f and %3.1f)" % (
-                value,
-                metavar,
-                min_val,
-                max_val,
-            )
-        if not valid:
-            raise argparse.ArgumentTypeError(msg)
-        return value
-
-    return _type_checker
-
-
-def string_type_check(
-    valid_strings: List[str], case_sensitive: bool = True, metavar: Optional[str] = None
-):
-    """Creates an argparse type for a list of strings.
-
-    The passed argument is declared valid if it is a valid string which exists
-    in the passed list valid_strings.  If case_sensitive is False, all input
-    strings and strings in valid_strings are processed as lowercase.  Leading
-    and trailing whitespace is ignored in all strings.
-
-    Returns:
-        A function which can be passed as an argument type, when calling
-        add_argument on an ArgumentParser object
-
-    Raises:
-        ArgumentTypeError: Passed argument must be string within valid list.
-    """
-    metavar = "value" if metavar is None else metavar
-    valid_strings = [x.strip() for x in valid_strings]
-    if not case_sensitive:
-        valid_strings = [x.lower() for x in valid_strings]
-
-    def _type_checker(value):
-        value = str(value)
-        valid = True
-        if not case_sensitive:
-            value = value.lower()
-        if value not in valid_strings:
-            valid = False
-            case_msg = " (case sensitive)" if case_sensitive else ""
-            msg = "invalid choice: %s (valid settings for %s%s are: %s)" % (
-                value,
-                metavar,
-                case_msg,
-                valid_strings.__str__()[1:-1],
-            )
-        if not valid:
-            raise argparse.ArgumentTypeError(msg)
-        return value
-
-    return _type_checker
-
-
-class LicenseAction(argparse.Action):
-    """argparse Action for displaying DVR-Scan license & copyright info."""
-
-    def __init__(
-        self,
-        option_strings,
-        version=None,
-        dest=argparse.SUPPRESS,
-        default=argparse.SUPPRESS,
-        help="show copyright information",
-    ):
-        super(LicenseAction, self).__init__(
-            option_strings=option_strings,
-            dest=dest,
-            default=default,
-            nargs=0,
-            help=help,
-        )
-        self.version = version
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        version = self.version
-        if version is None:
-            version = parser.version
-        parser.exit(message=version)
-
-
-class VersionAction(argparse.Action):
-    """argparse Action for displaying DVR-Scan version."""
-
-    def __init__(
-        self,
-        option_strings,
-        version=None,
-        dest=argparse.SUPPRESS,
-        default=argparse.SUPPRESS,
-        help="show version number",
-    ):
-        super(VersionAction, self).__init__(
-            option_strings=option_strings,
-            dest=dest,
-            default=default,
-            nargs=0,
-            help=help,
-        )
-        self.version = version
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        version = f"{self.version}\n{get_system_version_info(separator_width=48)}\n"
-        parser.exit(message=version)
 
 
 class RegionAction(argparse.Action):
@@ -341,7 +78,7 @@ class RegionAction(argparse.Action):
             metavar=metavar,
         )
 
-    def __call__(self, parser, namespace, values: List[str], option_string=None):
+    def __call__(self, parser, namespace, values: ty.List[str], option_string=None):
         try:
             region = RegionValidator(" ".join(values))
         except ValueError as ex:
@@ -391,7 +128,7 @@ def get_cli_parser(user_config: ConfigRegistry):
         "-L",
         "--license",
         action=LicenseAction,
-        version=dvr_scan.get_license_info(),
+        version=get_license_info(),
     )
 
     parser.add_argument(
@@ -551,7 +288,7 @@ def get_cli_parser(user_config: ConfigRegistry):
         "-k",
         "--kernel-size",
         metavar="size",
-        type=_kernel_size_type_check(metavar="size"),
+        type=kernel_size_type_check(metavar="size"),
         help=(
             "Size in pixels of the noise reduction kernel. Must be odd number greater than 1, "
             "0 to disable, or -1 to auto-set based on video resolution (default). If the kernel "
