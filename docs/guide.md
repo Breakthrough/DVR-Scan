@@ -85,7 +85,7 @@ Frame numbers will be accurate, but timestamps will not.  This can yield incorre
 
 ## :fontawesome-solid-crop-simple:Region Editor
 
-With the Region Editor, you can limit motion detection to specific areas of the frame.  You can launch the region editor when starting DVR-Scan by adding `-r`/`--region-editor`:
+With the Region Editor, you can limit motion detection to specific areas of the frame.  You can launch the region editor by by adding `-r`/`--region-editor` to the DVR-Scan command:
 
     dvr-scan -i video.mp4 -r
 
