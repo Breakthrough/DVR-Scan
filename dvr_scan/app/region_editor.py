@@ -45,8 +45,12 @@ import PIL.Image
 import PIL.ImageTk
 
 import dvr_scan
-from dvr_scan.platform import get_system_version_info
+from dvr_scan.app.about_window import AboutWindow
+from dvr_scan.app.common import SUPPORTS_RESOURCES, register_icon
 from dvr_scan.region import Point, Size, bound_point, load_regions
+
+if SUPPORTS_RESOURCES:
+    pass
 
 # TODO: Update screenshots to reflect release title.
 WINDOW_TITLE = "DVR-Scan Region Editor"
@@ -65,23 +69,6 @@ MIN_SIZE = 16
 """Minimum height/width for a ROI created using the mouse."""
 
 logger = getLogger("dvr_scan")
-
-SUPPORTS_RESOURCES = sys.version_info.minor >= 9
-if SUPPORTS_RESOURCES:
-    import importlib.resources as resources
-
-
-def register_icon(root: tk.Tk):
-    if SUPPORTS_RESOURCES:
-        # On Windows we always want a path so we can load the .ICO with `iconbitmap`.
-        # On other systems, we can just use the PNG logo directly with `iconphoto`.
-        if os.name == "nt":
-            icon_path = resources.files(dvr_scan).joinpath("dvr-scan.ico")
-            with resources.as_file(icon_path) as icon_path:
-                root.iconbitmap(default=icon_path)
-            return
-        icon = PIL.Image.open(resources.open_binary(dvr_scan, "dvr-scan.png"))
-        root.iconphoto(True, PIL.ImageTk.PhotoImage(icon))
 
 
 @dataclass
@@ -248,15 +235,14 @@ class RegionEditor:
         self._editor_canvas: tk.Canvas = None
         self._editor_scroll: ty.Tuple[tk.Scrollbar, tk.Scrollbar] = None
         self._should_scan: bool = False
-        self._version_info: ty.Optional[str] = None
         self._scale_widget: ttk.Scale = None
         self._pan_enabled: bool = False
         self._panning: bool = False
         self._controls_window: tk.Toplevel = None
-        self._about_image: PIL.Image = None
         self._region_selector: ttk.Combobox = None
 
         self._context_menu: tk.Menu = None
+        self._about: AboutWindow = None
         # Clones of the normal state variables since sometimes we can still interact with the main
         # window after the context menu is posted.
         self._context_curr_mouse_pos: Point = None
@@ -810,121 +796,14 @@ class RegionEditor:
             underline=0,
         )
         help_menu.add_separator()
-        help_menu.add_command(label="About DVR-Scan", command=self._show_about, underline=0)
+
+        help_menu.add_command(
+            label="About DVR-Scan", command=lambda: AboutWindow().show(root=self._root), underline=0
+        )
 
         self._edit_menu = edit_menu
         self._root["menu"] = root_menu
         self._update_ui_state()
-
-    def _show_about(self):
-        about_window = tk.Toplevel(master=self._root)
-        about_window.withdraw()
-        about_window.title("About DVR-Scan")
-        about_window.resizable(True, True)
-
-        if SUPPORTS_RESOURCES:
-            app_logo = PIL.Image.open(resources.open_binary(dvr_scan, "dvr-scan-logo.png"))
-            self._about_image = app_logo.crop((8, 8, app_logo.width - 132, app_logo.height - 8))
-            self._about_image_tk = PIL.ImageTk.PhotoImage(self._about_image)
-            canvas = tk.Canvas(
-                about_window, width=self._about_image.width, height=self._about_image.height
-            )
-            canvas.grid()
-            canvas.create_image(0, 0, anchor=tk.NW, image=self._about_image_tk)
-
-        ttk.Separator(about_window, orient=tk.HORIZONTAL).grid(row=1, sticky="ew", padx=16.0)
-        ttk.Label(
-            about_window,
-            text=ABOUT_WINDOW_COPYRIGHT,
-        ).grid(row=2, sticky="nw", padx=24.0, pady=24.0)
-
-        # TODO: These should be buttons not labels.
-        website_link = ttk.Label(
-            about_window, text="www.dvr-scan.com", cursor="hand2", foreground="medium blue"
-        )
-        website_link.grid(row=2, sticky="ne", padx=24.0, pady=24.0)
-        website_link.bind("<Button-1>", lambda _: webbrowser.open_new_tab("www.dvr-scan.com"))
-
-        about_tabs = ttk.Notebook(about_window)
-        version_tab = ttk.Frame(about_tabs)
-        version_area = tkinter.scrolledtext.ScrolledText(
-            version_tab, wrap=tk.NONE, width=40, height=1
-        )
-        # TODO: See if we can add another button that will copy debug logs.
-        if not self._version_info:
-            self._version_info = get_system_version_info()
-        version_area.insert(tk.INSERT, self._version_info)
-        version_area.grid(sticky="nsew")
-        version_area.config(state="disabled")
-        version_tab.columnconfigure(0, weight=1)
-        version_tab.rowconfigure(0, weight=1)
-        tk.Button(
-            version_tab,
-            text="Copy to Clipboard",
-            command=lambda: self._root.clipboard_append(self._version_info),
-        ).grid(row=1, column=0)
-
-        license_tab = ttk.Frame(about_tabs)
-        scrollbar = tk.Scrollbar(license_tab, orient=tk.HORIZONTAL)
-        license_area = tkinter.scrolledtext.ScrolledText(
-            license_tab, wrap=tk.NONE, width=40, xscrollcommand=scrollbar.set, height=1
-        )
-        license_area.insert(tk.INSERT, dvr_scan.get_license_info())
-        license_area.grid(sticky="nsew")
-        scrollbar.config(command=license_area.xview)
-        scrollbar.grid(row=1, sticky="swe")
-        license_area.config(state="disabled")
-        license_tab.columnconfigure(0, weight=1)
-        license_tab.rowconfigure(0, weight=1)
-
-        # TODO: Add tab that has some useful links like submitting bug report, etc
-        about_tabs.add(version_tab, text="Version Info")
-        about_tabs.add(license_tab, text="License Info")
-
-        about_tabs.grid(
-            row=0, column=1, rowspan=4, padx=(0.0, 16.0), pady=(16.0, 16.0), sticky="nsew"
-        )
-        about_window.update()
-        if self._about_image is not None:
-            about_window.columnconfigure(0, minsize=self._about_image.width)
-            about_window.rowconfigure(0, minsize=self._about_image.height)
-        else:
-            about_window.columnconfigure(0, minsize=200)
-            about_window.rowconfigure(0, minsize=100)
-        # minsize includes padding
-        about_window.columnconfigure(1, weight=1, minsize=100)
-        about_window.rowconfigure(3, weight=1)
-
-        about_window.minsize(
-            width=about_window.winfo_reqwidth(), height=about_window.winfo_reqheight()
-        )
-        # can we query widget height?
-
-        self._root.grab_release()
-        if os == "nt":
-            self._root.attributes("-disabled", True)
-
-        about_window.transient(self._root)
-        about_window.focus()
-        about_window.grab_set()
-
-        def dismiss():
-            about_window.grab_release()
-            about_window.destroy()
-            if os == "nt":
-                self._root.attributes("-disabled", False)
-            self._root.grab_set()
-            self._root.focus()
-
-        about_window.protocol("WM_DELETE_WINDOW", dismiss)
-        about_window.attributes("-topmost", True)
-        about_window.bind("<Escape>", lambda _: about_window.destroy())
-        about_window.bind("<Destroy>", lambda _: dismiss())
-
-        about_window.deiconify()
-        about_window.wait_window()
-
-        self._draw()
 
     def _show_help(self):
         if self._controls_window is None:
