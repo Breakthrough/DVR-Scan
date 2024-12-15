@@ -25,6 +25,10 @@ See [the documentation](docs.md) for a complete list of all command-line and con
 
 These settings will be used by default each time you run DVR-Scan, unless you override them.
 
+### Running Without Terminal
+
+A GUI is being developed for DVR-Scan but is not yet available. In the meantime, Windows users can see [Issue #178](https://github.com/Breakthrough/DVR-Scan/issues/178) for instructions on how to create drag-and-drop shortcuts to run DVR-Scan without needing to type commands.
+
 ### Multiple Videos
 
 You can specify multiple input videos as long as they have the same resolution and framerate:
@@ -87,63 +91,32 @@ With the Region Editor, you can limit motion detection to specific areas of the 
 
 The region editor will open and display a rectangle over the first frame:
 
-<img alt="region editor startup window" src="../assets/region-editor-start.jpg"/>
+<img alt="[Region Editor Startup Window]" src="../assets/region-editor-start.jpg"/>
 
-You can use the mouse to add or move points when editing regions. Left click to add a new point, or drag an existing one. Left/middle click can be used to delete a point (see [controls](#controls)).
+You can use the mouse to add or move points when editing regions. Left click to add a new point, or drag an existing one. Right click can be used to delete a point, and to add/remove shapes.
 
-Press `S` to save the current regions to a file, or `O` to load existing ones.  When you are satisfied with the region, press **space bar or enter to start processing** the video.  You can press **escape to quit** the program without saving.
+To begin scanning, click File -> Start Scan. You will be prompted to save the regions you have created before scanning so you can re-use them if required.
 
 ### Regions
 
 Regions are a set of points creating a closed shape. A rectangle will be created by default for you to modify.
 
-You can use the left mouse button to add a new point (keyboard: `A`) and right/middle mouse button (keyboard `X`) to delete a point. You can left click to drag existing points. This allows creating complex shapes, such as:
+<img alt="[Non-Rectangular Region Example]" src="../assets/region-editor-region.jpg"/>
 
-<img alt="example of non-rectangular region" src="../assets/region-editor-region.jpg"/>
+Regions are edited individually, but all regions are used when scanning. To add a new shape, right click anywhere on the frame.
 
-Regions can be created by pressing `T` and deleted by pressing `G`.
+<img alt="[Multiple Region Example]" src="../assets/region-editor-multiple.jpg"/>
 
-<img alt="example of region mask" src="../assets/region-editor-multiple.jpg"/>
+Regions can be selected using the Active Region selector at the bottom left, or cycled by using the `Tab` key. Note that only one region can be edited at a time.
 
-Regions can be selected using the number keys `1`-`9`, or by pressing `k`/`l` to select the previous/next region. Note that only one region can be active at a time (you must select an existing shape to modify it).
+By enabling mask mode (Toggle Mask at the bottom right), you can see the exact areas of the frame that DVR-Scan will consider for motion:
 
-Lastly, you can hit `M` to view a cutout of the active mask:
+<img alt="[Mask Mode View]" src="../assets/region-editor-mask.jpg"/>
 
-<img alt="example of region mask" src="../assets/region-editor-mask.jpg"/>
+Regions can be loaded/saved for reusing across videos or editing.
 
 ### Controls
 
-#### Regions
+Click Help -> Show Controls or press `Ctrl + H` (`Command + H` on Mac) to display all keyboard and mouse controls. You can move the canvas by holding `Ctrl` (`Command` on Mac) and dragging with left-click. The cursor icon should change depending on what mode the editor is in.
 
-| Command | Keyboard | Mouse |
-|--|--|--|
-| Add Point | `A` | Left |
-| Delete Point | `X` | :fontawesome-brands-windows:Right<br/>:fontawesome-brands-linux:Middle |
-| Add Region | `T` | |
-| Delete Region | `G` | |
-| Select Region | `1` - `9` | |
-| Next Region | `L` | |
-| Previous Region | `K` | |
-
-#### Editor
-
-| Command | Keyboard | Alt |
-|--|--|--|
-| Mask On/Off | `M` | |
-| Start Scan | Space,<br/>Enter | |
-| Quit | Escape | |
-| Save | `S` | |
-| Load | `O` | |
-| Undo | `Z` | :fontawesome-brands-windows:`Ctrl + Z`|
-| Redo | `Y` | :fontawesome-brands-windows:`Ctrl + Y`|
-| Print Points | `C` | |
-
-#### Display
-
-| Command | Keyboard | Mouse |
-|--|--|--|
-| Downscale Increase | `W` | |
-| Downscale Decrease | `E` | |
-| Antialiasing | `Q` | |
-| Window Mode | `R` | |
-| Window Menu | | :fontawesome-brands-linux:Right |
+Most actions have keyboard shortcuts displayed beside the menu item. You can undo/redo any modifications or deletions when working on the regions by clicking Edit -> Undo/Redo or using your system's undo/redo keys.

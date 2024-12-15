@@ -1,11 +1,23 @@
 
 # :fontawesome-solid-keyboard:Frequently Asked Questions
 
+
 ----------------------------------------------------------
+
+
+### How do I run DVR-Scan?
+
+DVR-Scan is a command-line program and must be launched from a terminal or command prompt (e.g. `cmd.exe` on Windows). A GUI is in development for an upcoming release.
+
+In the meantime, Windows users can [use these instructions](https://github.com/Breakthrough/DVR-Scan/issues/178) create helpful drag-and-drop shortcuts. These will allow you to run DVR-Scan by dragging and dropping the video(s) you want to scan.
+
+
+----------------------------------------------------------
+
 
 ### How can I stop DVR-Scan?
 
-Hit Ctrl + C on your keyboard to exit DVR-Scan.
+Hit `Ctrl + C` on your keyboard to exit DVR-Scan.
 
 
 ----------------------------------------------------------
@@ -18,6 +30,8 @@ DVR-Scan saves all files in the current working directory (the location you are 
 ```
 dvr-scan -i video.mp4 -d events_folder/
 ```
+
+This can also be done [with a config file](docs.md#config-file).
 
 
 ----------------------------------------------------------
