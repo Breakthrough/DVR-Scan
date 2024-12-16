@@ -33,8 +33,19 @@ try:
 except ImportError:
     tkinter = None
 
+try:
+    import cv2
+    import cv2.cuda
+
+    HAS_MOG2_CUDA = bool(hasattr(cv2.cuda, "createBackgroundSubtractorMOG2"))
+except:  # noqa: E722
+    # We make sure importing OpenCV succeeds elsewhere so it's okay to suppress any exceptions here.
+    HAS_MOG2_CUDA = False
+
 
 HAS_TKINTER = tkinter is not None
+
+IS_FROZEN = bool(not (getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS")))
 
 
 def get_min_screen_bounds():
@@ -181,13 +192,18 @@ def get_system_version_info(separator_width: int = 40) -> str:
             out_lines.append(output_template.format(module_name, not_found_str))
 
     # External Tools
-    out_lines += ["", "Tools", line_separator]
+    out_lines += ["", "Features", line_separator]
 
-    tool_version_info = (("ffmpeg", get_ffmpeg_version()),)
+    ffmpeg_version = get_ffmpeg_version()
+    feature_version_info = [("ffmpeg", ffmpeg_version)] if ffmpeg_version else []
+    feature_version_info += [("tkinter", "Installed")] if HAS_TKINTER else []
+    feature_version_info += [("cv2.cuda", "Installed")] if HAS_MOG2_CUDA else []
 
-    for tool_name, tool_version in tool_version_info:
+    for feature_name, feature_version in feature_version_info:
         out_lines.append(
-            output_template.format(tool_name, tool_version if tool_version else not_found_str)
+            output_template.format(
+                feature_name, feature_version if feature_version else not_found_str
+            )
         )
 
     return "\n".join(out_lines)

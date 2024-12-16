@@ -16,7 +16,6 @@ This module manages the DVR-Scan program control flow, starting with `run_dvr_sc
 import argparse
 import glob
 import logging
-import sys
 import time
 import typing as ty
 
@@ -182,19 +181,12 @@ def parse_settings(args: ty.List[str] = None) -> ty.Optional[ProgramSettings]:
         logger.error("Error: Unknown background subtraction type: %s", detector_type)
         return None
     if not bg_subtractor.value.is_available():
-        if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
-            # This should only happen for MOG2_CUDA (currently).
-            assert bg_subtractor == DetectorType.MOG2_CUDA
-            logger.error(
-                "Method %s is not available. To enable it, use a CUDA-enabled build of DVR-Scan.",
-                bg_subtractor.name,
-            )
+        if bg_subtractor == DetectorType.MOG2_CUDA:
+            logger.error("MOG2_CUDA requires a CUDA-enabled build of the `opencv-python` package!")
         else:
             logger.error(
-                "Method %s is not available. To enable CNT, you can try `pip install "
-                "opencv-contrib-python`. MOG2_CUDA requires building OpenCV with Python and CUDA "
-                "support enabled.",
-                bg_subtractor.name,
+                f"Method {bg_subtractor.name} is not available, you may need to run: "
+                "`pip install opencv-contrib-python`"
             )
         return None
 

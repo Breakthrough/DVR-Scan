@@ -23,7 +23,7 @@ from typing import List, Optional
 
 import dvr_scan
 from dvr_scan.config import CHOICE_MAP, USER_CONFIG_FILE_PATH, ConfigRegistry
-from dvr_scan.platform import get_system_version_info
+from dvr_scan.platform import HAS_MOG2_CUDA, get_system_version_info
 from dvr_scan.region import RegionValidator
 
 # Version string shown for the -v/--version CLI argument.
@@ -39,6 +39,9 @@ Copyright (C) 2016 Brandon Castellano
 SCAN_ONLY_MODE = "scan_only"
 assert SCAN_ONLY_MODE in CHOICE_MAP["output-mode"]
 VALID_OUTPUT_MODES = [mode for mode in CHOICE_MAP["output-mode"] if mode != SCAN_ONLY_MODE]
+
+
+BACKGROUND_SUBTRACTORS = ["MOG2", "CNT", "MOG2_CUDA"] if HAS_MOG2_CUDA else ["MOG2", "CNT"]
 
 
 def timecode_type_check(metavar: Optional[str] = None):
@@ -517,14 +520,15 @@ def get_cli_parser(user_config: ConfigRegistry):
         ),
     )
 
+    MOG2_CUDA = ", MOG2_CUDA (Nvidia GPU)" if HAS_MOG2_CUDA else ""
     parser.add_argument(
         "-b",
         "--bg-subtractor",
         metavar="type",
-        type=string_type_check(["MOG2", "CNT", "MOG2_CUDA"], False, "type"),
+        type=string_type_check(BACKGROUND_SUBTRACTORS, False, "type"),
         help=(
             "The type of background subtractor to use, must be one of: "
-            " MOG2 (default), CNT (parallel), MOG2_CUDA (Nvidia GPU).%s"
+            f" MOG2 (default), CNT (parallel){MOG2_CUDA}.%s"
         )
         % user_config.get_help_string("bg-subtractor"),
     )
