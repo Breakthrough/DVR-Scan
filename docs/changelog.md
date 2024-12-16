@@ -5,7 +5,7 @@
 
 ## DVR-Scan 1.6
 
-### 1.6.2 (In Development)
+### 1.6.2 (December 16, 2024)
 
  - [feature] Vastly improved region editor UI:
     - Reimplemented entire UI with Tcl/Tk to provide much more consistent experience across platforms
