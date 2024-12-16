@@ -40,7 +40,7 @@ import dvr_scan.opencv_loader as _  # noqa: F401
 from dvr_scan.platform import init_logger
 
 # Used for module/distribution identification.
-__version__ = "1.6.2-dev0"
+__version__ = "1.6.2"
 
 
 def get_license_info() -> str:
