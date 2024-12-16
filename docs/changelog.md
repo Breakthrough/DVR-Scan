@@ -13,10 +13,11 @@
     - System-specific shortcuts like undo/redo now work as expected
     - Various performance and usability improvements including zoom/pan and shape selection
  - [feature] Add new `variance-threshold` [config option](https://www.dvr-scan.com/docs/#config-file) to control how MOG2 controls which pixels are described by the current background model [#163](https://github.com/Breakthrough/DVR-Scan/issues/163)
- - [feature] Add new `--thumbnails` option to extract images from each event, use `--thumbnails highscore` to save frame with highest motion score [#159](https://github.com/Breakthrough/DVR-Scan/issues/159) (thanks @goatzillax)
+ - [feature] Add new `--thumbnails` option to extract images from each event, use `--thumbnails highscore` to save frame with highest motion score [#159](https://github.com/Breakthrough/DVR-Scan/issues/159)
+ - [feature] Add `--use-pts` option to allow using presentation time instead of frame number for timestamps [#170](https://github.com/Breakthrough/DVR-Scan/pull/170)
  - [bugfix] Fix incorrect framerate detection in Windows builds [#174](https://github.com/Breakthrough/DVR-Scan/issues/174)
  - [general] Updates to Windows distributions:
-     - Python 3.9 -> Python 3.13
+     - Python 3.9 -> Python 3.12
      - OpenCV 4.10.0.82 -> 4.10.0.84
      - Ffmpeg 6.0 -> 7.1
 
