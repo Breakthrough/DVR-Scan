@@ -40,7 +40,7 @@ The following is a list of alternative software that shares some of the function
                 DVR-Scan License (BSD 2-Clause)
           < https://github.com/Breakthrough/DVR-Scan >
 
-Copyright (C) 2016-2024, Brandon Castellano.
+Copyright (C) 2016, Brandon Castellano.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without

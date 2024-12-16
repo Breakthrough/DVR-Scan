@@ -70,6 +70,6 @@ https://github.com/Breakthrough/DVR-Scan/issues
 
 Licensed under BSD 2-Clause (see the ``LICENSE`` file for details).
 
-Copyright (C) 2016-2024 Brandon Castellano.
+Copyright (C) 2016 Brandon Castellano.
 All rights reserved.
 
