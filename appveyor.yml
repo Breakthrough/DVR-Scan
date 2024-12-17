@@ -16,9 +16,9 @@ environment:
     - PYTHON: "C:\\Python312-x64"
   # Encrypted AdvancedInstaller License
   ai_license_secret:
-    secure: MOkULlGPSi0C1Hg2PU1h2SZg/eyQnPQhRJ1XFlavfMKMOoX9hY4pSjpdgW3psSau
+    secure: of3o1pInqCJYwKLFsiadbsRYazCmCuZq7r2roaYvYXmBvm6e6JHsRU47waylTmhm
   ai_license_salt:
-    secure: /LlGOUGZk8HQgrW6txtssTt8I6Z6pU7K3XOcqTqr2iKX4vLO3ZTdILgL/6M6u7gWVdRoUYfbxm4JVYjs4hfcmQ==
+    secure: +NKWwlkEptlThgfeL35pLo7EsnkJc+4WODm8tTg1aO5fc0duQ4r100fHQYj6nzhyUdy3Dhs/mOLkxD8rNbBiEQ==
   ffmpeg_version: "7.1"
 
 # SignPath Config for Code Signing

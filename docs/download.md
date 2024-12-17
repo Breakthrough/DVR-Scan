@@ -10,7 +10,7 @@ hide:
 
 ## Python <span class="dvr-scan-download-icons">:fontawesome-brands-windows::fontawesome-brands-apple::fontawesome-brands-linux:</span>
 
-!!! python-download "**1.6.2**<span class="dvr-scan-release-date">December 16, 2024</span>"
+!!! python-download "**1.6.2**<span class="dvr-scan-release-date">December 17, 2024</span>"
 
     <h3>Regular Install:</h3>
 
@@ -26,7 +26,7 @@ DVR-Scan works on Windows, Linux, and OSX, and requires Python 3.8 or higher. Li
 
 ## Windows Distribution<span class="dvr-scan-download-icons">:fontawesome-brands-windows:</span>
 
-!!! windows-download "**1.6.2**<span class="dvr-scan-release-date">December 16, 2024</span>"
+!!! windows-download "**1.6.2**<span class="dvr-scan-release-date">December 17, 2024</span>"
 
     <div class="buttongrid buttongrid-download">[:fontawesome-solid-download: &nbsp; Installer `.msi`](https://github.com/Breakthrough/DVR-Scan/releases/download/v1.6.2-release/dvr-scan-1.6.2-win64.msi){ .md-button #download-button }[:fontawesome-solid-file-zipper: &nbsp; Portable `.zip`](https://github.com/Breakthrough/DVR-Scan/releases/download/v1.6.2-release/dvr-scan-1.6.2-win64.zip){ .md-button #changelog-button }</div>
 
