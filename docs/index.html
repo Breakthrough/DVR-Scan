@@ -651,6 +651,10 @@
 <p><b><pre>-c settings.cfg, --config settings.cfg</pre></b>
     Path to config file. If not set, tries to load one automatically from the user settings folder (run <code>dvr-scan --help</code> to see the exact path for your system). See the <a href="#config-file">config file documentation</a> for what options can be specified.</p>
 </li>
+<li>
+<p><b><pre>--use-pts</pre></b>
+    Use presentation time instead of frame number for timestamps. May improve timestamp accuracy with videos and network streams that may skip frames.</p>
+</li>
 </ul>
 <h4 id="seekingduration">Seeking/Duration<a class="headerlink" href="#seekingduration" title="Permanent link">&para;</a></h4>
 <p>All time values can be given as a timecode (<code>HH:MM:SS</code> or <code>HH:MM:SS.nnn</code>), in seconds as a number followed by <code>s</code> (<code>123s</code> or <code>123.45s</code>), or as number of frames (e.g. <code>1234</code>).
@@ -705,6 +709,9 @@
 </li>
 <li>
 <p><b><pre>-mo mask.avi, --mask-output mask.avi</pre></b> Save a video containing the calculated motion mask on each frame. Useful for tuning motion detection. Requires <code>.avi</code> extension.</p>
+</li>
+<li>
+<p><b><pre>--thumbnails highscore</pre></b> Save a thumbnail of the frame with the highest motion score for each event.</p>
 </li>
 </ul>
 <h3 id="events">Events<a class="headerlink" href="#events" title="Permanent link">&para;</a></h3>
@@ -848,7 +855,7 @@
 </li>
 <li>
 <p><b><pre>-fm, --frame-metrics</pre></b>  Draw frame metrics, including motion score, on the top right corner.
-<br/>Text properties (e.g. color, font size, margin) can be set with a <a href="config_file.md#text-overlays">config file</a>.</p>
+<br/>Text properties (e.g. color, font size, margin) can be set with a <a href="#config-file">config file</a>.</p>
 </li>
 </ul>
 <hr />
@@ -870,6 +877,14 @@ bounding-box-color = 0xFF0000
     Directory to output all created files. If unset, files will be created in the current working directory.
     <span class="dvr-scan-example">
     <div class="highlight"><pre><span></span><code>output-dir = C:/temp/scanned/
+</code></pre></div>
+    </span></p>
+</li>
+<li>
+<p><b><pre>use-pts</pre></b>
+    Use presentation time instead of frame number for timestamps. May improve timestamp accuracy with videos and network streams that may skip frames.
+    <span class="dvr-scan-example">
+    <div class="highlight"><pre><span></span><code>use-pts = yes
 </code></pre></div>
     </span></p>
 </li>
@@ -981,6 +996,16 @@ bounding-box-color = 0xFF0000
      Scores of this amount or higher are ignored. 255.0 is the maximum score, so values greater than 255.0 will disable the filter.
     <span class="dvr-scan-default">
     <div class="highlight"><pre><span></span><code>max-threshold = 255.0
+</code></pre></div>
+    </span></p>
+</li>
+<li>
+<p><b><pre>variance-threshold</pre></b>
+     Threshold on the distance between the pixel and the model to decide whether a pixel is well described by the background model. This parameter does not affect
+     the background update.<br />
+     The threshold is not used by the CNT subtractor.
+    <span class="dvr-scan-default">
+    <div class="highlight"><pre><span></span><code>variance-threshold = 16
 </code></pre></div>
     </span></p>
 </li>

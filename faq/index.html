@@ -408,6 +408,13 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#how-do-i-run-dvr-scan" class="md-nav__link">
+    How do I run DVR-Scan?
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#how-can-i-stop-dvr-scan" class="md-nav__link">
     How can I stop DVR-Scan?
   </a>
@@ -528,13 +535,18 @@
 
 <h1 id="frequently-asked-questions"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.4.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M64 64C28.7 64 0 92.7 0 128v256c0 35.3 28.7 64 64 64h448c35.3 0 64-28.7 64-64V128c0-35.3-28.7-64-64-64H64zm16 64h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H80c-8.8 0-16-7.2-16-16v-32c0-8.8 7.2-16 16-16zM64 240c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H80c-8.8 0-16-7.2-16-16v-32zm16 80h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H80c-8.8 0-16-7.2-16-16v-32c0-8.8 7.2-16 16-16zm80-176c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16h-32c-8.8 0-16-7.2-16-16v-32zm16 80h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16h-32c-8.8 0-16-7.2-16-16v-32c0-8.8 7.2-16 16-16zm-16 112c0-8.8 7.2-16 16-16h224c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H176c-8.8 0-16-7.2-16-16v-32zm112-208h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16h-32c-8.8 0-16-7.2-16-16v-32c0-8.8 7.2-16 16-16zm-16 112c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16h-32c-8.8 0-16-7.2-16-16v-32zm112-112h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16h-32c-8.8 0-16-7.2-16-16v-32c0-8.8 7.2-16 16-16zm-16 112c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16h-32c-8.8 0-16-7.2-16-16v-32zm112-112h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16h-32c-8.8 0-16-7.2-16-16v-32c0-8.8 7.2-16 16-16zm-16 112c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16h-32c-8.8 0-16-7.2-16-16v-32zm16 80h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16h-32c-8.8 0-16-7.2-16-16v-32c0-8.8 7.2-16 16-16z"/></svg></span>Frequently Asked Questions<a class="headerlink" href="#frequently-asked-questions" title="Permanent link">&para;</a></h1>
 <hr />
+<h3 id="how-do-i-run-dvr-scan">How do I run DVR-Scan?<a class="headerlink" href="#how-do-i-run-dvr-scan" title="Permanent link">&para;</a></h3>
+<p>DVR-Scan is a command-line program and must be launched from a terminal or command prompt (e.g. <code>cmd.exe</code> on Windows). A GUI is in development for an upcoming release.</p>
+<p>In the meantime, Windows users can <a href="https://github.com/Breakthrough/DVR-Scan/issues/178">use these instructions</a> create helpful drag-and-drop shortcuts. These will allow you to run DVR-Scan by dragging and dropping the video(s) you want to scan.</p>
+<hr />
 <h3 id="how-can-i-stop-dvr-scan">How can I stop DVR-Scan?<a class="headerlink" href="#how-can-i-stop-dvr-scan" title="Permanent link">&para;</a></h3>
-<p>Hit Ctrl + C on your keyboard to exit DVR-Scan.</p>
+<p>Hit <code>Ctrl + C</code> on your keyboard to exit DVR-Scan.</p>
 <hr />
 <h3 id="where-is-the-output-saved">Where is the output saved?<a class="headerlink" href="#where-is-the-output-saved" title="Permanent link">&para;</a></h3>
 <p>DVR-Scan saves all files in the current working directory (the location you are invoking the <code>dvr-scan</code> command from). You can override the output directory by setting <a href="../docs/#inputoutput">the <code>-d</code>/<code>--output-dir</code> option</a>:</p>
 <div class="highlight"><pre><span></span><code>dvr-scan -i video.mp4 -d events_folder/
 </code></pre></div>
+<p>This can also be done <a href="../docs/#config-file">with a config file</a>.</p>
 <hr />
 <h3 id="how-can-i-scan-all-videos-in-a-folder">How can I scan all videos in a folder?<a class="headerlink" href="#how-can-i-scan-all-videos-in-a-folder" title="Permanent link">&para;</a></h3>
 <p>You can use a wildcard in the input path to select multiple videos:</p>

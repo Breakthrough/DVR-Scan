@@ -431,6 +431,13 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#162-december-17-2024" class="md-nav__link">
+    1.6.2 (December 17, 2024)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#161-may-18-2024" class="md-nav__link">
     1.6.1 (May 18, 2024)
   </a>
@@ -849,6 +856,26 @@
 <h1 id="changelog"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.4.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M0 96c0-17.7 14.3-32 32-32h384c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zm0 160c0-17.7 14.3-32 32-32h384c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zm448 160c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32h384c17.7 0 32 14.3 32 32z"/></svg></span>Changelog<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
 <hr />
 <h2 id="dvr-scan-16">DVR-Scan 1.6<a class="headerlink" href="#dvr-scan-16" title="Permanent link">&para;</a></h2>
+<h3 id="162-december-17-2024">1.6.2 (December 17, 2024)<a class="headerlink" href="#162-december-17-2024" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[feature] Vastly improved region editor UI:<ul>
+<li>Reimplemented entire UI with Tcl/Tk to provide much more consistent experience across platforms</li>
+<li>All options now have dedicated UI controls in addition to keyboard shortcuts</li>
+<li>System-specific shortcuts like undo/redo now work as expected</li>
+<li>Various performance and usability improvements including zoom/pan and shape selection</li>
+</ul>
+</li>
+<li>[feature] Add new <code>variance-threshold</code> <a href="https://www.dvr-scan.com/docs/#config-file">config option</a> to control how MOG2 controls which pixels are described by the current background model <a href="https://github.com/Breakthrough/DVR-Scan/issues/163">#163</a></li>
+<li>[feature] Add new <code>--thumbnails</code> option to extract images from each event, use <code>--thumbnails highscore</code> to save frame with highest motion score <a href="https://github.com/Breakthrough/DVR-Scan/issues/159">#159</a></li>
+<li>[feature] Add <code>--use-pts</code> option to allow using presentation time instead of frame number for timestamps <a href="https://github.com/Breakthrough/DVR-Scan/pull/170">#170</a></li>
+<li>[bugfix] Fix incorrect framerate detection in Windows builds <a href="https://github.com/Breakthrough/DVR-Scan/issues/174">#174</a></li>
+<li>[general] Updates to Windows distributions:<ul>
+<li>Python 3.9 -&gt; Python 3.12</li>
+<li>OpenCV 4.10.0.82 -&gt; 4.10.0.84</li>
+<li>Ffmpeg 6.0 -&gt; 7.1</li>
+</ul>
+</li>
+</ul>
 <h3 id="161-may-18-2024">1.6.1 (May 18, 2024)<a class="headerlink" href="#161-may-18-2024" title="Permanent link">&para;</a></h3>
 <h4 id="release-notes">Release Notes<a class="headerlink" href="#release-notes" title="Permanent link">&para;</a></h4>
 <p>DVR-Scan 1.6.1 includes some important fixes and improvements for the region editor. Minimum supported Python version is now 3.8.</p>
