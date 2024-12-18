@@ -242,7 +242,6 @@ class RegionEditor:
         self._region_selector: ttk.Combobox = None
 
         self._context_menu: tk.Menu = None
-        self._about: AboutWindow = None
         # Clones of the normal state variables since sometimes we can still interact with the main
         # window after the context menu is posted.
         self._context_curr_mouse_pos: Point = None
