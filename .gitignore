@@ -12,9 +12,6 @@ dist/dvr-scan/*
 dist/dvr-scan-*
 dist/dvr_scan-*
 
-# Location where docs are built before assembling distributions
-dvr_scan/docs/
-
 # Editors/environment
 .DS_Store
 .vs_code/

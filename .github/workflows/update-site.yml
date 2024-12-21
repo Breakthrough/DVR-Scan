@@ -31,7 +31,9 @@ jobs:
 
       - name: Generate Website
         run: |
+          git rm docs/index_docs.md
           mkdocs build -f website/mkdocs.yml
+          git reset --hard HEAD
 
       - name: Update Website
         run: |

@@ -522,7 +522,10 @@ class MotionScanner:
             ]
         if self._region_editor:
             if not HAS_TKINTER:
-                logger.error("Error: Region editor requires Tcl/Tk support to run.")
+                logger.error(
+                    "Error: Region editor requires Tcl/Tk support to run. Try installing "
+                    "the python3-tk package (sudo apt install python3-tk)."
+                )
                 raise SystemExit(1)
 
             logger.info("Selecting area of interest:")
