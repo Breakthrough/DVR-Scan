@@ -8,16 +8,6 @@
 # DVR-Scan is licensed under the BSD 2-Clause License; see the included
 # LICENSE file, or visit one of the above pages for details.
 #
-"""``dvr_scan.cli`` Module
-
-This module provides the command-line business logic for the `dvr-scan` command. The entry point
-starts the program by calling :py:func:`dvr_scan.cli.controller.run_dvr_scan`.
-
-Control logic can be found in :py:mod:`dvr_scan.cli.controller` and configuration file parsing
-is defined in :py:mod:`dvr_scan.config`. This main module file defines :py:func:`get_cli_parser`
-which provides an argparse-based CLI used by the DVR-Scan application.
-"""
-
 import argparse
 import typing as ty
 
@@ -25,7 +15,7 @@ from dvr_scan import get_license_info
 from dvr_scan.config import CHOICE_MAP, USER_CONFIG_FILE_PATH, ConfigRegistry
 from dvr_scan.platform import HAS_MOG2_CUDA
 from dvr_scan.region import RegionValidator
-from dvr_scan.shared import (
+from dvr_scan.shared.cli import (
     VERSION_STRING,
     LicenseAction,
     VersionAction,
@@ -38,11 +28,11 @@ from dvr_scan.shared import (
 
 # In the CLI, -so/--scan-only is a different flag than -m/--output-mode, whereas in the
 # config file they are the same option. Therefore, we remove the scan only choice
-# from the -m/--output-mode selection in the CLI.
+# from the -m/--output-mode choices listed in the CLI.
 SCAN_ONLY_MODE = "scan_only"
 assert SCAN_ONLY_MODE in CHOICE_MAP["output-mode"]
-VALID_OUTPUT_MODES = [mode for mode in CHOICE_MAP["output-mode"] if mode != SCAN_ONLY_MODE]
 
+VALID_OUTPUT_MODES = [mode for mode in CHOICE_MAP["output-mode"] if mode != SCAN_ONLY_MODE]
 
 BACKGROUND_SUBTRACTORS = ["MOG2", "CNT", "MOG2_CUDA"] if HAS_MOG2_CUDA else ["MOG2", "CNT"]
 

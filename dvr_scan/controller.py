@@ -8,7 +8,7 @@
 # DVR-Scan is licensed under the BSD 2-Clause License; see the included
 # LICENSE file, or visit one of the above pages for details.
 #
-"""``dvr_scan.cli.controller`` Module
+"""``dvr_scan.controller`` Module
 
 This module manages the DVR-Scan program control flow, starting with `run_dvr_scan()`.
 """
@@ -27,37 +27,9 @@ from dvr_scan.config import ConfigLoadFailure, ConfigRegistry, RegionValueDeprec
 from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
 from dvr_scan.platform import init_logger
 from dvr_scan.scanner import DetectorType, MotionScanner, OutputMode
+from dvr_scan.shared.settings import ScanSettings
 
 logger = logging.getLogger("dvr_scan")
-
-
-class ProgramSettings:
-    """Contains the active command-line and config file settings."""
-
-    def __init__(self, args: argparse.Namespace, config: ConfigRegistry):
-        self._args = args
-        self._config = config
-
-    @property
-    def config(self) -> ConfigRegistry:
-        return self._config
-
-    def get_arg(self, arg: str) -> ty.Optional[ty.Any]:
-        """Get setting specified via command line argument, if any."""
-        arg_name = arg.replace("-", "_")
-        return getattr(self._args, arg_name) if hasattr(self._args, arg_name) else None
-
-    def get(self, option: str) -> ty.Union[str, int, float, bool]:
-        """Get setting based on following resolution order:
-        1. Argument specified via command line.
-        2. Option set in the active config file (either explicit with -c/--config, or
-           the dvr-scan.cfg file in the user's settings folder).
-        3. Default value specified in the config map (`dvr_scan.config.CONFIG_MAP`).
-        """
-        arg_val = self.get_arg(option)
-        if arg_val is not None:
-            return arg_val
-        return self.config.get_value(option)
 
 
 def _preprocess_args(args):
@@ -95,7 +67,7 @@ def _preprocess_args(args):
     return True, args
 
 
-def _init_logging(args: ty.Optional[argparse.ArgumentParser], config: ty.Optional[ProgramSettings]):
+def _init_logging(args: ty.Optional[argparse.ArgumentParser], config: ty.Optional[ScanSettings]):
     verbosity = logging.INFO
     if args is not None and hasattr(args, "verbosity"):
         verbosity = getattr(logging, args.verbosity.upper())
@@ -115,7 +87,7 @@ def _init_logging(args: ty.Optional[argparse.ArgumentParser], config: ty.Optiona
     )
 
 
-def parse_settings(args: ty.List[str] = None) -> ty.Optional[ProgramSettings]:
+def parse_settings(args: ty.List[str] = None) -> ty.Optional[ScanSettings]:
     """Parse command line options and load config file settings."""
     init_log = []
     config_load_error = None
@@ -171,7 +143,7 @@ def parse_settings(args: ty.List[str] = None) -> ty.Optional[ProgramSettings]:
     if not validated:
         return None
     logger.debug("Program arguments:\n%s", str(args))
-    settings = ProgramSettings(args=args, config=config)
+    settings = ScanSettings(args=args, config=config)
 
     # Validate that the specified motion detector is available on this system.
     try:
@@ -198,7 +170,7 @@ def parse_settings(args: ty.List[str] = None) -> ty.Optional[ProgramSettings]:
 # ProgramSettings called 'output_dir' that just returns settings.get('output_dir'). These can then
 # be directly referenced from the MotionScanner.
 def run_dvr_scan(
-    settings: ProgramSettings,
+    settings: ScanSettings,
 ) -> ty.List[ty.Tuple[FrameTimecode, FrameTimecode]]:
     """Run DVR-Scan scanning logic using validated `settings` from `parse_settings()`."""
 

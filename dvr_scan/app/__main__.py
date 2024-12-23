@@ -4,7 +4,7 @@
 #       [  Site: https://www.dvr-scan.com/                 ]
 #       [  Repo: https://github.com/Breakthrough/DVR-Scan  ]
 #
-# Copyright (C) 2014 Brandon Castellano <http://www.bcastell.com>.
+# Copyright (C) 2016 Brandon Castellano <http://www.bcastell.com>.
 # DVR-Scan is licensed under the BSD 2-Clause License; see the included
 # LICENSE file, or visit one of the above pages for details.
 #
@@ -18,12 +18,7 @@ from dvr_scan import get_license_info
 from dvr_scan.app.application import Application
 from dvr_scan.config import CHOICE_MAP
 from dvr_scan.platform import init_logger
-from dvr_scan.shared import (
-    VERSION_STRING,
-    LicenseAction,
-    VersionAction,
-    string_type_check,
-)
+from dvr_scan.shared.cli import VERSION_STRING, LicenseAction, VersionAction, string_type_check
 
 EXIT_SUCCESS: int = 0
 EXIT_ERROR: int = 1
