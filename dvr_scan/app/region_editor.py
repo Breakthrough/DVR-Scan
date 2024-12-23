@@ -46,11 +46,8 @@ import PIL.ImageTk
 
 import dvr_scan
 from dvr_scan.app.about_window import AboutWindow
-from dvr_scan.app.common import SUPPORTS_RESOURCES, register_icon
+from dvr_scan.app.common import register_icon
 from dvr_scan.region import Point, Size, bound_point, load_regions
-
-if SUPPORTS_RESOURCES:
-    pass
 
 # TODO: Update screenshots to reflect release title.
 WINDOW_TITLE = "DVR-Scan Region Editor"

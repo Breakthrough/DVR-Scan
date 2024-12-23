@@ -23,8 +23,8 @@ better separate the CLI from the GUI. To facilitate this, a separate entry-point
 for the GUI will be developed, and the region editor functionality will be deprecated.
 """
 
+import importlib.resources as resources
 import os
-import sys
 import tkinter as tk
 
 import PIL
@@ -33,19 +33,14 @@ import PIL.ImageTk
 
 import dvr_scan
 
-SUPPORTS_RESOURCES = sys.version_info.minor >= 9
-if SUPPORTS_RESOURCES:
-    import importlib.resources as resources
-
 
 def register_icon(root: tk.Tk):
-    if SUPPORTS_RESOURCES:
-        # On Windows we always want a path so we can load the .ICO with `iconbitmap`.
-        # On other systems, we can just use the PNG logo directly with `iconphoto`.
-        if os.name == "nt":
-            icon_path = resources.files(dvr_scan).joinpath("dvr-scan.ico")
-            with resources.as_file(icon_path) as icon_path:
-                root.iconbitmap(default=icon_path)
-            return
-        icon = PIL.Image.open(resources.open_binary(dvr_scan, "dvr-scan.png"))
-        root.iconphoto(True, PIL.ImageTk.PhotoImage(icon))
+    # On Windows we always want a path so we can load the .ICO with `iconbitmap`.
+    # On other systems, we can just use the PNG logo directly with `iconphoto`.
+    if os.name == "nt":
+        icon_path = resources.files(dvr_scan).joinpath("dvr-scan.ico")
+        with resources.as_file(icon_path) as icon_path:
+            root.iconbitmap(default=icon_path)
+        return
+    icon = PIL.Image.open(resources.open_binary(dvr_scan, "dvr-scan.png"))
+    root.iconphoto(True, PIL.ImageTk.PhotoImage(icon))

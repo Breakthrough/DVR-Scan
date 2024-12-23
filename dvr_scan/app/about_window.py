@@ -23,6 +23,7 @@ better separate the CLI from the GUI. To facilitate this, a separate entry-point
 for the GUI will be developed, and the region editor functionality will be deprecated.
 """
 
+import importlib.resources as resources
 import os
 import os.path
 import tkinter as tk
@@ -38,11 +39,7 @@ import PIL.Image
 import PIL.ImageTk
 
 import dvr_scan
-from dvr_scan.app.common import SUPPORTS_RESOURCES
 from dvr_scan.platform import get_system_version_info
-
-if SUPPORTS_RESOURCES:
-    import importlib.resources as resources
 
 TITLE = "About DVR-Scan"
 COPYRIGHT = (
@@ -62,15 +59,12 @@ class AboutWindow:
         window.title(TITLE)
         window.resizable(True, True)
 
-        if SUPPORTS_RESOURCES:
-            app_logo = PIL.Image.open(resources.open_binary(dvr_scan, "dvr-scan-logo.png"))
-            self._about_image = app_logo.crop((8, 8, app_logo.width - 132, app_logo.height - 8))
-            self._about_image_tk = PIL.ImageTk.PhotoImage(self._about_image)
-            canvas = tk.Canvas(
-                window, width=self._about_image.width, height=self._about_image.height
-            )
-            canvas.grid()
-            canvas.create_image(0, 0, anchor=tk.NW, image=self._about_image_tk)
+        app_logo = PIL.Image.open(resources.open_binary(dvr_scan, "dvr-scan-logo.png"))
+        self._about_image = app_logo.crop((8, 8, app_logo.width - 132, app_logo.height - 8))
+        self._about_image_tk = PIL.ImageTk.PhotoImage(self._about_image)
+        canvas = tk.Canvas(window, width=self._about_image.width, height=self._about_image.height)
+        canvas.grid()
+        canvas.create_image(0, 0, anchor=tk.NW, image=self._about_image_tk)
 
         ttk.Separator(window, orient=tk.HORIZONTAL).grid(row=1, sticky="ew", padx=16.0)
         ttk.Label(
