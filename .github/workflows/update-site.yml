@@ -7,9 +7,14 @@ on:
     branches:
       - main
     paths:
-      - 'docs/**'
-      - 'website/**'
+      - "docs/**"
+      - "website/**"
   workflow_dispatch:
+
+env:
+  ffmpeg_version: "7.1"
+  UV_SYSTEM_PYTHON: 1
+
 
 jobs:
   update_site:
@@ -21,13 +26,18 @@ jobs:
       - name: Set up Python 3.13
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
-          cache: 'pip'
+          python-version: "3.13"
+          cache: "pip"
+
+      - name: Install uv and set the python version
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "0.5.11"
+          python-version: "3.13"
 
       - name: Install Dependencies
         run: |
-          python -m pip install --upgrade pip build wheel virtualenv
-          pip install -r docs/requirements.txt
+          uv pip install -r docs/requirements.txt
 
       - name: Generate Website
         run: |

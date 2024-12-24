@@ -20,6 +20,9 @@ on:
 
 env:
   ffmpeg_version: "7.1"
+  UV_SYSTEM_PYTHON: 1
+  UV_LINK_MODE: "symlink"
+
 
 jobs:
   build:
@@ -37,10 +40,16 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
 
+      - name: Install uv and set the python version
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "0.5.11"
+          python-version: ${{ matrix.python-version }}
+
       - name: Install Dependencies
         run: |
-          python -m pip install --upgrade pip build wheel virtualenv setuptools
-          pip install -r dist/requirements_windows.txt -r docs/requirements.txt
+          uv pip install --upgrade pip build wheel virtualenv setuptools
+          uv pip install -r dist/requirements_windows.txt -r docs/requirements.txt
 
       - name: Download FFMPEG
         uses: dsaltares/fetch-gh-release-asset@1.1.2
