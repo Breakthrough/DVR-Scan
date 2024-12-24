@@ -20,6 +20,7 @@ from pathlib import Path
 
 from dvr_scan.app.about_window import AboutWindow
 from dvr_scan.app.common import register_icon
+from dvr_scan.app.scan_window import ScanWindow
 from dvr_scan.config import CONFIG_MAP
 
 WINDOW_TITLE = "DVR-Scan"
@@ -322,21 +323,39 @@ class OutputArea:
 
 
 class ScanArea:
-    def __init__(self, root: tk.Widget):
-        root.columnconfigure(0, weight=1)
-        root.columnconfigure(1, weight=2)
+    def __init__(self, root: tk.Tk, frame: tk.Widget):
+        frame.columnconfigure(0, weight=1)
+        frame.columnconfigure(1, weight=2)
 
-        ttk.Button(root, text="Start").grid(
-            row=0, column=0, sticky=tk.NSEW, ipady=PADDING, pady=(0, PADDING)
+        self._start_button = ttk.Button(
+            frame, text="Start", command=lambda: root.event_generate("<<StartScan>>")
         )
-        self._scan_only = tk.BooleanVar(root, value=False)
-        ttk.Checkbutton(
-            root,
+        self._start_button.grid(
+            row=0,
+            column=0,
+            sticky=tk.NSEW,
+            ipady=PADDING,
+            pady=(0, PADDING),
+        )
+        self._scan_only = tk.BooleanVar(frame, value=False)
+        self._scan_only_button = ttk.Checkbutton(
+            frame,
             text="Scan Only",
             variable=self._scan_only,
             onvalue=True,
             offvalue=False,
-        ).grid(row=1, column=0, sticky=tk.W)
+        )
+        self._scan_only_button.grid(row=1, column=0, sticky=tk.W)
+
+    def disable(self):
+        self._start_button["text"] = "Scanning..."
+        self._start_button["state"] = tk.DISABLED
+        self._scan_only_button["state"] = tk.DISABLED
+
+    def enable(self):
+        self._start_button["text"] = "Start"
+        self._start_button["state"] = tk.NORMAL
+        self._scan_only_button["state"] = tk.NORMAL
 
 
 class Application:
@@ -370,8 +389,28 @@ class Application:
         output_frame.grid(row=2, sticky=tk.EW, padx=PADDING, pady=(PADDING, 0))
 
         scan_frame = ttk.Labelframe(self._root, text="Scan", padding=PADDING)
-        self._scan = ScanArea(scan_frame)
+        self._scan = ScanArea(self._root, scan_frame)
         scan_frame.grid(row=3, sticky=tk.EW, padx=PADDING, pady=PADDING)
+
+        self._scan_window: ty.Optional[ScanWindow] = None
+        self._root.bind("<<StartScan>>", lambda _: self._start_new_scan())
+        self._root.protocol("WM_DELETE_WINDOW", self._on_delete)
+
+    def _start_new_scan(self):
+        assert self._scan_window is None
+
+        def on_scan_window_close():
+            logger.debug("scan window closed, removing window and restoring focus")
+            self._scan_window = None
+            self._scan.enable()
+            self._root.deiconify()
+            self._root.grab_set()
+            self._root.focus()
+
+        self._scan.disable()
+        self._scan_window = ScanWindow(self._root, on_scan_window_close)
+        self._root.grab_release()
+        self._scan_window.show()
 
     def _create_menubar(self):
         root_menu = tk.Menu(self._root)
@@ -379,6 +418,7 @@ class Application:
 
         file_menu = tk.Menu(root_menu)
         root_menu.add_cascade(menu=file_menu, label="File", underline=0)
+
         file_menu.add_command(
             label="Start Scan",
             underline=1,
@@ -386,6 +426,7 @@ class Application:
         file_menu.add_separator()
         file_menu.add_command(
             label="Quit",
+            command=self._on_delete,
         )
 
         settings_menu = tk.Menu(root_menu)
@@ -416,13 +457,13 @@ class Application:
             command=lambda: webbrowser.open_new_tab("www.dvr-scan.com/guide"),
             underline=0,
         )
-        help_menu.add_command(
-            label="Debug Log", command=lambda: AboutWindow().show(root=self._root), underline=0
-        )
+        help_menu.add_command(label="Debug Log", underline=0)
         help_menu.add_separator()
 
         help_menu.add_command(
-            label="About DVR-Scan", command=lambda: AboutWindow().show(root=self._root), underline=0
+            label="About DVR-Scan",
+            command=lambda: AboutWindow().show(root=self._root),
+            underline=0,
         )
 
     def run(self):
@@ -431,3 +472,15 @@ class Application:
         self._root.focus()
         self._root.grab_release()
         self._root.mainloop()
+
+    def _on_delete(self):
+        logger.debug("shutting down")
+        if self._scan_window is not None:
+            # NOTE: We do not actually wait here,
+            logger.debug("waiting for worker threads")
+            # Signal all active worker threads to start shutting down.
+            self._root.event_generate("<<Shutdown>>")
+            # Make sure they actually have stopped.
+            self._root.after(0, lambda: self._scan_window.stop())
+        self._root.after(0, lambda: self._root.destroy())
+        self._root.withdraw()

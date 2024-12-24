@@ -24,8 +24,6 @@ for the GUI will be developed, and the region editor functionality will be depre
 """
 
 import importlib.resources as resources
-import os
-import os.path
 import tkinter as tk
 import tkinter.filedialog
 import tkinter.messagebox
@@ -133,8 +131,6 @@ class AboutWindow:
         # can we query widget height?
 
         root.grab_release()
-        if os == "nt":
-            root.attributes("-disabled", True)
 
         window.transient(root)
         window.focus()
@@ -143,8 +139,6 @@ class AboutWindow:
         def dismiss():
             window.grab_release()
             window.destroy()
-            if os == "nt":
-                root.attributes("-disabled", False)
             root.grab_set()
             root.focus()
 
