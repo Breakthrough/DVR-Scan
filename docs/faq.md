@@ -25,7 +25,7 @@ Hit `Ctrl + C` on your keyboard to exit DVR-Scan.
 
 ### Where is the output saved?
 
-DVR-Scan saves all files in the current working directory (the location you are invoking the `dvr-scan` command from). You can override the output directory by setting [the `-d`/`--output-dir` option](docs.md#inputoutput):
+DVR-Scan saves all files in the current working directory (the location you are invoking the `dvr-scan` command from). You can override the output directory by setting [the `-d`/`--output-dir` option](docs.md#output):
 
 ```
 dvr-scan -i video.mp4 -d events_folder/
