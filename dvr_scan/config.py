@@ -317,6 +317,7 @@ CONFIG_MAP: ConfigDict = {
     "region-editor": False,
     "quiet-mode": False,
     "verbosity": "info",
+    "debug": False,
     # Input/Output
     "output-dir": "",
     "output-mode": "opencv",
@@ -545,7 +546,7 @@ class ConfigRegistry:
         """True if the option is default, i.e. is NOT set by the user."""
         return option not in self._config
 
-    def get_value(
+    def get(
         self,
         option: str,
         override: Optional[ConfigValue] = None,

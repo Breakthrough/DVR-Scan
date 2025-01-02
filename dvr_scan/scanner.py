@@ -20,6 +20,7 @@ import queue
 import subprocess
 import sys
 import threading
+import typing as ty
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, AnyStr, List, Optional, Tuple, Union
@@ -267,6 +268,8 @@ class MotionScanner:
         self._roi_deprecated = None
 
         # Input Video Parameters (set_video_time)
+        if not input_videos:
+            input_videos = ["tests/resources/simple_movement.mp4"]
         self._input: VideoJoiner = VideoJoiner(input_videos)  # -i/--input
         self._frame_skip: int = frame_skip  # -fs/--frame-skip
         self._start_time: FrameTimecode = None  # -st/--start-time
@@ -285,6 +288,10 @@ class MotionScanner:
         self._thumbnails = None
         self._highscore = 0
         self._highframe = None
+
+        # Callbacks for UI integration
+        self._scan_started = None
+        self._processed_frame = None
 
         # Make sure we initialize defaults now that we loaded the input videos.
         self.set_detection_params()
@@ -584,24 +591,38 @@ class MotionScanner:
             logger.debug("No regions selected.")
         return True
 
-    def _create_progress_bar(self) -> tqdm:
+    @property
+    def frames_remaining(self) -> int:
         num_frames = self._input.total_frames
         # Correct for end time.
         if self._end_time and self._end_time.frame_num < num_frames:
             num_frames = self._end_time.frame_num
         # Correct for current seek position.
         num_frames = max(0, num_frames - self._input.position.frame_num)
+        return num_frames
+
+    def _create_progress_bar(self) -> tqdm:
         return tqdm(
-            total=num_frames,
+            total=self.frames_remaining,
             unit=" frames",
             desc=PROGRESS_BAR_DESCRIPTION % 0,
             dynamic_ncols=True,
         )
 
     def stop(self):
-        """Stop the current scan call. This is the only thread-safe public method."""
+        """Stop the current scan call. Thread-safe."""
         self._stop.set()
         logger.debug("Stop event set.")
+
+    def is_stopped(self):
+        """Check if the current scan call was stopped, or `False` if one wasn't run. Thread-safe."""
+        return self._stop.is_set()
+
+    def set_callbacks(
+        self, scan_started: ty.Callable[[int], None], processed_frame: ty.Callable[[int], None]
+    ):
+        self._scan_started = scan_started
+        self._processed_frame = processed_frame
 
     def scan(self) -> Optional[DetectionResult]:
         """Performs motion analysis on the MotionScanner's input video(s)."""
@@ -616,6 +637,7 @@ class MotionScanner:
         frames_processed = 0
 
         # Seek to starting position if required.
+        # TODO: Offload this seek to the decode thread.
         if self._start_time is not None:
             self._input.seek(self._start_time)
 
@@ -709,8 +731,10 @@ class MotionScanner:
             if len(self._input.paths) > 1
             else "input video",
         )
+        logger.debug(f"output mode = {self._output_mode}")
 
         progress_bar = FakeTqdmObject() if not self._show_progress else self._create_progress_bar()
+        num_frames_to_process = self.frames_remaining
 
         decode_queue = queue.Queue(MAX_DECODE_QUEUE_SIZE)
         decode_thread = threading.Thread(
@@ -728,8 +752,13 @@ class MotionScanner:
             )
             encode_thread.start()
 
+        if self._scan_started:
+            self._scan_started(num_frames=num_frames_to_process)
+
         # TODO: The main scanning loop should be refactored into a state machine.
         while not self._stop.is_set():
+            if self._processed_frame:
+                self._processed_frame(progress_bar=progress_bar, num_events=len(event_list))
             # Keep polling decode queue until it's empty (signaled via None).
             frame: Optional[DecodeEvent] = decode_queue.get()
             if frame is None:

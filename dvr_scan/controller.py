@@ -13,7 +13,6 @@
 This module manages the DVR-Scan program control flow, starting with `run_dvr_scan()`.
 """
 
-import argparse
 import glob
 import logging
 import time
@@ -24,10 +23,8 @@ from scenedetect import FrameTimecode
 import dvr_scan
 from dvr_scan.cli import get_cli_parser
 from dvr_scan.config import ConfigLoadFailure, ConfigRegistry, RegionValueDeprecated
-from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
-from dvr_scan.platform import init_logger
-from dvr_scan.scanner import DetectorType, MotionScanner, OutputMode
-from dvr_scan.shared.settings import ScanSettings
+from dvr_scan.scanner import DetectorType, OutputMode
+from dvr_scan.shared import ScanSettings, init_logging, init_scanner
 
 logger = logging.getLogger("dvr_scan")
 
@@ -67,26 +64,6 @@ def _preprocess_args(args):
     return True, args
 
 
-def _init_logging(args: ty.Optional[argparse.ArgumentParser], config: ty.Optional[ScanSettings]):
-    verbosity = logging.INFO
-    if args is not None and hasattr(args, "verbosity"):
-        verbosity = getattr(logging, args.verbosity.upper())
-    elif config is not None:
-        verbosity = getattr(logging, config.get_value("verbosity").upper())
-
-    quiet_mode = False
-    if args is not None and hasattr(args, "quiet_mode"):
-        quiet_mode = args.quiet_mode
-    elif config is not None:
-        quiet_mode = config.get_value("quiet-mode")
-
-    init_logger(
-        log_level=verbosity,
-        show_stdout=not quiet_mode,
-        log_file=args.logfile if hasattr(args, "logfile") else None,
-    )
-
-
 def parse_settings(args: ty.List[str] = None) -> ty.Optional[ScanSettings]:
     """Parse command line options and load config file settings."""
     init_log = []
@@ -101,12 +78,12 @@ def parse_settings(args: ty.List[str] = None) -> ty.Optional[ScanSettings]:
         config = user_config
     except ConfigLoadFailure as ex:
         config_load_error = ex
-    _init_logging(args, config)
+    init_logging(args, config)
     # Parse CLI args, override config if an override was specified on the command line.
     try:
         args = get_cli_parser(config).parse_args(args=args)
         debug_mode = args.debug
-        _init_logging(args, config)
+        init_logging(args, config)
         init_log += [(logging.INFO, "DVR-Scan %s" % dvr_scan.__version__)]
         if config_load_error and not hasattr(args, "config"):
             raise config_load_error
@@ -115,7 +92,7 @@ def parse_settings(args: ty.List[str] = None) -> ty.Optional[ScanSettings]:
         if hasattr(args, "config"):
             config_setting = ConfigRegistry()
             config_setting.load(args.config)
-            _init_logging(args, config_setting)
+            init_logging(args, config_setting)
             config = config_setting
         init_log += config.consume_init_log()
     except ConfigLoadFailure as ex:
@@ -175,114 +152,13 @@ def run_dvr_scan(
     """Run DVR-Scan scanning logic using validated `settings` from `parse_settings()`."""
 
     logger.info("Initializing scan context...")
-    scanner = MotionScanner(
-        input_videos=settings.get_arg("input"),
-        frame_skip=settings.get("frame-skip"),
-        show_progress=not settings.get("quiet-mode"),
-        debug_mode=settings.get("debug"),
-    )
-
-    output_mode = (
-        OutputMode.SCAN_ONLY if settings.get_arg("scan-only") else settings.get("output-mode")
-    )
-    scanner.set_output(
-        comp_file=settings.get_arg("output"),
-        mask_file=settings.get_arg("mask-output"),
-        output_mode=output_mode,
-        opencv_fourcc=settings.get("opencv-codec"),
-        ffmpeg_input_args=settings.get("ffmpeg-input-args"),
-        ffmpeg_output_args=settings.get("ffmpeg-output-args"),
-        output_dir=settings.get("output-dir"),
-    )
-
-    timecode_overlay = None
-    if settings.get("time-code"):
-        timecode_overlay = TextOverlay(
-            font_scale=settings.get("text-font-scale"),
-            margin=settings.get("text-margin"),
-            border=settings.get("text-border"),
-            thickness=settings.get("text-font-thickness"),
-            color=settings.get("text-font-color"),
-            bg_color=settings.get("text-bg-color"),
-            corner=TextOverlay.Corner.TopLeft,
-        )
-
-    metrics_overlay = None
-    if settings.get("frame-metrics"):
-        metrics_overlay = TextOverlay(
-            font_scale=settings.get("text-font-scale"),
-            margin=settings.get("text-margin"),
-            border=settings.get("text-border"),
-            thickness=settings.get("text-font-thickness"),
-            color=settings.get("text-font-color"),
-            bg_color=settings.get("text-bg-color"),
-            corner=TextOverlay.Corner.TopRight,
-        )
-
-    bounding_box = None
-    # bounding_box_arg will be None if -bb was not set, False if -bb was set without any args,
-    # otherwise it represents the desired smooth time.
-    bounding_box_arg = settings.get_arg("bounding-box")
-    if bounding_box_arg is not None or settings.get("bounding-box"):
-        if bounding_box_arg is not None and bounding_box_arg is not False:
-            smoothing_time = FrameTimecode(bounding_box_arg, scanner.framerate)
-        else:
-            smoothing_time = FrameTimecode(
-                settings.get("bounding-box-smooth-time"), scanner.framerate
-            )
-        bounding_box = BoundingBoxOverlay(
-            min_size_ratio=settings.get("bounding-box-min-size"),
-            thickness_ratio=settings.get("bounding-box-thickness"),
-            color=settings.get("bounding-box-color"),
-            smoothing=smoothing_time.frame_num,
-        )
-
-    scanner.set_overlays(
-        timecode_overlay=timecode_overlay,
-        metrics_overlay=metrics_overlay,
-        bounding_box=bounding_box,
-    )
-
-    scanner.set_detection_params(
-        detector_type=DetectorType[settings.get("bg-subtractor").upper()],
-        threshold=settings.get("threshold"),
-        max_threshold=settings.get("max-threshold"),
-        variance_threshold=settings.get("variance-threshold"),
-        kernel_size=settings.get("kernel-size"),
-        downscale_factor=settings.get("downscale-factor"),
-        learning_rate=settings.get("learning-rate"),
-    )
-
-    scanner.set_event_params(
-        min_event_len=settings.get("min-event-length"),
-        time_pre_event=settings.get("time-before-event"),
-        time_post_event=settings.get("time-post-event"),
-        use_pts=settings.get("use-pts"),
-    )
-
-    scanner.set_thumbnail_params(
-        thumbnails=settings.get("thumbnails"),
-    )
-
-    scanner.set_video_time(
-        start_time=settings.get_arg("start-time"),
-        end_time=settings.get_arg("end-time"),
-        duration=settings.get_arg("duration"),
-    )
-
-    scanner.set_regions(
-        region_editor=settings.get("region-editor"),
-        regions=settings.get_arg("regions"),
-        load_region=settings.get("load-region"),
-        save_region=settings.get_arg("save-region"),
-        roi_deprecated=settings.get("region-of-interest"),
-    )
+    scanner = init_scanner(settings)
 
     # Scan video for motion with specified parameters.
     processing_start = time.time()
     result = scanner.scan()
     if result is None:
-        logging.debug("Exiting early, scan() returned None.")
+        logger.debug("Exiting early, scan() returned None.")
         return
     processing_time = time.time() - processing_start
 
@@ -327,5 +203,6 @@ def run_dvr_scan(
         # start1-end1[,[+]start2-end2[,[+]start3-end3...]]
         print(",".join(timecode_list))
 
-    if output_mode != OutputMode.SCAN_ONLY:
+    # TODO: Fix private variable access.
+    if scanner._output_mode != OutputMode.SCAN_ONLY:
         logger.info("Motion events written to disk.")
