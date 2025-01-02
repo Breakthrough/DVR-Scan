@@ -22,6 +22,7 @@ class ScanSettings:
     def __init__(self, args: argparse.Namespace, config: ConfigRegistry):
         self._args = args
         self._config = config
+        self._app_settings = dict()
 
     @property
     def config(self) -> ConfigRegistry:
@@ -39,7 +40,13 @@ class ScanSettings:
            the dvr-scan.cfg file in the user's settings folder).
         3. Default value specified in the config map (`dvr_scan.config.CONFIG_MAP`).
         """
+        if option in self._app_settings:
+            return self._app_settings[option]
         arg_val = self.get_arg(option)
         if arg_val is not None:
             return arg_val
-        return self.config.get_value(option)
+        return self.config.get(option)
+
+    def set(self, option: str, value: ty.Union[str, int, float, bool]):
+        """Set application overrides for any setting."""
+        self._app_settings[option] = value
