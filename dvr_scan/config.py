@@ -545,7 +545,7 @@ class ConfigRegistry:
         """True if the option is default, i.e. is NOT set by the user."""
         return option not in self._config
 
-    def get_value(
+    def get(
         self,
         option: str,
         override: Optional[ConfigValue] = None,

@@ -20,7 +20,7 @@ from subprocess import CalledProcessError
 from scenedetect import VideoOpenFailure
 from scenedetect.platform import FakeTqdmLoggingRedirect, logging_redirect_tqdm
 
-from dvr_scan.cli.controller import parse_settings, run_dvr_scan
+from dvr_scan.controller import parse_settings, run_dvr_scan
 
 EXIT_SUCCESS: int = 0
 EXIT_ERROR: int = 1

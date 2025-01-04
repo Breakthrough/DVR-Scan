@@ -3,6 +3,16 @@
 
 ----------------------------------------------------------
 
+## DVR-Scan 1.7
+
+### 1.7 (In Development)
+
+ - [feature] New GUI now available across all platforms, can be launched via `dvr-scan-app`
+
+ - [general] Minimum supported Python version is now 3.9
+
+----------------------------------------------------------
+
 ## DVR-Scan 1.6
 
 ### 1.6.2 (December 17, 2024)
