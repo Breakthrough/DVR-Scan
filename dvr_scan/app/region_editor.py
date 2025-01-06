@@ -922,13 +922,7 @@ class RegionEditor:
     def _adjust_downscale(self, amount: int, allow_resize=True):
         # scale is clamped to MIN_DOWNSCALE_FACTOR/MAX_DOWNSCALE_FACTOR.
         scale = self._scale + amount
-        self._scale = (
-            MIN_DOWNSCALE_FACTOR
-            if scale < MIN_DOWNSCALE_FACTOR
-            else scale
-            if scale < MAX_DOWNSCALE_FACTOR
-            else MAX_DOWNSCALE_FACTOR
-        )
+        self._scale = min(MAX_DOWNSCALE_FACTOR, max(MIN_DOWNSCALE_FACTOR, scale))
         self._scale_widget.set(self._scale)
         self._rescale(allow_resize=allow_resize)
 

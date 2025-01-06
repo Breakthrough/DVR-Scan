@@ -244,7 +244,9 @@ class RGBValue(ValidatedValue):
     _IGNORE_CHARS = [",", "/", "(", ")"]
     """Characters to ignore."""
 
-    def __init__(self, value: Union[int, str]):
+    def __init__(self, value: Union[int, str, "RGBValue"]):
+        if isinstance(value, RGBValue):
+            return value
         # If not an int, convert to one.
         # First try to convert values of the form 'ffffff'.
         if not isinstance(value, int) and len(value) == 6:

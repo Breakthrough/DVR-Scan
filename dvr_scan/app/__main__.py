@@ -95,6 +95,11 @@ def get_cli_parser():
     return parser
 
 
+# TODO: There's a lot of duplicated code here between the CLI and GUI. See if we can combine some
+# of the handling of config file loading and exceptions to be consistent between the two.
+#
+# It would also be nice if both commands took the same set of arguments. Can probably re-use the
+# existing CLI parser.
 def main():
     """Parse command line options and load config file settings."""
 

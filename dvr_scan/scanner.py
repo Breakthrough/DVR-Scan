@@ -221,7 +221,6 @@ class MotionScanner:
             show_progress: Show a progress bar using tqdm.
         """
 
-        self._in_motion_event: bool = False
         self._show_progress: bool = show_progress
         self._debug_mode: bool = debug_mode
 
@@ -758,7 +757,10 @@ class MotionScanner:
         # TODO: The main scanning loop should be refactored into a state machine.
         while not self._stop.is_set():
             if self._processed_frame:
-                self._processed_frame(progress_bar=progress_bar, num_events=len(event_list))
+                num_events = len(event_list)
+                if in_motion_event:
+                    num_events += 1
+                self._processed_frame(progress_bar=progress_bar, num_events=num_events)
             # Keep polling decode queue until it's empty (signaled via None).
             frame: Optional[DecodeEvent] = decode_queue.get()
             if frame is None:
