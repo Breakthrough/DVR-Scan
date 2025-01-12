@@ -87,8 +87,6 @@ class ScanWindow:
         self._processed_label.grid(row=4, column=0, sticky=tk.NW, padx=padding)
         self._total_label.grid(row=5, column=0, sticky=tk.NW, padx=padding)
         self._speed_label.grid(row=4, column=1, sticky=tk.NE, padx=padding)
-        # self._stop_button.grid(row=7, column=0, pady=padding, sticky=tk.NSEW, padx=padding)
-        # self._close_button.grid(row=7, column=1, pady=padding, sticky=tk.NSEW, padx=padding)
         frame = tk.Frame(self._root)
         frame.rowconfigure(0, weight=1)
         frame.columnconfigure(0, weight=1)
@@ -140,6 +138,7 @@ class ScanWindow:
                 pady=self._padding,
             )
             self._scan_started.clear()
+
         # Frames processed is updated from the worker thread, but we don't care about stale values.
         self._progress.set(self._frames_processed)
         self._events_label["text"] = f"Events Found: {self._num_events}"

@@ -10,21 +10,51 @@
 #
 
 import tkinter as tk
-import tkinter.filedialog
+import tkinter.colorchooser
 import tkinter.ttk as ttk
 import typing as ty
 
 from scenedetect import FrameTimecode
 
+from dvr_scan.config import RGBValue
+
+PADDING = 8
 SETTING_INPUT_WIDTH = 12
-LONG_SETTING_INPUT_WIDTH = 72
-MAX_DURATION = 120.0
-DURATION_INCREMENT = 0.1
-DURATION_FORMAT = "%.1fs"
-MIN_WINDOW_WIDTH = 128
-MIN_WINDOW_HEIGHT = 128
-LARGE_BUTTON_WIDTH = 40
-MAX_THRESHOLD = 255.0
+
+
+class ColorPicker:
+    def __init__(
+        self, root: tk.Widget, initial_color: str = "#FF0000", padding=PADDING, sticky=tk.EW
+    ):
+        self._frame = tk.Frame(root)
+        self._frame.columnconfigure(0, weight=1)
+        self._frame.columnconfigure(1, weight=1)
+        self._frame.rowconfigure(0, weight=1)
+        self._color = tk.Label(self._frame, bg=initial_color, width=2)
+        self._color.grid(row=0, column=0, sticky=sticky, padx=(0, padding))
+
+        def set_color():
+            color = tkinter.colorchooser.askcolor(self._color["bg"])
+            if color and color[1]:
+                self._color["bg"] = color[1]
+
+        self._set_button = tk.Button(self._frame, text="Set Color", command=set_color)
+        self._set_button.grid(row=0, column=1, sticky=sticky, padx=(padding, 0))
+
+        self.grid = self._frame.grid
+
+    def __setitem__(self, key, item):
+        self._set_button[key] = item
+
+    def __getitem__(self, key):
+        return self._set_button[key]
+
+    def get(self) -> str:
+        return self._color["bg"]
+
+    def set(self, newval: ty.Tuple[int, int, int]):
+        color_code = (newval[0] << 16) + (newval[1] << 8) + newval[2]
+        self._color["bg"] = f"#{str(RGBValue(color_code))[2:]}"
 
 
 class TimecodeEntry:
@@ -57,13 +87,11 @@ class TimecodeEntry:
     def __getitem__(self, key):
         return self._entry[key]
 
-    @property
-    def value(self) -> str:
+    def get(self) -> str:
         return self._value.get()
 
-    @value.setter
-    def value(self, newval: str):
-        self._value.set(newval)
+    def set(self, newval: str):
+        self._value.set(str(newval))
         self._refresh(clear_selection=True)
 
     def _refresh(self, clear_selection=False):
@@ -72,6 +100,9 @@ class TimecodeEntry:
 
             if newval.isdigit():
                 newval = float(newval)
+            # TODO: There's a bug here in PySceneDetect when there are more than 3 :'s.
+            if isinstance(newval, str) and newval.count(":") >= 3:
+                raise ValueError()
             validated = FrameTimecode(newval, 1000.0).get_timecode()
             self._value.set(validated)
             self._last_valid = validated
@@ -101,9 +132,9 @@ class Spinbox:
         self,
         root: tk.Widget,
         value: str,
-        from_: float = 0.0,
-        to: float = MAX_DURATION,
-        increment: float = DURATION_INCREMENT,
+        from_: float,
+        to: float,
+        increment: float,
         width: int = SETTING_INPUT_WIDTH,
         format: str = "%g",
         suffix: ty.Optional[str] = None,
@@ -144,19 +175,11 @@ class Spinbox:
     def __getitem__(self, key):
         return self._spinbox[key]
 
-    def set(self, newval: str):
-        self.value = newval
-
     def get(self) -> str:
-        return self.value
-
-    @property
-    def value(self) -> str:
         return self._value.get()
 
-    @value.setter
-    def value(self, newval: str):
-        self._value.set(newval)
+    def set(self, newval: str):
+        self._value.set(str(newval))
         self._refresh(clear_selection=True)
 
     def _refresh(self, clear_selection=False):

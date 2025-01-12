@@ -11,7 +11,6 @@
 
 import copy
 import tkinter as tk
-import tkinter.colorchooser as colorchooser
 import tkinter.filedialog
 import tkinter.ttk as ttk
 import typing as ty
@@ -19,14 +18,14 @@ import webbrowser
 from logging import getLogger
 from pathlib import Path
 
-from scenedetect import FrameTimecode
+from scenedetect import FrameTimecode, open_video
 
 from dvr_scan.app.about_window import AboutWindow
 from dvr_scan.app.common import register_icon
 from dvr_scan.app.scan_window import ScanWindow
-from dvr_scan.app.widgets import Spinbox, TimecodeEntry
-from dvr_scan.config import CHOICE_MAP, CONFIG_MAP, RGBValue
-from dvr_scan.scanner import DetectorType, OutputMode
+from dvr_scan.app.widgets import ColorPicker, Spinbox, TimecodeEntry
+from dvr_scan.config import CHOICE_MAP, CONFIG_MAP
+from dvr_scan.scanner import OutputMode
 from dvr_scan.shared import ScanSettings
 
 WINDOW_TITLE = "DVR-Scan"
@@ -93,8 +92,12 @@ class InputArea:
         self._videos = ttk.Treeview(root, columns=("duration", "path"))
 
         self._videos.heading("#0", text="Name")
+        self._videos.column("#0", width=40)
         self._videos.heading("duration", text="Duration")
+        self._videos.column("duration", width=40)
         self._videos.heading("path", text="Path")
+        self._videos.column("path", width=120)
+
         self._videos.grid(row=0, column=0, columnspan=6, sticky=tk.NSEW)
 
         ttk.Button(root, text="Add", state=tk.DISABLED).grid(
@@ -165,8 +168,39 @@ class InputArea:
         # Update internal state
         self._on_set_time()
         self._on_use_regions()
+        self.add_video("tests/resources/simple_movement.mp4")
+        self.add_video("tests/resources/simple_movement.mp4")
+        self.add_video("tests/resources/simple_movement.mp4")
+        self.add_video("tests/resources/simple_movement.mp4")
+
+    def get(self, settings: ScanSettings) -> ty.Optional[ScanSettings]:
+        settings.set("input", ["tests/resources/simple_movement.mp4"])
+        if self.start_end_time:
+            (start, end) = self.start_end_time
+            if start != "00:00:00.000":
+                settings.set("start-time", start)
+            if end != "00:00:00.000":
+                settings.set("end-time", end)
+            start_frame = FrameTimecode(start, 1000.0).get_frames()
+            end_frame = FrameTimecode(end, 1000.0).get_frames()
+            if end_frame and end_frame <= start_frame:
+                # TODO: We should prevent this from being possible by constraining start/end time
+                # when being set.
+                logger.error("No frames to process (start time must be less than than end time)")
+                return None
+
+    def add_video(self, path: str):
+        # TODO: error handling
+        video = open_video(path, backend="opencv")
+        self._videos.insert(
+            "",
+            tk.END,
+            text=video.name,
+            values=(video.duration.get_timecode(), Path(video.path).absolute()),
+        )
 
     def _on_set_time(self):
+        # TODO: When disabled, set start time 0 and end time duration of video.
         state = tk.NORMAL if self._set_time.get() else tk.DISABLED
         self._start_time_label["state"] = state
         self._start_time["state"] = state
@@ -182,12 +216,10 @@ class InputArea:
     def start_end_time(self) -> ty.Optional[ty.Tuple[str, str]]:
         if not self._set_time.get():
             return None
-        return self._start_time.value, self._end_time.value
+        return self._start_time.get(), self._end_time.get()
 
 
 class SettingsArea:
-    # TODO: make this less busy by making it a notebook widget that can also include the
-    # output settings. Can also have an additional tab to load/save the various settings.
     def __init__(self, root: tk.Widget):
         self._root = root
         self._advanced = tk.Toplevel(master=root)
@@ -209,29 +241,29 @@ class SettingsArea:
         # Detector
 
         tk.Label(root, text="Subtractor").grid(row=0, column=0, sticky=STICKY)
-        self._subtractor = tk.StringVar()
-        combo = ttk.Combobox(root, textvariable=self._subtractor, width=SETTING_INPUT_WIDTH)
+        self._bg_subtractor = tk.StringVar()
+        combo = ttk.Combobox(root, textvariable=self._bg_subtractor, width=SETTING_INPUT_WIDTH)
         combo["values"] = ("MOG2", "CNT")
         combo.state(["readonly"])
-        self._subtractor.set("MOG2")
+        self._bg_subtractor.set("MOG2")
         combo.grid(row=0, column=1, sticky=STICKY)
 
         tk.Label(root, text="Kernel Size").grid(row=1, column=0, sticky=STICKY)
 
-        self._kernel_size = ttk.Combobox(root, width=SETTING_INPUT_WIDTH, state="readonly")
+        self._kernel_size_combobox = ttk.Combobox(root, width=SETTING_INPUT_WIDTH, state="readonly")
         # 0: Auto
         # 1: Off
         # 2: 3x3
         # 3: 5x5
         # 4: 7x7
         # 5: 9x9...
-        self._kernel_size["values"] = (
+        self._kernel_size_combobox["values"] = (
             "Off",
             "Auto",
             *tuple(f"{n}x{n}" for n in range(3, MAX_KERNEL_SIZE + 1, 2)),
         )
-        self._kernel_size.grid(row=1, column=1, sticky=STICKY)
-        self._kernel_size.current(1)
+        self._kernel_size_combobox.grid(row=1, column=1, sticky=STICKY)
+        self._kernel_size_combobox.current(1)
 
         tk.Label(root, text="Threshold").grid(row=2, column=0, sticky=STICKY)
         self._threshold = Spinbox(
@@ -239,25 +271,43 @@ class SettingsArea:
             value=str(CONFIG_MAP["threshold"]),
             from_=0.0,
             to=255.0,
-            width=SETTING_INPUT_WIDTH,
             increment=0.01,
-            format="%g",
         )
         self._threshold.grid(row=2, column=1, sticky=STICKY)
 
         # Events
-
         tk.Label(root, text="Min. Event Length").grid(row=0, column=3, sticky=STICKY)
-        self._min_event_len = Spinbox(root, value=str(CONFIG_MAP["min-event-length"]), suffix="s")
-        self._min_event_len.grid(row=0, column=4, sticky=STICKY)
+        self._min_event_length = Spinbox(
+            root,
+            value=str(CONFIG_MAP["min-event-length"]),
+            from_=0.0,
+            to=MAX_DURATION,
+            increment=DURATION_INCREMENT,
+            suffix="s",
+        )
+        self._min_event_length.grid(row=0, column=4, sticky=STICKY)
 
         tk.Label(root, text="Time Pre-Event").grid(row=1, column=3, sticky=STICKY)
-        self._pre_event = Spinbox(root, value=str(CONFIG_MAP["time-before-event"]), suffix="s")
-        self._pre_event.grid(row=1, column=4, sticky=STICKY)
+        self._time_before_event = Spinbox(
+            root,
+            value=str(CONFIG_MAP["time-before-event"]),
+            from_=0.0,
+            to=MAX_DURATION,
+            increment=DURATION_INCREMENT,
+            suffix="s",
+        )
+        self._time_before_event.grid(row=1, column=4, sticky=STICKY)
 
         tk.Label(root, text="Time Post-Event").grid(row=2, column=3, sticky=STICKY)
-        self._post_event = Spinbox(root, value=str(CONFIG_MAP["time-post-event"]), suffix="s")
-        self._post_event.grid(row=2, column=4, sticky=STICKY)
+        self._time_post_event = Spinbox(
+            root,
+            value=str(CONFIG_MAP["time-post-event"]),
+            from_=0.0,
+            to=MAX_DURATION,
+            increment=DURATION_INCREMENT,
+            suffix="s",
+        )
+        self._time_post_event.grid(row=2, column=4, sticky=STICKY)
 
         self._mask_output = tk.BooleanVar(value=False)
         ttk.Checkbutton(
@@ -298,34 +348,31 @@ class SettingsArea:
         frame.columnconfigure(5, weight=2)
         frame.columnconfigure(6, weight=12)
 
-        self._downscale = tk.StringVar(value=1)
+        self._downscale_factor = tk.StringVar(value=1)
         tk.Label(frame, text="Downscale Factor").grid(
             row=0, column=0, sticky=STICKY, padx=PADDING, pady=PADDING
         )
-        self._downscale = Spinbox(
+        self._downscale_factor = Spinbox(
             frame,
-            value=1,
-            from_=1.0,
+            value=float(CONFIG_MAP["downscale-factor"]),
+            from_=0.0,
             to=float(MAX_DOWNSCALE_FACTOR),
-            width=SETTING_INPUT_WIDTH,
             increment=1.0,
-            format="%g",
             convert=lambda val: round(float(val)),
         )
-        self._downscale.grid(row=0, column=1, sticky=STICKY, padx=PADDING, pady=PADDING)
+        self._downscale_factor.grid(row=0, column=1, sticky=STICKY, padx=PADDING, pady=PADDING)
 
         self._learning_rate_auto = tk.BooleanVar(value=True)
         tk.Label(frame, text="Learning Rate").grid(row=0, column=3, padx=PADDING, sticky=STICKY)
-        self._learning_rate = Spinbox(
+        self._learning_rate_value = Spinbox(
             frame,
             value=0.5,
             from_=0.0,
             to=1.0,
-            width=SETTING_INPUT_WIDTH,
             increment=0.01,
             state=tk.DISABLED,
         )
-        self._learning_rate.grid(row=0, column=4, padx=PADDING, sticky=STICKY, pady=PADDING)
+        self._learning_rate_value.grid(row=0, column=4, padx=PADDING, sticky=STICKY, pady=PADDING)
         ttk.Checkbutton(
             frame,
             text="Auto",
@@ -343,7 +390,6 @@ class SettingsArea:
             value=str(CONFIG_MAP["max-threshold"]),
             from_=0.0,
             to=MAX_THRESHOLD,
-            width=SETTING_INPUT_WIDTH,
             increment=1.0,
         )
         self._max_threshold.grid(row=1, column=1, padx=PADDING, sticky=STICKY, pady=PADDING)
@@ -356,7 +402,6 @@ class SettingsArea:
             value=str(CONFIG_MAP["threshold"]),
             from_=0.0,
             to=255.0,
-            width=SETTING_INPUT_WIDTH,
             increment=0.01,
         )
         self._variance_threshold.grid(row=1, column=4, padx=PADDING, sticky=STICKY, pady=PADDING)
@@ -382,14 +427,14 @@ class SettingsArea:
             value=str(CONFIG_MAP["frame-skip"]),
             from_=0.0,
             to=1000.0,
-            width=SETTING_INPUT_WIDTH,
             increment=1.0,
-            format="%g",
         )
         self._frame_skip.grid(row=2, column=4, padx=PADDING, sticky=tk.N + STICKY, pady=PADDING)
 
     def _on_auto_learning_rate(self):
-        self._learning_rate["state"] = tk.DISABLED if self._learning_rate_auto.get() else tk.NORMAL
+        self._learning_rate_value["state"] = (
+            tk.DISABLED if self._learning_rate_auto.get() else tk.NORMAL
+        )
 
     def _show_advanced(self):
         logger.debug("showing advanced settings window")
@@ -406,48 +451,8 @@ class SettingsArea:
         self._advanced_button.focus()
 
     @property
-    def bg_subtractor(self) -> DetectorType:
-        return self._subtractor.get()
-
-    @bg_subtractor.setter
-    def bg_subtractor(self, newval: str):
-        self._subtractor.set(newval)
-
-    @property
-    def min_event_length(self) -> str:
-        return self._min_event_len.value
-
-    @min_event_length.setter
-    def min_event_length(self, newval: str):
-        self._min_event_len.value = newval
-
-    @property
-    def time_before_event(self) -> str:
-        return self._pre_event.value
-
-    @time_before_event.setter
-    def time_before_event(self, newval: str):
-        self._pre_event.value = newval
-
-    @property
-    def time_post_event(self) -> str:
-        return self._post_event.value
-
-    @time_post_event.setter
-    def time_post_event(self, newval: str):
-        self._post_event.value = newval
-
-    @property
-    def threshold(self) -> float:
-        return float(self._threshold.value)
-
-    @threshold.setter
-    def threshold(self, newval: float):
-        self._threshold.value = str(newval)
-
-    @property
-    def kernel_size(self) -> int:
-        index = self._kernel_size.current()
+    def _kernel_size(self) -> int:
+        index = self._kernel_size_combobox.current()
         if index == 0:
             return 0
         elif index == 1:
@@ -456,8 +461,8 @@ class SettingsArea:
             assert index > 0
             return (index * 2) - 1
 
-    @kernel_size.setter
-    def kernel_size(self, size):
+    @_kernel_size.setter
+    def _kernel_size(self, size):
         # TODO: Handle this discrepency properly, we're clipping the user config right now.
         if size > MAX_KERNEL_SIZE:
             logger.warning("Kernel sizes above 21 are not supported by the UI, clipping to 21.")
@@ -465,19 +470,54 @@ class SettingsArea:
         auto_kernel = bool(kernel_size < 0)
         none_kernel = bool(kernel_size == 0)
         index = 0 if none_kernel else 1 if auto_kernel else (1 + (kernel_size // 2))
-        self._kernel_size.current(index)
+        self._kernel_size_combobox.current(index)
 
     @property
-    def mask_output(self) -> bool:
-        return self._mask_output.get()
+    def _learning_rate(self) -> float:
+        if self._learning_rate_auto.get():
+            return CONFIG_MAP["learning-rate"]
+        return self._learning_rate_value.get()
 
-    @property
-    def use_pts(self) -> bool:
-        return self._use_pts.get()
+    @_learning_rate.setter
+    def _learning_rate(self, newval: float):
+        if newval < 0.0:
+            self._learning_rate_auto.set(True)
+        else:
+            self._learning_rate_auto.set(False)
+            self._learning_rate_value.set(newval)
+        self._on_auto_learning_rate()
 
-    @use_pts.setter
-    def use_pts(self, newval: bool):
-        self._use_pts.set(newval)
+    def set(self, settings: ScanSettings):
+        self._kernel_size = settings.get("kernel-size")
+        self._learning_rate = settings.get("learning-rate")
+        self._bg_subtractor.set(settings.get("bg-subtractor"))
+        self._threshold.set(settings.get("threshold"))
+        self._min_event_length.set(settings.get("min-event-length"))
+        self._time_before_event.set(settings.get("time-before-event"))
+        self._time_post_event.set(settings.get("time-post-event"))
+        self._use_pts.set(settings.get("use-pts"))
+        self._downscale_factor.set(settings.get("downscale-factor"))
+        self._frame_skip.set(settings.get("frame-skip"))
+        self._max_threshold.set(settings.get("max-threshold"))
+        self._variance_threshold.set(settings.get("variance-threshold"))
+
+    def get(self, settings: ScanSettings) -> ScanSettings:
+        settings.set("kernel-size", self._kernel_size)
+        settings.set("bg-subtractor", self._bg_subtractor.get())
+        settings.set("threshold", float(self._threshold.get()))
+        settings.set("min-event-length", self._min_event_length.get())
+        settings.set("time-before-event", self._time_before_event.get())
+        settings.set("time-post-event", self._time_post_event.get())
+        settings.set("use-pts", self._use_pts.get())
+        settings.set("downscale-factor", int(self._downscale_factor.get()))
+        settings.set("learning-rate", float(self._learning_rate_value.get()))
+        settings.set("max-threshold", float(self._max_threshold.get()))
+        settings.set("variance-threshold", float(self._variance_threshold.get()))
+        settings.set("frame-skip", int(self._frame_skip.get()))
+        # NOTE: There is no mask-output in the get function above as it does not exist in the
+        # config file (CLI only).
+        settings.set("mask-output", self._mask_output.get())
+        return settings
 
 
 class OutputArea:
@@ -495,23 +535,25 @@ class OutputArea:
         tk.Label(root, text="Mode").grid(
             row=0, column=0, sticky=tk.EW, padx=PADDING, pady=(0, PADDING)
         )
-        self._mode_combo = ttk.Combobox(root, width=SETTING_INPUT_WIDTH, state="readonly")
-        self._mode_combo.grid(row=0, column=1, sticky=tk.EW, padx=PADDING, pady=(0, PADDING))
-        self._mode_combo.bind("<<ComboboxSelected>>", lambda _: self._on_mode_combo_selected())
+        self._output_mode_combo = ttk.Combobox(root, width=SETTING_INPUT_WIDTH, state="readonly")
+        self._output_mode_combo.grid(row=0, column=1, sticky=tk.EW, padx=PADDING, pady=(0, PADDING))
+        self._output_mode_combo.bind(
+            "<<ComboboxSelected>>", lambda _: self._on_mode_combo_selected()
+        )
 
         self._options_button = ttk.Button(
             root, text="Options...", command=self._show_options, width=SETTING_INPUT_WIDTH
         )
         self._options_button.grid(row=0, column=2, sticky=tk.EW, pady=(0, PADDING))
 
-        self._mode_combo["values"] = (
+        self._output_mode_combo["values"] = (
             "OpenCV (.avi)",
             "ffmpeg",
             "ffmpeg (copy)",
         )
-        self._mode_combo.current(1)
+        self._output_mode_combo.current(1)
 
-        self._output_dir = False
+        self._output_dir_str = ""
         self._output_dir_label = tk.StringVar(root, value="Ask Me")
 
         tk.Label(root, text="Directory").grid(
@@ -533,8 +575,12 @@ class OutputArea:
 
         self._select_button = ttk.Button(root, text="Select...", command=self._on_select)
         self._select_button.grid(row=2, column=2, sticky=tk.EW, pady=(PADDING, 0))
+
+        def clear_output_directory():
+            self._output_dir = ""
+
         self._clear_button = ttk.Button(
-            root, text="Clear", state=tk.DISABLED, command=self.clear_output_directory
+            root, text="Clear", state=tk.DISABLED, command=clear_output_directory
         )
         self._clear_button.grid(row=2, column=1, sticky=tk.EW, padx=PADDING, pady=(PADDING, 0))
 
@@ -563,20 +609,20 @@ class OutputArea:
 
         self._ffmpeg_input_label = tk.Label(self._ffmpeg_options, text="ffmpeg\nInput Args")
         self._ffmpeg_input_label.grid(row=0, column=0, sticky=STICKY, padx=PADDING, pady=PADDING)
-        self._ffmpeg_input = tk.StringVar(value=CONFIG_MAP["ffmpeg-input-args"])
+        self._ffmpeg_input_args = tk.StringVar(value=CONFIG_MAP["ffmpeg-input-args"])
         self._ffmpeg_input_entry = ttk.Entry(
             self._ffmpeg_options,
-            textvariable=self._ffmpeg_input,
+            textvariable=self._ffmpeg_input_args,
             width=LONG_SETTING_INPUT_WIDTH,
         )
         self._ffmpeg_input_entry.grid(row=0, column=1, sticky=STICKY, padx=PADDING, pady=PADDING)
 
         self._ffmpeg_output_label = tk.Label(self._ffmpeg_options, text="ffmpeg\nOutput Args")
         self._ffmpeg_output_label.grid(row=1, column=0, sticky=STICKY, padx=PADDING, pady=PADDING)
-        self._ffmpeg_output = tk.StringVar(value=CONFIG_MAP["ffmpeg-output-args"])
+        self._ffmpeg_output_args = tk.StringVar(value=CONFIG_MAP["ffmpeg-output-args"])
         self._ffmpeg_output_entry = ttk.Entry(
             self._ffmpeg_options,
-            textvariable=self._ffmpeg_output,
+            textvariable=self._ffmpeg_output_args,
             width=LONG_SETTING_INPUT_WIDTH,
         )
         self._ffmpeg_output_entry.grid(row=1, column=1, sticky=STICKY, padx=PADDING, pady=PADDING)
@@ -634,65 +680,68 @@ class OutputArea:
             row=1, column=1, sticky=tk.W, padx=PADDING, pady=(PADDING, 0)
         )
 
-        tk.Label(self._opencv_options, text="Font Scale").grid(
+        tk.Label(self._opencv_options, text="Text Color").grid(
             row=2, column=0, sticky=STICKY, padx=PADDING, pady=(PADDING, 0)
+        )
+        self._text_font_color = ColorPicker(self._opencv_options)
+        self._text_font_color.grid(row=2, column=1, sticky=tk.NSEW, pady=(PADDING, 0), padx=PADDING)
+        tk.Label(self._opencv_options, text="Background").grid(
+            row=2, column=2, sticky=STICKY, padx=PADDING, pady=(PADDING, 0)
+        )
+        self._text_bg_color = ColorPicker(self._opencv_options)
+        self._text_bg_color.grid(row=2, column=3, sticky=tk.NSEW, pady=(PADDING, 0), padx=PADDING)
+
+        tk.Label(self._opencv_options, text="Font Scale").grid(
+            row=3, column=0, sticky=STICKY, padx=PADDING, pady=(PADDING, 0)
         )
         self._text_font_scale = Spinbox(
             self._opencv_options,
             value=str(CONFIG_MAP["text-font-scale"]),
             from_=0.0,
             to=1000.0,
-            width=SETTING_INPUT_WIDTH,
             increment=0.1,
-            format="%g",
         )
-        self._text_font_scale.grid(row=2, column=1, sticky=STICKY, padx=PADDING, pady=(PADDING, 0))
+        self._text_font_scale.grid(row=3, column=1, sticky=STICKY, padx=PADDING, pady=(PADDING, 0))
 
         tk.Label(self._opencv_options, text="Font Weight").grid(
-            row=2, column=2, sticky=STICKY, padx=PADDING, pady=(PADDING, 0)
+            row=3, column=2, sticky=STICKY, padx=PADDING, pady=(PADDING, 0)
         )
         self._text_font_thickness = Spinbox(
             self._opencv_options,
             value=str(CONFIG_MAP["text-font-thickness"]),
             from_=0.0,
             to=1000.0,
-            width=SETTING_INPUT_WIDTH,
             increment=1.0,
-            format="%g",
             convert=lambda val: round(float(val)),
         )
         self._text_font_thickness.grid(
-            row=2, column=3, sticky=STICKY, padx=PADDING, pady=(PADDING, 0)
+            row=3, column=3, sticky=STICKY, padx=PADDING, pady=(PADDING, 0)
         )
 
-        tk.Label(self._opencv_options, text="Text Border").grid(row=3, column=0, sticky=STICKY)
+        tk.Label(self._opencv_options, text="Text Border").grid(row=4, column=0, sticky=STICKY)
         # TODO: Constrain to be <= text margin
         self._text_border = Spinbox(
             self._opencv_options,
             value=str(CONFIG_MAP["text-border"]),
             from_=0.0,
             to=1000.0,
-            width=SETTING_INPUT_WIDTH,
             increment=1.0,
-            format="%g",
             convert=lambda val: round(float(val)),
         )
-        self._text_border.grid(row=3, column=1, sticky=STICKY, padx=PADDING, pady=PADDING)
+        self._text_border.grid(row=4, column=1, sticky=STICKY, padx=PADDING, pady=PADDING)
 
         tk.Label(self._opencv_options, text="Text Margin").grid(
-            row=3, column=2, sticky=STICKY, padx=PADDING, pady=PADDING
+            row=4, column=2, sticky=STICKY, padx=PADDING, pady=PADDING
         )
         self._text_margin = Spinbox(
             self._opencv_options,
             value=str(CONFIG_MAP["text-margin"]),
             from_=0.0,
             to=1000.0,
-            width=SETTING_INPUT_WIDTH,
             increment=1.0,
-            format="%g",
             convert=lambda val: round(float(val)),
         )
-        self._text_margin.grid(row=3, column=3, sticky=STICKY, padx=PADDING, pady=PADDING)
+        self._text_margin.grid(row=4, column=3, sticky=STICKY, padx=PADDING, pady=PADDING)
 
         self._bounding_box = tk.BooleanVar(value=False)
         self._bounding_box_button = ttk.Checkbutton(
@@ -704,67 +753,57 @@ class OutputArea:
             command=self._on_bounding_box,
         )
         self._bounding_box_button.grid(
-            row=4, column=0, columnspan=2, sticky=STICKY, padx=PADDING, pady=(2 * PADDING, 0)
+            row=5, column=0, columnspan=2, sticky=STICKY, padx=PADDING, pady=(PADDING, 0)
         )
 
         tk.Label(self._opencv_options, text="Line Color").grid(
-            row=5, column=0, sticky=STICKY, padx=PADDING, pady=(PADDING, 0)
+            row=6, column=0, sticky=STICKY, padx=PADDING, pady=(PADDING, 0)
         )
-        frame = tk.Frame(self._opencv_options)
-        frame.columnconfigure(0, weight=1)
-        frame.columnconfigure(1, weight=1)
-        frame.rowconfigure(0, weight=1)
-        self._color_label = tk.Label(frame, bg="#FF0000", width=2)
-        self._color_label.grid(row=0, column=0, sticky=STICKY, padx=PADDING, pady=(PADDING, 0))
-
-        def on_color():
-            color = colorchooser.askcolor()
-            if color and color[1]:
-                self._color_label["bg"] = color[1]
-
-        self._color_button = tk.Button(frame, text="Set Color", command=on_color)
-        self._color_button.grid(row=0, column=1, sticky=STICKY, padx=PADDING, pady=(PADDING, 0))
-        frame.grid(row=5, column=1, sticky=tk.NSEW)
+        self._bounding_box_color = ColorPicker(self._opencv_options)
+        self._bounding_box_color.grid(
+            row=6, column=1, sticky=tk.NSEW, pady=(PADDING, 0), padx=PADDING
+        )
 
         tk.Label(self._opencv_options, text="Line Thickness").grid(
-            row=5, column=2, sticky=STICKY, padx=PADDING, pady=(PADDING, 0)
+            row=6, column=2, sticky=STICKY, padx=PADDING, pady=(PADDING, 0)
         )
         self._bounding_box_thickness = Spinbox(
             self._opencv_options,
             value=str(CONFIG_MAP["bounding-box-thickness"]),
             from_=0.0,
             to=1.0,
-            width=SETTING_INPUT_WIDTH,
             increment=0.001,
-            format="%g",
         )
         self._bounding_box_thickness.grid(
-            row=5, column=3, sticky=STICKY, padx=PADDING, pady=(PADDING, 0)
+            row=6, column=3, sticky=STICKY, padx=PADDING, pady=(PADDING, 0)
         )
 
         tk.Label(self._opencv_options, text="Smooth Time").grid(
-            row=6, column=0, sticky=STICKY, padx=PADDING, pady=PADDING
+            row=7, column=0, sticky=STICKY, padx=PADDING, pady=PADDING
         )
         self._bounding_box_smooth_time = Spinbox(
-            self._opencv_options, str(CONFIG_MAP["bounding-box-smooth-time"]), suffix="s"
+            self._opencv_options,
+            str(CONFIG_MAP["bounding-box-smooth-time"]),
+            from_=0.0,
+            to=MAX_DURATION,
+            increment=DURATION_INCREMENT,
+            suffix="s",
         )
         self._bounding_box_smooth_time.grid(
-            row=6, column=1, sticky=STICKY, padx=PADDING, pady=PADDING
+            row=7, column=1, sticky=STICKY, padx=PADDING, pady=PADDING
         )
 
         tk.Label(self._opencv_options, text="Min. Box Size").grid(
-            row=6, column=2, sticky=STICKY, padx=PADDING, pady=PADDING
+            row=7, column=2, sticky=STICKY, padx=PADDING, pady=PADDING
         )
         self._bounding_box_min_size = Spinbox(
             self._opencv_options,
             value=str(CONFIG_MAP["bounding-box-min-size"]),
             from_=0.0,
             to=1.0,
-            width=SETTING_INPUT_WIDTH,
             increment=0.001,
-            format="%g",
         )
-        self._bounding_box_min_size.grid(row=6, column=3, sticky=STICKY, padx=PADDING, pady=PADDING)
+        self._bounding_box_min_size.grid(row=7, column=3, sticky=STICKY, padx=PADDING, pady=PADDING)
 
         self._on_text_overlay()
         self._on_bounding_box()
@@ -792,7 +831,7 @@ class OutputArea:
         return callback
 
     def _show_options(self):
-        if self.output_mode == OutputMode.OPENCV:
+        if self._output_mode == OutputMode.OPENCV:
             self._opencv_options.grid(row=0, column=0, sticky=tk.NSEW, padx=PADDING, pady=PADDING)
             self._ffmpeg_options.grid_remove()
         else:
@@ -816,56 +855,41 @@ class OutputArea:
         output_path = tkinter.filedialog.askdirectory(title="Set Output Directory", mustexist=True)
         if output_path:
             self._output_dir_label.set(output_path)
-            self._output_dir = True
+            self._output_dir_str = output_path
             self._clear_button["state"] = tk.NORMAL
 
-    def clear_output_directory(self):
+    def _clear_output_directory(self):
         self._output_dir_label.set("Ask Me")
-        self._output_dir = ""
+        self._output_dir_str = ""
         self._clear_button["state"] = tk.DISABLED
 
     def _on_text_overlay(self):
-        if self.output_mode != OutputMode.OPENCV:
-            self._timecode_checkbutton["state"] = tk.DISABLED
-            self._frame_metrics_checkbutton["state"] = tk.DISABLED
-            self._text_border["state"] = tk.DISABLED
-            self._text_font_scale["state"] = tk.DISABLED
-            self._text_font_thickness["state"] = tk.DISABLED
-            self._text_margin["state"] = tk.DISABLED
-        else:
-            self._timecode_checkbutton["state"] = tk.NORMAL
-            self._frame_metrics_checkbutton["state"] = tk.NORMAL
-            state = (
-                tk.NORMAL if (self._frame_metrics.get() or self._timecode.get()) else tk.DISABLED
-            )
-            self._text_border["state"] = state
-            self._text_font_scale["state"] = state
-            self._text_font_thickness["state"] = state
-            self._text_margin["state"] = state
+        self._timecode_checkbutton["state"] = tk.NORMAL
+        self._frame_metrics_checkbutton["state"] = tk.NORMAL
+        state = tk.NORMAL if (self._frame_metrics.get() or self._timecode.get()) else tk.DISABLED
+        self._text_border["state"] = state
+        self._text_font_scale["state"] = state
+        self._text_font_thickness["state"] = state
+        self._text_margin["state"] = state
+        self._text_bg_color["state"] = state
+        self._text_font_color["state"] = state
 
     def _on_bounding_box(self):
-        if self.output_mode != OutputMode.OPENCV:
-            self._bounding_box_button["state"] = tk.DISABLED
-            self._color_button["state"] = tk.DISABLED
-            self._bounding_box_thickness["state"] = tk.DISABLED
-            self._bounding_box_smooth_time["state"] = tk.DISABLED
-            self._bounding_box_min_size["state"] = tk.DISABLED
-        else:
-            self._bounding_box_button["state"] = tk.NORMAL
-            state = tk.NORMAL if self._bounding_box.get() else tk.DISABLED
-            self._color_button["state"] = state
-            self._bounding_box_thickness["state"] = state
-            self._bounding_box_smooth_time["state"] = state
-            self._bounding_box_min_size["state"] = state
+        self._bounding_box_button["state"] = tk.NORMAL
+        state = tk.NORMAL if self._bounding_box.get() else tk.DISABLED
+        self._bounding_box_color["state"] = state
+        self._bounding_box_thickness["state"] = state
+        self._bounding_box_smooth_time["state"] = state
+        self._bounding_box_min_size["state"] = state
 
     def _on_mode_combo_selected(self):
         self._options_button["state"] = (
-            tk.DISABLED if self.output_mode == OutputMode.COPY else tk.NORMAL
+            tk.DISABLED if self._output_mode == OutputMode.COPY else tk.NORMAL
         )
 
     @property
-    def output_mode(self) -> OutputMode:
-        index = self._mode_combo.current()
+    def _output_mode(self) -> OutputMode:
+        index = self._output_mode_combo.current()
         if index == 0:
             return OutputMode.OPENCV
         elif index == 1:
@@ -873,96 +897,82 @@ class OutputArea:
         else:
             return OutputMode.COPY
 
-    @output_mode.setter
-    def output_mode(self, newval: OutputMode):
+    @_output_mode.setter
+    def _output_mode(self, newval: OutputMode):
         assert newval != OutputMode.SCAN_ONLY  # Scan only is a separate checkbox in the UI.
         if newval == OutputMode.OPENCV:
-            self._mode_combo.current(0)
+            self._output_mode_combo.current(0)
         elif newval == OutputMode.FFMPEG:
-            self._mode_combo.current(1)
+            self._output_mode_combo.current(1)
         elif newval == OutputMode.COPY:
-            self._mode_combo.current(2)
+            self._output_mode_combo.current(2)
 
     @property
-    def output_dir(self) -> str:
-        return self._output_dir
+    def _output_dir(self) -> str:
+        return self._output_dir_str
 
-    @output_dir.setter
-    def output_dir(self, newval: str):
+    @_output_dir.setter
+    def _output_dir(self, newval: str):
         if newval:
-            self._output_dir = newval
+            self._output_dir_str = newval
             self._output_dir_label.set(newval)
             self._clear_button["state"] = tk.NORMAL
         else:
-            self.clear_output_directory()
+            self._output_dir_label.set("Ask Me")
+            self._output_dir_str = ""
+            self._clear_button["state"] = tk.DISABLED
 
-    @property
-    def ffmpeg_input_args(self) -> ty.Optional[str]:
-        return self._ffmpeg_input.get()
+    def set(self, settings: ScanSettings):
+        output_mode = OutputMode[settings.get("output-mode").upper()]
+        if output_mode != OutputMode.SCAN_ONLY:
+            self._output_mode = output_mode
+        output_dir = settings.get("output-dir")
+        if output_dir:
+            self._output_dir = output_dir
+        self._ffmpeg_input_args.set(settings.get("ffmpeg-input-args"))
+        self._ffmpeg_output_args.set(settings.get("ffmpeg-output-args"))
+        self._opencv_codec.set(settings.get("opencv-codec"))
+        # Text Overlays
+        self._timecode.set(settings.get("time-code"))
+        self._frame_metrics.set(settings.get("frame-metrics"))
+        self._text_font_color.set(settings.get("text-font-color"))
+        self._text_bg_color.set(settings.get("text-bg-color"))
+        self._text_font_scale.set(settings.get("text-font-scale"))
+        self._text_font_thickness.set(settings.get("text-font-thickness"))
+        self._text_border.set(settings.get("text-border"))
+        self._text_margin.set(settings.get("text-margin"))
+        # Bounding Box
+        self._bounding_box.set(settings.get("bounding-box"))
+        self._bounding_box_color.set(settings.get("bounding-box-color"))
+        self._bounding_box_min_size.set(settings.get("bounding-box-min-size"))
+        self._bounding_box_smooth_time.set(settings.get("bounding-box-smooth-time"))
+        self._bounding_box_thickness.set(settings.get("bounding-box-thickness"))
 
-    @ffmpeg_input_args.setter
-    def ffmpeg_input_args(self, newval: ty.Optional[str]):
-        self._ffmpeg_input.set(newval)
-
-    @property
-    def ffmpeg_output_args(self) -> str:
-        return self._ffmpeg_output.get()
-
-    @ffmpeg_output_args.setter
-    def ffmpeg_output_args(self, newval: ty.Optional[str]):
-        self._ffmpeg_output.set(newval)
-
-    @property
-    def opencv_codec(self) -> str:
-        return self._opencv_codec.get()
-
-    @opencv_codec.setter
-    def opencv_codec(self, newval):
-        self._opencv_codec.set(newval)
-
-    @property
-    def timecode(self) -> bool:
-        return self._timecode.get()
-
-    @timecode.setter
-    def timecode(self, newval: bool):
-        self._timecode.set(newval)
-
-    @property
-    def frame_metrics(self) -> bool:
-        return self._frame_metrics.get()
-
-    @frame_metrics.setter
-    def frame_metrics(self, newval: bool):
-        self._frame_metrics.set(newval)
-
-    @property
-    def bounding_box(self) -> bool:
-        return self._bounding_box.get()
-
-    @bounding_box.setter
-    def bounding_box(self, newval: bool):
-        self._bounding_box.set(newval)
-
-    @property
-    def bounding_box_smooth_time(self) -> str:
-        val = self._bounding_box_smooth_time.value
-        if not val.endswith("s"):
-            val += "s"
-        return val
-
-    @bounding_box_smooth_time.setter
-    def bounding_box_smooth_time(self, newval: str):
-        self._bounding_box_smooth_time.value = newval
-
-    @property
-    def bounding_box_color(self) -> str:
-        return self._color_label["bg"]
-
-    @bounding_box_color.setter
-    def bounding_box_color(self, newval: ty.Tuple[int, int, int]) -> str:
-        color_code = (newval[0] << 16) + (newval[1] << 8) + newval[2]
-        self._color_label["bg"] = f"#{str(RGBValue(color_code))[2:]}"
+    def get(self, settings: ScanSettings) -> ScanSettings:
+        settings.set("output-mode", self._output_mode)
+        if self._output_dir:
+            settings.set("output-dir", self._output_dir)
+        if self._output_mode == OutputMode.FFMPEG:
+            settings.set("ffmpeg-input-args", self._ffmpeg_input_args.get())
+            settings.set("ffmpeg-output-args", self._ffmpeg_output_args.get())
+        elif self._output_mode == OutputMode.OPENCV:
+            settings.set("opencv-codec", self._opencv_codec.get())
+            # Text Overlays
+            settings.set("time-code", self._timecode.get())
+            settings.set("frame-metrics", self._frame_metrics.get())
+            settings.set("text-font-color", self._text_font_color.get())
+            settings.set("text-bg-color", self._text_bg_color.get())
+            settings.set("text-font-scale", float(self._text_font_scale.get()))
+            settings.set("text-font-thickness", int(self._text_font_thickness.get()))
+            settings.set("text-border", int(self._text_border.get()))
+            settings.set("text-margin", int(self._text_margin.get()))
+            # Bounding Box
+            settings.set("bounding-box", self._bounding_box.get())
+            settings.set("bounding-box-smooth-time", self._bounding_box_smooth_time.get())
+            settings.set("bounding-box-color", self._bounding_box_color.get())
+            settings.set("bounding-box-min-size", float(self._bounding_box_min_size.get()))
+            settings.set("bounding-box-thickness", float(self._bounding_box_thickness.get()))
+        return settings
 
 
 class ScanArea:
@@ -1036,7 +1046,7 @@ class Application:
         self._create_menubar()
 
         input_frame = ttk.Labelframe(self._root, text="Input", padding=PADDING)
-        self._input = InputArea(input_frame)
+        self._input_area = InputArea(input_frame)
         input_frame.grid(row=0, sticky=tk.NSEW, padx=PADDING, pady=(PADDING, 0))
 
         settings_frame = ttk.Labelframe(self._root, text="Motion", padding=PADDING)
@@ -1154,73 +1164,37 @@ class Application:
     def _set_from(self, settings: ScanSettings):
         """Initialize UI from config file."""
         logger.debug("initializing UI state from settings")
+        # Store copy of settings internally.
         self._settings = settings
-
-        # Scan Settings
-        self._settings_area.kernel_size = self._settings.get("kernel-size")
-        self._settings_area.bg_subtractor = self._settings.get("bg-subtractor")
-        self._settings_area.threshold = self._settings.get("threshold")
-        self._settings_area.min_event_length = self._settings.get("min-event-length")
-        self._settings_area.time_before_event = self._settings.get("time-before-event")
-        self._settings_area.time_post_event = self._settings.get("time-post-event")
-        self._settings_area.use_pts = self._settings.get("use-pts")
-
-        # Output Settings
-        output_mode = OutputMode[self._settings.get("output-mode").upper()]
-        if output_mode == OutputMode.SCAN_ONLY:
+        # Initialize widgets.
+        self._settings_area.set(settings)
+        self._output_area.set(settings)
+        if OutputMode[settings.get("output-mode").upper()] == OutputMode.SCAN_ONLY:
             self._scan_area.scan_only = True
-        else:
-            self._output_area.output_mode = output_mode
-        output_dir = self._settings.get("output-dir")
-        if output_dir:
-            self._output_area.output_dir = output_dir
-        self._output_area.ffmpeg_input_args = self._settings.get("ffmpeg-input-args")
-        self._output_area.ffmpeg_output_args = self._settings.get("ffmpeg-output-args")
-        self._output_area.opencv_codec = self._settings.get("opencv-codec")
-
-        self._output_area.bounding_box = self._settings.get("bounding-box")
-        self._output_area.timecode = self._settings.get("time-code")
-        self._output_area.frame_metrics = self._settings.get("frame-metrics")
-        self._output_area.bounding_box_smooth_time = self._settings.get("bounding-box-smooth-time")
-        self._output_area.bounding_box_color = self._settings.get("bounding-box-color")
 
     def _get_scan_settings(self) -> ty.Optional[ScanSettings]:
         """Get current UI state as a new ScanSettings."""
         settings = copy.deepcopy(self._settings)
 
         # Input Area
-        if self._input.start_end_time:
-            (start, end) = self._input.start_end_time
-            if start != "00:00:00.000":
-                settings.set("start-time", start)
-            if end != "00:00:00.000":
-                settings.set("end-time", end)
-            start_frame = FrameTimecode(start, 1000.0).get_frames()
-            end_frame = FrameTimecode(end, 1000.0).get_frames()
-            if end_frame and end_frame <= start_frame:
-                # TODO: This should be validated by the input widget.
-                logger.error("No frames to process (start time must be less than than end time)")
-                return None
+        settings = self._input_area.get(settings)
+        if not settings:
+            return None
 
         # Settings Area
-        settings.set("kernel-size", self._settings_area.kernel_size)
-        settings.set("bg-subtractor", self._settings_area.bg_subtractor)
-        settings.set("threshold", self._settings_area.threshold)
-        settings.set("min-event-length", self._settings_area.min_event_length)
-        settings.set("time-before-event", self._settings_area.time_before_event)
-        settings.set("time-post-event", self._settings_area.time_post_event)
-        settings.set("use-pts", self._settings_area.use_pts)
+        settings = self._settings_area.get(settings)
 
         # Output Area
-        scan_only = self._scan_area.scan_only
-        output_mode = self._output_area.output_mode
-        settings.set("scan-only", scan_only)
-        settings.set("output-mode", output_mode)
+        settings = self._output_area.get(settings)
 
-        if self._output_area.output_dir:
-            settings.set("output-dir", self._output_area.output_dir)
-        elif not scan_only or self._settings_area.mask_output:
-            # We will create files, prompt the user for an output folder.
+        # Scan Area
+        # TODO: Move this logic into the scan area.
+        settings.set("scan-only", self._scan_area.scan_only)
+        if not settings.get("output-dir") and (
+            not settings.get("scan-only") or settings.get("mask-output")
+        ):
+            # We will create files but an output directory wasn't set ahead of time - prompt the
+            # user to select one.
             output_dir = tkinter.filedialog.askdirectory(
                 title="Set Output Directory", mustexist=True
             )
@@ -1229,18 +1203,7 @@ class Application:
             else:
                 return None
 
-        if output_mode == OutputMode.FFMPEG:
-            settings.set("ffmpeg-input-args", self._output_area.ffmpeg_input_args)
-            settings.set("ffmpeg-output-args", self._output_area.ffmpeg_output_args)
-        elif output_mode == OutputMode.OPENCV:
-            settings.set("opencv-codec", self._output_area.opencv_codec)
-            settings.set("bounding-box", self._output_area.bounding_box)
-            settings.set("time-code", self._output_area.timecode)
-            settings.set("frame-metrics", self._output_area.frame_metrics)
-            settings.set("bounding-box-smooth-time", self._output_area.bounding_box_smooth_time)
-            settings.set("bounding-box-color", self._output_area.bounding_box_color)
-
-        if self._settings_area.mask_output:
+        if settings.get("mask-output"):
             logger.error("ERROR - TODO: Set output path for the output mask based on video name.")
             return None
 

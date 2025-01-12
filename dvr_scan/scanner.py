@@ -267,8 +267,6 @@ class MotionScanner:
         self._roi_deprecated = None
 
         # Input Video Parameters (set_video_time)
-        if not input_videos:
-            input_videos = ["tests/resources/simple_movement.mp4"]
         self._input: VideoJoiner = VideoJoiner(input_videos)  # -i/--input
         self._frame_skip: int = frame_skip  # -fs/--frame-skip
         self._start_time: FrameTimecode = None  # -st/--start-time
