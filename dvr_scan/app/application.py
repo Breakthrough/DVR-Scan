@@ -68,60 +68,89 @@ logger = getLogger("dvr_scan")
 #
 
 
+# TODO: Allow this to be sorted by columns.
+# TODO: Should we have a default sort method when bulk adding videos?
 class InputArea:
-    @property
-    def concatenate(self) -> bool:
-        return self._concatenate.get()
-
-    @property
-    def videos(self) -> ty.List[Path]:
-        raise NotImplementedError()
-
     def __init__(self, root: tk.Widget):
         root.rowconfigure(0, pad=PADDING, weight=1)
         root.rowconfigure(1, pad=PADDING)
         root.rowconfigure(2, pad=PADDING)
         root.rowconfigure(3, pad=PADDING)
+        root.rowconfigure(4, pad=PADDING)
         root.columnconfigure(0, weight=1)
         root.columnconfigure(1, weight=1)
         root.columnconfigure(2, weight=1)
         root.columnconfigure(3, weight=1)
         root.columnconfigure(4, weight=1)
-        root.columnconfigure(5, weight=12, minsize=0)
+        root.columnconfigure(5, weight=1)
+        root.columnconfigure(6, weight=12, minsize=0)
 
-        self._videos = ttk.Treeview(root, columns=("duration", "path"))
+        frame = tk.Frame(root)
+        frame.rowconfigure(0, weight=1)
+        frame.columnconfigure(0, weight=1)
+        frame.columnconfigure(1, weight=1)
+
+        self._videos = ttk.Treeview(
+            frame,
+            columns=("duration", "framerate", "resolution", "path"),
+        )
+
+        scroll_horizontal = ttk.Scrollbar(frame, orient=tk.HORIZONTAL, command=self._videos.xview)
+        scroll_vertical = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=self._videos.yview)
+        scroll_horizontal.grid(row=1, column=0, columnspan=6, sticky="NEW")
+        scroll_vertical.grid(row=0, column=6, rowspan=6, sticky="NSW")
+        self._videos.configure(
+            xscrollcommand=scroll_horizontal.set, yscrollcommand=scroll_vertical.set
+        )
+
+        self._videos.grid(row=0, column=0, sticky=tk.NSEW)
+        frame.grid(row=0, column=0, rowspan=2, columnspan=6, sticky=tk.NSEW)
 
         self._videos.heading("#0", text="Name")
-        self._videos.column("#0", width=40)
+        self._videos.column("#0", width=180, minwidth=80, stretch=False)
         self._videos.heading("duration", text="Duration")
-        self._videos.column("duration", width=40)
+        self._videos.column("duration", width=80, minwidth=80, stretch=False)
+        self._videos.heading("framerate", text="Framerate")
+        self._videos.column("framerate", width=80, minwidth=80, stretch=False)
+        self._videos.heading("resolution", text="Resolution")
+        self._videos.column("resolution", width=80, minwidth=80, stretch=False)
         self._videos.heading("path", text="Path")
-        self._videos.column("path", width=120)
+        self._videos.column("path", width=80, minwidth=80, stretch=False)
 
         self._videos.grid(row=0, column=0, columnspan=6, sticky=tk.NSEW)
 
-        ttk.Button(root, text="Add", state=tk.DISABLED).grid(
-            row=1, column=0, sticky=tk.EW, padx=PADDING
+        ttk.Button(root, text="Add", command=self._add_video).grid(
+            row=2, column=0, sticky=tk.EW, padx=PADDING
         )
-        ttk.Button(root, text="Remove", state=tk.DISABLED).grid(
-            row=1, column=1, sticky=tk.EW, padx=PADDING
+        self._remove_button = ttk.Button(
+            root, text="Remove", state=tk.DISABLED, command=self._on_remove
         )
-        ttk.Button(root, text="Move Up", state=tk.DISABLED).grid(
-            row=1, column=2, sticky=tk.EW, padx=PADDING
-        )
-        ttk.Button(root, text="Move Down", state=tk.DISABLED).grid(
-            row=1, column=3, sticky=tk.EW, padx=PADDING
-        )
+        self._remove_button.grid(row=2, column=1, sticky=tk.EW, padx=PADDING)
+        ttk.Button(
+            root,
+            text="Move Up",
+            command=self._on_move_up,
+        ).grid(row=2, column=2, sticky=tk.EW, padx=PADDING)
+        ttk.Button(
+            root,
+            text="Move Down",
+            command=self._on_move_down,
+        ).grid(row=2, column=3, sticky=tk.EW, padx=PADDING)
 
-        self._concatenate = tk.BooleanVar(root, value=False)
+        self._concatenate = tk.BooleanVar(root, value=True)
+        #
+        #
+        # FIXME: When this is unchecked, we should disable the start/end time controls. We should
+        # just ungrid them entirely and use a placeholder label to fill the row.
+        #
+        #
         ttk.Checkbutton(
             root,
             text="Concatenate",
             variable=self._concatenate,
             onvalue=True,
             offvalue=False,
-            state=tk.DISABLED,
-        ).grid(row=1, column=4, padx=PADDING, sticky=tk.EW)
+        ).grid(row=2, column=4, padx=PADDING, sticky=tk.EW)
 
         # TODO: Change default to value=False. Time is set by default for now for development.
         # TODO: Need to prevent start_time >= end_time.
@@ -133,18 +162,14 @@ class InputArea:
             onvalue=True,
             offvalue=False,
             command=self._on_set_time,
-        ).grid(row=2, column=0, padx=PADDING, sticky=tk.W)
+        ).grid(row=3, column=0, padx=PADDING, sticky=tk.W)
         self._start_time_label = tk.Label(root, text="Start Time", state=tk.DISABLED)
-        self._start_time_label.grid(row=2, column=1, sticky=tk.EW)
         self._start_time = TimecodeEntry(root, value="00:00:00.000")
-        self._start_time.grid(row=2, column=2, padx=PADDING, sticky=tk.EW)
 
         # HACK: Default set to 10 seconds for development. Also need to add some kind of hint that
         # a value of 0 means no end time is set.
         self._end_time_label = tk.Label(root, text="End Time", state=tk.DISABLED)
-        self._end_time_label.grid(row=2, column=3, sticky=tk.EW)
         self._end_time = TimecodeEntry(root, "00:00:10.000")
-        self._end_time.grid(row=2, column=4, padx=PADDING, sticky=tk.EW)
 
         self._use_region = tk.BooleanVar(root, value=False)
         ttk.Checkbutton(
@@ -155,26 +180,29 @@ class InputArea:
             offvalue=False,
             command=self._on_use_regions,
             state=tk.DISABLED,
-        ).grid(row=3, column=0, padx=PADDING, sticky=tk.W)
+        ).grid(row=4, column=0, padx=PADDING, sticky=tk.W)
         self._region_editor = ttk.Button(root, text="Region Editor", state=tk.DISABLED)
-        self._region_editor.grid(row=3, column=1, padx=PADDING, sticky=tk.EW)
         self._load_region_file = ttk.Button(root, text="Load Region File", state=tk.DISABLED)
-        self._load_region_file.grid(row=3, column=2, padx=PADDING, sticky=tk.EW)
         self._current_region = tk.StringVar(value="No Region(s) Specified")
-        tk.Entry(
+        self._current_region_label = tk.Entry(
             root, width=PATH_INPUT_WIDTH, state=tk.DISABLED, textvariable=self._current_region
-        ).grid(row=3, column=3, sticky=tk.EW, padx=PADDING, columnspan=2)
+        )
+        self._region_editor.grid(row=4, column=1, padx=PADDING, sticky=tk.EW)
+        self._load_region_file.grid(row=4, column=2, padx=PADDING, sticky=tk.EW)
+        self._current_region_label.grid(row=4, column=3, sticky=tk.EW, padx=PADDING, columnspan=2)
 
         # Update internal state
         self._on_set_time()
         self._on_use_regions()
-        self.add_video("tests/resources/simple_movement.mp4")
-        self.add_video("tests/resources/simple_movement.mp4")
-        self.add_video("tests/resources/simple_movement.mp4")
-        self.add_video("tests/resources/simple_movement.mp4")
 
     def get(self, settings: ScanSettings) -> ty.Optional[ScanSettings]:
-        settings.set("input", ["tests/resources/simple_movement.mp4"])
+        videos = []
+        for item in self._videos.get_children():
+            # TODO: File bug against PySceneDetect as we can't seem to use Path objects here.
+            videos.append(self._videos.item(item)["values"][4])
+        if not videos:
+            return None
+        settings.set("input", videos)
         if self.start_end_time:
             (start, end) = self.start_end_time
             if start != "00:00:00.000":
@@ -188,16 +216,61 @@ class InputArea:
                 # when being set.
                 logger.error("No frames to process (start time must be less than than end time)")
                 return None
+        return settings
 
-    def add_video(self, path: str):
-        # TODO: error handling
-        video = open_video(path, backend="opencv")
-        self._videos.insert(
-            "",
-            tk.END,
-            text=video.name,
-            values=(video.duration.get_timecode(), Path(video.path).absolute()),
-        )
+    def _add_video(self, path: str = ""):
+        if not path:
+            # TODO: set multiple=true and handle multiple names.
+            paths = tkinter.filedialog.askopenfilename(
+                title="Open video(s)...",
+                # TODO: More extensions.
+                filetypes=[("Video", "*.mp4"), ("Video", "*.avi"), ("Other", "*")],
+                multiple=True,
+            )
+            if not paths:
+                return
+            for path in paths:
+                if not Path(path).exists():
+                    logger.error(f"File does not exist: {path}")
+                    return
+                # TODO: error handling
+                video = open_video(path, backend="opencv")
+                duration = video.duration.get_timecode()
+                framerate = f"{video.frame_rate:g}"
+                resolution = f"{video.frame_size[0]} x {video.frame_size[1]}"
+                path = Path(video.path).absolute()
+                self._videos.insert(
+                    "",
+                    tk.END,
+                    text=video.name,
+                    values=(duration, framerate, resolution, path),
+                )
+        self._remove_button["state"] = tk.NORMAL
+
+    @property
+    def concatenate(self) -> bool:
+        return self._concatenate.get()
+
+    def _on_remove(self):
+        for selection in self._videos.selection():
+            self._videos.delete(selection)
+
+    def _on_move_up(self):
+        for selection in self._videos.selection():
+            index = self._videos.index(selection)
+            if index > 0:
+                self._videos.move(selection, "", index - 1)
+            else:
+                break
+
+    def _on_move_down(self):
+        for selection in self._videos.selection()[::-1]:
+            index = self._videos.index(selection)
+            next = self._videos.next(selection)
+            if next:
+                self._videos.move(next, "", index)
+            else:
+                break
 
     def _on_set_time(self):
         # TODO: When disabled, set start time 0 and end time duration of video.
@@ -206,6 +279,16 @@ class InputArea:
         self._start_time["state"] = state
         self._end_time_label["state"] = state
         self._end_time["state"] = state
+        if state == tk.NORMAL:
+            self._start_time_label.grid(row=3, column=1, sticky=tk.EW)
+            self._start_time.grid(row=3, column=2, padx=PADDING, sticky=tk.EW)
+            self._end_time.grid(row=3, column=4, padx=PADDING, sticky=tk.EW)
+            self._end_time_label.grid(row=3, column=3, sticky=tk.EW)
+        else:
+            self._start_time_label.grid_remove()
+            self._start_time.grid_remove()
+            self._end_time.grid_remove()
+            self._end_time_label.grid_remove()
 
     def _on_use_regions(self):
         state = tk.NORMAL if self._use_region.get() else tk.DISABLED
@@ -1144,6 +1227,7 @@ class Application:
 
     def _start_new_scan(self):
         assert self._scan_window is None
+
         settings = self._get_scan_settings()
         if not settings:
             return
@@ -1164,6 +1248,8 @@ class Application:
     def _set_from(self, settings: ScanSettings):
         """Initialize UI from config file."""
         logger.debug("initializing UI state from settings")
+        for path in settings.get("input"):
+            self._input_area._add_video(path)
         # Store copy of settings internally.
         self._settings = settings
         # Initialize widgets.
@@ -1205,6 +1291,10 @@ class Application:
 
         if settings.get("mask-output"):
             logger.error("ERROR - TODO: Set output path for the output mask based on video name.")
+            return None
+
+        if not self._input_area.concatenate and len(settings.get_arg("input")) > 1:
+            logger.error("ERROR - TODO: Handle non-concatenated inputs.")
             return None
 
         return settings

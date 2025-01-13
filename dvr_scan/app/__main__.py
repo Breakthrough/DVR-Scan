@@ -92,6 +92,12 @@ def get_cli_parser():
         default=False,
     )
 
+    parser.add_argument(
+        "input",
+        nargs="*",
+        type=str,
+    )
+
     return parser
 
 

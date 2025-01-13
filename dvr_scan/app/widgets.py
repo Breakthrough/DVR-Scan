@@ -80,6 +80,7 @@ class TimecodeEntry:
 
         # Expose grid method from underlying widget
         self.grid = self._entry.grid
+        self.grid_remove = self._entry.grid_remove
 
     def __setitem__(self, key, item):
         self._entry[key] = item
