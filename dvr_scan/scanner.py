@@ -505,7 +505,7 @@ class MotionScanner:
                 )
             try:
                 logger.info(f"Loading regions from file: {self._load_region}")
-                regions = load_regions(self._load_region)
+                region_editor = load_regions(self._load_region)
             except ValueError as ex:
                 reason = " ".join(str(arg) for arg in ex.args)
                 if not reason:
@@ -514,11 +514,11 @@ class MotionScanner:
             else:
                 logger.debug(
                     "Loaded %d region%s:\n%s",
-                    len(regions),
-                    "s" if len(regions) > 1 else "",
-                    "\n".join(f"[{i}] = {points}" for i, points in enumerate(regions)),
+                    len(region_editor),
+                    "s" if len(region_editor) > 1 else "",
+                    "\n".join(f"[{i}] = {points}" for i, points in enumerate(region_editor)),
                 )
-            self._regions += regions
+            self._regions += region_editor
         if self._regions:
             self._regions = [
                 [bound_point(point, Size(*self._input.resolution)) for point in shape]
@@ -547,7 +547,7 @@ class MotionScanner:
                     factor_h = frame_h / float(max_h) if max_h > 0 and frame_h > max_h else 1
                     factor_w = frame_w / float(max_w) if max_w > 0 and frame_w > max_w else 1
                     scale_factor = round(max(factor_h, factor_w))
-            regions = RegionEditor(
+            region_editor = RegionEditor(
                 frame=frame_for_crop,
                 initial_shapes=self._regions,
                 initial_scale=scale_factor,
@@ -555,11 +555,11 @@ class MotionScanner:
                 video_path=self._input.paths[0],
                 save_path=self._save_region,
             )
-            if not regions.run():
+            if not region_editor.run():
                 return False
-            self._regions = list(regions.shapes)
+            self._regions = list(region_editor.shapes)
         elif self._save_region:
-            regions = (
+            region_editor = (
                 self._regions
                 if self._regions
                 else [

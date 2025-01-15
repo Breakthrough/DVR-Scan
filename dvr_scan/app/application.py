@@ -22,10 +22,11 @@ from scenedetect import FrameTimecode, open_video
 
 from dvr_scan.app.about_window import AboutWindow
 from dvr_scan.app.common import register_icon
+from dvr_scan.app.region_editor import RegionEditor
 from dvr_scan.app.scan_window import ScanWindow
 from dvr_scan.app.widgets import ColorPicker, Spinbox, TimecodeEntry
 from dvr_scan.config import CHOICE_MAP, CONFIG_MAP
-from dvr_scan.scanner import OutputMode
+from dvr_scan.scanner import OutputMode, Point
 from dvr_scan.shared import ScanSettings
 
 WINDOW_TITLE = "DVR-Scan"
@@ -42,6 +43,7 @@ MIN_WINDOW_HEIGHT = 128
 LARGE_BUTTON_WIDTH = 40
 MAX_THRESHOLD = 255.0
 MAX_DOWNSCALE_FACTOR = 128
+NO_REGIONS_SPECIFIED_TEXT = "No Region(s) Specified"
 
 # TODO: Remove this and use the "debug" setting instead.
 SUPPRESS_EXCEPTIONS = False
@@ -72,6 +74,8 @@ logger = getLogger("dvr_scan")
 # TODO: Should we have a default sort method when bulk adding videos?
 class InputArea:
     def __init__(self, root: tk.Widget):
+        self._root = root
+        self._region_editor: ty.Optional[RegionEditor] = None
         root.rowconfigure(0, pad=PADDING, weight=1)
         root.rowconfigure(1, pad=PADDING)
         root.rowconfigure(2, pad=PADDING)
@@ -138,68 +142,67 @@ class InputArea:
         ).grid(row=2, column=3, sticky=tk.EW, padx=PADDING)
 
         self._concatenate = tk.BooleanVar(root, value=True)
-        #
-        #
-        # FIXME: When this is unchecked, we should disable the start/end time controls. We should
-        # just ungrid them entirely and use a placeholder label to fill the row.
-        #
-        #
         ttk.Checkbutton(
             root,
             text="Concatenate",
             variable=self._concatenate,
             onvalue=True,
             offvalue=False,
+            command=self._on_set_time,
+            state=tk.DISABLED,  # TODO: Enable when implemented.
         ).grid(row=2, column=4, padx=PADDING, sticky=tk.EW)
 
-        # TODO: Change default to value=False. Time is set by default for now for development.
         # TODO: Need to prevent start_time >= end_time.
-        self._set_time = tk.BooleanVar(root, value=True)
-        ttk.Checkbutton(
+        self._set_time = tk.BooleanVar(root, value=False)
+        self._set_time_button = ttk.Checkbutton(
             root,
             text="Set Time",
             variable=self._set_time,
             onvalue=True,
             offvalue=False,
             command=self._on_set_time,
-        ).grid(row=3, column=0, padx=PADDING, sticky=tk.W)
+        )
+        self._set_time_button.grid(row=3, column=0, padx=PADDING, sticky=tk.W)
         self._start_time_label = tk.Label(root, text="Start Time", state=tk.DISABLED)
         self._start_time = TimecodeEntry(root, value="00:00:00.000")
 
-        # HACK: Default set to 10 seconds for development. Also need to add some kind of hint that
-        # a value of 0 means no end time is set.
         self._end_time_label = tk.Label(root, text="End Time", state=tk.DISABLED)
-        self._end_time = TimecodeEntry(root, "00:00:10.000")
+        self._end_time = TimecodeEntry(root, "00:00:00.000")
 
-        self._use_region = tk.BooleanVar(root, value=False)
+        self._set_region = tk.BooleanVar(root, value=False)
         ttk.Checkbutton(
             root,
-            text="Use Regions",
-            variable=self._use_region,
+            text="Set Regions",
+            variable=self._set_region,
             onvalue=True,
             offvalue=False,
             command=self._on_use_regions,
-            state=tk.DISABLED,
         ).grid(row=4, column=0, padx=PADDING, sticky=tk.W)
-        self._region_editor = ttk.Button(root, text="Region Editor", state=tk.DISABLED)
-        self._load_region_file = ttk.Button(root, text="Load Region File", state=tk.DISABLED)
-        self._current_region = tk.StringVar(value="No Region(s) Specified")
+        self._region_editor_button = ttk.Button(
+            root, text="Region Editor", state=tk.DISABLED, command=self._on_edit_regions
+        )
+        self._current_region = tk.StringVar(value=NO_REGIONS_SPECIFIED_TEXT)
         self._current_region_label = tk.Entry(
             root, width=PATH_INPUT_WIDTH, state=tk.DISABLED, textvariable=self._current_region
         )
-        self._region_editor.grid(row=4, column=1, padx=PADDING, sticky=tk.EW)
-        self._load_region_file.grid(row=4, column=2, padx=PADDING, sticky=tk.EW)
+        self._region_editor_button.grid(row=4, column=1, padx=PADDING, sticky=tk.EW)
+        self._regions: ty.List[ty.List[Point]] = []
         self._current_region_label.grid(row=4, column=3, sticky=tk.EW, padx=PADDING, columnspan=2)
 
         # Update internal state
         self._on_set_time()
         self._on_use_regions()
 
-    def get(self, settings: ScanSettings) -> ty.Optional[ScanSettings]:
+    @property
+    def videos(self) -> ty.List[str]:
         videos = []
         for item in self._videos.get_children():
             # TODO: File bug against PySceneDetect as we can't seem to use Path objects here.
-            videos.append(self._videos.item(item)["values"][4])
+            videos.append(self._videos.item(item)["values"][3])
+        return videos
+
+    def get(self, settings: ScanSettings) -> ty.Optional[ScanSettings]:
+        videos = self.videos
         if not videos:
             return None
         settings.set("input", videos)
@@ -216,11 +219,12 @@ class InputArea:
                 # when being set.
                 logger.error("No frames to process (start time must be less than than end time)")
                 return None
+        if self._set_region.get() and self._region_editor and self._region_editor.shapes:
+            settings.set("regions", self._region_editor.shapes)
         return settings
 
     def _add_video(self, path: str = ""):
         if not path:
-            # TODO: set multiple=true and handle multiple names.
             paths = tkinter.filedialog.askopenfilename(
                 title="Open video(s)...",
                 # TODO: More extensions.
@@ -275,11 +279,12 @@ class InputArea:
     def _on_set_time(self):
         # TODO: When disabled, set start time 0 and end time duration of video.
         state = tk.NORMAL if self._set_time.get() else tk.DISABLED
+        self._set_time_button["state"] = tk.NORMAL if self.concatenate else tk.DISABLED
         self._start_time_label["state"] = state
         self._start_time["state"] = state
         self._end_time_label["state"] = state
         self._end_time["state"] = state
-        if state == tk.NORMAL:
+        if state == tk.NORMAL and self.concatenate:
             self._start_time_label.grid(row=3, column=1, sticky=tk.EW)
             self._start_time.grid(row=3, column=2, padx=PADDING, sticky=tk.EW)
             self._end_time.grid(row=3, column=4, padx=PADDING, sticky=tk.EW)
@@ -291,9 +296,39 @@ class InputArea:
             self._end_time_label.grid_remove()
 
     def _on_use_regions(self):
-        state = tk.NORMAL if self._use_region.get() else tk.DISABLED
-        self._region_editor["state"] = state
-        self._load_region_file["state"] = state
+        state = tk.NORMAL if self._set_region.get() else tk.DISABLED
+        self._region_editor_button["state"] = state
+        # self._load_region_file["state"] = tk.DISABLED #state
+
+    def _on_edit_regions(self):
+        videos = self.videos
+        if videos:
+            frame = open_video(videos[0], backend="opencv").read()
+            if self._region_editor is None:
+                self._region_editor = RegionEditor(
+                    frame=frame,
+                    initial_shapes=[],
+                    initial_scale=None,
+                    video_path=videos[0],
+                    debug_mode=False,  # TODO: Wire up debug mode.
+                    save_path=None,
+                    on_close=self._on_region_editor_close,
+                )
+            self._region_editor.run(
+                root=self._root,
+            )
+            self._region_editor._root.grab_set()
+
+    def _on_region_editor_close(self):
+        assert self._region_editor is not None
+        self._regions = self._region_editor.shapes
+        self._current_region.set(
+            f"Using {len(self._regions)} regions." if self._regions else NO_REGIONS_SPECIFIED_TEXT
+        )
+        logger.debug(f"Regions updated: {self._regions}")
+
+        self._region_editor._root.grab_release()
+        self._root.focus()
 
     @property
     def start_end_time(self) -> ty.Optional[ty.Tuple[str, str]]:
@@ -1076,8 +1111,7 @@ class ScanArea:
             ipady=PADDING,
             pady=(0, PADDING),
         )
-        # TODO: Change default to value=False. Scan only is defaulted for testing.
-        self._scan_only = tk.BooleanVar(frame, value=True)
+        self._scan_only = tk.BooleanVar(frame, value=False)
         self._scan_only_button = ttk.Checkbutton(
             frame,
             text="Scan Only",
@@ -1113,7 +1147,7 @@ class Application:
         self._root.focus()
         self._root.mainloop()
 
-    def __init__(self, settings: ScanSettings):
+    def __init__(self, settings: ScanSettings, initial_videos: []):
         self._root = tk.Tk()
         self._root.withdraw()
         self._settings: ScanSettings = None
@@ -1157,6 +1191,8 @@ class Application:
 
         # Initialize UI state from config.
         self._set_from(settings)
+        for path in initial_videos:
+            self._input_area._add_video(path)
 
     def _create_menubar(self):
         root_menu = tk.Menu(self._root)
@@ -1222,6 +1258,8 @@ class Application:
             self._root.event_generate("<<Shutdown>>")
             # Make sure they actually have stopped.
             self._root.after(0, lambda: self._scan_window.stop())
+        if self._input_area._region_editor:
+            self._input_area._region_editor.prompt_save_on_scan(self._root)
         self._root.after(0, lambda: self._root.destroy())
         self._root.withdraw()
 
@@ -1248,11 +1286,8 @@ class Application:
     def _set_from(self, settings: ScanSettings):
         """Initialize UI from config file."""
         logger.debug("initializing UI state from settings")
-        for path in settings.get("input"):
-            self._input_area._add_video(path)
         # Store copy of settings internally.
         self._settings = settings
-        # Initialize widgets.
         self._settings_area.set(settings)
         self._output_area.set(settings)
         if OutputMode[settings.get("output-mode").upper()] == OutputMode.SCAN_ONLY:
@@ -1290,8 +1325,8 @@ class Application:
                 return None
 
         if settings.get("mask-output"):
-            logger.error("ERROR - TODO: Set output path for the output mask based on video name.")
-            return None
+            video_name = Path(settings.get("input")[0]).stem
+            settings.set("mask-output", f"{video_name}-mask.avi")
 
         if not self._input_area.concatenate and len(settings.get_arg("input")) > 1:
             logger.error("ERROR - TODO: Handle non-concatenated inputs.")

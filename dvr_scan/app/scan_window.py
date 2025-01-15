@@ -205,9 +205,12 @@ class ScanWindow:
             self._last_stats_update_ns = curr
             format_dict = progress_bar.format_dict
             format_dict.update(bar_format="{elapsed} {remaining} {rate_fmt}")
-            (self._elapsed, self._remaining, self._rate, _) = tqdm.format_meter(
-                **format_dict
-            ).split(" ")
+            # TODO: Why do we sometimes not get enough values here?
+            values = tqdm.format_meter(**format_dict).split(" ")
+            if len(values) >= 4:
+                (self._elapsed, self._remaining, self._rate, _) = tqdm.format_meter(
+                    **format_dict
+                ).split(" ")
 
     def _do_scan(self):
         self._scanner.scan()

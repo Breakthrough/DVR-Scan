@@ -161,7 +161,9 @@ def main():
     debug_mode = settings.get("debug")
     with redirect(loggers=[logger]):
         try:
-            app = Application(settings=settings)
+            app = Application(
+                settings=settings, initial_videos=args.input if hasattr(args, "input") else []
+            )
             app.run()
 
         except ValueError as ex:

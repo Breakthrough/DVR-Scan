@@ -49,8 +49,8 @@ class ColorPicker:
     def __getitem__(self, key):
         return self._set_button[key]
 
-    def get(self) -> str:
-        return self._color["bg"]
+    def get(self) -> ty.Tuple[int, int, int]:
+        return RGBValue(f"0x{self._color['bg'][1:]}").value
 
     def set(self, newval: ty.Tuple[int, int, int]):
         color_code = (newval[0] << 16) + (newval[1] << 8) + newval[2]

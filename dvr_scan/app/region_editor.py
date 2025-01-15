@@ -49,11 +49,11 @@ from dvr_scan.app.about_window import AboutWindow
 from dvr_scan.app.common import register_icon
 from dvr_scan.region import Point, Size, bound_point, load_regions
 
-# TODO: Update screenshots to reflect release title.
 WINDOW_TITLE = "DVR-Scan Region Editor"
+OWNED_WINDOW_TITLE = "Region Editor"
 PROMPT_TITLE = "DVR-Scan"
 # TODO: Use a different prompt on quit vs. scan start.
-PROMPT_MESSAGE = "You have unsaved changes.\nDo you want to save?"
+PROMPT_MESSAGE = "You have unsaved region changes.\nDo you want to save them?"
 SAVE_TITLE = "Save Region File"
 LOAD_TITLE = "Load Region File"
 
@@ -198,6 +198,7 @@ class RegionEditor:
         debug_mode: bool,
         video_path: str,
         save_path: ty.Optional[str],
+        on_close: ty.Optional[ty.Callable[[], None]] = None,
     ):
         self._settings = EditorSettings(video_path=video_path, save_path=save_path)
         self._source_frame: np.ndarray = frame.copy()  # Frame before downscaling
@@ -225,8 +226,11 @@ class RegionEditor:
         self._mouse_dist: ty.List[int] = []  # Square distance of mouse to point i
         self._scale: int = 1 if initial_scale is None else initial_scale
         self._persisted: bool = True  # Indicates if we've saved outstanding changes to disk.
+        self._persisted_path: str = ""  # Path we've saved changes to, if any.
 
-        self._root: tk.Tk = None
+        self._launched_from_app: bool = False
+        self._on_close: ty.Optional[ty.Callable[[], None]] = on_close
+        self._root: ty.Union[tk.Tk, tk.Toplevel] = None
         self._edit_menu: tk.Menu = None
         self._editor_window: tk.Toplevel = None
         self._editor_canvas: tk.Canvas = None
@@ -262,6 +266,14 @@ class RegionEditor:
             if (self._active_shape is not None and bool(self._regions))
             else None
         )
+
+    @property
+    def persisted(self) -> bool:
+        return self._persisted
+
+    @property
+    def persisted_path(self) -> str:
+        return self._persisted_path
 
     # TODO: Using a virtual event for this would be much cleaner.
     def _rescale(self, draw=True, allow_resize=True):
@@ -341,7 +353,7 @@ class RegionEditor:
         self._edit_menu.entryconfigure("Redo", state=tk.ACTIVE if can_redo else tk.DISABLED)
         if self._regions:
             self._region_selector["values"] = tuple(
-                f"Shape {i+1}" for i in range(len(self._regions))
+                f"Shape {i + 1}" for i in range(len(self._regions))
             )
             assert self._active_shape is not None
             self._region_selector.current(self._active_shape)
@@ -610,35 +622,47 @@ class RegionEditor:
 
         self._root.protocol("WM_DELETE_WINDOW", lambda: self._close(False))
         self._root.bind("<FocusOut>", lambda _: self._cancel_active_action())
-        self._root.bind("<Leave>", lambda _: self._on_mouse_leave())
 
         for i in range(9):
 
             def select_region(index):
                 return lambda _: self._select_region(index)
 
-            self._root.bind(f"{i+1}", select_region(i))
+            self._root.bind(f"{i + 1}", select_region(i))
 
         # TODO: If Shift is held down, allow translating current shape
         # by left-click and drag.
 
     def _close(self, should_scan: bool):
+        if self._launched_from_app:
+            self._root.destroy()
+            self._on_close()
+            return
+
         self._should_scan = should_scan
-        if self._prompt_save_on_quit():
+        if self.prompt_save_on_scan():
             self._root.destroy()
 
-    def _create_canvas(self):
-        pass
-
-    def run(self) -> bool:
+    def run(
+        self,
+        root: ty.Optional[tk.Tk] = None,
+    ) -> ty.Optional[bool]:
         """Run the region editor. Returns True if the video should be scanned, False otherwise."""
         logger.debug("Creating window for frame (scale = %d)", self._scale)
 
-        self._root = tk.Tk()
+        if root:
+            self._root = tk.Toplevel(master=root)
+            self._launched_from_app = True
+        else:
+            self._root = tk.Tk()
+
+        if not self._regions:
+            self._regions = [initial_point_list(self._frame_size)]
+
         # Withdraw root window until we're done adding everything to avoid visual flicker.
         self._root.withdraw()
         self._root.option_add("*tearOff", False)
-        self._root.title(WINDOW_TITLE)
+        self._root.title(OWNED_WINDOW_TITLE if self._launched_from_app else WINDOW_TITLE)
         register_icon(self._root)
         self._root.resizable(True, True)
         self._root.minsize(width=320, height=240)
@@ -684,7 +708,7 @@ class RegionEditor:
         )
         self._region_selector = ttk.Combobox(
             frame,
-            values=list(f"Shape {i+1}" for i in range(len(self._regions))),
+            values=list(f"Shape {i + 1}" for i in range(len(self._regions))),
             width=12,
             justify=tk.CENTER,
         )
@@ -713,21 +737,23 @@ class RegionEditor:
 
         self._root.focus()
         self._root.grab_release()
-        self._root.mainloop()
-        return self._should_scan
+        if not self._launched_from_app:
+            self._root.mainloop()
+            return self._should_scan
 
     def _create_menubar(self):
         root_menu = tk.Menu(self._root)
 
         file_menu = tk.Menu(root_menu)
         root_menu.add_cascade(menu=file_menu, label="File", underline=0)
-        file_menu.add_command(
-            label="Start Scan",
-            command=lambda: self._close(True),
-            accelerator=KEYBIND_START_SCAN,
-            underline=1,
-        )
-        file_menu.add_separator()
+        if not self._launched_from_app:
+            file_menu.add_command(
+                label="Start Scan",
+                command=lambda: self._close(True),
+                accelerator=KEYBIND_START_SCAN,
+                underline=1,
+            )
+            file_menu.add_separator()
         file_menu.add_command(
             label="Open Regions...",
             command=self._prompt_load,
@@ -742,7 +768,9 @@ class RegionEditor:
         )
         file_menu.add_separator()
         file_menu.add_command(
-            label="Quit", command=lambda: self._close(False), accelerator=KEYBIND_QUIT
+            label="Close" if self._launched_from_app else "Quit",
+            command=lambda: self._close(False),
+            accelerator=KEYBIND_QUIT,
         )
 
         edit_menu = tk.Menu(root_menu)
@@ -935,20 +963,24 @@ class RegionEditor:
             filetypes=[("Region File", "*.txt")],
             defaultextension=".txt",
             confirmoverwrite=True,
+            parent=self._root,
         )
         if save_path:
             self._save(save_path)
 
-    def _prompt_save_on_quit(self):
+    def prompt_save_on_scan(self, root: ty.Optional[tk.Widget] = None):
         """Saves any changes that weren't persisted, prompting the user if a path wasn't specified.
         Returns True if we should quit the program, False if we should not quit."""
         # Don't prompt user if changes are already saved.
+        # TODO: If we launched this from the GUI, don't prompt the user to save when they close this
+        # window, only when they close the root application.
         if self._persisted:
             return True
         should_save = tkinter.messagebox.askyesnocancel(
             title=PROMPT_TITLE,
             message=PROMPT_MESSAGE,
             icon=tkinter.messagebox.WARNING,
+            parent=root if root else self._root,
         )
         if should_save is None:
             return False
@@ -958,12 +990,13 @@ class RegionEditor:
                 filetypes=[("Region File", "*.txt")],
                 defaultextension=".txt",
                 confirmoverwrite=True,
+                parent=root if root else self._root,
             )
             if not save_path:
                 return False
             self._save(save_path)
         else:
-            logger.debug("Quitting with unsaved changes.")
+            logger.debug("Continuing with unsaved changes.")
         return True
 
     def _save(self, path=None):
@@ -977,16 +1010,18 @@ class RegionEditor:
                 region_file.write("\n")
         logger.info("Saved region data to: %s", path)
         self._persisted = True
+        self._persisted_path = path
         return True
 
     def _prompt_load(self):
         # TODO: Rename this function.
-        if not self._prompt_save_on_quit():
+        if not self.prompt_save_on_scan():
             return
         load_path = tkinter.filedialog.askopenfilename(
             title=LOAD_TITLE,
             filetypes=[("Region File", "*.txt")],
             defaultextension=".txt",
+            parent=self._root,
         )
         if not load_path:
             return
