@@ -20,6 +20,7 @@ import queue
 import subprocess
 import sys
 import threading
+import typing as ty
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, AnyStr, List, Optional, Tuple, Union
@@ -87,6 +88,16 @@ class OutputMode(Enum):
     """Output using ffmpeg in codec-copy mode."""
     FFMPEG = 4
     """Output using ffmpeg."""
+
+    def __str__(self):
+        if self == OutputMode.SCAN_ONLY:
+            return "SCAN_ONLY"
+        if self == OutputMode.OPENCV:
+            return "SCAN_ONLY"
+        if self == OutputMode.COPY:
+            return "SCAN_ONLY"
+        if self == OutputMode.FFMPEG:
+            return "SCAN_ONLY"
 
 
 @dataclass
@@ -220,7 +231,6 @@ class MotionScanner:
             show_progress: Show a progress bar using tqdm.
         """
 
-        self._in_motion_event: bool = False
         self._show_progress: bool = show_progress
         self._debug_mode: bool = debug_mode
 
@@ -285,6 +295,10 @@ class MotionScanner:
         self._thumbnails = None
         self._highscore = 0
         self._highframe = None
+
+        # Callbacks for UI integration
+        self._scan_started = None
+        self._processed_frame = None
 
         # Make sure we initialize defaults now that we loaded the input videos.
         self.set_detection_params()
@@ -501,7 +515,7 @@ class MotionScanner:
                 )
             try:
                 logger.info(f"Loading regions from file: {self._load_region}")
-                regions = load_regions(self._load_region)
+                region_editor = load_regions(self._load_region)
             except ValueError as ex:
                 reason = " ".join(str(arg) for arg in ex.args)
                 if not reason:
@@ -510,11 +524,11 @@ class MotionScanner:
             else:
                 logger.debug(
                     "Loaded %d region%s:\n%s",
-                    len(regions),
-                    "s" if len(regions) > 1 else "",
-                    "\n".join(f"[{i}] = {points}" for i, points in enumerate(regions)),
+                    len(region_editor),
+                    "s" if len(region_editor) > 1 else "",
+                    "\n".join(f"[{i}] = {points}" for i, points in enumerate(region_editor)),
                 )
-            self._regions += regions
+            self._regions += region_editor
         if self._regions:
             self._regions = [
                 [bound_point(point, Size(*self._input.resolution)) for point in shape]
@@ -543,7 +557,7 @@ class MotionScanner:
                     factor_h = frame_h / float(max_h) if max_h > 0 and frame_h > max_h else 1
                     factor_w = frame_w / float(max_w) if max_w > 0 and frame_w > max_w else 1
                     scale_factor = round(max(factor_h, factor_w))
-            regions = RegionEditor(
+            region_editor = RegionEditor(
                 frame=frame_for_crop,
                 initial_shapes=self._regions,
                 initial_scale=scale_factor,
@@ -551,11 +565,11 @@ class MotionScanner:
                 video_path=self._input.paths[0],
                 save_path=self._save_region,
             )
-            if not regions.run():
+            if not region_editor.run():
                 return False
-            self._regions = list(regions.shapes)
+            self._regions = list(region_editor.shapes)
         elif self._save_region:
-            regions = (
+            region_editor = (
                 self._regions
                 if self._regions
                 else [
@@ -584,24 +598,38 @@ class MotionScanner:
             logger.debug("No regions selected.")
         return True
 
-    def _create_progress_bar(self) -> tqdm:
+    @property
+    def frames_remaining(self) -> int:
         num_frames = self._input.total_frames
         # Correct for end time.
         if self._end_time and self._end_time.frame_num < num_frames:
             num_frames = self._end_time.frame_num
         # Correct for current seek position.
         num_frames = max(0, num_frames - self._input.position.frame_num)
+        return num_frames
+
+    def _create_progress_bar(self) -> tqdm:
         return tqdm(
-            total=num_frames,
+            total=self.frames_remaining,
             unit=" frames",
             desc=PROGRESS_BAR_DESCRIPTION % 0,
             dynamic_ncols=True,
         )
 
     def stop(self):
-        """Stop the current scan call. This is the only thread-safe public method."""
+        """Stop the current scan call. Thread-safe."""
         self._stop.set()
         logger.debug("Stop event set.")
+
+    def is_stopped(self):
+        """Check if the current scan call was stopped, or `False` if one wasn't run. Thread-safe."""
+        return self._stop.is_set()
+
+    def set_callbacks(
+        self, scan_started: ty.Callable[[int], None], processed_frame: ty.Callable[[int], None]
+    ):
+        self._scan_started = scan_started
+        self._processed_frame = processed_frame
 
     def scan(self) -> Optional[DetectionResult]:
         """Performs motion analysis on the MotionScanner's input video(s)."""
@@ -616,6 +644,7 @@ class MotionScanner:
         frames_processed = 0
 
         # Seek to starting position if required.
+        # TODO: Offload this seek to the decode thread.
         if self._start_time is not None:
             self._input.seek(self._start_time)
 
@@ -709,8 +738,10 @@ class MotionScanner:
             if len(self._input.paths) > 1
             else "input video",
         )
+        logger.debug(f"output mode = {self._output_mode}")
 
         progress_bar = FakeTqdmObject() if not self._show_progress else self._create_progress_bar()
+        num_frames_to_process = self.frames_remaining
 
         decode_queue = queue.Queue(MAX_DECODE_QUEUE_SIZE)
         decode_thread = threading.Thread(
@@ -728,8 +759,16 @@ class MotionScanner:
             )
             encode_thread.start()
 
+        if self._scan_started:
+            self._scan_started(num_frames=num_frames_to_process)
+
         # TODO: The main scanning loop should be refactored into a state machine.
         while not self._stop.is_set():
+            if self._processed_frame:
+                num_events = len(event_list)
+                if in_motion_event:
+                    num_events += 1
+                self._processed_frame(progress_bar=progress_bar, num_events=num_events)
             # Keep polling decode queue until it's empty (signaled via None).
             frame: Optional[DecodeEvent] = decode_queue.get()
             if frame is None:

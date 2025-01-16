@@ -158,7 +158,7 @@ class VideoJoiner:
                 raise VideoOpenFailure("Video resolutions must match to be concatenated!")
             if abs(cap.frame_rate - self._cap.frame_rate) > FRAMERATE_DELTA_TOLERANCE:
                 logger.warning(
-                    "Warning: framerate does not match first input." " Timecodes may be incorrect."
+                    "Warning: framerate does not match first input. Timecodes may be incorrect."
                 )
             if round(cap.capture.get(cv2.CAP_PROP_FOURCC)) == 0:
                 unsupported_codec = True
