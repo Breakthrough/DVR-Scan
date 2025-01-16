@@ -80,6 +80,7 @@ install:
   - cd dist
   - move installer\DVR-Scan-*.msi .
   - cp dvr-scan\dvr-scan.exe .
+  - cp dvr-scan\dvr-scan-app.exe .
   - 7z a dvr-scan-signed.zip dvr-scan.exe DVR-Scan-*.msi
   - cd ..
 
@@ -93,6 +94,7 @@ test_script:
   - cd dist/dvr-scan
   - dvr-scan.exe --version
   - dvr-scan.exe -i ../../tests/resources/simple_movement.mp4 -so -df 4 -et 100
+  - dvr-scan-app.exe --version
 
 artifacts:
   # Portable ZIP

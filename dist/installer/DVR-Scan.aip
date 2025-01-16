@@ -19,10 +19,10 @@
     <ROW Property="BannerBitmap" Value="banner.jpg" MultiBuildValue="DefaultBuild:installer_banner.jpg" Type="1" MsiKey="BannerBitmap"/>
     <ROW Property="DialogBitmap" Value="dialog.jpg" MultiBuildValue="DefaultBuild:installer_logo.jpg" Type="1" MsiKey="DialogBitmap"/>
     <ROW Property="Manufacturer" Value="Brandon Castellano"/>
-    <ROW Property="ProductCode" Value="1033:{E5D9C8DA-7B4F-49FE-86B7-D23FABCBC526} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{9632D0E7-685F-405B-86F2-30B3B71C899C} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="DVR-Scan"/>
-    <ROW Property="ProductVersion" Value="1.6.2" Options="32"/>
+    <ROW Property="ProductVersion" Value="1.6.9999" Options="32"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND"/>
     <ROW Property="UpgradeCode" Value="{8FEF5940-4574-4C5D-9776-2CDDC0375510}"/>
     <ROW Property="WindowsType9X" MultiBuildValue="DefaultBuild:Windows 9x/ME" ValueLocId="-"/>
@@ -99,7 +99,7 @@
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCompsComponent">
     <ROW Component="ACT" ComponentId="{D95A9999-B504-484E-A1D8-14BF76FBD948}" Directory_="Australia_Dir" Attributes="0" KeyPath="ACT" Type="0"/>
-    <ROW Component="AI_CustomARPName" ComponentId="{BFD46D26-8B3D-4FF8-AE7F-DF5C2A311385}" Directory_="APPDIR" Attributes="260" KeyPath="DisplayName" Options="1"/>
+    <ROW Component="AI_CustomARPName" ComponentId="{00E96A81-AAD7-4B78-AD54-6DDCEBD81B59}" Directory_="APPDIR" Attributes="260" KeyPath="DisplayName" Options="1"/>
     <ROW Component="AI_DisableModify" ComponentId="{653C9260-5E39-41EA-9C74-362F9C299BED}" Directory_="APPDIR" Attributes="260" KeyPath="NoModify" Options="1"/>
     <ROW Component="APPDIR" ComponentId="{088A429B-96BF-40BE-9BA2-B2CA5EB76862}" Directory_="APPDIR" Attributes="0"/>
     <ROW Component="AST4" ComponentId="{D3AA5737-678B-426E-B6DD-A5D29A98FCBC}" Directory_="SystemV_Dir" Attributes="0" KeyPath="AST4" Type="0"/>
@@ -191,6 +191,7 @@
     <ROW Component="cs.msg" ComponentId="{F272B5C4-45E3-4492-AB70-0672D653C745}" Directory_="msgs_1_Dir" Attributes="0" KeyPath="cs.msg_1" Type="0"/>
     <ROW Component="dvrscan.cfg" ComponentId="{18A37A49-86C6-42DF-A130-DC5499CD6677}" Directory_="DVRScan_Dir" Attributes="16" KeyPath="dvrscan.cfg_1" Type="0"/>
     <ROW Component="dvrscan.exe" ComponentId="{BFAC0A4B-76D6-4EF9-B2B5-DFB8B5AC8885}" Directory_="APPDIR" Attributes="256" KeyPath="dvrscan.exe"/>
+    <ROW Component="dvrscanapp.exe" ComponentId="{A045E3AE-324D-423D-8B7C-1B428B3F619C}" Directory_="APPDIR" Attributes="256" KeyPath="dvrscanapp.exe"/>
     <ROW Component="dvrscanlogo.png" ComponentId="{1A521399-BE46-4639-A4CD-92BBB2F07C9A}" Directory_="dvr_scan_Dir" Attributes="0" KeyPath="dvrscanlogo.png_1" Type="0"/>
     <ROW Component="ffmpeg.exe" ComponentId="{BBCE1F27-65DC-461F-B81C-CF84ED2D7201}" Directory_="APPDIR" Attributes="256" KeyPath="ffmpeg.exe"/>
     <ROW Component="html" ComponentId="{4C35D225-4654-4A96-BABB-5A69EF7F4260}" Directory_="docs_Dir" Attributes="0" KeyPath="html" Type="0"/>
@@ -1267,6 +1268,7 @@
     <ROW File="unsupported.tcl" Component_="bgerror.tcl" FileName="UNSUPP~1.TCL|unsupported.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\_tk_data\unsupported.tcl" SelfReg="false"/>
     <ROW File="xmfbox.tcl" Component_="bgerror.tcl" FileName="xmfbox.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\_tk_data\xmfbox.tcl" SelfReg="false"/>
     <ROW File="_wmi.pyd" Component_="base_library.zip" FileName="_wmi.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\_wmi.pyd" SelfReg="false"/>
+    <ROW File="dvrscanapp.exe" Component_="dvrscanapp.exe" FileName="DVR-SC~1.EXE|dvr-scan-app.exe" Attributes="0" SourcePath="..\dvr-scan\dvr-scan-app.exe" SelfReg="false"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.AiPersistentDataComponent">
     <ROW PersistentRow="dvrscan.cfg_1" Type="0" Condition="1"/>
@@ -1282,7 +1284,7 @@
     <ROW Action="AI_RESTORE_AI_SETUPEXEPATH" Condition="AI_SETUPEXEPATH_ORIGINAL" Sequence="251"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.BuildComponent">
-    <ROW BuildKey="DefaultBuild" BuildName="DefaultBuild" BuildOrder="1" BuildType="0" PackageFolder="." PackageFileName="DVR-Scan-1.6.2-win64" Languages="en" InstallationType="4" ExtUI="true" UseLargeSchema="true" MsiPackageType="x64"/>
+    <ROW BuildKey="DefaultBuild" BuildName="DefaultBuild" BuildOrder="1" BuildType="0" PackageFolder="." PackageFileName="DVR-Scan-1.7-dev0-win64" Languages="en" InstallationType="4" ExtUI="true" UseLargeSchema="true" MsiPackageType="x64"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.DictionaryComponent">
     <ROW Path="&lt;AI_DICTS&gt;ui.ail"/>
@@ -1535,6 +1537,7 @@
     <ROW Feature_="DVRScan" Component_="logo.eps"/>
     <ROW Feature_="DVRScan" Component_="cs.msg"/>
     <ROW Feature_="DVRScan" Component_="altTheme.tcl"/>
+    <ROW Feature_="DVRScan" Component_="dvrscanapp.exe"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiIconsComponent">
     <ROW Name="dvr_scan_icon.exe" SourcePath="dvr_scan_icon.ico" Index="0"/>
@@ -1642,8 +1645,5 @@
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.PreReqSearchComponent">
     <ROW SearchKey="C4FE6FD5B7C4D07B3A313E754A9A6A8Vers" Prereq="C4FE6FD5B7C4D07B3A313E754A9A6A8" SearchType="2" SearchString="HKLM\SOFTWARE\Microsoft\DevDiv\VC\Servicing\14.0\RuntimeMinimum\Version" VerMin="14.26.28720" Order="1" Property="PreReqSearch_C4FE6FD5B7C4D07B3A313E"/>
-  </COMPONENT>
-  <COMPONENT cid="caphyon.advinst.msicomp.SynchronizedFolderComponent">
-    <ROW Directory_="APPDIR" SourcePath="..\dvr-scan" Feature="DVRScan" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="5"/>
   </COMPONENT>
 </DOCUMENT>
