@@ -12,6 +12,7 @@
 import copy
 import tkinter as tk
 import tkinter.filedialog
+import tkinter.messagebox
 import tkinter.ttk as ttk
 import typing as ty
 import webbrowser
@@ -25,7 +26,7 @@ from dvr_scan.app.common import register_icon
 from dvr_scan.app.region_editor import RegionEditor
 from dvr_scan.app.scan_window import ScanWindow
 from dvr_scan.app.widgets import ColorPicker, Spinbox, TimecodeEntry
-from dvr_scan.config import CHOICE_MAP, CONFIG_MAP
+from dvr_scan.config import CHOICE_MAP, CONFIG_MAP, ConfigLoadFailure, ConfigRegistry
 from dvr_scan.scanner import OutputMode, Point
 from dvr_scan.shared import ScanSettings
 
@@ -201,7 +202,7 @@ class InputArea:
             videos.append(self._videos.item(item)["values"][3])
         return videos
 
-    def get(self, settings: ScanSettings) -> ty.Optional[ScanSettings]:
+    def update(self, settings: ScanSettings) -> ty.Optional[ScanSettings]:
         videos = self.videos
         if not videos:
             return None
@@ -619,7 +620,7 @@ class SettingsArea:
         self._max_threshold.set(settings.get("max-threshold"))
         self._variance_threshold.set(settings.get("variance-threshold"))
 
-    def get(self, settings: ScanSettings) -> ScanSettings:
+    def update(self, settings: ScanSettings) -> ScanSettings:
         settings.set("kernel-size", self._kernel_size)
         settings.set("bg-subtractor", self._bg_subtractor.get())
         settings.set("threshold", float(self._threshold.get()))
@@ -1040,7 +1041,7 @@ class OutputArea:
             self._output_dir_str = ""
             self._clear_button["state"] = tk.DISABLED
 
-    def set(self, settings: ScanSettings):
+    def load(self, settings: ScanSettings):
         output_mode = OutputMode[settings.get("output-mode").upper()]
         if output_mode != OutputMode.SCAN_ONLY:
             self._output_mode = output_mode
@@ -1066,7 +1067,7 @@ class OutputArea:
         self._bounding_box_smooth_time.set(settings.get("bounding-box-smooth-time"))
         self._bounding_box_thickness.set(settings.get("bounding-box-thickness"))
 
-    def get(self, settings: ScanSettings) -> ScanSettings:
+    def save(self, settings: ScanSettings) -> ScanSettings:
         settings.set("output-mode", self._output_mode)
         if self._output_dir:
             settings.set("output-dir", self._output_dir)
@@ -1190,7 +1191,7 @@ class Application:
             self._root.report_callback_exception = error_handler
 
         # Initialize UI state from config.
-        self._set_from(settings)
+        self._initialize_settings(settings)
         for path in initial_videos:
             self._input_area._add_video(path)
 
@@ -1203,44 +1204,45 @@ class Application:
 
         file_menu.add_command(
             label="Start Scan",
-            underline=1,
+            underline=0,
             command=lambda: self._root.event_generate("<<StartScan>>"),
         )
         file_menu.add_separator()
         file_menu.add_command(
             label="Quit",
+            underline=0,
             command=self._on_delete,
         )
 
         settings_menu = tk.Menu(root_menu)
-        root_menu.add_cascade(menu=settings_menu, label="Settings", underline=0, state=tk.DISABLED)
+        root_menu.add_cascade(menu=settings_menu, label="Settings", underline=0)
         settings_menu.add_command(
             label="Load...",
-            underline=1,
+            underline=0,
+            command=self._on_load_config,
         )
-        settings_menu.add_command(
-            label="Save...",
-        )
-        settings_menu.add_command(
-            label="Save Current as Default",
-        )
-        settings_menu.add_command(
-            label="Reset",
-            underline=1,
-        )
+        # TODO: Add functionality to save settings to a config file.
+        settings_menu.add_command(label="Save...", underline=0, command=self._on_save_config)
+        # settings_menu.add_command(label="Save as User Default", underline=2, state=tk.DISABLED)
         settings_menu.add_separator()
         settings_menu.add_command(
-            label="Reset Default",
+            label="Reset (User Default)", underline=12, command=self._reset_config
+        )
+        settings_menu.add_command(
+            label="Reset (Program Default)",
+            underline=0,
+            command=lambda: self._reset_config(program_default=True),
         )
 
         help_menu = tk.Menu(root_menu)
         root_menu.add_cascade(menu=help_menu, label="Help", underline=0)
         help_menu.add_command(
-            label="Online Manual",
+            label="Help Guide",
             command=lambda: webbrowser.open_new_tab("www.dvr-scan.com/guide"),
             underline=0,
         )
-        help_menu.add_command(label="Debug Log", underline=0, state=tk.DISABLED)
+        # TODO: Add window to show log messages and copy them to clipboard or save to a logfile.
+        # help_menu.add_command(label="Debug Log", underline=0, state=tk.DISABLED)
         help_menu.add_separator()
 
         help_menu.add_command(
@@ -1283,30 +1285,111 @@ class Application:
         self._scan_area.disable()
         self._scan_window.show()
 
-    def _set_from(self, settings: ScanSettings):
-        """Initialize UI from config file."""
+    def _on_load_config(self):
+        load_path = tkinter.filedialog.askopenfilename(
+            title="Load Config File...",
+            filetypes=[("Config File", "*.cfg")],
+            defaultextension=".cfg",
+            parent=self._root,
+        )
+        if not load_path:
+            return
+        try:
+            config = ConfigRegistry()
+            config.load(load_path)
+        except ConfigLoadFailure as ex:
+            for log_level, log_str in ex.init_log:
+                logger.log(log_level, log_str)
+            tkinter.messagebox.showerror(
+                title="Config Load Failure",
+                message="Invalid config file. See log messages for details.",
+            )
+            return
+
+        for log_level, log_str in config.consume_init_log():
+            logger.log(log_level, log_str)
+        self._reload_config(config)
+
+    def _reset_config(self, program_default: bool = False):
+        if not tkinter.messagebox.askyesno(
+            title="Reset Settings",
+            message="All settings will be reset. Do you want to continue?",
+            icon=tkinter.messagebox.WARNING,
+        ):
+            return
+        try:
+            config = ConfigRegistry()
+            if not program_default:
+                config.load()
+        except ConfigLoadFailure as ex:
+            for log_level, log_str in ex.init_log:
+                logger.log(log_level, log_str)
+            tkinter.messagebox.showerror(
+                title="Config Load Failure",
+                message="Failed to load specified config file. See log messages for details.",
+            )
+            return
+
+        for log_level, log_str in config.consume_init_log():
+            logger.log(log_level, log_str)
+        self._reload_config(config)
+
+    def _reload_config(self, config: ConfigRegistry):
+        """Reinitialize UI from another config."""
+        self._initialize_settings(ScanSettings(args=self._settings._args, config=config))
+
+    def _initialize_settings(self, settings: ScanSettings):
+        """Initialize UI from both UI command-line arguments and config file."""
         logger.debug("initializing UI state from settings")
         # Store copy of settings internally.
         self._settings = settings
+        if settings.get("load-region"):
+            tkinter.messagebox.showwarning(
+                title="Regions Not Loaded",
+                message="Warning: region file from config was not loaded.\n\n"
+                "You can load it from the Region Editor.",
+            )
         self._settings_area.set(settings)
-        self._output_area.set(settings)
+        self._output_area.load(settings)
         if OutputMode[settings.get("output-mode").upper()] == OutputMode.SCAN_ONLY:
             self._scan_area.scan_only = True
 
+    def _on_save_config(self):
+        save_path = tkinter.filedialog.asksaveasfilename(
+            title="Save Config File...",
+            filetypes=[("Config File", "*.cfg")],
+            defaultextension=".cfg",
+            confirmoverwrite=True,
+            parent=self._root,
+        )
+        if not save_path:
+            return
+        settings = self._get_config_settings()
+        with open(save_path, "w") as file:
+            settings.write_to_file(file)
+
+    def _get_config_settings(self) -> ScanSettings:
+        """Get current UI state for writing a config file."""
+        settings = ScanSettings(args=None, config=ConfigRegistry())
+        # Only include settings/output areas, exclude input/scan area.
+        settings = self._settings_area.update(settings)
+        settings = self._output_area.save(settings)
+        return settings
+
     def _get_scan_settings(self) -> ty.Optional[ScanSettings]:
-        """Get current UI state as a new ScanSettings."""
+        """Get current UI state with all options to run a scan."""
         settings = copy.deepcopy(self._settings)
 
         # Input Area
-        settings = self._input_area.get(settings)
+        settings = self._input_area.update(settings)
         if not settings:
             return None
 
         # Settings Area
-        settings = self._settings_area.get(settings)
+        settings = self._settings_area.update(settings)
 
         # Output Area
-        settings = self._output_area.get(settings)
+        settings = self._output_area.save(settings)
 
         # Scan Area
         # TODO: Move this logic into the scan area.

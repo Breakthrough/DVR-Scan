@@ -51,8 +51,19 @@ class ScanSettings:
         arg_val = self.get_arg(option)
         if arg_val is not None:
             return arg_val
-        return self.config.get(option)
+        return self._config.get(option)
 
     def set(self, option: str, value: ty.Union[str, int, float, bool]):
         """Set application overrides for any setting."""
         self._app_settings[option] = value
+
+    def write_to_file(self, file: ty.TextIO):
+        """Get application settings as a config file. Only works for the UI, not CLI."""
+        keys = sorted(self._app_settings.keys())
+        if "mask-output" in keys:
+            keys.remove("mask-output")
+        for key in keys:
+            value = self._app_settings[key]
+            if isinstance(value, bool):
+                value = "yes" if True else "no"
+            file.write(f"{key} = {str(value)}\n")

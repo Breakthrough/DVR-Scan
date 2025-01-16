@@ -89,6 +89,16 @@ class OutputMode(Enum):
     FFMPEG = 4
     """Output using ffmpeg."""
 
+    def __str__(self):
+        if self == OutputMode.SCAN_ONLY:
+            return "SCAN_ONLY"
+        if self == OutputMode.OPENCV:
+            return "SCAN_ONLY"
+        if self == OutputMode.COPY:
+            return "SCAN_ONLY"
+        if self == OutputMode.FFMPEG:
+            return "SCAN_ONLY"
+
 
 @dataclass
 class DecodeEvent:
