@@ -27,8 +27,8 @@ deploy:
   url: https://app.signpath.io/API/v1/f2efa44c-5b5c-45f2-b44f-8f9dde708313/Integrations/AppVeyor?ProjectSlug=DVR-Scan&SigningPolicySlug=release-signing
   authorization:
     secure: FBgWCaxCCKOqc2spYf5NGWSNUGLbT5WeuC5U0k4Of1Ids9n51YWxhGlMyzLbdNBFe64RUcOSzk/N3emlQzbsJg==
-  on:
-    APPVEYOR_REPO_TAG: true # keep casing this way for Linux builds where variables are case-sensitive
+#  on:
+#    APPVEYOR_REPO_TAG: true # keep casing this way for Linux builds where variables are case-sensitive
 
 install:
   - echo * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -81,7 +81,7 @@ install:
   - move installer\DVR-Scan-*.msi .
   - cp dvr-scan\dvr-scan.exe .
   - cp dvr-scan\dvr-scan-app.exe .
-  - 7z a dvr-scan-signed.zip dvr-scan.exe DVR-Scan-*.msi
+  - 7z a dvr-scan-signed.zip dvr-scan.exe dvr-scan-app.exe DVR-Scan-*.msi
   - cd ..
 
 test_script:
