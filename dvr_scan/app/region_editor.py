@@ -359,7 +359,7 @@ class RegionEditor:
         self._edit_menu.entryconfigure("Redo", state=tk.ACTIVE if can_redo else tk.DISABLED)
         if self._regions:
             self._region_selector["values"] = tuple(
-                f"Shape {i+1}" for i in range(len(self._regions))
+                f"Shape {i + 1}" for i in range(len(self._regions))
             )
             assert self._active_shape is not None
             self._region_selector.current(self._active_shape)
@@ -635,7 +635,7 @@ class RegionEditor:
             def select_region(index):
                 return lambda _: self._select_region(index)
 
-            self._root.bind(f"{i+1}", select_region(i))
+            self._root.bind(f"{i + 1}", select_region(i))
 
         # TODO: If Shift is held down, allow translating current shape
         # by left-click and drag.
@@ -702,7 +702,7 @@ class RegionEditor:
         )
         self._region_selector = ttk.Combobox(
             frame,
-            values=list(f"Shape {i+1}" for i in range(len(self._regions))),
+            values=list(f"Shape {i + 1}" for i in range(len(self._regions))),
             width=12,
             justify=tk.CENTER,
         )
