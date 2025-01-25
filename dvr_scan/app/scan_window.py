@@ -205,12 +205,11 @@ class ScanWindow:
             self._last_stats_update_ns = curr
             format_dict = progress_bar.format_dict
             format_dict.update(bar_format="{elapsed} {remaining} {rate_fmt}")
-            # TODO: Why do we sometimes not get enough values here?
             values = tqdm.format_meter(**format_dict).split(" ")
+            # TODO: Why do we sometimes not get enough values here? The format above should always
+            # print a string similar to "NN:NN NN:NN NN.NN frames/s"
             if len(values) >= 4:
-                (self._elapsed, self._remaining, self._rate, _) = tqdm.format_meter(
-                    **format_dict
-                ).split(" ")
+                (self._elapsed, self._remaining, self._rate, *_) = values
 
     def _do_scan(self):
         self._scanner.scan()

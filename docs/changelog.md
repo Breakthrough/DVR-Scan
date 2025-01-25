@@ -7,9 +7,14 @@
 
 ### 1.7 (In Development)
 
- - [feature] New GUI now available across all platforms, can be launched via `dvr-scan-app`
+#### Beta 1
 
+ - [feature] New GUI now available across all platforms, can be launched via `dvr-scan-app`
  - [general] Minimum supported Python version is now 3.9
+
+#### Beta 2 (TBD)
+
+ - [bugfix] Fix "too many values to unpack" exception when scanning video
 
 ----------------------------------------------------------
 
