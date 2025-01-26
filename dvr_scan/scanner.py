@@ -605,7 +605,8 @@ class MotionScanner:
         if self._end_time and self._end_time.frame_num < num_frames:
             num_frames = self._end_time.frame_num
         # Correct for current seek position.
-        num_frames = max(0, num_frames - self._input.position.frame_num)
+        if self._start_time:
+            num_frames = max(0, num_frames - self._start_time.frame_num)
         return num_frames
 
     def _create_progress_bar(self) -> tqdm:

@@ -35,7 +35,7 @@ import pkgutil
 import sys
 
 # Used for module/distribution identification.
-__version__ = "1.7-dev0"
+__version__ = "1.7-dev1"
 
 # Handle loading OpenCV. This **MUST** be first before any other DVR-Scan or third-party
 # packages are imported which might attempt to import the `cv2` module.

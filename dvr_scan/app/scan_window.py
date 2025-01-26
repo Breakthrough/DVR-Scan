@@ -17,6 +17,7 @@ import tkinter.ttk as ttk
 import typing as ty
 from logging import getLogger
 
+from scenedetect import FrameTimecode
 from tqdm import tqdm
 
 from dvr_scan.shared import ScanSettings, init_scanner
@@ -48,7 +49,6 @@ class ScanWindow:
 
         # Widgets
         self._scan_thread = threading.Thread(target=self._do_scan)
-        self._state_lock = threading.Lock()
         self._on_destroyed = on_destroyed
 
         self._progress = tk.IntVar(self._root, value=0)
@@ -99,10 +99,10 @@ class ScanWindow:
         self._close_button.grid(row=0, column=1, pady=padding, sticky=tk.NSEW, padx=padding)
         frame.grid(row=7, column=0, columnspan=2, sticky=tk.NSEW)
 
-        self._prompt_shown = False
-
         self._scan_started = threading.Event()
         self._scan_finished = threading.Event()
+        self._start_time = 0.0
+        self._last_stats_update_ns = 0
         self._expected_num_frames = 0
         self._num_events = 0
         self._frames_processed = 0
@@ -110,7 +110,6 @@ class ScanWindow:
         self._remaining = "N/A"
         self._rate = "N/A"
         self._padding = padding
-        self._last_stats_update_ns = time.time_ns()
 
     def _update(self):
         if self._scan_finished.is_set():
@@ -190,10 +189,12 @@ class ScanWindow:
         self._root.wait_window()
 
     def _on_scan_started(self, num_frames: int):
-        # We only get the number of frames as an event and not synchronously since we try to do as
-        # much work in the worker thread as possible, including seeking to the start time.
+        # We've now seeked to the start of the motion detection area and are processing frames.
+        # We also have an *estimate* of how many frames we'll be processing.
         self._expected_num_frames = num_frames
         self._scan_started.set()
+        # We set start time here to avoid including seek time in the overall FPS calculation.
+        self._start_time = time.time()
 
     def _on_processed_frame(self, progress_bar: tqdm, num_events: int):
         self._num_events = num_events
@@ -205,16 +206,36 @@ class ScanWindow:
             self._last_stats_update_ns = curr
             format_dict = progress_bar.format_dict
             format_dict.update(bar_format="{elapsed} {remaining} {rate_fmt}")
-            values = tqdm.format_meter(**format_dict).split(" ")
-            # TODO: Why do we sometimes not get enough values here? The format above should always
-            # print a string similar to "NN:NN NN:NN NN.NN frames/s"
+            # TODO: Why do we sometimes not get enough or too many values here?
+            #
+            # The format above should always print a string similar to "NN:NN NN:NN NN.NN frames/s".
+            # Some extra spaces might be in there. Filter out empty values?
+            values = tqdm.format_meter(**format_dict).strip().split(" ")
+            if len(values) != 4:
+                logger.error(f"[Issue 198] Incorrect meter format: {values}")
+            # While we determine the underlying cause of the issue, we don't want to stop scanning.
+            # Filter out empty values, ensure we got enough values, and guarad against too many.
+            values = list(filter(bool, values))
             if len(values) >= 4:
+                # Update internal state used for UI labels.
                 (self._elapsed, self._remaining, self._rate, *_) = values
 
     def _do_scan(self):
-        self._scanner.scan()
+        # TODO: Set an event if any exceptions are thrown so we can display an error dialog box
+        # in the main UI thread and close the scan window.
+        result = self._scanner.scan()
         self._scan_finished.set()
-        # TODO: We need to add a hook to be called before we destroy the progress bar so we can also
-        # extract the final values. We also need to verify that the scan completed or if it was
-        # stopped early, or if an error occurs.
+        self._frames_processed = result.num_frames
+        elapsed = time.time() - self._start_time
+        self._elapsed = (
+            FrameTimecode(elapsed, 1000.0)
+            .get_timecode(precision=0, use_rounding=True)
+            .removeprefix("00:")
+        )
+        # TODO: This rate will always be a tiny bit slower than the one shown in stdout since we
+        # use different timers. This can be fixed if we add a callback to the MotionScanner that
+        # we can use to access the progress bar the scanner created.
+        self._rate = (
+            "%.2f" % (float(self._frames_processed) / elapsed) if self._frames_processed else "N/A"
+        )
         # TODO: Figure out how to open the output directory when scanning is complete.
