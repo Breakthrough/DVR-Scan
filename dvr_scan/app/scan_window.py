@@ -14,6 +14,7 @@ import time
 import tkinter as tk
 import tkinter.messagebox as messagebox
 import tkinter.ttk as ttk
+import traceback
 import typing as ty
 from logging import getLogger
 
@@ -101,6 +102,7 @@ class ScanWindow:
 
         self._scan_started = threading.Event()
         self._scan_finished = threading.Event()
+        self._scan_exception = None
         self._start_time = 0.0
         self._last_stats_update_ns = 0
         self._expected_num_frames = 0
@@ -113,7 +115,19 @@ class ScanWindow:
 
     def _update(self):
         if self._scan_finished.is_set():
-            logger.debug("scan completed")
+            if self._scan_exception:
+                formatted_exception = "\n".join(traceback.format_exception(self._scan_exception))
+                logger.critical(f"error during scan:\n{formatted_exception}")
+                messagebox.showerror(
+                    "Scan Error",
+                    "Error during scanning. See log messages for more info."
+                    f"\nSummary: {self._scan_exception}",
+                    parent=self._root,
+                )
+                self._destroy()
+                return
+            else:
+                logger.debug("scan complete")
             self._progress.set(self._expected_num_frames)
             self._elapsed_label["text"] = f"Elapsed: {self._elapsed}"
             self._remaining_label["text"] = "\n"
@@ -199,9 +213,7 @@ class ScanWindow:
     def _on_processed_frame(self, progress_bar: tqdm, num_events: int):
         self._num_events = num_events
         self._frames_processed += 1
-
         curr = time.time_ns()
-
         if (curr - self._last_stats_update_ns) > STATS_UPDATE_RATE_NS:
             self._last_stats_update_ns = curr
             format_dict = progress_bar.format_dict
@@ -221,11 +233,14 @@ class ScanWindow:
                 (self._elapsed, self._remaining, self._rate, *_) = values
 
     def _do_scan(self):
-        # TODO: Set an event if any exceptions are thrown so we can display an error dialog box
-        # in the main UI thread and close the scan window.
-        result = self._scanner.scan()
-        self._scan_finished.set()
-        self._frames_processed = result.num_frames
+        # We'll handle any errors below in the main Tkinter thread.
+        try:
+            result = self._scanner.scan()
+            self._frames_processed = result.num_frames
+        except Exception as ex:  # noqa: E722
+            self._scan_exception = ex
+        finally:
+            self._scan_finished.set()
         elapsed = time.time() - self._start_time
         self._elapsed = (
             FrameTimecode(elapsed, 1000.0)

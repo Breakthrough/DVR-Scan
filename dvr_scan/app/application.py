@@ -216,8 +216,6 @@ class InputArea:
             start_frame = FrameTimecode(start, 1000.0).get_frames()
             end_frame = FrameTimecode(end, 1000.0).get_frames()
             if end_frame and end_frame <= start_frame:
-                # TODO: We should prevent this from being possible by constraining start/end time
-                # when being set.
                 logger.error("No frames to process (start time must be less than than end time)")
                 return None
         if self._set_region.get() and self._region_editor and self._region_editor.shapes:
@@ -1180,8 +1178,8 @@ class Application:
         scan_frame.grid(row=3, sticky=tk.EW, padx=PADDING, pady=PADDING)
 
         self._scan_window: ty.Optional[ScanWindow] = None
-        self._root.bind("<<StartScan>>", lambda _: self._start_new_scan())
-        self._root.protocol("WM_DELETE_WINDOW", self._on_delete)
+        self._root.bind("<<StartScan>>", lambda _: self._start_scan())
+        self._root.protocol("WM_DELETE_WINDOW", self._destroy)
 
         if not SUPPRESS_EXCEPTIONS:
 
@@ -1211,7 +1209,7 @@ class Application:
         file_menu.add_command(
             label="Quit",
             underline=0,
-            command=self._on_delete,
+            command=self._destroy,
         )
 
         settings_menu = tk.Menu(root_menu)
@@ -1219,7 +1217,7 @@ class Application:
         settings_menu.add_command(
             label="Load...",
             underline=0,
-            command=self._on_load_config,
+            command=self._load_config,
         )
         # TODO: Add functionality to save settings to a config file.
         settings_menu.add_command(label="Save...", underline=0, command=self._on_save_config)
@@ -1251,7 +1249,7 @@ class Application:
             underline=0,
         )
 
-    def _on_delete(self):
+    def _destroy(self):
         logger.debug("shutting down")
         if self._scan_window is not None:
             # NOTE: We do not actually wait here,
@@ -1265,27 +1263,32 @@ class Application:
         self._root.after(0, lambda: self._root.destroy())
         self._root.withdraw()
 
-    def _start_new_scan(self):
+    def _start_scan(self):
+        # It should not be possible to start two scans in parallel with the current UI.
+        # Once we start a scan, the scan window should grab input focus until it is closed.
         assert self._scan_window is None
 
-        settings = self._get_scan_settings()
+        # TODO: Instead of just returning None below if the settings are invalid or we can't start
+        # the scan (e.g. no input videos selected), we should throw an exception and catch it here.
+        # We should then display a messagebox to the user indicating why the scan couldn't start.
+        settings = self._get_settings()
         if not settings:
             return
 
         logger.debug(f"ui settings:\n{settings.app_settings}")
 
-        def on_scan_window_close():
+        def on_closed():
             logger.debug("scan window closed, restoring focus")
             self._scan_window = None
             self._scan_area.enable()
             self._root.deiconify()
             self._root.focus()
 
-        self._scan_window = ScanWindow(self._root, settings, on_scan_window_close, PADDING)
+        self._scan_window = ScanWindow(self._root, settings, on_closed, PADDING)
         self._scan_area.disable()
         self._scan_window.show()
 
-    def _on_load_config(self):
+    def _load_config(self):
         load_path = tkinter.filedialog.askopenfilename(
             title="Load Config File...",
             filetypes=[("Config File", "*.cfg")],
@@ -1376,7 +1379,7 @@ class Application:
         settings = self._output_area.save(settings)
         return settings
 
-    def _get_scan_settings(self) -> ty.Optional[ScanSettings]:
+    def _get_settings(self) -> ty.Optional[ScanSettings]:
         """Get current UI state with all options to run a scan."""
         settings = copy.deepcopy(self._settings)
 
