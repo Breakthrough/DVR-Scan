@@ -19,6 +19,7 @@
 
  - [bugfix] Fix "too many values to unpack" exception when scanning video
  - [bugfix] Fix incorrect calculation of total frames when showing progress
+ - [bugfix] Fix drag-and-drop shortcut not working due to not parsing input paths from command line
  - [general] Show alert on any errors during motion scanning
 
 

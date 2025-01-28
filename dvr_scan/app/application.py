@@ -223,6 +223,7 @@ class InputArea:
         return settings
 
     def _add_video(self, path: str = ""):
+        paths = []
         if not path:
             paths = tkinter.filedialog.askopenfilename(
                 title="Open video(s)...",
@@ -232,22 +233,24 @@ class InputArea:
             )
             if not paths:
                 return
-            for path in paths:
-                if not Path(path).exists():
-                    logger.error(f"File does not exist: {path}")
-                    return
-                # TODO: error handling
-                video = open_video(path, backend="opencv")
-                duration = video.duration.get_timecode()
-                framerate = f"{video.frame_rate:g}"
-                resolution = f"{video.frame_size[0]} x {video.frame_size[1]}"
-                path = Path(video.path).absolute()
-                self._videos.insert(
-                    "",
-                    tk.END,
-                    text=video.name,
-                    values=(duration, framerate, resolution, path),
-                )
+        else:
+            paths = [path]
+        for path in paths:
+            if not Path(path).exists():
+                logger.error(f"File does not exist: {path}")
+                return
+            # TODO: error handling
+            video = open_video(path, backend="opencv")
+            duration = video.duration.get_timecode()
+            framerate = f"{video.frame_rate:g}"
+            resolution = f"{video.frame_size[0]} x {video.frame_size[1]}"
+            path = Path(video.path).absolute()
+            self._videos.insert(
+                "",
+                tk.END,
+                text=video.name,
+                values=(duration, framerate, resolution, path),
+            )
         self._remove_button["state"] = tk.NORMAL
 
     @property
@@ -1146,7 +1149,7 @@ class Application:
         self._root.focus()
         self._root.mainloop()
 
-    def __init__(self, settings: ScanSettings, initial_videos: []):
+    def __init__(self, settings: ScanSettings, initial_videos: ty.List[str]):
         self._root = tk.Tk()
         self._root.withdraw()
         self._settings: ScanSettings = None
