@@ -7,9 +7,10 @@
 
 ### How do I run DVR-Scan?
 
-DVR-Scan is a command-line program and must be launched from a terminal or command prompt (e.g. `cmd.exe` on Windows). A GUI is in development for an upcoming release.
-
+Currently, DVR-Scan is a command-line program only, and must be launched from a terminal or command prompt (e.g. `cmd.exe` on Windows).
 In the meantime, Windows users can [use these instructions](https://github.com/Breakthrough/DVR-Scan/issues/178) create helpful drag-and-drop shortcuts. These will allow you to run DVR-Scan by dragging and dropping the video(s) you want to scan.
+
+!!! note "A [beta release for the new GUI version of DVR-Scan](https://github.com/Breakthrough/DVR-Scan/releases/tag/v1.7-dev0) is now available for testing on Windows/Linux/OSX!"
 
 
 ----------------------------------------------------------
@@ -25,7 +26,7 @@ Hit `Ctrl + C` on your keyboard to exit DVR-Scan.
 
 ### Where is the output saved?
 
-DVR-Scan saves all files in the current working directory (the location you are invoking the `dvr-scan` command from). You can override the output directory by setting [the `-d`/`--output-dir` option](docs.md#inputoutput):
+DVR-Scan saves all files in the current working directory (the location you are invoking the `dvr-scan` command from). You can override the output directory by setting [the `-d`/`--output-dir` option](docs.md#output):
 
 ```
 dvr-scan -i video.mp4 -d events_folder/

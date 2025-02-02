@@ -152,9 +152,9 @@ def build_docs(use_local_images=True):
             "assets/images",
             "assets/javascripts/lunr",
             "assets/javascripts/workers",
-            "assets/javascripts/bundle.220ee61c.min.js.map",
-            "assets/stylesheets/main.eebd395e.min.css.map",
-            "assets/stylesheets/palette.ecc896b0.min.css.map",
+            "assets/javascripts/bundle.88dd0f4e.min.js.map",
+            "assets/stylesheets/main.6f8fc17f.min.css.map",
+            "assets/stylesheets/palette.06af60db.min.css.map",
         ):
             to_remove = docs_build_path.joinpath(to_remove)
             shutil.rmtree(
@@ -162,9 +162,9 @@ def build_docs(use_local_images=True):
             ) if to_remove.is_dir() else to_remove.unlink()
 
         def remove_mapping():
-            path = docs_build_path.joinpath("assets/javascripts/bundle.220ee61c.min.js")
+            path = docs_build_path.joinpath("assets/javascripts/bundle.88dd0f4e.min.js")
             contents = path.read_text()
-            TO_REMOVE = "//# sourceMappingURL=bundle.220ee61c.min.js.map\n"
+            TO_REMOVE = "//# sourceMappingURL=bundle.88dd0f4e.min.js.map\n"
             assert TO_REMOVE in contents
             contents = contents.replace(TO_REMOVE, "")
             path.unlink()

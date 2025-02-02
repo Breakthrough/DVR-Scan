@@ -76,7 +76,7 @@ jobs:
           Move-Item -Path dist/ffmpeg/LICENSE -Destination dist/dvr-scan/LICENSE-FFMPEG -Force
 
       - name: Upload
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.0
         with:
           name: DVR-Scan-win64_portable
           path: dist/dvr-scan
@@ -87,7 +87,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/download-artifact@v4.1.7
+      - uses: actions/download-artifact@v4.1.8
         with:
           name: DVR-Scan-win64_portable
           path: build

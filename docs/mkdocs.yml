@@ -23,7 +23,6 @@ theme:
         icon: material/brightness-7
         name: Switch to dark mode
 
-
   logo: assets/dvr-scan.png
   icon:
     logo: material/magnify-scan
@@ -44,8 +43,14 @@ theme:
     - toc.integrate
     - content.code.copy
 
+plugins:
+ - minify:
+    minify_html: true
+    minify_js: true
+    minify_css: true
+    css_files:
+      - style.css
 
-plugins: []
 markdown_extensions:
  - admonition
  - attr_list
@@ -55,13 +60,11 @@ markdown_extensions:
     alternate_style: true
  - pymdownx.superfences
  - pymdownx.emoji:
-    emoji_index: !!python/name:materialx.emoji.twemoji
-    emoji_generator: !!python/name:materialx.emoji.to_svg
+    emoji_index: !!python/name:material.extensions.emoji.twemoji
+    emoji_generator: !!python/name:material.extensions.emoji.to_svg
  - toc:
     toc_depth: 6
     permalink: true
-
-
 
 nav:
  - 'User Guide': 'guide.md'

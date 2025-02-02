@@ -9,6 +9,14 @@ hide:
 
 -------------------------------
 
+## GUI Release (Beta)
+
+A new GUI is under development for the next version of DVR-Scan and is available now for beta testing. The beta release can be [downloaded from Github](https://github.com/Breakthrough/DVR-Scan/releases/tag/v1.7-dev0). All current stable versions of DVR-Scan are command-line only.
+
+Feedback for the new GUI is welcome. Users can download and install the beta ontop of an existing DVR-Scan installation, and it is compatible with all existing config and region files.
+
+-------------------------------
+
 ## Python <span class="dvr-scan-download-icons">:fontawesome-brands-windows::fontawesome-brands-apple::fontawesome-brands-linux:</span>
 
 !!! python-download "**1.6.2**<span class="dvr-scan-release-date">December 17, 2024</span>"
