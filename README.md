@@ -4,9 +4,9 @@
 
 ------------------------------------------------
 
-### Beta Release: v1.7-dev0 (January 16, 2025)
+### Beta Release: v1.7-dev1 (February 2, 2025)
 
-The latest beta of DVR-Scan includes a new GUI.  See [the release page](https://github.com/Breakthrough/DVR-Scan/releases/tag/v1.7-dev0) for download links and screenshots.  Feedback is most welcome (see issue [#198](https://github.com/Breakthrough/DVR-Scan/issues/198)).
+The latest beta of DVR-Scan includes a new GUI.  See [the release page](https://github.com/Breakthrough/DVR-Scan/releases/tag/v1.7-dev1) for download links and screenshots.  Feedback is most welcome (see issue [#198](https://github.com/Breakthrough/DVR-Scan/issues/198)).
 
 ![GUI Beta Screenshot](https://github.com/user-attachments/assets/6d6bb509-f40c-48ba-95d9-a7912935e9eb)
 
