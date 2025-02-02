@@ -7,7 +7,7 @@
 
 ### 1.7 (In Development)
 
-#### Beta 1
+#### Beta 1 (1.7-dev0)
 
  - [feature] New GUI now available across all platforms, can be launched via `dvr-scan-app`
     - Has UI elements for all settings, supports editing motion regions
@@ -15,13 +15,12 @@
     - Supports loading/saving config files compatible with the `dvr-scan` CLI command
  - [general] Minimum supported Python version is now 3.9
 
-#### Beta 2 (TBD)
+#### Beta 2 (1.7-dev1)
 
  - [bugfix] Fix "too many values to unpack" exception when scanning video
  - [bugfix] Fix incorrect calculation of total frames when showing progress
  - [bugfix] Fix drag-and-drop shortcut not working due to not parsing input paths from command line
  - [general] Show alert on any errors during motion scanning
-
 
 ----------------------------------------------------------
 
