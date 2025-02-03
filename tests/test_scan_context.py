@@ -237,3 +237,21 @@ def test_start_duration(traffic_camera_video):
     event_list = [(event.start.frame_num, event.end.frame_num) for event in event_list]
     # The set duration should only cover the middle event.
     compare_event_lists(event_list, TRAFFIC_CAMERA_EVENTS[1:2], EVENT_FRAME_TOLERANCE)
+
+
+TRAFFIC_CAMERA_EVENTS_MERGE_WITHIN_TIME_BEFORE = [
+    (2, 149),
+    (306, 576),
+]
+
+
+def test_merge_within_time_before(traffic_camera_video):
+    """Test setting time_pre_event."""
+    scanner = MotionScanner([traffic_camera_video])
+    scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
+    scanner.set_event_params(min_event_len=4, time_pre_event=52)
+    event_list = scanner.scan().event_list
+    event_list = [(event.start.frame_num, event.end.frame_num) for event in event_list]
+    compare_event_lists(
+        event_list, TRAFFIC_CAMERA_EVENTS_MERGE_WITHIN_TIME_BEFORE, EVENT_FRAME_TOLERANCE
+    )

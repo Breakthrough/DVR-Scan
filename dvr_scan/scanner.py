@@ -263,8 +263,9 @@ class MotionScanner:
 
         # Motion Event Parameters (set_event_params)
         self._min_event_len = None  # -l/--min-event-length
-        self._pre_event_len = None  # -tb/--time-before-event
-        self._post_event_len = None  # -tp/--time-post-event
+        self._min_event_dist = None  # --min-event-dist  # TODO: Implement this to fix #72.
+        self._time_before_event = None  # -tb/--time-before-event
+        self._time_post_event = None  # -tp/--time-post-event
         self._use_pts = None  # --use_pts
 
         # Region Parameters (set_region)
@@ -471,8 +472,8 @@ class MotionScanner:
         """Set motion event parameters."""
         assert self._input.framerate is not None
         self._min_event_len = FrameTimecode(min_event_len, self._input.framerate)
-        self._pre_event_len = FrameTimecode(time_pre_event, self._input.framerate)
-        self._post_event_len = FrameTimecode(time_post_event, self._input.framerate)
+        self._time_before_event = FrameTimecode(time_pre_event, self._input.framerate)
+        self._time_post_event = FrameTimecode(time_post_event, self._input.framerate)
         self._use_pts = use_pts
 
     def set_thumbnail_params(self, thumbnails: str = None):
@@ -693,8 +694,8 @@ class MotionScanner:
         )
 
         # Correct event length parameters to account frame skip.
-        post_event_len: int = self._post_event_len.frame_num // (self._frame_skip + 1)
-        pre_event_len: int = self._pre_event_len.frame_num // (self._frame_skip + 1)
+        post_event_len: int = self._time_post_event.frame_num // (self._frame_skip + 1)
+        pre_event_len: int = self._time_before_event.frame_num // (self._frame_skip + 1)
         min_event_len: int = max(self._min_event_len.frame_num // (self._frame_skip + 1), 1)
 
         # Calculations below rely on min_event_len always being >= 1 (cannot be zero)
@@ -705,21 +706,19 @@ class MotionScanner:
         # need to compensate for rounding errors when we corrected it for frame skip. This is
         # important as this affects the number of frames we consider for the actual motion event.
         if not self._use_pts:
-            start_event_shift: int = self._pre_event_len.frame_num + min_event_len * (
+            start_event_shift: int = self._time_before_event.frame_num + min_event_len * (
                 self._frame_skip + 1
             )
         else:
             start_event_shift_ms: float = (
-                self._pre_event_len.get_seconds() + self._min_event_len.get_seconds()
+                self._time_before_event.get_seconds() + self._min_event_len.get_seconds()
             ) * 1000
 
         # Length of buffer we require in memory to keep track of all frames required for -l and -tb.
         buff_len = pre_event_len + min_event_len
         event_end = self._input.position
-        if not self._use_pts:
-            last_frame_above_threshold = 0
-        else:
-            last_frame_above_threshold_ms = 0
+        last_frame_above_threshold = 0
+        last_frame_above_threshold_ms = 0
 
         if self._bounding_box:
             self._bounding_box.set_corrections(
@@ -825,6 +824,11 @@ class MotionScanner:
                     )
                 )
 
+            #
+            # TODO: Make a small state diagram and create a new state enum to handle different
+            # merging modes, etc.
+            #
+
             # Last frame was part of a motion event, or still within the post-event window.
             if in_motion_event:
                 # If this frame still has motion, reset the post-event window.
@@ -839,67 +843,39 @@ class MotionScanner:
                 #
                 # TODO(#72): We should wait until the max of *both* the pre-event and post-
                 # event windows have passed. Right now we just consider the post-event window.
+                # We should also allow configuring overlap behavior:
+                #  - normal: If any new motion is found within max(time_pre_event, time_post_event),
+                #            it will be merged with the preceeding event.
+                #  - extended: Events that have a gap of size (time_pre_event + time_post_event)
+                #              between each other will be merged.
                 else:
                     num_frames_post_event += 1
-                    if num_frames_post_event >= post_event_len:
+                    if num_frames_post_event >= (pre_event_len + post_event_len):
                         in_motion_event = False
-
-                        logger.debug(
-                            "event %d high score %f" % (1 + self._num_events, self._highscore)
+                        # TODO: We can't throw these frames away, they might be needed for the
+                        # next event to satisfy it's own pre_event_len.
+                        buffered_frames = []
+                        event = self._on_event_end(
+                            last_frame_above_threshold,
+                            last_frame_above_threshold_ms,
+                            event_start,
                         )
-                        if self._thumbnails == "highscore":
-                            video_name = get_filename(
-                                path=self._input.paths[0], include_extension=False
-                            )
-                            output_path = (
-                                self._comp_file
-                                if self._comp_file
-                                else OUTPUT_FILE_TEMPLATE.format(
-                                    VIDEO_NAME=video_name,
-                                    EVENT_NUMBER="%04d" % (1 + self._num_events),
-                                    EXTENSION="jpg",
-                                )
-                            )
-                            if self._output_dir:
-                                output_path = os.path.join(self._output_dir, output_path)
-                            cv2.imwrite(output_path, self._highframe)
-                            self._highscore = 0
-                            self._highframe = None
-
-                        # Calculate event end based on the last frame we had with motion plus
-                        # the post event length time. We also need to compensate for the number
-                        # of frames that we skipped that could have had motion.
-                        # We also add 1 to include the presentation duration of the last frame.
-                        if not self._use_pts:
-                            event_end = FrameTimecode(
-                                1
-                                + last_frame_above_threshold
-                                + self._post_event_len.frame_num
-                                + self._frame_skip,
-                                self._input.framerate,
-                            )
-                            assert event_end.frame_num >= event_start.frame_num
-                        else:
-                            event_end = FrameTimecode(
-                                (last_frame_above_threshold_ms / 1000)
-                                + self._post_event_len.get_seconds(),
-                                self._input.framerate,
-                            )
-                            assert event_end.get_seconds() >= event_start.get_seconds()
-                        event_list.append(MotionEvent(start=event_start, end=event_end))
+                        event_list.append(event)
                         if self._output_mode != OutputMode.SCAN_ONLY:
                             encode_queue.put(MotionEvent(start=event_start, end=event_end))
-
                 # Send frame to encode thread.
                 if in_motion_event and self._output_mode == OutputMode.OPENCV:
-                    encode_queue.put(
-                        EncodeFrameEvent(
-                            frame_bgr=frame.frame_bgr,
-                            timecode=frame.timecode,
-                            bounding_box=bounding_box,
-                            score=frame_score,
-                        )
+                    encode_frame = EncodeFrameEvent(
+                        frame_bgr=frame.frame_bgr,
+                        timecode=frame.timecode,
+                        bounding_box=bounding_box,
+                        score=frame_score,
                     )
+                    if num_frames_post_event < post_event_len:
+                        encode_queue.put(encode_frame)
+                    else:
+                        buffered_frames.append(encode_frame)
+
             # Not already in a motion event, look for a new one.
             else:
                 # Buffer the required amount of frames and overlay data until we find an event.
@@ -1016,6 +992,48 @@ class MotionScanner:
             )
 
         return DetectionResult(event_list, frames_processed)
+
+    def _on_event_end(
+        self,
+        last_frame_above_threshold,
+        last_frame_above_threshold_ms,
+        event_start,
+    ) -> MotionEvent:
+        logger.debug("event %d high score %f" % (1 + self._num_events, self._highscore))
+        if self._thumbnails == "highscore":
+            video_name = get_filename(path=self._input.paths[0], include_extension=False)
+            output_path = (
+                self._comp_file
+                if self._comp_file
+                else OUTPUT_FILE_TEMPLATE.format(
+                    VIDEO_NAME=video_name,
+                    EVENT_NUMBER="%04d" % (1 + self._num_events),
+                    EXTENSION="jpg",
+                )
+            )
+            if self._output_dir:
+                output_path = os.path.join(self._output_dir, output_path)
+            cv2.imwrite(output_path, self._highframe)
+            self._highscore = 0
+            self._highframe = None
+
+        # Calculate event end based on the last frame we had with motion plus
+        # the post event length time. We also need to compensate for the number
+        # of frames that we skipped that could have had motion.
+        # We also add 1 to include the presentation duration of the last frame.
+        if not self._use_pts:
+            event_end = FrameTimecode(
+                1 + last_frame_above_threshold + self._time_post_event.frame_num + self._frame_skip,
+                self._input.framerate,
+            )
+            assert event_end.frame_num >= event_start.frame_num
+        else:
+            event_end = FrameTimecode(
+                (last_frame_above_threshold_ms / 1000) + self._time_post_event.get_seconds(),
+                self._input.framerate,
+            )
+            assert event_end.get_seconds() >= event_start.get_seconds()
+        return MotionEvent(start=event_start, end=event_end)
 
     def _decode_thread(self, decode_queue: queue.Queue):
         try:
