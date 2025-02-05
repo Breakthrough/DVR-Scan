@@ -16,11 +16,14 @@ Validates functionality of the motion scanning context using various parameters.
 import platform
 import typing as ty
 
+import numpy as np
 import pytest
+from scenedetect import FrameTimecode
 
 from dvr_scan.region import Point
-from dvr_scan.scanner import DetectorType, MotionScanner
-from dvr_scan.subtractor import SubtractorCNT, SubtractorCudaMOG2
+from dvr_scan.scanner import DetectorType, MotionEvent, MotionScanner
+from dvr_scan.subtractor import Subtractor, SubtractorCNT, SubtractorCudaMOG2
+from dvr_scan.video_joiner import VideoJoiner
 
 MACHINE_ARCH = platform.machine().upper()
 
@@ -255,3 +258,91 @@ def test_merge_within_time_before(traffic_camera_video):
     compare_event_lists(
         event_list, TRAFFIC_CAMERA_EVENTS_MERGE_WITHIN_TIME_BEFORE, EVENT_FRAME_TOLERANCE
     )
+
+
+class FakeVideo(VideoJoiner):
+    def __init__(self):
+        self._position = FrameTimecode(0, fps=self.framerate)
+
+        pass
+
+    @property
+    def paths(self):
+        return ["fake_path.mp4"]
+
+    @property
+    def resolution(self):
+        return (1, 1)
+
+    @property
+    def framerate(self) -> float:
+        return 1.0
+
+    @property
+    def total_frames(self) -> int:
+        return 1000
+
+    @property
+    def decode_failures(self) -> float:
+        return 0
+
+    @property
+    def position(self) -> FrameTimecode:
+        return self._position + 1
+
+    @property
+    def position_ms(self) -> float:
+        return self._position.get_seconds() / 1000.0
+
+    def read(self, decode: bool = True) -> ty.Optional[np.ndarray]:
+        if self._position.get_frames() >= self.total_frames:
+            return None
+        img = np.zeros((self.resolution[1], self.resolution[0], 3), dtype=np.uint8)
+        self._position += 1
+        return img
+
+    def seek(self, target: FrameTimecode):
+        pass
+
+
+def test_fake_video():
+    # With default subtractor it won't have any motion, it's just empty frames.
+    scanner = MotionScanner(FakeVideo())
+    assert scanner.scan().event_list == []
+
+
+# A fake subtractor we control to give a specific set of frame scores to test boundary and event
+# merging behaviors.
+class FakeSubtractor(Subtractor):
+    def __init__(self, events: ty.List[MotionEvent]):
+        self._frame_num = 0
+        assert events
+        self._events = events
+        self._curr_event = 0
+
+    def apply(self, frame: np.ndarray) -> np.ndarray:
+        self._frame_num += 1
+        frame = np.copy(frame[:, :, 0])
+        if self._curr_event >= len(self._events):
+            return frame
+        if self._frame_num > self._events[self._curr_event].end:
+            self._curr_event += 1
+            return frame
+        if self._frame_num > self._events[self._curr_event].start:
+            return np.add(frame, 254)  # Scores of 255 are rejected by default.
+        return frame
+
+    @staticmethod
+    def is_available():
+        return True
+
+
+def test_fake_subtractor():
+    scanner = MotionScanner(FakeVideo())
+    base_time = FrameTimecode(0, scanner._input.framerate)
+    expected_events = [MotionEvent(start=(base_time + 100), end=(base_time + 999))]
+    scanner._subtractor = FakeSubtractor(events=expected_events)
+    # TODO(#72): This should be the same as the above list ideally, figure out why it's not.
+    assert scanner.scan().event_list == [
+        MotionEvent(start=(base_time + 99), end=(base_time + 1001))
+    ]
