@@ -35,7 +35,7 @@ from dvr_scan.detector import MotionDetector
 from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
 from dvr_scan.platform import HAS_TKINTER, get_filename, get_min_screen_bounds, is_ffmpeg_available
 from dvr_scan.region import Point, Size, bound_point, load_regions
-from dvr_scan.subtractor import SubtractorCNT, SubtractorCudaMOG2, SubtractorMOG2
+from dvr_scan.subtractor import Subtractor, SubtractorCNT, SubtractorCudaMOG2, SubtractorMOG2
 from dvr_scan.video_joiner import VideoJoiner
 
 if HAS_TKINTER:
@@ -216,7 +216,7 @@ class MotionScanner:
 
     def __init__(
         self,
-        input_videos: List[AnyStr],
+        input_videos: Union[List[AnyStr], VideoJoiner],
         frame_skip: int = 0,
         show_progress: bool = False,
         debug_mode: bool = False,
@@ -236,7 +236,7 @@ class MotionScanner:
 
         # Scan state and options they come from:
 
-        # Output Parameters (set_output)
+        # Output Parameters
         self._comp_file: Optional[AnyStr] = None  # -o/--output
         self._mask_file: Optional[AnyStr] = None  # -mo/--mask-output
         self._fourcc: Any = None  # opencv-codec
@@ -247,28 +247,24 @@ class MotionScanner:
         # TODO: Replace uses of self._output_dir with
         # a helper function called "get_output_path".
 
-        # Overlay Parameters (set_overlays)
+        # Overlay Parameters
         self._timecode_overlay = None  # -tc/--time-code, None or TextOverlay
         self._metrics_overlay = None  # -fm/--frame-metrics, None or TextOverlay
         self._bounding_box = None  # -bb/--bounding-box, None or BoundingBoxOverlay
 
-        # Motion Detection Parameters (set_detection_params)
-        self._subtractor_type = DetectorType.MOG2  # -b/--bg-subtractor
+        # Motion Detection Parameters
         self._threshold = 0.15  # -t/--threshold
-        self._variance_threshold = 16.0  # variance-threshold
-        self._kernel_size = None  # -k/--kernel-size
-        self._downscale_factor = 1  # -df/--downscale-factor
-        self._learning_rate = -1  # learning-rate
         self._max_threshold = 255.0  # max-threshold
+        self._subtractor: Optional[Subtractor] = None
 
-        # Motion Event Parameters (set_event_params)
+        # Motion Event Parameters
         self._min_event_len = None  # -l/--min-event-length
         self._min_event_dist = None  # --min-event-dist  # TODO: Implement this to fix #72.
         self._time_before_event = None  # -tb/--time-before-event
         self._time_post_event = None  # -tp/--time-post-event
         self._use_pts = None  # --use_pts
 
-        # Region Parameters (set_region)
+        # Region Parameters
         self._region_editor = False  # -w/--region-window
         self._regions: List[List[Point]] = []  # -a/--add-region, -w/--region-window
         self._load_region: Optional[str] = None  # -R/--load-region
@@ -277,8 +273,10 @@ class MotionScanner:
         self._show_roi_window_deprecated = False
         self._roi_deprecated = None
 
-        # Input Video Parameters (set_video_time)
-        self._input: VideoJoiner = VideoJoiner(input_videos)  # -i/--input
+        # Input Video Parameters
+        self._input: VideoJoiner = (  # -i/--input
+            input_videos if isinstance(input_videos, VideoJoiner) else VideoJoiner(input_videos)
+        )
         self._frame_skip: int = frame_skip  # -fs/--frame-skip
         self._start_time: FrameTimecode = None  # -st/--start-time
         self._end_time: FrameTimecode = None  # -et/--end-time
@@ -292,7 +290,7 @@ class MotionScanner:
         self._mask_writer: Optional[cv2.VideoWriter] = None
         self._num_events: int = 0
 
-        # Thumbnail production (set_thumbnail_params)
+        # Thumbnail production
         self._thumbnails = None
         self._highscore = 0
         self._highframe = None
@@ -410,6 +408,7 @@ class MotionScanner:
         learning_rate: float = -1,
     ):
         """Set detection parameters."""
+
         self._threshold = threshold
         self._max_threshold = max_threshold
         self._subtractor_type = detector_type
@@ -427,6 +426,35 @@ class MotionScanner:
         #
         # We should also investigate how this works for CNT and other subtractors.
         self._learning_rate = learning_rate
+
+        # Calculate size of noise reduction kernel. Even if an ROI is set, the auto factor is
+        # set based on the original video's input resolution.
+        # TODO(#194): We should probably not scale the kernel size if the user set it. They can
+        # adjust it for the downscale factor manually, doing it without warning is unintuitive.
+
+        kernel_size = (
+            _scale_kernel_size(self._kernel_size, self._downscale_factor)
+            if self._kernel_size != -1
+            else _recommended_kernel_size(self._input.resolution[0], self._downscale_factor)
+        )
+        # Create background subtractor from parameters.
+        SubtractorType = self._subtractor_type.value
+        self._subtractor = SubtractorType(
+            # TODO(v1.7): Don't set or log unused parameter variance_threshold if CNT is used.
+            variance_threshold=self._variance_threshold,
+            kernel_size=kernel_size,
+            learning_rate=self._learning_rate,
+        )
+
+        logger.info(
+            "Using subtractor %s with kernel_size = %s%s, "
+            "variance_threshold = %s and learning_rate = %s",
+            self._subtractor_type.name,
+            str(kernel_size) if kernel_size else "off",
+            " (auto)" if kernel_size == -1 else "",
+            str(self._variance_threshold) if self._variance_threshold != 16.0 else "auto",
+            str(self._learning_rate) if self._learning_rate != -1 else "auto",
+        )
 
     def set_regions(
         self,
@@ -660,37 +688,12 @@ class MotionScanner:
             logger.info("Exiting...")
             return None
 
-        if self._kernel_size == -1:
-            # Calculate size of noise reduction kernel. Even if an ROI is set, the auto factor is
-            # set based on the original video's input resolution.
-            kernel_size = _recommended_kernel_size(
-                self._input.resolution[0], self._downscale_factor
-            )
-        else:
-            kernel_size = _scale_kernel_size(self._kernel_size, self._downscale_factor)
-
-        # Create background subtractor and motion detector.
-        # TODO(v1.7): Don't set or log unused parameter variance_threshold
-        # if CNT is used.
-        detector = MotionDetector(
-            subtractor=self._subtractor_type.value(
-                variance_threshold=self._variance_threshold,
-                kernel_size=kernel_size,
-                learning_rate=self._learning_rate,
-            ),
+        # Create motion detector.
+        self._detector = MotionDetector(
+            subtractor=self._subtractor,
             frame_size=self._input.resolution,
             downscale=self._downscale_factor,
             regions=self._regions,
-        )
-
-        logger.info(
-            "Using subtractor %s with kernel_size = %s%s, "
-            "variance_threshold = %s and learning_rate = %s",
-            self._subtractor_type.name,
-            str(kernel_size) if kernel_size else "off",
-            " (auto)" if self._kernel_size == -1 else "",
-            str(self._variance_threshold) if self._variance_threshold != 16.0 else "auto",
-            str(self._learning_rate) if self._learning_rate != -1 else "auto",
         )
 
         # Correct event length parameters to account frame skip.
@@ -723,7 +726,7 @@ class MotionScanner:
         if self._bounding_box:
             self._bounding_box.set_corrections(
                 downscale_factor=self._downscale_factor,
-                shift=(detector.area[0].x, detector.area[0].y),
+                shift=(self._detector.area[0].x, self._detector.area[0].y),
                 frame_skip=self._frame_skip,
             )
 
@@ -779,11 +782,11 @@ class MotionScanner:
             if frame_size != self._input.resolution:
                 time = frame.timecode
                 video_res = self._input.resolution
-                logger.warn(
+                logger.warning(
                     f"WARNING: Frame {time.frame_num} [{time.get_timecode()}] has unexpected size: "
                     f"{frame_size[0]}x{frame_size[1]}, expected {video_res[0]}x{video_res[1]}"
                 )
-            result = detector.update(frame.frame_bgr)
+            result = self._detector.update(frame.frame_bgr)
             frame_score = result.score
             # TODO(1.7): Allow disabling the rejection filter or customizing amount of
             # consecutive frames it will ignore.
