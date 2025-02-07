@@ -29,6 +29,7 @@ from dvr_scan.app.widgets import ColorPicker, Spinbox, TimecodeEntry
 from dvr_scan.config import CHOICE_MAP, CONFIG_MAP, ConfigLoadFailure, ConfigRegistry
 from dvr_scan.scanner import OutputMode, Point
 from dvr_scan.shared import ScanSettings
+from dvr_scan.subtractor import SubtractorCudaMOG2
 
 WINDOW_TITLE = "DVR-Scan"
 PADDING = 8
@@ -363,9 +364,14 @@ class SettingsArea:
         tk.Label(root, text="Subtractor").grid(row=0, column=0, sticky=STICKY)
         self._bg_subtractor = tk.StringVar()
         combo = ttk.Combobox(root, textvariable=self._bg_subtractor, width=SETTING_INPUT_WIDTH)
-        combo["values"] = ("MOG2", "CNT")
         combo.state(["readonly"])
-        self._bg_subtractor.set("MOG2")
+        if SubtractorCudaMOG2.is_available():
+            combo["values"] = ("MOG2_CUDA", "MOG2", "CNT")
+            self._bg_subtractor.set("MOG2_CUDA")
+        else:
+            combo["values"] = ("MOG2", "CNT")
+            self._bg_subtractor.set("MOG2")
+
         combo.grid(row=0, column=1, sticky=STICKY)
 
         tk.Label(root, text="Kernel Size").grid(row=1, column=0, sticky=STICKY)
