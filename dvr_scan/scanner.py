@@ -20,6 +20,7 @@ import queue
 import subprocess
 import sys
 import threading
+import typing as ty
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, AnyStr, List, Optional, Tuple, Union
@@ -34,7 +35,7 @@ from dvr_scan.detector import MotionDetector
 from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
 from dvr_scan.platform import HAS_TKINTER, get_filename, get_min_screen_bounds, is_ffmpeg_available
 from dvr_scan.region import Point, Size, bound_point, load_regions
-from dvr_scan.subtractor import SubtractorCNT, SubtractorCudaMOG2, SubtractorMOG2
+from dvr_scan.subtractor import Subtractor, SubtractorCNT, SubtractorCudaMOG2, SubtractorMOG2
 from dvr_scan.video_joiner import VideoJoiner
 
 if HAS_TKINTER:
@@ -87,6 +88,16 @@ class OutputMode(Enum):
     """Output using ffmpeg in codec-copy mode."""
     FFMPEG = 4
     """Output using ffmpeg."""
+
+    def __str__(self):
+        if self == OutputMode.SCAN_ONLY:
+            return "SCAN_ONLY"
+        if self == OutputMode.OPENCV:
+            return "SCAN_ONLY"
+        if self == OutputMode.COPY:
+            return "SCAN_ONLY"
+        if self == OutputMode.FFMPEG:
+            return "SCAN_ONLY"
 
 
 @dataclass
@@ -205,7 +216,7 @@ class MotionScanner:
 
     def __init__(
         self,
-        input_videos: List[AnyStr],
+        input_videos: Union[List[AnyStr], VideoJoiner],
         frame_skip: int = 0,
         show_progress: bool = False,
         debug_mode: bool = False,
@@ -220,13 +231,12 @@ class MotionScanner:
             show_progress: Show a progress bar using tqdm.
         """
 
-        self._in_motion_event: bool = False
         self._show_progress: bool = show_progress
         self._debug_mode: bool = debug_mode
 
         # Scan state and options they come from:
 
-        # Output Parameters (set_output)
+        # Output Parameters
         self._comp_file: Optional[AnyStr] = None  # -o/--output
         self._mask_file: Optional[AnyStr] = None  # -mo/--mask-output
         self._fourcc: Any = None  # opencv-codec
@@ -237,27 +247,24 @@ class MotionScanner:
         # TODO: Replace uses of self._output_dir with
         # a helper function called "get_output_path".
 
-        # Overlay Parameters (set_overlays)
+        # Overlay Parameters
         self._timecode_overlay = None  # -tc/--time-code, None or TextOverlay
         self._metrics_overlay = None  # -fm/--frame-metrics, None or TextOverlay
         self._bounding_box = None  # -bb/--bounding-box, None or BoundingBoxOverlay
 
-        # Motion Detection Parameters (set_detection_params)
-        self._subtractor_type = DetectorType.MOG2  # -b/--bg-subtractor
+        # Motion Detection Parameters
         self._threshold = 0.15  # -t/--threshold
-        self._variance_threshold = 16.0  # variance-threshold
-        self._kernel_size = None  # -k/--kernel-size
-        self._downscale_factor = 1  # -df/--downscale-factor
-        self._learning_rate = -1  # learning-rate
         self._max_threshold = 255.0  # max-threshold
+        self._subtractor: Optional[Subtractor] = None
 
-        # Motion Event Parameters (set_event_params)
+        # Motion Event Parameters
         self._min_event_len = None  # -l/--min-event-length
-        self._pre_event_len = None  # -tb/--time-before-event
-        self._post_event_len = None  # -tp/--time-post-event
+        self._min_event_dist = None  # --min-event-dist  # TODO: Implement this to fix #72.
+        self._time_before_event = None  # -tb/--time-before-event
+        self._time_post_event = None  # -tp/--time-post-event
         self._use_pts = None  # --use_pts
 
-        # Region Parameters (set_region)
+        # Region Parameters
         self._region_editor = False  # -w/--region-window
         self._regions: List[List[Point]] = []  # -a/--add-region, -w/--region-window
         self._load_region: Optional[str] = None  # -R/--load-region
@@ -266,8 +273,10 @@ class MotionScanner:
         self._show_roi_window_deprecated = False
         self._roi_deprecated = None
 
-        # Input Video Parameters (set_video_time)
-        self._input: VideoJoiner = VideoJoiner(input_videos)  # -i/--input
+        # Input Video Parameters
+        self._input: VideoJoiner = (  # -i/--input
+            input_videos if isinstance(input_videos, VideoJoiner) else VideoJoiner(input_videos)
+        )
         self._frame_skip: int = frame_skip  # -fs/--frame-skip
         self._start_time: FrameTimecode = None  # -st/--start-time
         self._end_time: FrameTimecode = None  # -et/--end-time
@@ -281,10 +290,14 @@ class MotionScanner:
         self._mask_writer: Optional[cv2.VideoWriter] = None
         self._num_events: int = 0
 
-        # Thumbnail production (set_thumbnail_params)
+        # Thumbnail production
         self._thumbnails = None
         self._highscore = 0
         self._highframe = None
+
+        # Callbacks for UI integration
+        self._scan_started = None
+        self._processed_frame = None
 
         # Make sure we initialize defaults now that we loaded the input videos.
         self.set_detection_params()
@@ -395,6 +408,7 @@ class MotionScanner:
         learning_rate: float = -1,
     ):
         """Set detection parameters."""
+
         self._threshold = threshold
         self._max_threshold = max_threshold
         self._subtractor_type = detector_type
@@ -412,6 +426,35 @@ class MotionScanner:
         #
         # We should also investigate how this works for CNT and other subtractors.
         self._learning_rate = learning_rate
+
+        # Calculate size of noise reduction kernel. Even if an ROI is set, the auto factor is
+        # set based on the original video's input resolution.
+        # TODO(#194): We should probably not scale the kernel size if the user set it. They can
+        # adjust it for the downscale factor manually, doing it without warning is unintuitive.
+
+        kernel_size = (
+            _scale_kernel_size(self._kernel_size, self._downscale_factor)
+            if self._kernel_size != -1
+            else _recommended_kernel_size(self._input.resolution[0], self._downscale_factor)
+        )
+        # Create background subtractor from parameters.
+        SubtractorType = self._subtractor_type.value
+        self._subtractor = SubtractorType(
+            # TODO(v1.7): Don't set or log unused parameter variance_threshold if CNT is used.
+            variance_threshold=self._variance_threshold,
+            kernel_size=kernel_size,
+            learning_rate=self._learning_rate,
+        )
+
+        logger.info(
+            "Using subtractor %s with kernel_size = %s%s, "
+            "variance_threshold = %s and learning_rate = %s",
+            self._subtractor_type.name,
+            str(kernel_size) if kernel_size else "off",
+            " (auto)" if kernel_size == -1 else "",
+            str(self._variance_threshold) if self._variance_threshold != 16.0 else "auto",
+            str(self._learning_rate) if self._learning_rate != -1 else "auto",
+        )
 
     def set_regions(
         self,
@@ -457,8 +500,8 @@ class MotionScanner:
         """Set motion event parameters."""
         assert self._input.framerate is not None
         self._min_event_len = FrameTimecode(min_event_len, self._input.framerate)
-        self._pre_event_len = FrameTimecode(time_pre_event, self._input.framerate)
-        self._post_event_len = FrameTimecode(time_post_event, self._input.framerate)
+        self._time_before_event = FrameTimecode(time_pre_event, self._input.framerate)
+        self._time_post_event = FrameTimecode(time_post_event, self._input.framerate)
         self._use_pts = use_pts
 
     def set_thumbnail_params(self, thumbnails: str = None):
@@ -501,7 +544,7 @@ class MotionScanner:
                 )
             try:
                 logger.info(f"Loading regions from file: {self._load_region}")
-                regions = load_regions(self._load_region)
+                region_editor = load_regions(self._load_region)
             except ValueError as ex:
                 reason = " ".join(str(arg) for arg in ex.args)
                 if not reason:
@@ -510,11 +553,11 @@ class MotionScanner:
             else:
                 logger.debug(
                     "Loaded %d region%s:\n%s",
-                    len(regions),
-                    "s" if len(regions) > 1 else "",
-                    "\n".join(f"[{i}] = {points}" for i, points in enumerate(regions)),
+                    len(region_editor),
+                    "s" if len(region_editor) > 1 else "",
+                    "\n".join(f"[{i}] = {points}" for i, points in enumerate(region_editor)),
                 )
-            self._regions += regions
+            self._regions += region_editor
         if self._regions:
             self._regions = [
                 [bound_point(point, Size(*self._input.resolution)) for point in shape]
@@ -543,7 +586,7 @@ class MotionScanner:
                     factor_h = frame_h / float(max_h) if max_h > 0 and frame_h > max_h else 1
                     factor_w = frame_w / float(max_w) if max_w > 0 and frame_w > max_w else 1
                     scale_factor = round(max(factor_h, factor_w))
-            regions = RegionEditor(
+            region_editor = RegionEditor(
                 frame=frame_for_crop,
                 initial_shapes=self._regions,
                 initial_scale=scale_factor,
@@ -551,11 +594,11 @@ class MotionScanner:
                 video_path=self._input.paths[0],
                 save_path=self._save_region,
             )
-            if not regions.run():
+            if not region_editor.run():
                 return False
-            self._regions = list(regions.shapes)
+            self._regions = list(region_editor.shapes)
         elif self._save_region:
-            regions = (
+            region_editor = (
                 self._regions
                 if self._regions
                 else [
@@ -584,24 +627,39 @@ class MotionScanner:
             logger.debug("No regions selected.")
         return True
 
-    def _create_progress_bar(self) -> tqdm:
+    @property
+    def frames_remaining(self) -> int:
         num_frames = self._input.total_frames
         # Correct for end time.
         if self._end_time and self._end_time.frame_num < num_frames:
             num_frames = self._end_time.frame_num
         # Correct for current seek position.
-        num_frames = max(0, num_frames - self._input.position.frame_num)
+        if self._start_time:
+            num_frames = max(0, num_frames - self._start_time.frame_num)
+        return num_frames
+
+    def _create_progress_bar(self) -> tqdm:
         return tqdm(
-            total=num_frames,
+            total=self.frames_remaining,
             unit=" frames",
             desc=PROGRESS_BAR_DESCRIPTION % 0,
             dynamic_ncols=True,
         )
 
     def stop(self):
-        """Stop the current scan call. This is the only thread-safe public method."""
+        """Stop the current scan call. Thread-safe."""
         self._stop.set()
         logger.debug("Stop event set.")
+
+    def is_stopped(self):
+        """Check if the current scan call was stopped, or `False` if one wasn't run. Thread-safe."""
+        return self._stop.is_set()
+
+    def set_callbacks(
+        self, scan_started: ty.Callable[[int], None], processed_frame: ty.Callable[[int], None]
+    ):
+        self._scan_started = scan_started
+        self._processed_frame = processed_frame
 
     def scan(self) -> Optional[DetectionResult]:
         """Performs motion analysis on the MotionScanner's input video(s)."""
@@ -616,6 +674,7 @@ class MotionScanner:
         frames_processed = 0
 
         # Seek to starting position if required.
+        # TODO: Offload this seek to the decode thread.
         if self._start_time is not None:
             self._input.seek(self._start_time)
 
@@ -629,42 +688,17 @@ class MotionScanner:
             logger.info("Exiting...")
             return None
 
-        if self._kernel_size == -1:
-            # Calculate size of noise reduction kernel. Even if an ROI is set, the auto factor is
-            # set based on the original video's input resolution.
-            kernel_size = _recommended_kernel_size(
-                self._input.resolution[0], self._downscale_factor
-            )
-        else:
-            kernel_size = _scale_kernel_size(self._kernel_size, self._downscale_factor)
-
-        # Create background subtractor and motion detector.
-        # TODO(v1.7): Don't set or log unused parameter variance_threshold
-        # if CNT is used.
-        detector = MotionDetector(
-            subtractor=self._subtractor_type.value(
-                variance_threshold=self._variance_threshold,
-                kernel_size=kernel_size,
-                learning_rate=self._learning_rate,
-            ),
+        # Create motion detector.
+        self._detector = MotionDetector(
+            subtractor=self._subtractor,
             frame_size=self._input.resolution,
             downscale=self._downscale_factor,
             regions=self._regions,
         )
 
-        logger.info(
-            "Using subtractor %s with kernel_size = %s%s, "
-            "variance_threshold = %s and learning_rate = %s",
-            self._subtractor_type.name,
-            str(kernel_size) if kernel_size else "off",
-            " (auto)" if self._kernel_size == -1 else "",
-            str(self._variance_threshold) if self._variance_threshold != 16.0 else "auto",
-            str(self._learning_rate) if self._learning_rate != -1 else "auto",
-        )
-
         # Correct event length parameters to account frame skip.
-        post_event_len: int = self._post_event_len.frame_num // (self._frame_skip + 1)
-        pre_event_len: int = self._pre_event_len.frame_num // (self._frame_skip + 1)
+        post_event_len: int = self._time_post_event.frame_num // (self._frame_skip + 1)
+        pre_event_len: int = self._time_before_event.frame_num // (self._frame_skip + 1)
         min_event_len: int = max(self._min_event_len.frame_num // (self._frame_skip + 1), 1)
 
         # Calculations below rely on min_event_len always being >= 1 (cannot be zero)
@@ -675,26 +709,24 @@ class MotionScanner:
         # need to compensate for rounding errors when we corrected it for frame skip. This is
         # important as this affects the number of frames we consider for the actual motion event.
         if not self._use_pts:
-            start_event_shift: int = self._pre_event_len.frame_num + min_event_len * (
+            start_event_shift: int = self._time_before_event.frame_num + min_event_len * (
                 self._frame_skip + 1
             )
         else:
             start_event_shift_ms: float = (
-                self._pre_event_len.get_seconds() + self._min_event_len.get_seconds()
+                self._time_before_event.get_seconds() + self._min_event_len.get_seconds()
             ) * 1000
 
         # Length of buffer we require in memory to keep track of all frames required for -l and -tb.
         buff_len = pre_event_len + min_event_len
         event_end = self._input.position
-        if not self._use_pts:
-            last_frame_above_threshold = 0
-        else:
-            last_frame_above_threshold_ms = 0
+        last_frame_above_threshold = 0
+        last_frame_above_threshold_ms = 0
 
         if self._bounding_box:
             self._bounding_box.set_corrections(
                 downscale_factor=self._downscale_factor,
-                shift=(detector.area[0].x, detector.area[0].y),
+                shift=(self._detector.area[0].x, self._detector.area[0].y),
                 frame_skip=self._frame_skip,
             )
 
@@ -709,8 +741,10 @@ class MotionScanner:
             if len(self._input.paths) > 1
             else "input video",
         )
+        logger.debug(f"output mode = {self._output_mode}")
 
         progress_bar = FakeTqdmObject() if not self._show_progress else self._create_progress_bar()
+        num_frames_to_process = self.frames_remaining
 
         decode_queue = queue.Queue(MAX_DECODE_QUEUE_SIZE)
         decode_thread = threading.Thread(
@@ -728,8 +762,16 @@ class MotionScanner:
             )
             encode_thread.start()
 
+        if self._scan_started:
+            self._scan_started(num_frames=num_frames_to_process)
+
         # TODO: The main scanning loop should be refactored into a state machine.
         while not self._stop.is_set():
+            if self._processed_frame:
+                num_events = len(event_list)
+                if in_motion_event:
+                    num_events += 1
+                self._processed_frame(progress_bar=progress_bar, num_events=num_events)
             # Keep polling decode queue until it's empty (signaled via None).
             frame: Optional[DecodeEvent] = decode_queue.get()
             if frame is None:
@@ -740,11 +782,11 @@ class MotionScanner:
             if frame_size != self._input.resolution:
                 time = frame.timecode
                 video_res = self._input.resolution
-                logger.warn(
+                logger.warning(
                     f"WARNING: Frame {time.frame_num} [{time.get_timecode()}] has unexpected size: "
                     f"{frame_size[0]}x{frame_size[1]}, expected {video_res[0]}x{video_res[1]}"
                 )
-            result = detector.update(frame.frame_bgr)
+            result = self._detector.update(frame.frame_bgr)
             frame_score = result.score
             # TODO(1.7): Allow disabling the rejection filter or customizing amount of
             # consecutive frames it will ignore.
@@ -785,6 +827,11 @@ class MotionScanner:
                     )
                 )
 
+            #
+            # TODO: Make a small state diagram and create a new state enum to handle different
+            # merging modes, etc.
+            #
+
             # Last frame was part of a motion event, or still within the post-event window.
             if in_motion_event:
                 # If this frame still has motion, reset the post-event window.
@@ -799,67 +846,39 @@ class MotionScanner:
                 #
                 # TODO(#72): We should wait until the max of *both* the pre-event and post-
                 # event windows have passed. Right now we just consider the post-event window.
+                # We should also allow configuring overlap behavior:
+                #  - normal: If any new motion is found within max(time_pre_event, time_post_event),
+                #            it will be merged with the preceeding event.
+                #  - extended: Events that have a gap of size (time_pre_event + time_post_event)
+                #              between each other will be merged.
                 else:
                     num_frames_post_event += 1
-                    if num_frames_post_event >= post_event_len:
+                    if num_frames_post_event >= (pre_event_len + post_event_len):
                         in_motion_event = False
-
-                        logger.debug(
-                            "event %d high score %f" % (1 + self._num_events, self._highscore)
+                        # TODO: We can't throw these frames away, they might be needed for the
+                        # next event to satisfy it's own pre_event_len.
+                        buffered_frames = []
+                        event = self._on_event_end(
+                            last_frame_above_threshold,
+                            last_frame_above_threshold_ms,
+                            event_start,
                         )
-                        if self._thumbnails == "highscore":
-                            video_name = get_filename(
-                                path=self._input.paths[0], include_extension=False
-                            )
-                            output_path = (
-                                self._comp_file
-                                if self._comp_file
-                                else OUTPUT_FILE_TEMPLATE.format(
-                                    VIDEO_NAME=video_name,
-                                    EVENT_NUMBER="%04d" % (1 + self._num_events),
-                                    EXTENSION="jpg",
-                                )
-                            )
-                            if self._output_dir:
-                                output_path = os.path.join(self._output_dir, output_path)
-                            cv2.imwrite(output_path, self._highframe)
-                            self._highscore = 0
-                            self._highframe = None
-
-                        # Calculate event end based on the last frame we had with motion plus
-                        # the post event length time. We also need to compensate for the number
-                        # of frames that we skipped that could have had motion.
-                        # We also add 1 to include the presentation duration of the last frame.
-                        if not self._use_pts:
-                            event_end = FrameTimecode(
-                                1
-                                + last_frame_above_threshold
-                                + self._post_event_len.frame_num
-                                + self._frame_skip,
-                                self._input.framerate,
-                            )
-                            assert event_end.frame_num >= event_start.frame_num
-                        else:
-                            event_end = FrameTimecode(
-                                (last_frame_above_threshold_ms / 1000)
-                                + self._post_event_len.get_seconds(),
-                                self._input.framerate,
-                            )
-                            assert event_end.get_seconds() >= event_start.get_seconds()
-                        event_list.append(MotionEvent(start=event_start, end=event_end))
+                        event_list.append(event)
                         if self._output_mode != OutputMode.SCAN_ONLY:
                             encode_queue.put(MotionEvent(start=event_start, end=event_end))
-
                 # Send frame to encode thread.
                 if in_motion_event and self._output_mode == OutputMode.OPENCV:
-                    encode_queue.put(
-                        EncodeFrameEvent(
-                            frame_bgr=frame.frame_bgr,
-                            timecode=frame.timecode,
-                            bounding_box=bounding_box,
-                            score=frame_score,
-                        )
+                    encode_frame = EncodeFrameEvent(
+                        frame_bgr=frame.frame_bgr,
+                        timecode=frame.timecode,
+                        bounding_box=bounding_box,
+                        score=frame_score,
                     )
+                    if num_frames_post_event < post_event_len:
+                        encode_queue.put(encode_frame)
+                    else:
+                        buffered_frames.append(encode_frame)
+
             # Not already in a motion event, look for a new one.
             else:
                 # Buffer the required amount of frames and overlay data until we find an event.
@@ -976,6 +995,48 @@ class MotionScanner:
             )
 
         return DetectionResult(event_list, frames_processed)
+
+    def _on_event_end(
+        self,
+        last_frame_above_threshold,
+        last_frame_above_threshold_ms,
+        event_start,
+    ) -> MotionEvent:
+        logger.debug("event %d high score %f" % (1 + self._num_events, self._highscore))
+        if self._thumbnails == "highscore":
+            video_name = get_filename(path=self._input.paths[0], include_extension=False)
+            output_path = (
+                self._comp_file
+                if self._comp_file
+                else OUTPUT_FILE_TEMPLATE.format(
+                    VIDEO_NAME=video_name,
+                    EVENT_NUMBER="%04d" % (1 + self._num_events),
+                    EXTENSION="jpg",
+                )
+            )
+            if self._output_dir:
+                output_path = os.path.join(self._output_dir, output_path)
+            cv2.imwrite(output_path, self._highframe)
+            self._highscore = 0
+            self._highframe = None
+
+        # Calculate event end based on the last frame we had with motion plus
+        # the post event length time. We also need to compensate for the number
+        # of frames that we skipped that could have had motion.
+        # We also add 1 to include the presentation duration of the last frame.
+        if not self._use_pts:
+            event_end = FrameTimecode(
+                1 + last_frame_above_threshold + self._time_post_event.frame_num + self._frame_skip,
+                self._input.framerate,
+            )
+            assert event_end.frame_num >= event_start.frame_num
+        else:
+            event_end = FrameTimecode(
+                (last_frame_above_threshold_ms / 1000) + self._time_post_event.get_seconds(),
+                self._input.framerate,
+            )
+            assert event_end.get_seconds() >= event_start.get_seconds()
+        return MotionEvent(start=event_start, end=event_end)
 
     def _decode_thread(self, decode_queue: queue.Queue):
         try:

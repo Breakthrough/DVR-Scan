@@ -244,7 +244,9 @@ class RGBValue(ValidatedValue):
     _IGNORE_CHARS = [",", "/", "(", ")"]
     """Characters to ignore."""
 
-    def __init__(self, value: Union[int, str]):
+    def __init__(self, value: Union[int, str, "RGBValue"]):
+        if isinstance(value, RGBValue):
+            return value
         # If not an int, convert to one.
         # First try to convert values of the form 'ffffff'.
         if not isinstance(value, int) and len(value) == 6:
@@ -317,6 +319,7 @@ CONFIG_MAP: ConfigDict = {
     "region-editor": False,
     "quiet-mode": False,
     "verbosity": "info",
+    "debug": False,
     # Input/Output
     "output-dir": "",
     "output-mode": "opencv",
@@ -545,7 +548,7 @@ class ConfigRegistry:
         """True if the option is default, i.e. is NOT set by the user."""
         return option not in self._config
 
-    def get_value(
+    def get(
         self,
         option: str,
         override: Optional[ConfigValue] = None,

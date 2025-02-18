@@ -29,7 +29,6 @@ FRAMERATE_DELTA_TOLERANCE: float = 0.1
 logger = logging.getLogger("dvr_scan")
 
 
-# TODO: Replace this with the equivalent from PySceneDetect when available.
 class VideoJoiner:
     """Handles concatenating multiple videos together.
 
@@ -69,7 +68,7 @@ class VideoJoiner:
         return self._cap.frame_rate
 
     @property
-    def total_frames(self) -> float:
+    def total_frames(self) -> int:
         """Total number of frames of all input videos combined. May be inaccurate."""
         return self._total_frames
 
