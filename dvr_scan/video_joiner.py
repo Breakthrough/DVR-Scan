@@ -21,7 +21,7 @@ from typing import AnyStr, List, Optional, Tuple, Union
 import cv2
 import numpy
 from scenedetect import FrameTimecode
-from scenedetect.backends import VideoStreamCv2
+from scenedetect.backends import VideoStreamAv
 from scenedetect.video_stream import VideoOpenFailure
 
 FRAMERATE_DELTA_TOLERANCE: float = 0.1
@@ -44,7 +44,7 @@ class VideoJoiner:
         assert paths
         self._paths = paths
 
-        self._cap: Optional[VideoStreamCv2] = None
+        self._cap: Optional[VideoStreamAv] = None
         self._curr_cap_index = 0
         self._total_frames: int = 0
         self._decode_failures: int = 0
@@ -99,7 +99,7 @@ class VideoJoiner:
                 logger.debug(
                     "End of current video, loading next: %s" % self._paths[self._curr_cap_index]
                 )
-                self._cap = VideoStreamCv2(self._paths[self._curr_cap_index])
+                self._cap = VideoStreamAv(self._paths[self._curr_cap_index])
                 self._last_cap_pos = self._cap.base_timecode
                 return self.read(decode=decode)
             logger.debug("No more input to process.")
@@ -127,7 +127,7 @@ class VideoJoiner:
         for video_path in self._paths:
             video_name = os.path.basename(video_path)
             try:
-                cap = VideoStreamCv2(video_path)
+                cap = VideoStreamAv(video_path)
             except VideoOpenFailure:
                 logger.error("Error: Couldn't load video %s", video_path)
                 raise

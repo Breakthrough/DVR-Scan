@@ -340,30 +340,51 @@ class InputArea:
         return self._start_time.get(), self._end_time.get()
 
 
-class SettingsArea:
+class SettingsWindow:
     def __init__(self, root: tk.Widget):
         self._root = root
-        self._advanced = tk.Toplevel(master=root)
-        self._advanced.withdraw()
+        self._window = tk.Toplevel(master=root)
+        self._window.withdraw()
 
         root.rowconfigure(0, pad=PADDING, weight=1)
-        root.rowconfigure(1, pad=PADDING, weight=1)
-        root.rowconfigure(2, pad=PADDING, weight=1)
         root.columnconfigure(0, pad=PADDING, weight=1)
-        root.columnconfigure(1, pad=PADDING, weight=1)
-        root.columnconfigure(2, pad=PADDING, weight=2)
-        root.columnconfigure(3, pad=PADDING, weight=1)
-        root.columnconfigure(4, pad=PADDING, weight=1)
-        root.columnconfigure(5, pad=PADDING, weight=1)
-        root.columnconfigure(6, pad=PADDING, weight=12, minsize=0)
+        root.columnconfigure(1, pad=PADDING, weight=12, minsize=0)
+
+        STICKY = tk.EW
+
+        #
+        #
+        # Advanced Window
+        #
+        #
+        self._window.minsize(width=MIN_WINDOW_WIDTH, height=MIN_WINDOW_HEIGHT)
+        self._window.title("Motion Settings")
+        self._window.resizable(True, True)
+        self._window.protocol("WM_DELETE_WINDOW", self._dismiss_advanced)
+        self._window.rowconfigure(0, weight=1)
+        self._window.rowconfigure(1, weight=1)
+        self._window.columnconfigure(0, weight=1)
+
+        frame = ttk.LabelFrame(self._window, text="Motion", padding=PADDING)
+        frame.grid(row=0, sticky=tk.NSEW, padx=PADDING, pady=PADDING)
+        frame.rowconfigure(0, pad=PADDING, weight=1)
+        frame.rowconfigure(1, pad=PADDING, weight=1)
+        frame.rowconfigure(2, pad=PADDING, weight=1)
+        frame.columnconfigure(0, pad=PADDING, weight=1)
+        frame.columnconfigure(1, pad=PADDING, weight=1)
+        frame.columnconfigure(2, pad=PADDING, weight=2)
+        frame.columnconfigure(3, pad=PADDING, weight=1)
+        frame.columnconfigure(4, pad=PADDING, weight=1)
+        frame.columnconfigure(5, pad=PADDING, weight=1)
+        frame.columnconfigure(6, pad=PADDING, weight=12, minsize=0)
 
         STICKY = tk.EW
 
         # Detector
 
-        tk.Label(root, text="Subtractor").grid(row=0, column=0, sticky=STICKY)
+        tk.Label(frame, text="Subtractor").grid(row=0, column=0, sticky=STICKY)
         self._bg_subtractor = tk.StringVar()
-        combo = ttk.Combobox(root, textvariable=self._bg_subtractor, width=SETTING_INPUT_WIDTH)
+        combo = ttk.Combobox(frame, textvariable=self._bg_subtractor, width=SETTING_INPUT_WIDTH)
         combo.state(["readonly"])
         if SubtractorCudaMOG2.is_available():
             combo["values"] = ("MOG2_CUDA", "MOG2", "CNT")
@@ -374,9 +395,11 @@ class SettingsArea:
 
         combo.grid(row=0, column=1, sticky=STICKY)
 
-        tk.Label(root, text="Kernel Size").grid(row=1, column=0, sticky=STICKY)
+        tk.Label(frame, text="Kernel Size").grid(row=1, column=0, sticky=STICKY)
 
-        self._kernel_size_combobox = ttk.Combobox(root, width=SETTING_INPUT_WIDTH, state="readonly")
+        self._kernel_size_combobox = ttk.Combobox(
+            frame, width=SETTING_INPUT_WIDTH, state="readonly"
+        )
         # 0: Auto
         # 1: Off
         # 2: 3x3
@@ -391,9 +414,9 @@ class SettingsArea:
         self._kernel_size_combobox.grid(row=1, column=1, sticky=STICKY)
         self._kernel_size_combobox.current(1)
 
-        tk.Label(root, text="Threshold").grid(row=2, column=0, sticky=STICKY)
+        tk.Label(frame, text="Threshold").grid(row=2, column=0, sticky=STICKY)
         self._threshold = Spinbox(
-            root,
+            frame,
             value=str(CONFIG_MAP["threshold"]),
             from_=0.0,
             to=255.0,
@@ -402,9 +425,9 @@ class SettingsArea:
         self._threshold.grid(row=2, column=1, sticky=STICKY)
 
         # Events
-        tk.Label(root, text="Min. Event Length").grid(row=0, column=3, sticky=STICKY)
+        tk.Label(frame, text="Min. Event Length").grid(row=0, column=3, sticky=STICKY)
         self._min_event_length = Spinbox(
-            root,
+            frame,
             value=str(CONFIG_MAP["min-event-length"]),
             from_=0.0,
             to=MAX_DURATION,
@@ -413,9 +436,9 @@ class SettingsArea:
         )
         self._min_event_length.grid(row=0, column=4, sticky=STICKY)
 
-        tk.Label(root, text="Time Pre-Event").grid(row=1, column=3, sticky=STICKY)
+        tk.Label(frame, text="Time Pre-Event").grid(row=1, column=3, sticky=STICKY)
         self._time_before_event = Spinbox(
-            root,
+            frame,
             value=str(CONFIG_MAP["time-before-event"]),
             from_=0.0,
             to=MAX_DURATION,
@@ -424,9 +447,9 @@ class SettingsArea:
         )
         self._time_before_event.grid(row=1, column=4, sticky=STICKY)
 
-        tk.Label(root, text="Time Post-Event").grid(row=2, column=3, sticky=STICKY)
+        tk.Label(frame, text="Time Post-Event").grid(row=2, column=3, sticky=STICKY)
         self._time_post_event = Spinbox(
-            root,
+            frame,
             value=str(CONFIG_MAP["time-post-event"]),
             from_=0.0,
             to=MAX_DURATION,
@@ -437,35 +460,15 @@ class SettingsArea:
 
         self._mask_output = tk.BooleanVar(value=False)
         ttk.Checkbutton(
-            root,
+            frame,
             text="Save Motion Mask",
             variable=self._mask_output,
             onvalue=True,
             offvalue=False,
         ).grid(row=3, column=0, columnspan=2, sticky=tk.W, padx=PADDING, pady=PADDING)
 
-        # Processing
-
-        self._advanced_button = ttk.Button(
-            root, text="Advanced...", command=self._show_advanced, width=SETTING_INPUT_WIDTH
-        )
-        self._advanced_button.grid(
-            row=3, column=3, columnspan=2, sticky=tk.EW, pady=PADDING, padx=PADDING
-        )
-
-        #
-        #
-        # Advanced Window
-        #
-        #
-        self._advanced.minsize(width=MIN_WINDOW_WIDTH, height=MIN_WINDOW_HEIGHT)
-        self._advanced.title("Motion Settings")
-        self._advanced.resizable(True, True)
-        self._advanced.protocol("WM_DELETE_WINDOW", self._dismiss_advanced)
-        self._advanced.rowconfigure(0, weight=1)
-        self._advanced.columnconfigure(0, weight=1)
-        frame = ttk.LabelFrame(self._advanced, text="Advanced", padding=PADDING)
-        frame.grid(row=0, sticky=tk.NSEW, padx=PADDING, pady=PADDING)
+        frame = ttk.LabelFrame(self._window, text="Advanced", padding=PADDING)
+        frame.grid(row=1, sticky=tk.NSEW, padx=PADDING, pady=PADDING)
         frame.columnconfigure(0, weight=1)
         frame.columnconfigure(1, weight=1)
         frame.columnconfigure(2, weight=2)
@@ -541,8 +544,8 @@ class SettingsArea:
             offvalue=False,
         ).grid(row=2, column=0, columnspan=2, padx=PADDING, sticky=STICKY, pady=PADDING)
 
-        tk.Button(self._advanced, text="Close", command=self._dismiss_advanced).grid(
-            row=1, column=0, sticky=tk.E, padx=PADDING, pady=PADDING
+        tk.Button(self._window, text="Close", command=self._dismiss_advanced).grid(
+            row=2, column=0, sticky=tk.E, padx=PADDING, pady=PADDING
         )
 
         tk.Label(frame, text="Frame Skip").grid(
@@ -562,19 +565,19 @@ class SettingsArea:
             tk.DISABLED if self._learning_rate_auto.get() else tk.NORMAL
         )
 
-    def _show_advanced(self):
+    def show(self):
         logger.debug("showing advanced settings window")
-        self._advanced.transient(self._root)
-        self._advanced.deiconify()
-        self._advanced.focus()
-        self._advanced.grab_set()
-        self._advanced.wait_window()
+        self._window.transient(self._root)
+        self._window.deiconify()
+        self._window.focus()
+        self._window.grab_set()
+        self._window.wait_window()
 
     def _dismiss_advanced(self):
         logger.debug("closing advanced settings window")
-        self._advanced.withdraw()
-        self._advanced.grab_release()
-        self._advanced_button.focus()
+        self._window.withdraw()
+        self._window.grab_release()
+        self._root.focus()
 
     @property
     def _kernel_size(self) -> int:
@@ -1168,27 +1171,26 @@ class Application:
         self._root.columnconfigure(0, weight=1, pad=PADDING)
         self._root.rowconfigure(0, weight=1)
 
-        self._create_menubar()
-
         input_frame = ttk.Labelframe(self._root, text="Input", padding=PADDING)
         self._input_area = InputArea(input_frame)
         input_frame.grid(row=0, sticky=tk.NSEW, padx=PADDING, pady=(PADDING, 0))
 
-        settings_frame = ttk.Labelframe(self._root, text="Motion", padding=PADDING)
-        self._settings_area = SettingsArea(settings_frame)
-        settings_frame.grid(row=1, sticky=tk.EW, padx=PADDING, pady=(PADDING, 0))
+        # settings_frame = ttk.Labelframe(self._root, text="Scanner", padding=PADDING)
+        self._settings_area = SettingsWindow(self._root)
 
         output_frame = ttk.Labelframe(self._root, text="Output", padding=PADDING)
         self._output_area = OutputArea(output_frame)
         output_frame.grid(row=2, sticky=tk.EW, padx=PADDING, pady=(PADDING, 0))
 
-        scan_frame = ttk.Labelframe(self._root, text="Scan", padding=PADDING)
+        scan_frame = ttk.Labelframe(self._root, text="Run", padding=PADDING)
         self._scan_area = ScanArea(self._root, scan_frame)
         scan_frame.grid(row=3, sticky=tk.EW, padx=PADDING, pady=PADDING)
 
         self._scan_window: ty.Optional[ScanWindow] = None
         self._root.bind("<<StartScan>>", lambda _: self._start_scan())
         self._root.protocol("WM_DELETE_WINDOW", self._destroy)
+
+        self._create_menubar()
 
         if not SUPPRESS_EXCEPTIONS:
 
@@ -1223,6 +1225,13 @@ class Application:
 
         settings_menu = tk.Menu(root_menu)
         root_menu.add_cascade(menu=settings_menu, label="Settings", underline=0)
+        # TODO(#201): Add ability to change input settings.
+        settings_menu.add_command(
+            label="Motion",
+            underline=0,
+            command=self._settings_area.show,
+        )
+        settings_menu.add_separator()
         settings_menu.add_command(
             label="Load...",
             underline=0,
