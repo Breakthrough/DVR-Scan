@@ -13,7 +13,7 @@ hide:
 
 !!! success "Latest Version: 1.6.2 (December 17, 2024)"
 
-    <div class="buttongrid">[:fontawesome-solid-download: &nbsp; Download](download.md){ .md-button #download-button }[:fontawesome-solid-book: User Guide](guide.md){ .md-button #changelog-button }[:fontawesome-solid-bars: &nbsp; Documentation](docs.md){ .md-button #documentation-button }[:fontawesome-solid-gear: &nbsp; Resources](changelog.md){ .md-button #quickstart-button }</div>
+    <div class="buttongrid">[:fontawesome-solid-download: &nbsp; Download](download.md){ .md-button #download-button }[:fontawesome-solid-book: User Guide](guide.md){ .md-button #changelog-button }[:fontawesome-solid-bars: &nbsp; Documentation](docs.md){ .md-button #documentation-button }[:fontawesome-solid-gear: &nbsp; Resources](resources.md){ .md-button #quickstart-button }</div>
 
 ------------------------------------------------------
 
@@ -41,6 +41,5 @@ Use `ffmpeg` to extract events:
 
     dvr-scan -i video.mp4 -m ffmpeg
 
-Once installed, see [the user guide](guide.md) to get started, try one of the examples above, or type `dvr-scan --help`. Press `Ctrl + C` to stop processing at any time.
+Once installed, see [the user guide](guide.md) to get started, try one of the examples above, or type `dvr-scan --help`. Press `Ctrl + C` to stop processing at any time.  See the [documentation](docs.md) for a complete description of all [command-line](docs.md#dvr-scan-options) and [config file](docs.md#config-file) settings.
 
-See the [documentation](docs.md) for a complete description of all [command-line](docs.md#dvr-scan-options) and [config file](docs.md#config-file) settings.

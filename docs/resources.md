@@ -3,13 +3,20 @@
 
 ------------------------------------------------
 
+## :fontawesome-solid-link:Links
+
+ - Github: [https://github.com/Breakthrough/DVR-Scan](https://github.com/Breakthrough/DVR-Scan)
+ - Discord: [https://discord.gg/UtE6mMSA](https://discord.gg/UtE6mMSA)
+
+------------------------------------------------
+
 ## :fontawesome-solid-bug:Bug Reports
 
 Bugs and issues with DVR-Scan are handled through [the issue tracker on Github](https://github.com/Breakthrough/DVR-Scan/issues?q=). If you encounter into any bugs while using DVR-Scan, please feel free to [create a new issue](https://github.com/Breakthrough/DVR-Scan/issues/new) describing the problem.
 
 Make sure to set `--verbosity debug` when attaching program logs. Attach examples where possible to demonstrate the problem. Include any information you think is relevant to replicate and resolve the issue.
 
-For technical help, you can try [starting a discussion](https://github.com/Breakthrough/DVR-Scan/discussions) on Github.
+For technical help, you can try [starting a discussion](https://github.com/Breakthrough/DVR-Scan/discussions) on Github or joining the [DVR-Scan Discord server](https://discord.gg/UtE6mMSA).
 
 ------------------------------------------------
 

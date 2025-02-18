@@ -20,6 +20,8 @@ The latest beta of DVR-Scan includes a new GUI.  See [the release page](https://
 
 **Documentation**: [dvr-scan.com/docs](https://www.dvr-scan.com/docs/)
 
+**Discord**: [https://discord.gg/UtE6mMSA](https://discord.gg/UtE6mMSA)
+
 ------------------------------------------------------
 
 DVR-Scan is a command-line application that **automatically detects motion events in video files** (e.g. security camera footage).  DVR-Scan looks for areas in footage containing motion, and saves each event to a separate video clip.  DVR-Scan is free and open-source software, and works on Windows, Linux, and Mac.
