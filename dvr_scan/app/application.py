@@ -360,7 +360,7 @@ class SettingsWindow:
         self._window.minsize(width=MIN_WINDOW_WIDTH, height=MIN_WINDOW_HEIGHT)
         self._window.title("Motion Settings")
         self._window.resizable(True, True)
-        self._window.protocol("WM_DELETE_WINDOW", self._dismiss_advanced)
+        self._window.protocol("WM_DELETE_WINDOW", self._dismiss)
         self._window.rowconfigure(0, weight=1)
         self._window.rowconfigure(1, weight=1)
         self._window.columnconfigure(0, weight=1)
@@ -544,7 +544,7 @@ class SettingsWindow:
             offvalue=False,
         ).grid(row=2, column=0, columnspan=2, padx=PADDING, sticky=STICKY, pady=PADDING)
 
-        tk.Button(self._window, text="Close", command=self._dismiss_advanced).grid(
+        tk.Button(self._window, text="Close", command=self._dismiss).grid(
             row=2, column=0, sticky=tk.E, padx=PADDING, pady=PADDING
         )
 
@@ -566,15 +566,15 @@ class SettingsWindow:
         )
 
     def show(self):
-        logger.debug("showing advanced settings window")
+        logger.debug("showing motion settings window")
         self._window.transient(self._root)
         self._window.deiconify()
         self._window.focus()
         self._window.grab_set()
         self._window.wait_window()
 
-    def _dismiss_advanced(self):
-        logger.debug("closing advanced settings window")
+    def _dismiss(self):
+        logger.debug("closing motion settings window")
         self._window.withdraw()
         self._window.grab_release()
         self._root.focus()
@@ -639,7 +639,7 @@ class SettingsWindow:
         settings.set("time-post-event", self._time_post_event.get())
         settings.set("use-pts", self._use_pts.get())
         settings.set("downscale-factor", int(self._downscale_factor.get()))
-        settings.set("learning-rate", float(self._learning_rate_value.get()))
+        settings.set("learning-rate", float(self._learning_rate))
         settings.set("max-threshold", float(self._max_threshold.get()))
         settings.set("variance-threshold", float(self._variance_threshold.get()))
         settings.set("frame-skip", int(self._frame_skip.get()))
