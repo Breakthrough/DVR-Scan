@@ -18,6 +18,7 @@ import typing as ty
 import webbrowser
 from logging import getLogger
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 
 from scenedetect import AVAILABLE_BACKENDS, FrameTimecode, open_video
 
@@ -26,7 +27,13 @@ from dvr_scan.app.common import register_icon
 from dvr_scan.app.region_editor import RegionEditor
 from dvr_scan.app.scan_window import ScanWindow
 from dvr_scan.app.widgets import ColorPicker, Spinbox, TimecodeEntry
-from dvr_scan.config import CHOICE_MAP, CONFIG_MAP, ConfigLoadFailure, ConfigRegistry
+from dvr_scan.config import (
+    CHOICE_MAP,
+    CONFIG_MAP,
+    USER_CONFIG_FILE_PATH,
+    ConfigLoadFailure,
+    ConfigRegistry,
+)
 from dvr_scan.scanner import OutputMode, Point
 from dvr_scan.shared import ScanSettings
 from dvr_scan.subtractor import SubtractorCudaMOG2
@@ -1182,6 +1189,7 @@ class OutputArea:
         settings.set("output-mode", self._output_mode)
         if self._output_dir:
             settings.set("output-dir", self._output_dir)
+        # TODO: Should we save all these settings instead of being dependent on output mode?
         if self._output_mode == OutputMode.FFMPEG:
             settings.set("ffmpeg-input-args", self._ffmpeg_input_args.get())
             settings.set("ffmpeg-output-args", self._ffmpeg_output_args.get())
@@ -1226,6 +1234,7 @@ class ScanArea:
             pady=(0, PADDING),
         )
         self._scan_only = tk.BooleanVar(frame, value=False)
+        # TODO: This should be merged into output-mode to match the config file option.
         self._scan_only_button = ttk.Checkbutton(
             frame,
             text="Scan Only",
@@ -1346,7 +1355,9 @@ class Application:
         )
         # TODO: Add functionality to save settings to a config file.
         settings_menu.add_command(label="Save...", underline=0, command=self._on_save_config)
-        settings_menu.add_command(label="Save As User Default", underline=2, state=tk.DISABLED)
+        settings_menu.add_command(
+            label="Save As User Default", underline=2, command=self._on_save_config_as_user_default
+        )
         settings_menu.add_separator()
         settings_menu.add_command(
             label="Reset To User Default", underline=12, command=self._reset_config
@@ -1503,8 +1514,24 @@ class Application:
         if not save_path:
             return
         settings = self._get_config_settings()
+        logger.debug(f"saving config to {save_path}")
         with open(save_path, "w") as file:
             settings.write_to_file(file)
+
+    def _on_save_config_as_user_default(self):
+        if not tkinter.messagebox.askyesno(
+            title="Save As User Default",
+            message="Existing user config will be overwritten. Do you want to continue?",
+            icon=tkinter.messagebox.WARNING,
+        ):
+            return
+
+        settings = self._get_config_settings()
+        logger.debug(f"saving config to {USER_CONFIG_FILE_PATH}")
+        with NamedTemporaryFile(mode="w", delete_on_close=False) as file:
+            settings.write_to_file(file)
+            file.close()
+            Path(file.name).replace(USER_CONFIG_FILE_PATH)
 
     def _get_config_settings(self) -> ScanSettings:
         """Get current UI state for writing a config file."""
