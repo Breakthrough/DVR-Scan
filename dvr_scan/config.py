@@ -321,6 +321,7 @@ CONFIG_MAP: ConfigDict = {
     "verbosity": "info",
     "debug": False,
     # Input/Output
+    "input-mode": "opencv",
     "output-dir": "",
     "output-mode": "opencv",
     "ffmpeg-input-args": DEFAULT_FFMPEG_INPUT_ARGS,
@@ -367,6 +368,7 @@ certain string options are stored in `CHOICE_MAP`."""
 
 # TODO: This should be a validator. These sub- lists should also be constants somewhere.
 CHOICE_MAP: Dict[str, List[str]] = {
+    "input-mode": ["opencv", "pyav", "moviepy"],
     "opencv-codec": ["XVID", "MP4V", "MP42", "H264"],
     "output-mode": ["scan_only", "opencv", "copy", "ffmpeg"],
     "verbosity": ["debug", "info", "warning", "error"],

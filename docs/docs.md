@@ -251,11 +251,11 @@ bounding-box-color = 0xFF0000
 
 ### Options
 
- * <b><pre>output-dir</pre></b>
-    Directory to output all created files. If unset, files will be created in the current working directory.
-    <span class="dvr-scan-example">
+ * <b><pre>input-mode</pre></b>
+    Which mode to use for decoding frames: (`opencv`, `pyav`, `moviepy`).
+    <span class="dvr-scan-default">
     ```
-    output-dir = C:/temp/scanned/
+    input-mode = opencv
     ```
     </span>
 
@@ -264,6 +264,14 @@ bounding-box-color = 0xFF0000
     <span class="dvr-scan-example">
     ```
     use-pts = yes
+    ```
+    </span>
+
+ * <b><pre>output-dir</pre></b>
+    Directory to output all created files. If unset, files will be created in the current working directory.
+    <span class="dvr-scan-example">
+    ```
+    output-dir = C:/temp/scanned/
     ```
     </span>
 
