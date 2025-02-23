@@ -19,7 +19,7 @@ import webbrowser
 from logging import getLogger
 from pathlib import Path
 
-from scenedetect import FrameTimecode, open_video
+from scenedetect import AVAILABLE_BACKENDS, FrameTimecode, open_video
 
 from dvr_scan.app.about_window import AboutWindow
 from dvr_scan.app.common import register_icon
@@ -30,6 +30,7 @@ from dvr_scan.config import CHOICE_MAP, CONFIG_MAP, ConfigLoadFailure, ConfigReg
 from dvr_scan.scanner import OutputMode, Point
 from dvr_scan.shared import ScanSettings
 from dvr_scan.subtractor import SubtractorCudaMOG2
+from dvr_scan.video_joiner import BackendUnavailable
 
 WINDOW_TITLE = "DVR-Scan"
 PADDING = 8
@@ -127,22 +128,22 @@ class InputArea:
         self._videos.grid(row=0, column=0, columnspan=6, sticky=tk.NSEW)
 
         ttk.Button(root, text="Add", command=self._add_video).grid(
-            row=2, column=0, sticky=tk.EW, padx=PADDING
+            row=2, column=0, sticky=EXPAND_HORIZONTAL, padx=PADDING
         )
         self._remove_button = ttk.Button(
             root, text="Remove", state=tk.DISABLED, command=self._on_remove
         )
-        self._remove_button.grid(row=2, column=1, sticky=tk.EW, padx=PADDING)
+        self._remove_button.grid(row=2, column=1, sticky=EXPAND_HORIZONTAL, padx=PADDING)
         ttk.Button(
             root,
             text="Move Up",
             command=self._on_move_up,
-        ).grid(row=2, column=2, sticky=tk.EW, padx=PADDING)
+        ).grid(row=2, column=2, sticky=EXPAND_HORIZONTAL, padx=PADDING)
         ttk.Button(
             root,
             text="Move Down",
             command=self._on_move_down,
-        ).grid(row=2, column=3, sticky=tk.EW, padx=PADDING)
+        ).grid(row=2, column=3, sticky=EXPAND_HORIZONTAL, padx=PADDING)
 
         self._concatenate = tk.BooleanVar(root, value=True)
         ttk.Checkbutton(
@@ -153,7 +154,7 @@ class InputArea:
             offvalue=False,
             command=self._on_set_time,
             state=tk.DISABLED,  # TODO: Enable when implemented.
-        ).grid(row=2, column=4, padx=PADDING, sticky=tk.EW)
+        ).grid(row=2, column=4, padx=PADDING, sticky=EXPAND_HORIZONTAL)
 
         # TODO: Need to prevent start_time >= end_time.
         self._set_time = tk.BooleanVar(root, value=False)
@@ -188,9 +189,11 @@ class InputArea:
         self._current_region_label = tk.Entry(
             root, width=PATH_INPUT_WIDTH, state=tk.DISABLED, textvariable=self._current_region
         )
-        self._region_editor_button.grid(row=4, column=1, padx=PADDING, sticky=tk.EW)
+        self._region_editor_button.grid(row=4, column=1, padx=PADDING, sticky=EXPAND_HORIZONTAL)
         self._regions: ty.List[ty.List[Point]] = []
-        self._current_region_label.grid(row=4, column=3, sticky=tk.EW, padx=PADDING, columnspan=2)
+        self._current_region_label.grid(
+            row=4, column=3, sticky=EXPAND_HORIZONTAL, padx=PADDING, columnspan=2
+        )
 
         # Update internal state
         self._on_set_time()
@@ -289,10 +292,10 @@ class InputArea:
         self._end_time_label["state"] = state
         self._end_time["state"] = state
         if state == tk.NORMAL and self.concatenate:
-            self._start_time_label.grid(row=3, column=1, sticky=tk.EW)
-            self._start_time.grid(row=3, column=2, padx=PADDING, sticky=tk.EW)
-            self._end_time.grid(row=3, column=4, padx=PADDING, sticky=tk.EW)
-            self._end_time_label.grid(row=3, column=3, sticky=tk.EW)
+            self._start_time_label.grid(row=3, column=1, sticky=EXPAND_HORIZONTAL)
+            self._start_time.grid(row=3, column=2, padx=PADDING, sticky=EXPAND_HORIZONTAL)
+            self._end_time.grid(row=3, column=4, padx=PADDING, sticky=EXPAND_HORIZONTAL)
+            self._end_time_label.grid(row=3, column=3, sticky=EXPAND_HORIZONTAL)
         else:
             self._start_time_label.grid_remove()
             self._start_time.grid_remove()
@@ -369,13 +372,12 @@ class InputSettingsWindow:
         frame.columnconfigure(2, pad=PADDING, weight=2)
         frame.columnconfigure(3, pad=PADDING, weight=1)
         frame.columnconfigure(4, pad=PADDING, weight=1)
-        frame.columnconfigure(5, pad=PADDING, weight=1)
-        frame.columnconfigure(6, pad=PADDING, weight=12, minsize=0)
+        frame.columnconfigure(5, pad=PADDING, weight=12, minsize=0)
 
         self._use_pts = tk.BooleanVar()
         ttk.Checkbutton(
             frame,
-            text="Use Presentation Time\n(PTS) for Timestamps",
+            text="Use Presentation Time (PTS)\nfor Timestamps",
             variable=self._use_pts,
             onvalue=True,
             offvalue=False,
@@ -420,6 +422,16 @@ class InputSettingsWindow:
         self._downscale_factor.grid(
             row=0, column=4, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
         )
+        tk.Label(frame, text="Input Mode").grid(row=0, column=0, sticky=EXPAND_HORIZONTAL)
+        self._input_mode = tk.StringVar()
+        combo = ttk.Combobox(frame, textvariable=self._input_mode, width=SETTING_INPUT_WIDTH)
+        combo.state(["readonly"])
+        # Make sure OpenCV is always at the top.
+        combo["values"] = ["opencv"] + [
+            backend for backend in AVAILABLE_BACKENDS if backend != "opencv"
+        ]
+        self._input_mode.set("opencv")
+        combo.grid(row=0, column=1, sticky=EXPAND_HORIZONTAL)
 
     def show(self):
         logger.debug("showing input settings window")
@@ -439,11 +451,13 @@ class InputSettingsWindow:
         self._use_pts.set(settings.get("use-pts"))
         self._downscale_factor.set(settings.get("downscale-factor"))
         self._frame_skip.set(settings.get("frame-skip"))
+        self._input_mode.set(settings.get("input-mode"))
 
     def update(self, settings: ScanSettings) -> ScanSettings:
         settings.set("use-pts", self._use_pts.get())
         settings.set("downscale-factor", int(self._downscale_factor.get()))
         settings.set("frame-skip", int(self._frame_skip.get()))
+        settings.set("input-mode", self._input_mode.get())
         return settings
 
 
@@ -727,10 +741,12 @@ class OutputArea:
         root.columnconfigure(3, pad=PADDING, weight=12)
 
         tk.Label(root, text="Mode").grid(
-            row=0, column=0, sticky=tk.EW, padx=PADDING, pady=(0, PADDING)
+            row=0, column=0, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(0, PADDING)
         )
         self._output_mode_combo = ttk.Combobox(root, width=SETTING_INPUT_WIDTH, state="readonly")
-        self._output_mode_combo.grid(row=0, column=1, sticky=tk.EW, padx=PADDING, pady=(0, PADDING))
+        self._output_mode_combo.grid(
+            row=0, column=1, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(0, PADDING)
+        )
         self._output_mode_combo.bind(
             "<<ComboboxSelected>>", lambda _: self._on_mode_combo_selected()
         )
@@ -738,7 +754,7 @@ class OutputArea:
         self._options_button = ttk.Button(
             root, text="Options...", command=self._show_options, width=SETTING_INPUT_WIDTH
         )
-        self._options_button.grid(row=0, column=2, sticky=tk.EW, pady=(0, PADDING))
+        self._options_button.grid(row=0, column=2, sticky=EXPAND_HORIZONTAL, pady=(0, PADDING))
 
         self._output_mode_combo["values"] = (
             "OpenCV (.avi)",
@@ -753,7 +769,7 @@ class OutputArea:
         tk.Label(root, text="Directory").grid(
             row=1,
             column=0,
-            sticky=tk.EW,
+            sticky=EXPAND_HORIZONTAL,
             pady=(PADDING, 0),
         )
         ttk.Entry(
@@ -761,14 +777,14 @@ class OutputArea:
         ).grid(
             row=1,
             column=1,
-            sticky=tk.EW,
+            sticky=EXPAND_HORIZONTAL,
             columnspan=3,
             pady=(PADDING, 0),
             padx=PADDING,
         )
 
         self._select_button = ttk.Button(root, text="Select...", command=self._on_select)
-        self._select_button.grid(row=2, column=2, sticky=tk.EW, pady=(PADDING, 0))
+        self._select_button.grid(row=2, column=2, sticky=EXPAND_HORIZONTAL, pady=(PADDING, 0))
 
         def clear_output_directory():
             self._output_dir = ""
@@ -776,7 +792,9 @@ class OutputArea:
         self._clear_button = ttk.Button(
             root, text="Clear", state=tk.DISABLED, command=clear_output_directory
         )
-        self._clear_button.grid(row=2, column=1, sticky=tk.EW, padx=PADDING, pady=(PADDING, 0))
+        self._clear_button.grid(
+            row=2, column=1, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0)
+        )
 
         #
         #
@@ -1265,11 +1283,11 @@ class Application:
 
         output_frame = ttk.Labelframe(self._root, text="Output", padding=PADDING)
         self._output_area = OutputArea(output_frame)
-        output_frame.grid(row=2, sticky=tk.EW, padx=PADDING, pady=(PADDING, 0))
+        output_frame.grid(row=2, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0))
 
         scan_frame = ttk.Labelframe(self._root, text="Run", padding=PADDING)
         self._scan_area = ScanArea(self._root, scan_frame)
-        scan_frame.grid(row=3, sticky=tk.EW, padx=PADDING, pady=PADDING)
+        scan_frame.grid(row=3, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING)
 
         self._scan_window: ty.Optional[ScanWindow] = None
         self._root.bind("<<StartScan>>", lambda _: self._start_scan())
@@ -1328,13 +1346,13 @@ class Application:
         )
         # TODO: Add functionality to save settings to a config file.
         settings_menu.add_command(label="Save...", underline=0, command=self._on_save_config)
-        # settings_menu.add_command(label="Save as User Default", underline=2, state=tk.DISABLED)
+        settings_menu.add_command(label="Save As User Default", underline=2, state=tk.DISABLED)
         settings_menu.add_separator()
         settings_menu.add_command(
-            label="Reset (User Default)", underline=12, command=self._reset_config
+            label="Reset To User Default", underline=12, command=self._reset_config
         )
         settings_menu.add_command(
-            label="Reset (Program Default)",
+            label="Reset To Program Default",
             underline=0,
             command=lambda: self._reset_config(program_default=True),
         )
@@ -1391,7 +1409,16 @@ class Application:
             self._root.deiconify()
             self._root.focus()
 
-        self._scan_window = ScanWindow(self._root, settings, on_closed, PADDING)
+        try:
+            self._scan_window = ScanWindow(self._root, settings, on_closed, PADDING)
+        except BackendUnavailable:
+            tkinter.messagebox.showerror(
+                title="Input Mode Unavailable",
+                message=f"The specified input mode ({settings.get('input-mode')}) "
+                "is not available on this system.",
+            )
+            return
+
         self._scan_area.disable()
         self._scan_window.show()
 
@@ -1482,7 +1509,7 @@ class Application:
     def _get_config_settings(self) -> ScanSettings:
         """Get current UI state for writing a config file."""
         settings = ScanSettings(args=None, config=ConfigRegistry())
-        # Only include settings/output areas, exclude input/scan area.
+        settings = self._input_settings_window.update(settings)
         settings = self._motion_settings_window.update(settings)
         settings = self._output_area.save(settings)
         return settings
@@ -1490,19 +1517,13 @@ class Application:
     def _get_settings(self) -> ty.Optional[ScanSettings]:
         """Get current UI state with all options to run a scan."""
         settings = copy.deepcopy(self._settings)
-
-        # Input Area
         settings = self._input_area.update(settings)
         if not settings:
             return None  # No videos to process.
-
-        # Combine settings from remaining windows and frame areas.
         settings = self._input_settings_window.update(settings)
         settings = self._motion_settings_window.update(settings)
         settings = self._output_area.save(settings)
 
-        # Scan Area
-        # TODO: Move this logic into the scan area similar to the above areas/windows.
         settings.set("scan-only", self._scan_area.scan_only)
         if not settings.get("output-dir") and (
             not settings.get("scan-only") or settings.get("mask-output")
