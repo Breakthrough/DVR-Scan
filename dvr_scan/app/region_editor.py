@@ -8,20 +8,6 @@
 # DVR-Scan is licensed under the BSD 2-Clause License; see the included
 # LICENSE file, or visit one of the above pages for details.
 #
-"""DVR-Scan Region Editor handles detection region input and processing.
-
-Regions are represented as a set of closed polygons defined by lists of points.
-
-*NOTE*: The region editor is being transitioned to an offical GUI for DVR-Scan.
-During this period, there may still be some keyboard/CLI interaction required to
-run the program. Usability and accessibility bugs will be prioritized over feature
-development.
-
-The code in this module covers *all* the current UI logic, and consequently is not
-well organized. This should be resolved as we develop the UI further and start to
-better separate the CLI from the GUI. To facilitate this, a separate entry-point
-for the GUI will be developed, and the region editor functionality will be deprecated.
-"""
 
 import math
 import os

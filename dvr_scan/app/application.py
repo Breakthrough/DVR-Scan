@@ -20,7 +20,7 @@ from logging import getLogger
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
-from scenedetect import AVAILABLE_BACKENDS, FrameTimecode, open_video
+from scenedetect import AVAILABLE_BACKENDS, FrameTimecode, VideoOpenFailure, open_video
 
 from dvr_scan.app.about_window import AboutWindow
 from dvr_scan.app.common import register_icon
@@ -60,25 +60,6 @@ SUPPRESS_EXCEPTIONS = False
 EXPAND_HORIZONTAL = tk.EW
 
 logger = getLogger("dvr_scan")
-
-#
-# TODO: This is ALL the controls that should be included in the initial release.
-# Any additions or modifications can come in the future. Even overlay settings should
-# be ignored for now and added later.
-#
-# Things that need unblocking for a beta release:
-#
-#   1. Map all existing UI controls to the DVR-Scan config types (in progress)
-#   2. Figure out how to run the scan in the background and report the process
-#      and status back. (done)
-#   3. Handle the video input widget. (requires background task model already)
-#      A lot of headaches can be solved if we take some time to validate the video,
-#      and maybe generate some thumbnails or check other metadata, which could take
-#      a few seconds when adding lots of videos. We can't block the UI for this long
-#      so we already need to have a task model in place before this. (todo)
-#
-# At that point DVR-Scan should be ready for a beta release.
-#
 
 
 # TODO: Allow this to be sorted by columns.
@@ -247,12 +228,16 @@ class InputArea:
                 return
         else:
             paths = [path]
+        failed_to_load = False
         for path in paths:
             if not Path(path).exists():
                 logger.error(f"File does not exist: {path}")
                 return
-            # TODO: error handling
-            video = open_video(path, backend="opencv")
+            try:
+                video = open_video(path, backend="opencv")
+            except VideoOpenFailure:
+                failed_to_load = True
+                continue
             duration = video.duration.get_timecode()
             framerate = f"{video.frame_rate:g}"
             resolution = f"{video.frame_size[0]} x {video.frame_size[1]}"
@@ -263,7 +248,11 @@ class InputArea:
                 text=video.name,
                 values=(duration, framerate, resolution, path),
             )
-        self._remove_button["state"] = tk.NORMAL
+        if failed_to_load:
+            tkinter.messagebox.showwarning(
+                "Video Open Failure", "Failed to open one or more videos."
+            )
+        self._remove_button["state"] = tk.NORMAL if self._videos.get_children() else tk.DISABLED
 
     @property
     def concatenate(self) -> bool:
@@ -310,9 +299,14 @@ class InputArea:
             self._end_time_label.grid_remove()
 
     def _on_use_regions(self):
-        state = tk.NORMAL if self._set_region.get() else tk.DISABLED
-        self._region_editor_button["state"] = state
-        # self._load_region_file["state"] = tk.DISABLED #state
+        if self._set_region.get():
+            self._region_editor_button["state"] = tk.NORMAL
+            self._current_region_label.grid(
+                row=4, column=3, sticky=EXPAND_HORIZONTAL, padx=PADDING, columnspan=2
+            )
+        else:
+            self._region_editor_button["state"] = tk.DISABLED
+            self._current_region_label.grid_remove()
 
     def _on_edit_regions(self):
         videos = self.videos
@@ -1189,7 +1183,6 @@ class OutputArea:
         settings.set("output-mode", self._output_mode)
         if self._output_dir:
             settings.set("output-dir", self._output_dir)
-        # TODO: Should we save all these settings instead of being dependent on output mode?
         if self._output_mode == OutputMode.FFMPEG:
             settings.set("ffmpeg-input-args", self._ffmpeg_input_args.get())
             settings.set("ffmpeg-output-args", self._ffmpeg_output_args.get())
@@ -1234,7 +1227,6 @@ class ScanArea:
             pady=(0, PADDING),
         )
         self._scan_only = tk.BooleanVar(frame, value=False)
-        # TODO: This should be merged into output-mode to match the config file option.
         self._scan_only_button = ttk.Checkbutton(
             frame,
             text="Scan Only",
@@ -1353,7 +1345,6 @@ class Application:
             underline=0,
             command=self._load_config,
         )
-        # TODO: Add functionality to save settings to a config file.
         settings_menu.add_command(label="Save...", underline=0, command=self._on_save_config)
         settings_menu.add_command(
             label="Save As User Default", underline=2, command=self._on_save_config_as_user_default
