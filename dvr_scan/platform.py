@@ -26,6 +26,7 @@ try:
 except ImportError:
     screeninfo = None
 
+from scenedetect import AVAILABLE_BACKENDS
 from scenedetect.platform import get_and_create_path, get_ffmpeg_version
 
 try:
@@ -172,8 +173,10 @@ def get_system_version_info(separator_width: int = 40) -> str:
     # Third-Party Packages
     out_lines += ["", "Packages", line_separator]
     third_party_packages = (
+        "av",
         "cv2",
         "dvr_scan",
+        "moviepy",
         "numpy",
         "platformdirs",
         "PIL",
@@ -196,8 +199,10 @@ def get_system_version_info(separator_width: int = 40) -> str:
 
     ffmpeg_version = get_ffmpeg_version()
     feature_version_info = [("ffmpeg", ffmpeg_version)] if ffmpeg_version else []
+    feature_version_info += [("MoviePy", "Installed")] if "moviepy" in AVAILABLE_BACKENDS else []
+    feature_version_info += [("OpenCV CUDA", "Installed")] if HAS_MOG2_CUDA else []
+    feature_version_info += [("PyAV", "Installed")] if "pyav" in AVAILABLE_BACKENDS else []
     feature_version_info += [("tkinter", "Installed")] if HAS_TKINTER else []
-    feature_version_info += [("cv2.cuda", "Installed")] if HAS_MOG2_CUDA else []
 
     for feature_name, feature_version in feature_version_info:
         out_lines.append(

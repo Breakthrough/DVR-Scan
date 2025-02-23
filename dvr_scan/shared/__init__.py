@@ -51,6 +51,7 @@ def init_scanner(
     logger.info("initializing motion scan")
     scanner = MotionScanner(
         input_videos=settings.get_arg("input"),
+        input_mode=settings.get("input-mode"),
         frame_skip=settings.get("frame-skip"),
         show_progress=not settings.get("quiet-mode"),
         debug_mode=settings.get("debug"),
