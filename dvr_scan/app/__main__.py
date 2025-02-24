@@ -12,8 +12,11 @@
 import argparse
 import logging
 import sys
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 from subprocess import CalledProcessError
 
+from platformdirs import user_log_path
 from scenedetect import VideoOpenFailure
 from scenedetect.platform import FakeTqdmLoggingRedirect, logging_redirect_tqdm
 
@@ -21,6 +24,7 @@ import dvr_scan
 from dvr_scan import get_license_info
 from dvr_scan.app.application import Application
 from dvr_scan.config import CHOICE_MAP, USER_CONFIG_FILE_PATH, ConfigLoadFailure, ConfigRegistry
+from dvr_scan.platform import LOG_FORMAT_ROLLING_LOGS, attach_log_handler
 from dvr_scan.shared import ScanSettings, init_logging
 from dvr_scan.shared.cli import VERSION_STRING, LicenseAction, VersionAction, string_type_check
 
@@ -29,6 +33,10 @@ logger = logging.getLogger("dvr_scan")
 
 EXIT_SUCCESS: int = 0
 EXIT_ERROR: int = 1
+
+# Keep the last 16 KiB of logfiles automatically
+MAX_LOGFILE_SIZE_KB = 16384
+MAX_LOGFILE_BACKUPS = 4
 
 
 def get_cli_parser():
@@ -101,6 +109,20 @@ def get_cli_parser():
     return parser
 
 
+def init_debug_logger() -> logging.Handler:
+    """Initialize rolling debug logger."""
+    folder = user_log_path("DVR-Scan", False)
+    folder.mkdir(parents=True, exist_ok=True)
+    handler = RotatingFileHandler(
+        folder / Path("dvr-scan.app.log"),
+        maxBytes=MAX_LOGFILE_SIZE_KB * 1024,
+        backupCount=MAX_LOGFILE_BACKUPS,
+    )
+    handler.setLevel(logging.DEBUG)
+    handler.setFormatter(logging.Formatter(fmt=LOG_FORMAT_ROLLING_LOGS))
+    return handler
+
+
 # TODO: There's a lot of duplicated code here between the CLI and GUI. See if we can combine some
 # of the handling of config file loading and exceptions to be consistent between the two.
 #
@@ -108,12 +130,12 @@ def get_cli_parser():
 # existing CLI parser.
 def main():
     """Parse command line options and load config file settings."""
-
     init_log = []
+    debug_log_handler = init_debug_logger()
     config_load_error = None
     failed_to_load_config = False
     config = ConfigRegistry()
-    # Try to load config from user settings folder.
+    # Create debug log handler and try to load the user config file.
     try:
         user_config = ConfigRegistry()
         user_config.load()
@@ -124,6 +146,8 @@ def main():
     # Parse CLI args, override config if an override was specified on the command line.
     try:
         args = get_cli_parser().parse_args()
+        # TODO: Add a UI element somewhere (e.g. in the about window) that indicates to the user
+        # where the log files are being written.
         init_logging(args, config)
         init_log += [(logging.INFO, "DVR-Scan Application %s" % dvr_scan.__version__)]
         if config_load_error and not hasattr(args, "config"):
@@ -141,6 +165,7 @@ def main():
         failed_to_load_config = True
         config_load_error = ex
     finally:
+        attach_log_handler(debug_log_handler)
         for log_level, log_str in init_log:
             logger.log(log_level, log_str)
         if failed_to_load_config:
