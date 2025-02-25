@@ -2,15 +2,7 @@
 # :fontawesome-solid-keyboard:Frequently Asked Questions
 
 
-----------------------------------------------------------
-
-
-### How do I run DVR-Scan?
-
-Currently, DVR-Scan is a command-line program only, and must be launched from a terminal or command prompt (e.g. `cmd.exe` on Windows).
-In the meantime, Windows users can [use these instructions](https://github.com/Breakthrough/DVR-Scan/issues/178) create helpful drag-and-drop shortcuts. These will allow you to run DVR-Scan by dragging and dropping the video(s) you want to scan.
-
-!!! note "A [beta release for the new GUI version of DVR-Scan](https://github.com/Breakthrough/DVR-Scan/releases/tag/v1.7-dev0) is now available for testing on Windows/Linux/OSX!"
+## Command-Line Interface
 
 
 ----------------------------------------------------------
