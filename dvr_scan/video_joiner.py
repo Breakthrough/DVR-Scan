@@ -20,13 +20,22 @@ from typing import AnyStr, List, Optional, Tuple, Union
 
 import cv2
 import numpy
-from scenedetect import FrameTimecode
-from scenedetect.backends import VideoStreamCv2
+from scenedetect import FrameTimecode, VideoStream
+from scenedetect.backends import AVAILABLE_BACKENDS
 from scenedetect.video_stream import VideoOpenFailure
 
 FRAMERATE_DELTA_TOLERANCE: float = 0.1
 
 logger = logging.getLogger("dvr_scan")
+
+
+class BackendUnavailable(Exception):
+    """Raised when specified input backend is unavailable."""
+
+    def __init__(
+        self, backend: str, message: str = "Specified backend (%s) is not available on this system."
+    ):
+        super().__init__(message % backend)
 
 
 # TODO: Replace this with the equivalent from PySceneDetect when available.
@@ -37,18 +46,21 @@ class VideoJoiner:
         VideoOpenFailure: Failed to open a video, or video parameters don't match.
     """
 
-    def __init__(self, paths: Union[AnyStr, List[AnyStr]]):
+    def __init__(self, paths: Union[AnyStr, List[AnyStr]], backend: str = "opencv"):
+        if backend not in AVAILABLE_BACKENDS:
+            raise BackendUnavailable(backend=backend)
+        self._backend: VideoStream = AVAILABLE_BACKENDS[backend]
+
         if isinstance(paths, (str, bytes)):
             paths = [paths]
-
         assert paths
         self._paths = paths
 
-        self._cap: Optional[VideoStreamCv2] = None
+        self._cap: Optional[VideoStream] = None
         self._curr_cap_index = 0
         self._total_frames: int = 0
         self._decode_failures: int = 0
-        self._load_input_videos()
+        self._load_input_videos(backend)
         # Initialize position now that the framerate is valid.
         self._position: FrameTimecode = FrameTimecode(0, self.framerate)
         self._last_cap_pos: FrameTimecode = FrameTimecode(0, self.framerate)
@@ -76,7 +88,9 @@ class VideoJoiner:
     @property
     def decode_failures(self) -> float:
         """Number of frames which failed to decode (may indicate video corruption)."""
-        return self._decode_failures + self._cap._decode_failures
+        return self._decode_failures + (
+            self._cap._decode_failures if hasattr(self._cap, "_decode_failures") else 0
+        )
 
     @property
     def position(self) -> FrameTimecode:
@@ -95,11 +109,13 @@ class VideoJoiner:
                 self._curr_cap_index += 1
                 # Compensate for presentation time of last frame
                 self._position += 1
-                self._decode_failures += self._cap._decode_failures
+                self._decode_failures += (
+                    self._cap._decode_failures if hasattr(self._cap, "_decode_failures") else 0
+                )
                 logger.debug(
                     "End of current video, loading next: %s" % self._paths[self._curr_cap_index]
                 )
-                self._cap = VideoStreamCv2(self._paths[self._curr_cap_index])
+                self._cap = self._backend(self._paths[self._curr_cap_index])
                 self._last_cap_pos = self._cap.base_timecode
                 return self.read(decode=decode)
             logger.debug("No more input to process.")
@@ -120,18 +136,19 @@ class VideoJoiner:
                 if self.read(decode=False) is None:
                     break
 
-    def _load_input_videos(self):
+    def _load_input_videos(self, backend: str):
         unsupported_codec: bool = False
         validated_paths: List[str] = []
         opened_video: bool = False
-        for video_path in self._paths:
-            video_name = os.path.basename(video_path)
+        for path in self._paths:
+            video_name = os.path.basename(path)
             try:
-                cap = VideoStreamCv2(video_path)
+                assert backend in AVAILABLE_BACKENDS
+                cap = self._backend(path)
             except VideoOpenFailure:
-                logger.error("Error: Couldn't load video %s", video_path)
+                logger.error(f"Error: Couldn't load video {path} with {backend}")
                 raise
-            validated_paths.append(video_path)
+            validated_paths.append(path)
             self._total_frames += cap.duration.frame_num
             # Set the resolution/framerate based on the first video.
             if not opened_video:

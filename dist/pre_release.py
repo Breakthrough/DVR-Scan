@@ -113,6 +113,12 @@ def build_docs(use_local_images=True):
         print("Postprocessing docs.")
 
         delete_and_replace = [
+            "assets/app-ffmpeg-settings.jpg",
+            "assets/app-input-settings.jpg",
+            "assets/app-main-window.jpg",
+            "assets/app-motion-settings.jpg",
+            "assets/app-opencv-settings.jpg",
+            "assets/app-scan-window.jpg",
             "assets/bounding-box.gif",
             "assets/dvr-scan-logo.png",
             "assets/dvr-scan.ico",

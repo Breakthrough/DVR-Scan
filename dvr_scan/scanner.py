@@ -217,20 +217,11 @@ class MotionScanner:
     def __init__(
         self,
         input_videos: List[AnyStr],
+        input_mode: str = "opencv",
         frame_skip: int = 0,
         show_progress: bool = False,
         debug_mode: bool = False,
     ):
-        """Initializes the MotionScanner with the supplied arguments.
-
-        Arguments:
-            config_file: List of paths of videos to process.
-            input_videos: List of paths of videos to process.
-            frame_skip: Skip every 1 in (frame_skip+1) frames to speed up processing at
-                expense of accuracy (default is 0 for no skipping).
-            show_progress: Show a progress bar using tqdm.
-        """
-
         self._show_progress: bool = show_progress
         self._debug_mode: bool = debug_mode
 
@@ -277,7 +268,7 @@ class MotionScanner:
         self._roi_deprecated = None
 
         # Input Video Parameters (set_video_time)
-        self._input: VideoJoiner = VideoJoiner(input_videos)  # -i/--input
+        self._input: VideoJoiner = VideoJoiner(input_videos, backend=input_mode)  # -i/--input
         self._frame_skip: int = frame_skip  # -fs/--frame-skip
         self._start_time: FrameTimecode = None  # -st/--start-time
         self._end_time: FrameTimecode = None  # -et/--end-time
@@ -739,7 +730,9 @@ class MotionScanner:
             if len(self._input.paths) > 1
             else "input video",
         )
-        logger.debug(f"output mode = {self._output_mode}")
+        logger.debug(
+            f"input mode = {self._input._backend.BACKEND_NAME}, output mode = {self._output_mode}"
+        )
 
         progress_bar = FakeTqdmObject() if not self._show_progress else self._create_progress_bar()
         num_frames_to_process = self.frames_remaining

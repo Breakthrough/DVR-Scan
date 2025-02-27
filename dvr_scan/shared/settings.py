@@ -12,6 +12,7 @@
 import argparse
 import typing as ty
 
+import dvr_scan
 from dvr_scan.config import ConfigRegistry
 
 
@@ -59,6 +60,8 @@ class ScanSettings:
 
     def write_to_file(self, file: ty.TextIO):
         """Get application settings as a config file. Only works for the UI, not CLI."""
+        file.write("# DVR-Scan Config File\n")
+        file.write(f"# Created by: DVR-Scan {dvr_scan.__version__}\n")
         keys = sorted(self._app_settings.keys())
         if "mask-output" in keys:
             keys.remove("mask-output")

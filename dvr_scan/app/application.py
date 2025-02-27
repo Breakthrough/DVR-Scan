@@ -18,17 +18,26 @@ import typing as ty
 import webbrowser
 from logging import getLogger
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 
-from scenedetect import FrameTimecode, open_video
+from scenedetect import AVAILABLE_BACKENDS, FrameTimecode, VideoOpenFailure, open_video
 
 from dvr_scan.app.about_window import AboutWindow
 from dvr_scan.app.common import register_icon
 from dvr_scan.app.region_editor import RegionEditor
 from dvr_scan.app.scan_window import ScanWindow
 from dvr_scan.app.widgets import ColorPicker, Spinbox, TimecodeEntry
-from dvr_scan.config import CHOICE_MAP, CONFIG_MAP, ConfigLoadFailure, ConfigRegistry
+from dvr_scan.config import (
+    CHOICE_MAP,
+    CONFIG_MAP,
+    USER_CONFIG_FILE_PATH,
+    ConfigLoadFailure,
+    ConfigRegistry,
+)
 from dvr_scan.scanner import OutputMode, Point
 from dvr_scan.shared import ScanSettings
+from dvr_scan.subtractor import SubtractorCudaMOG2
+from dvr_scan.video_joiner import BackendUnavailable
 
 WINDOW_TITLE = "DVR-Scan"
 PADDING = 8
@@ -48,27 +57,9 @@ NO_REGIONS_SPECIFIED_TEXT = "No Region(s) Specified"
 
 # TODO: Remove this and use the "debug" setting instead.
 SUPPRESS_EXCEPTIONS = False
+EXPAND_HORIZONTAL = tk.EW
 
 logger = getLogger("dvr_scan")
-
-#
-# TODO: This is ALL the controls that should be included in the initial release.
-# Any additions or modifications can come in the future. Even overlay settings should
-# be ignored for now and added later.
-#
-# Things that need unblocking for a beta release:
-#
-#   1. Map all existing UI controls to the DVR-Scan config types (in progress)
-#   2. Figure out how to run the scan in the background and report the process
-#      and status back. (done)
-#   3. Handle the video input widget. (requires background task model already)
-#      A lot of headaches can be solved if we take some time to validate the video,
-#      and maybe generate some thumbnails or check other metadata, which could take
-#      a few seconds when adding lots of videos. We can't block the UI for this long
-#      so we already need to have a task model in place before this. (todo)
-#
-# At that point DVR-Scan should be ready for a beta release.
-#
 
 
 # TODO: Allow this to be sorted by columns.
@@ -125,22 +116,22 @@ class InputArea:
         self._videos.grid(row=0, column=0, columnspan=6, sticky=tk.NSEW)
 
         ttk.Button(root, text="Add", command=self._add_video).grid(
-            row=2, column=0, sticky=tk.EW, padx=PADDING
+            row=2, column=0, sticky=EXPAND_HORIZONTAL, padx=PADDING
         )
         self._remove_button = ttk.Button(
             root, text="Remove", state=tk.DISABLED, command=self._on_remove
         )
-        self._remove_button.grid(row=2, column=1, sticky=tk.EW, padx=PADDING)
+        self._remove_button.grid(row=2, column=1, sticky=EXPAND_HORIZONTAL, padx=PADDING)
         ttk.Button(
             root,
             text="Move Up",
             command=self._on_move_up,
-        ).grid(row=2, column=2, sticky=tk.EW, padx=PADDING)
+        ).grid(row=2, column=2, sticky=EXPAND_HORIZONTAL, padx=PADDING)
         ttk.Button(
             root,
             text="Move Down",
             command=self._on_move_down,
-        ).grid(row=2, column=3, sticky=tk.EW, padx=PADDING)
+        ).grid(row=2, column=3, sticky=EXPAND_HORIZONTAL, padx=PADDING)
 
         self._concatenate = tk.BooleanVar(root, value=True)
         ttk.Checkbutton(
@@ -151,7 +142,7 @@ class InputArea:
             offvalue=False,
             command=self._on_set_time,
             state=tk.DISABLED,  # TODO: Enable when implemented.
-        ).grid(row=2, column=4, padx=PADDING, sticky=tk.EW)
+        ).grid(row=2, column=4, padx=PADDING, sticky=EXPAND_HORIZONTAL)
 
         # TODO: Need to prevent start_time >= end_time.
         self._set_time = tk.BooleanVar(root, value=False)
@@ -186,9 +177,11 @@ class InputArea:
         self._current_region_label = tk.Entry(
             root, width=PATH_INPUT_WIDTH, state=tk.DISABLED, textvariable=self._current_region
         )
-        self._region_editor_button.grid(row=4, column=1, padx=PADDING, sticky=tk.EW)
+        self._region_editor_button.grid(row=4, column=1, padx=PADDING, sticky=EXPAND_HORIZONTAL)
         self._regions: ty.List[ty.List[Point]] = []
-        self._current_region_label.grid(row=4, column=3, sticky=tk.EW, padx=PADDING, columnspan=2)
+        self._current_region_label.grid(
+            row=4, column=3, sticky=EXPAND_HORIZONTAL, padx=PADDING, columnspan=2
+        )
 
         # Update internal state
         self._on_set_time()
@@ -235,12 +228,16 @@ class InputArea:
                 return
         else:
             paths = [path]
+        failed_to_load = False
         for path in paths:
             if not Path(path).exists():
                 logger.error(f"File does not exist: {path}")
                 return
-            # TODO: error handling
-            video = open_video(path, backend="opencv")
+            try:
+                video = open_video(path, backend="opencv")
+            except VideoOpenFailure:
+                failed_to_load = True
+                continue
             duration = video.duration.get_timecode()
             framerate = f"{video.frame_rate:g}"
             resolution = f"{video.frame_size[0]} x {video.frame_size[1]}"
@@ -251,7 +248,11 @@ class InputArea:
                 text=video.name,
                 values=(duration, framerate, resolution, path),
             )
-        self._remove_button["state"] = tk.NORMAL
+        if failed_to_load:
+            tkinter.messagebox.showwarning(
+                "Video Open Failure", "Failed to open one or more videos."
+            )
+        self._remove_button["state"] = tk.NORMAL if self._videos.get_children() else tk.DISABLED
 
     @property
     def concatenate(self) -> bool:
@@ -287,10 +288,10 @@ class InputArea:
         self._end_time_label["state"] = state
         self._end_time["state"] = state
         if state == tk.NORMAL and self.concatenate:
-            self._start_time_label.grid(row=3, column=1, sticky=tk.EW)
-            self._start_time.grid(row=3, column=2, padx=PADDING, sticky=tk.EW)
-            self._end_time.grid(row=3, column=4, padx=PADDING, sticky=tk.EW)
-            self._end_time_label.grid(row=3, column=3, sticky=tk.EW)
+            self._start_time_label.grid(row=3, column=1, sticky=EXPAND_HORIZONTAL)
+            self._start_time.grid(row=3, column=2, padx=PADDING, sticky=EXPAND_HORIZONTAL)
+            self._end_time.grid(row=3, column=4, padx=PADDING, sticky=EXPAND_HORIZONTAL)
+            self._end_time_label.grid(row=3, column=3, sticky=EXPAND_HORIZONTAL)
         else:
             self._start_time_label.grid_remove()
             self._start_time.grid_remove()
@@ -298,9 +299,14 @@ class InputArea:
             self._end_time_label.grid_remove()
 
     def _on_use_regions(self):
-        state = tk.NORMAL if self._set_region.get() else tk.DISABLED
-        self._region_editor_button["state"] = state
-        # self._load_region_file["state"] = tk.DISABLED #state
+        if self._set_region.get():
+            self._region_editor_button["state"] = tk.NORMAL
+            self._current_region_label.grid(
+                row=4, column=3, sticky=EXPAND_HORIZONTAL, padx=PADDING, columnspan=2
+            )
+        else:
+            self._region_editor_button["state"] = tk.DISABLED
+            self._current_region_label.grid_remove()
 
     def _on_edit_regions(self):
         videos = self.videos
@@ -339,38 +345,172 @@ class InputArea:
         return self._start_time.get(), self._end_time.get()
 
 
-class SettingsArea:
+class InputSettingsWindow:
     def __init__(self, root: tk.Widget):
         self._root = root
-        self._advanced = tk.Toplevel(master=root)
-        self._advanced.withdraw()
+        self._window = tk.Toplevel(master=root)
+        self._window.withdraw()
 
         root.rowconfigure(0, pad=PADDING, weight=1)
-        root.rowconfigure(1, pad=PADDING, weight=1)
-        root.rowconfigure(2, pad=PADDING, weight=1)
         root.columnconfigure(0, pad=PADDING, weight=1)
-        root.columnconfigure(1, pad=PADDING, weight=1)
-        root.columnconfigure(2, pad=PADDING, weight=2)
-        root.columnconfigure(3, pad=PADDING, weight=1)
-        root.columnconfigure(4, pad=PADDING, weight=1)
-        root.columnconfigure(5, pad=PADDING, weight=1)
-        root.columnconfigure(6, pad=PADDING, weight=12, minsize=0)
+        root.columnconfigure(1, pad=PADDING, weight=12, minsize=0)
 
-        STICKY = tk.EW
+        self._window.minsize(width=MIN_WINDOW_WIDTH, height=MIN_WINDOW_HEIGHT)
+        self._window.title("Input Settings")
+        self._window.resizable(True, True)
+        self._window.protocol("WM_DELETE_WINDOW", self._dismiss)
+        self._window.rowconfigure(0, weight=1)
+        self._window.rowconfigure(1, weight=1)
+        self._window.columnconfigure(0, weight=1)
 
-        # Detector
+        frame = ttk.LabelFrame(self._window, text="Video", padding=PADDING)
+        frame.grid(row=0, sticky=tk.NSEW, padx=PADDING, pady=PADDING)
+        frame.rowconfigure(0, pad=PADDING, weight=1)
+        frame.rowconfigure(1, pad=PADDING, weight=1)
+        frame.rowconfigure(2, pad=PADDING, weight=1)
+        frame.columnconfigure(0, pad=PADDING, weight=1)
+        frame.columnconfigure(1, pad=PADDING, weight=1)
+        frame.columnconfigure(2, pad=PADDING, weight=2)
+        frame.columnconfigure(3, pad=PADDING, weight=1)
+        frame.columnconfigure(4, pad=PADDING, weight=1)
+        frame.columnconfigure(5, pad=PADDING, weight=12, minsize=0)
 
-        tk.Label(root, text="Subtractor").grid(row=0, column=0, sticky=STICKY)
-        self._bg_subtractor = tk.StringVar()
-        combo = ttk.Combobox(root, textvariable=self._bg_subtractor, width=SETTING_INPUT_WIDTH)
-        combo["values"] = ("MOG2", "CNT")
+        self._use_pts = tk.BooleanVar()
+        ttk.Checkbutton(
+            frame,
+            text="Use Presentation Time (PTS)\nfor Timestamps",
+            variable=self._use_pts,
+            onvalue=True,
+            offvalue=False,
+        ).grid(
+            row=2,
+            column=0,
+            columnspan=2,
+            padx=PADDING,
+            sticky=tk.N + EXPAND_HORIZONTAL,
+            pady=PADDING,
+        )
+
+        tk.Button(self._window, text="Close", command=self._dismiss).grid(
+            row=2, column=0, sticky=tk.E, padx=PADDING, pady=PADDING
+        )
+
+        tk.Label(frame, text="Frame Skip").grid(
+            row=2, column=3, padx=PADDING, sticky=tk.N + EXPAND_HORIZONTAL, pady=PADDING
+        )
+        self._frame_skip = Spinbox(
+            frame,
+            value=str(CONFIG_MAP["frame-skip"]),
+            from_=0.0,
+            to=1000.0,
+            increment=1.0,
+        )
+        self._frame_skip.grid(
+            row=2, column=4, padx=PADDING, sticky=tk.N + EXPAND_HORIZONTAL, pady=PADDING
+        )
+        self._downscale_factor = tk.StringVar(value=1)
+        tk.Label(frame, text="Downscale Factor").grid(
+            row=0, column=3, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
+        )
+        self._downscale_factor = Spinbox(
+            frame,
+            value=float(CONFIG_MAP["downscale-factor"]),
+            from_=0.0,
+            to=float(MAX_DOWNSCALE_FACTOR),
+            increment=1.0,
+            convert=lambda val: round(float(val)),
+        )
+        self._downscale_factor.grid(
+            row=0, column=4, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
+        )
+        tk.Label(frame, text="Input Mode").grid(row=0, column=0, sticky=EXPAND_HORIZONTAL)
+        self._input_mode = tk.StringVar()
+        combo = ttk.Combobox(frame, textvariable=self._input_mode, width=SETTING_INPUT_WIDTH)
         combo.state(["readonly"])
-        self._bg_subtractor.set("MOG2")
-        combo.grid(row=0, column=1, sticky=STICKY)
+        # Make sure OpenCV is always at the top.
+        combo["values"] = ["opencv"] + [
+            backend for backend in AVAILABLE_BACKENDS if backend != "opencv"
+        ]
+        self._input_mode.set("opencv")
+        combo.grid(row=0, column=1, sticky=EXPAND_HORIZONTAL)
 
-        tk.Label(root, text="Kernel Size").grid(row=1, column=0, sticky=STICKY)
+    def show(self):
+        logger.debug("showing input settings window")
+        self._window.transient(self._root)
+        self._window.deiconify()
+        self._window.focus()
+        self._window.grab_set()
+        self._window.wait_window()
 
-        self._kernel_size_combobox = ttk.Combobox(root, width=SETTING_INPUT_WIDTH, state="readonly")
+    def _dismiss(self):
+        logger.debug("closing input settings window")
+        self._window.withdraw()
+        self._window.grab_release()
+        self._root.focus()
+
+    def set(self, settings: ScanSettings):
+        self._use_pts.set(settings.get("use-pts"))
+        self._downscale_factor.set(settings.get("downscale-factor"))
+        self._frame_skip.set(settings.get("frame-skip"))
+        self._input_mode.set(settings.get("input-mode"))
+
+    def update(self, settings: ScanSettings) -> ScanSettings:
+        settings.set("use-pts", self._use_pts.get())
+        settings.set("downscale-factor", int(self._downscale_factor.get()))
+        settings.set("frame-skip", int(self._frame_skip.get()))
+        settings.set("input-mode", self._input_mode.get())
+        return settings
+
+
+class MotionSettingsWindow:
+    def __init__(self, root: tk.Widget):
+        self._root = root
+        self._window = tk.Toplevel(master=root)
+        self._window.withdraw()
+
+        root.rowconfigure(0, pad=PADDING, weight=1)
+        root.columnconfigure(0, pad=PADDING, weight=1)
+        root.columnconfigure(1, pad=PADDING, weight=12, minsize=0)
+
+        self._window.minsize(width=MIN_WINDOW_WIDTH, height=MIN_WINDOW_HEIGHT)
+        self._window.title("Motion Settings")
+        self._window.resizable(True, True)
+        self._window.protocol("WM_DELETE_WINDOW", self._dismiss)
+        self._window.rowconfigure(0, weight=1)
+        self._window.rowconfigure(1, weight=1)
+        self._window.columnconfigure(0, weight=1)
+
+        frame = ttk.LabelFrame(self._window, text="Motion", padding=PADDING)
+        frame.grid(row=0, sticky=tk.NSEW, padx=PADDING, pady=PADDING)
+        frame.rowconfigure(0, pad=2 * PADDING, weight=1)
+        frame.rowconfigure(1, pad=2 * PADDING, weight=1)
+        frame.rowconfigure(2, pad=2 * PADDING, weight=1)
+        frame.columnconfigure(0, pad=PADDING, weight=1)
+        frame.columnconfigure(1, pad=PADDING, weight=1)
+        frame.columnconfigure(2, pad=PADDING, weight=2)
+        frame.columnconfigure(3, pad=PADDING, weight=1)
+        frame.columnconfigure(4, pad=PADDING, weight=1)
+        frame.columnconfigure(5, pad=PADDING, weight=1)
+        frame.columnconfigure(6, pad=PADDING, weight=12, minsize=0)
+
+        tk.Label(frame, text="Subtractor").grid(row=0, column=0, sticky=EXPAND_HORIZONTAL)
+        self._bg_subtractor = tk.StringVar()
+        combo = ttk.Combobox(frame, textvariable=self._bg_subtractor, width=SETTING_INPUT_WIDTH)
+        combo.state(["readonly"])
+        if SubtractorCudaMOG2.is_available():
+            combo["values"] = ("MOG2_CUDA", "MOG2", "CNT")
+            self._bg_subtractor.set("MOG2_CUDA")
+        else:
+            combo["values"] = ("MOG2", "CNT")
+            self._bg_subtractor.set("MOG2")
+
+        combo.grid(row=0, column=1, sticky=EXPAND_HORIZONTAL)
+
+        tk.Label(frame, text="Kernel Size").grid(row=1, column=0, sticky=EXPAND_HORIZONTAL)
+
+        self._kernel_size_combobox = ttk.Combobox(
+            frame, width=SETTING_INPUT_WIDTH, state="readonly"
+        )
         # 0: Auto
         # 1: Off
         # 2: 3x3
@@ -382,84 +522,57 @@ class SettingsArea:
             "Auto",
             *tuple(f"{n}x{n}" for n in range(3, MAX_KERNEL_SIZE + 1, 2)),
         )
-        self._kernel_size_combobox.grid(row=1, column=1, sticky=STICKY)
+        self._kernel_size_combobox.grid(row=1, column=1, sticky=EXPAND_HORIZONTAL)
         self._kernel_size_combobox.current(1)
 
-        tk.Label(root, text="Threshold").grid(row=2, column=0, sticky=STICKY)
+        tk.Label(frame, text="Threshold").grid(row=2, column=0, sticky=EXPAND_HORIZONTAL)
         self._threshold = Spinbox(
-            root,
+            frame,
             value=str(CONFIG_MAP["threshold"]),
             from_=0.0,
             to=255.0,
             increment=0.01,
         )
-        self._threshold.grid(row=2, column=1, sticky=STICKY)
+        self._threshold.grid(row=2, column=1, sticky=EXPAND_HORIZONTAL)
 
         # Events
-        tk.Label(root, text="Min. Event Length").grid(row=0, column=3, sticky=STICKY)
+        tk.Label(frame, text="Min. Event Length").grid(row=0, column=3, sticky=EXPAND_HORIZONTAL)
         self._min_event_length = Spinbox(
-            root,
+            frame,
             value=str(CONFIG_MAP["min-event-length"]),
             from_=0.0,
             to=MAX_DURATION,
             increment=DURATION_INCREMENT,
             suffix="s",
         )
-        self._min_event_length.grid(row=0, column=4, sticky=STICKY)
+        self._min_event_length.grid(row=0, column=4, sticky=EXPAND_HORIZONTAL)
 
-        tk.Label(root, text="Time Pre-Event").grid(row=1, column=3, sticky=STICKY)
+        tk.Label(frame, text="Time Pre-Event").grid(row=1, column=3, sticky=EXPAND_HORIZONTAL)
         self._time_before_event = Spinbox(
-            root,
+            frame,
             value=str(CONFIG_MAP["time-before-event"]),
             from_=0.0,
             to=MAX_DURATION,
             increment=DURATION_INCREMENT,
             suffix="s",
         )
-        self._time_before_event.grid(row=1, column=4, sticky=STICKY)
+        self._time_before_event.grid(row=1, column=4, sticky=EXPAND_HORIZONTAL)
 
-        tk.Label(root, text="Time Post-Event").grid(row=2, column=3, sticky=STICKY)
+        tk.Label(frame, text="Time Post-Event").grid(row=2, column=3, sticky=EXPAND_HORIZONTAL)
         self._time_post_event = Spinbox(
-            root,
+            frame,
             value=str(CONFIG_MAP["time-post-event"]),
             from_=0.0,
             to=MAX_DURATION,
             increment=DURATION_INCREMENT,
             suffix="s",
         )
-        self._time_post_event.grid(row=2, column=4, sticky=STICKY)
+        self._time_post_event.grid(row=2, column=4, sticky=EXPAND_HORIZONTAL)
 
-        self._mask_output = tk.BooleanVar(value=False)
-        ttk.Checkbutton(
-            root,
-            text="Save Motion Mask",
-            variable=self._mask_output,
-            onvalue=True,
-            offvalue=False,
-        ).grid(row=3, column=0, columnspan=2, sticky=tk.W, padx=PADDING, pady=PADDING)
-
-        # Processing
-
-        self._advanced_button = ttk.Button(
-            root, text="Advanced...", command=self._show_advanced, width=SETTING_INPUT_WIDTH
-        )
-        self._advanced_button.grid(
-            row=3, column=3, columnspan=2, sticky=tk.EW, pady=PADDING, padx=PADDING
-        )
-
-        #
-        #
-        # Advanced Window
-        #
-        #
-        self._advanced.minsize(width=MIN_WINDOW_WIDTH, height=MIN_WINDOW_HEIGHT)
-        self._advanced.title("Motion Settings")
-        self._advanced.resizable(True, True)
-        self._advanced.protocol("WM_DELETE_WINDOW", self._dismiss_advanced)
-        self._advanced.rowconfigure(0, weight=1)
-        self._advanced.columnconfigure(0, weight=1)
-        frame = ttk.LabelFrame(self._advanced, text="Advanced", padding=PADDING)
-        frame.grid(row=0, sticky=tk.NSEW, padx=PADDING, pady=PADDING)
+        frame = ttk.LabelFrame(self._window, text="Advanced", padding=PADDING)
+        frame.grid(row=1, sticky=tk.NSEW, padx=PADDING, pady=PADDING)
+        frame.rowconfigure(0, pad=PADDING, weight=1)
+        frame.rowconfigure(1, pad=PADDING, weight=1)
         frame.columnconfigure(0, weight=1)
         frame.columnconfigure(1, weight=1)
         frame.columnconfigure(2, weight=2)
@@ -468,22 +581,19 @@ class SettingsArea:
         frame.columnconfigure(5, weight=2)
         frame.columnconfigure(6, weight=12)
 
-        self._downscale_factor = tk.StringVar(value=1)
-        tk.Label(frame, text="Downscale Factor").grid(
-            row=0, column=0, sticky=STICKY, padx=PADDING, pady=PADDING
-        )
-        self._downscale_factor = Spinbox(
+        self._mask_output = tk.BooleanVar(value=False)
+        ttk.Checkbutton(
             frame,
-            value=float(CONFIG_MAP["downscale-factor"]),
-            from_=0.0,
-            to=float(MAX_DOWNSCALE_FACTOR),
-            increment=1.0,
-            convert=lambda val: round(float(val)),
-        )
-        self._downscale_factor.grid(row=0, column=1, sticky=STICKY, padx=PADDING, pady=PADDING)
+            text="Save Motion Mask",
+            variable=self._mask_output,
+            onvalue=True,
+            offvalue=False,
+        ).grid(row=1, column=0, columnspan=2, sticky=tk.W, padx=PADDING, pady=PADDING)
 
         self._learning_rate_auto = tk.BooleanVar(value=True)
-        tk.Label(frame, text="Learning Rate").grid(row=0, column=3, padx=PADDING, sticky=STICKY)
+        tk.Label(frame, text="Learning Rate").grid(
+            row=0, column=3, padx=PADDING, sticky=EXPAND_HORIZONTAL
+        )
         self._learning_rate_value = Spinbox(
             frame,
             value=0.5,
@@ -492,7 +602,9 @@ class SettingsArea:
             increment=0.01,
             state=tk.DISABLED,
         )
-        self._learning_rate_value.grid(row=0, column=4, padx=PADDING, sticky=STICKY, pady=PADDING)
+        self._learning_rate_value.grid(
+            row=0, column=4, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING
+        )
         ttk.Checkbutton(
             frame,
             text="Auto",
@@ -500,10 +612,10 @@ class SettingsArea:
             onvalue=True,
             offvalue=False,
             command=self._on_auto_learning_rate,
-        ).grid(row=0, column=5, padx=PADDING, sticky=STICKY, pady=PADDING)
+        ).grid(row=0, column=5, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING)
 
         tk.Label(frame, text="Max Threshold").grid(
-            row=1, column=0, padx=PADDING, sticky=STICKY, pady=PADDING
+            row=0, column=0, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING
         )
         self._max_threshold = Spinbox(
             frame,
@@ -512,10 +624,12 @@ class SettingsArea:
             to=MAX_THRESHOLD,
             increment=1.0,
         )
-        self._max_threshold.grid(row=1, column=1, padx=PADDING, sticky=STICKY, pady=PADDING)
+        self._max_threshold.grid(
+            row=0, column=1, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING
+        )
 
         tk.Label(frame, text="Variance Threshold").grid(
-            row=1, column=3, padx=PADDING, sticky=STICKY, pady=PADDING
+            row=1, column=3, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING
         )
         self._variance_threshold = Spinbox(
             frame,
@@ -524,51 +638,32 @@ class SettingsArea:
             to=255.0,
             increment=0.01,
         )
-        self._variance_threshold.grid(row=1, column=4, padx=PADDING, sticky=STICKY, pady=PADDING)
-
-        self._use_pts = tk.BooleanVar()
-        ttk.Checkbutton(
-            frame,
-            text="Use Presentation Time\n(PTS) for Timestamps",
-            variable=self._use_pts,
-            onvalue=True,
-            offvalue=False,
-        ).grid(row=2, column=0, columnspan=2, padx=PADDING, sticky=STICKY, pady=PADDING)
-
-        tk.Button(self._advanced, text="Close", command=self._dismiss_advanced).grid(
-            row=1, column=0, sticky=tk.E, padx=PADDING, pady=PADDING
+        self._variance_threshold.grid(
+            row=1, column=4, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING
         )
 
-        tk.Label(frame, text="Frame Skip").grid(
-            row=2, column=3, padx=PADDING, sticky=tk.N + STICKY, pady=PADDING
+        tk.Button(self._window, text="Close", command=self._dismiss).grid(
+            row=2, column=0, sticky=tk.E, padx=PADDING, pady=PADDING
         )
-        self._frame_skip = Spinbox(
-            frame,
-            value=str(CONFIG_MAP["frame-skip"]),
-            from_=0.0,
-            to=1000.0,
-            increment=1.0,
-        )
-        self._frame_skip.grid(row=2, column=4, padx=PADDING, sticky=tk.N + STICKY, pady=PADDING)
 
     def _on_auto_learning_rate(self):
         self._learning_rate_value["state"] = (
             tk.DISABLED if self._learning_rate_auto.get() else tk.NORMAL
         )
 
-    def _show_advanced(self):
-        logger.debug("showing advanced settings window")
-        self._advanced.transient(self._root)
-        self._advanced.deiconify()
-        self._advanced.focus()
-        self._advanced.grab_set()
-        self._advanced.wait_window()
+    def show(self):
+        logger.debug("showing motion settings window")
+        self._window.transient(self._root)
+        self._window.deiconify()
+        self._window.focus()
+        self._window.grab_set()
+        self._window.wait_window()
 
-    def _dismiss_advanced(self):
-        logger.debug("closing advanced settings window")
-        self._advanced.withdraw()
-        self._advanced.grab_release()
-        self._advanced_button.focus()
+    def _dismiss(self):
+        logger.debug("closing motion settings window")
+        self._window.withdraw()
+        self._window.grab_release()
+        self._root.focus()
 
     @property
     def _kernel_size(self) -> int:
@@ -615,9 +710,6 @@ class SettingsArea:
         self._min_event_length.set(settings.get("min-event-length"))
         self._time_before_event.set(settings.get("time-before-event"))
         self._time_post_event.set(settings.get("time-post-event"))
-        self._use_pts.set(settings.get("use-pts"))
-        self._downscale_factor.set(settings.get("downscale-factor"))
-        self._frame_skip.set(settings.get("frame-skip"))
         self._max_threshold.set(settings.get("max-threshold"))
         self._variance_threshold.set(settings.get("variance-threshold"))
 
@@ -628,12 +720,9 @@ class SettingsArea:
         settings.set("min-event-length", self._min_event_length.get())
         settings.set("time-before-event", self._time_before_event.get())
         settings.set("time-post-event", self._time_post_event.get())
-        settings.set("use-pts", self._use_pts.get())
-        settings.set("downscale-factor", int(self._downscale_factor.get()))
-        settings.set("learning-rate", float(self._learning_rate_value.get()))
+        settings.set("learning-rate", float(self._learning_rate))
         settings.set("max-threshold", float(self._max_threshold.get()))
         settings.set("variance-threshold", float(self._variance_threshold.get()))
-        settings.set("frame-skip", int(self._frame_skip.get()))
         # NOTE: There is no mask-output in the get function above as it does not exist in the
         # config file (CLI only).
         settings.set("mask-output", self._mask_output.get())
@@ -653,10 +742,12 @@ class OutputArea:
         root.columnconfigure(3, pad=PADDING, weight=12)
 
         tk.Label(root, text="Mode").grid(
-            row=0, column=0, sticky=tk.EW, padx=PADDING, pady=(0, PADDING)
+            row=0, column=0, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(0, PADDING)
         )
         self._output_mode_combo = ttk.Combobox(root, width=SETTING_INPUT_WIDTH, state="readonly")
-        self._output_mode_combo.grid(row=0, column=1, sticky=tk.EW, padx=PADDING, pady=(0, PADDING))
+        self._output_mode_combo.grid(
+            row=0, column=1, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(0, PADDING)
+        )
         self._output_mode_combo.bind(
             "<<ComboboxSelected>>", lambda _: self._on_mode_combo_selected()
         )
@@ -664,7 +755,7 @@ class OutputArea:
         self._options_button = ttk.Button(
             root, text="Options...", command=self._show_options, width=SETTING_INPUT_WIDTH
         )
-        self._options_button.grid(row=0, column=2, sticky=tk.EW, pady=(0, PADDING))
+        self._options_button.grid(row=0, column=2, sticky=EXPAND_HORIZONTAL, pady=(0, PADDING))
 
         self._output_mode_combo["values"] = (
             "OpenCV (.avi)",
@@ -679,7 +770,7 @@ class OutputArea:
         tk.Label(root, text="Directory").grid(
             row=1,
             column=0,
-            sticky=tk.EW,
+            sticky=EXPAND_HORIZONTAL,
             pady=(PADDING, 0),
         )
         ttk.Entry(
@@ -687,14 +778,14 @@ class OutputArea:
         ).grid(
             row=1,
             column=1,
-            sticky=tk.EW,
+            sticky=EXPAND_HORIZONTAL,
             columnspan=3,
             pady=(PADDING, 0),
             padx=PADDING,
         )
 
         self._select_button = ttk.Button(root, text="Select...", command=self._on_select)
-        self._select_button.grid(row=2, column=2, sticky=tk.EW, pady=(PADDING, 0))
+        self._select_button.grid(row=2, column=2, sticky=EXPAND_HORIZONTAL, pady=(PADDING, 0))
 
         def clear_output_directory():
             self._output_dir = ""
@@ -702,9 +793,9 @@ class OutputArea:
         self._clear_button = ttk.Button(
             root, text="Clear", state=tk.DISABLED, command=clear_output_directory
         )
-        self._clear_button.grid(row=2, column=1, sticky=tk.EW, padx=PADDING, pady=(PADDING, 0))
-
-        STICKY = tk.EW
+        self._clear_button.grid(
+            row=2, column=1, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0)
+        )
 
         #
         #
@@ -728,24 +819,32 @@ class OutputArea:
         self._ffmpeg_options.columnconfigure(2, weight=1)
 
         self._ffmpeg_input_label = tk.Label(self._ffmpeg_options, text="ffmpeg\nInput Args")
-        self._ffmpeg_input_label.grid(row=0, column=0, sticky=STICKY, padx=PADDING, pady=PADDING)
+        self._ffmpeg_input_label.grid(
+            row=0, column=0, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
+        )
         self._ffmpeg_input_args = tk.StringVar(value=CONFIG_MAP["ffmpeg-input-args"])
         self._ffmpeg_input_entry = ttk.Entry(
             self._ffmpeg_options,
             textvariable=self._ffmpeg_input_args,
             width=LONG_SETTING_INPUT_WIDTH,
         )
-        self._ffmpeg_input_entry.grid(row=0, column=1, sticky=STICKY, padx=PADDING, pady=PADDING)
+        self._ffmpeg_input_entry.grid(
+            row=0, column=1, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
+        )
 
         self._ffmpeg_output_label = tk.Label(self._ffmpeg_options, text="ffmpeg\nOutput Args")
-        self._ffmpeg_output_label.grid(row=1, column=0, sticky=STICKY, padx=PADDING, pady=PADDING)
+        self._ffmpeg_output_label.grid(
+            row=1, column=0, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
+        )
         self._ffmpeg_output_args = tk.StringVar(value=CONFIG_MAP["ffmpeg-output-args"])
         self._ffmpeg_output_entry = ttk.Entry(
             self._ffmpeg_options,
             textvariable=self._ffmpeg_output_args,
             width=LONG_SETTING_INPUT_WIDTH,
         )
-        self._ffmpeg_output_entry.grid(row=1, column=1, sticky=STICKY, padx=PADDING, pady=PADDING)
+        self._ffmpeg_output_entry.grid(
+            row=1, column=1, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
+        )
 
         tk.Button(self._options_window, text="Close", command=self._dismiss_options).grid(
             row=2, column=0, sticky=tk.E, padx=PADDING, pady=PADDING
@@ -763,7 +862,9 @@ class OutputArea:
         self._opencv_options.columnconfigure(5, weight=12)
 
         self._opencv_codec_label = tk.Label(self._opencv_options, text="Codec")
-        self._opencv_codec_label.grid(row=0, column=0, sticky=STICKY, padx=PADDING, pady=PADDING)
+        self._opencv_codec_label.grid(
+            row=0, column=0, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
+        )
         self._opencv_codec = tk.StringVar(value=CONFIG_MAP["opencv-codec"])
         self._opencv_codec_combo = ttk.Combobox(
             self._opencv_options,
@@ -784,7 +885,7 @@ class OutputArea:
             command=self._on_text_overlay,
         )
         self._timecode_checkbutton.grid(
-            row=1, column=0, columnspan=2, sticky=STICKY, padx=PADDING, pady=(PADDING, 0)
+            row=1, column=0, columnspan=2, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0)
         )
 
         self._frame_metrics = tk.BooleanVar(value=False)
@@ -801,18 +902,18 @@ class OutputArea:
         )
 
         tk.Label(self._opencv_options, text="Text Color").grid(
-            row=2, column=0, sticky=STICKY, padx=PADDING, pady=(PADDING, 0)
+            row=2, column=0, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0)
         )
         self._text_font_color = ColorPicker(self._opencv_options)
         self._text_font_color.grid(row=2, column=1, sticky=tk.NSEW, pady=(PADDING, 0), padx=PADDING)
         tk.Label(self._opencv_options, text="Background").grid(
-            row=2, column=2, sticky=STICKY, padx=PADDING, pady=(PADDING, 0)
+            row=2, column=2, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0)
         )
         self._text_bg_color = ColorPicker(self._opencv_options)
         self._text_bg_color.grid(row=2, column=3, sticky=tk.NSEW, pady=(PADDING, 0), padx=PADDING)
 
         tk.Label(self._opencv_options, text="Font Scale").grid(
-            row=3, column=0, sticky=STICKY, padx=PADDING, pady=(PADDING, 0)
+            row=3, column=0, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0)
         )
         self._text_font_scale = Spinbox(
             self._opencv_options,
@@ -821,10 +922,12 @@ class OutputArea:
             to=1000.0,
             increment=0.1,
         )
-        self._text_font_scale.grid(row=3, column=1, sticky=STICKY, padx=PADDING, pady=(PADDING, 0))
+        self._text_font_scale.grid(
+            row=3, column=1, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0)
+        )
 
         tk.Label(self._opencv_options, text="Font Weight").grid(
-            row=3, column=2, sticky=STICKY, padx=PADDING, pady=(PADDING, 0)
+            row=3, column=2, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0)
         )
         self._text_font_thickness = Spinbox(
             self._opencv_options,
@@ -835,10 +938,12 @@ class OutputArea:
             convert=lambda val: round(float(val)),
         )
         self._text_font_thickness.grid(
-            row=3, column=3, sticky=STICKY, padx=PADDING, pady=(PADDING, 0)
+            row=3, column=3, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0)
         )
 
-        tk.Label(self._opencv_options, text="Text Border").grid(row=4, column=0, sticky=STICKY)
+        tk.Label(self._opencv_options, text="Text Border").grid(
+            row=4, column=0, sticky=EXPAND_HORIZONTAL
+        )
         # TODO: Constrain to be <= text margin
         self._text_border = Spinbox(
             self._opencv_options,
@@ -848,10 +953,12 @@ class OutputArea:
             increment=1.0,
             convert=lambda val: round(float(val)),
         )
-        self._text_border.grid(row=4, column=1, sticky=STICKY, padx=PADDING, pady=PADDING)
+        self._text_border.grid(
+            row=4, column=1, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
+        )
 
         tk.Label(self._opencv_options, text="Text Margin").grid(
-            row=4, column=2, sticky=STICKY, padx=PADDING, pady=PADDING
+            row=4, column=2, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
         )
         self._text_margin = Spinbox(
             self._opencv_options,
@@ -861,7 +968,9 @@ class OutputArea:
             increment=1.0,
             convert=lambda val: round(float(val)),
         )
-        self._text_margin.grid(row=4, column=3, sticky=STICKY, padx=PADDING, pady=PADDING)
+        self._text_margin.grid(
+            row=4, column=3, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
+        )
 
         self._bounding_box = tk.BooleanVar(value=False)
         self._bounding_box_button = ttk.Checkbutton(
@@ -873,11 +982,11 @@ class OutputArea:
             command=self._on_bounding_box,
         )
         self._bounding_box_button.grid(
-            row=5, column=0, columnspan=2, sticky=STICKY, padx=PADDING, pady=(PADDING, 0)
+            row=5, column=0, columnspan=2, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0)
         )
 
         tk.Label(self._opencv_options, text="Line Color").grid(
-            row=6, column=0, sticky=STICKY, padx=PADDING, pady=(PADDING, 0)
+            row=6, column=0, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0)
         )
         self._bounding_box_color = ColorPicker(self._opencv_options)
         self._bounding_box_color.grid(
@@ -885,7 +994,7 @@ class OutputArea:
         )
 
         tk.Label(self._opencv_options, text="Line Thickness").grid(
-            row=6, column=2, sticky=STICKY, padx=PADDING, pady=(PADDING, 0)
+            row=6, column=2, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0)
         )
         self._bounding_box_thickness = Spinbox(
             self._opencv_options,
@@ -895,11 +1004,11 @@ class OutputArea:
             increment=0.001,
         )
         self._bounding_box_thickness.grid(
-            row=6, column=3, sticky=STICKY, padx=PADDING, pady=(PADDING, 0)
+            row=6, column=3, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0)
         )
 
         tk.Label(self._opencv_options, text="Smooth Time").grid(
-            row=7, column=0, sticky=STICKY, padx=PADDING, pady=PADDING
+            row=7, column=0, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
         )
         self._bounding_box_smooth_time = Spinbox(
             self._opencv_options,
@@ -910,11 +1019,11 @@ class OutputArea:
             suffix="s",
         )
         self._bounding_box_smooth_time.grid(
-            row=7, column=1, sticky=STICKY, padx=PADDING, pady=PADDING
+            row=7, column=1, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
         )
 
         tk.Label(self._opencv_options, text="Min. Box Size").grid(
-            row=7, column=2, sticky=STICKY, padx=PADDING, pady=PADDING
+            row=7, column=2, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
         )
         self._bounding_box_min_size = Spinbox(
             self._opencv_options,
@@ -923,7 +1032,9 @@ class OutputArea:
             to=1.0,
             increment=0.001,
         )
-        self._bounding_box_min_size.grid(row=7, column=3, sticky=STICKY, padx=PADDING, pady=PADDING)
+        self._bounding_box_min_size.grid(
+            row=7, column=3, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
+        )
 
         self._on_text_overlay()
         self._on_bounding_box()
@@ -1098,7 +1209,8 @@ class OutputArea:
 class ScanArea:
     def __init__(self, root: tk.Tk, frame: tk.Widget):
         frame.columnconfigure(0, weight=1)
-        frame.columnconfigure(1, weight=4)
+        frame.columnconfigure(1, weight=1)
+        frame.columnconfigure(2, weight=4)
 
         self._start_button = ttk.Button(
             frame,
@@ -1109,6 +1221,7 @@ class ScanArea:
         self._start_button.grid(
             row=0,
             column=0,
+            columnspan=2,
             sticky=tk.NSEW,
             ipady=PADDING,
             pady=(0, PADDING),
@@ -1162,27 +1275,26 @@ class Application:
         self._root.columnconfigure(0, weight=1, pad=PADDING)
         self._root.rowconfigure(0, weight=1)
 
-        self._create_menubar()
+        self._input_settings_window = InputSettingsWindow(self._root)
+        self._motion_settings_window = MotionSettingsWindow(self._root)
 
         input_frame = ttk.Labelframe(self._root, text="Input", padding=PADDING)
         self._input_area = InputArea(input_frame)
         input_frame.grid(row=0, sticky=tk.NSEW, padx=PADDING, pady=(PADDING, 0))
 
-        settings_frame = ttk.Labelframe(self._root, text="Motion", padding=PADDING)
-        self._settings_area = SettingsArea(settings_frame)
-        settings_frame.grid(row=1, sticky=tk.EW, padx=PADDING, pady=(PADDING, 0))
-
         output_frame = ttk.Labelframe(self._root, text="Output", padding=PADDING)
         self._output_area = OutputArea(output_frame)
-        output_frame.grid(row=2, sticky=tk.EW, padx=PADDING, pady=(PADDING, 0))
+        output_frame.grid(row=2, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0))
 
-        scan_frame = ttk.Labelframe(self._root, text="Scan", padding=PADDING)
+        scan_frame = ttk.Labelframe(self._root, text="Run", padding=PADDING)
         self._scan_area = ScanArea(self._root, scan_frame)
-        scan_frame.grid(row=3, sticky=tk.EW, padx=PADDING, pady=PADDING)
+        scan_frame.grid(row=3, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING)
 
         self._scan_window: ty.Optional[ScanWindow] = None
         self._root.bind("<<StartScan>>", lambda _: self._start_scan())
         self._root.protocol("WM_DELETE_WINDOW", self._destroy)
+
+        self._create_menubar()
 
         if not SUPPRESS_EXCEPTIONS:
 
@@ -1218,19 +1330,31 @@ class Application:
         settings_menu = tk.Menu(root_menu)
         root_menu.add_cascade(menu=settings_menu, label="Settings", underline=0)
         settings_menu.add_command(
+            label="Input",
+            underline=0,
+            command=self._input_settings_window.show,
+        )
+        settings_menu.add_command(
+            label="Motion",
+            underline=0,
+            command=self._motion_settings_window.show,
+        )
+        settings_menu.add_separator()
+        settings_menu.add_command(
             label="Load...",
             underline=0,
             command=self._load_config,
         )
-        # TODO: Add functionality to save settings to a config file.
         settings_menu.add_command(label="Save...", underline=0, command=self._on_save_config)
-        # settings_menu.add_command(label="Save as User Default", underline=2, state=tk.DISABLED)
+        settings_menu.add_command(
+            label="Save As User Default", underline=2, command=self._on_save_config_as_user_default
+        )
         settings_menu.add_separator()
         settings_menu.add_command(
-            label="Reset (User Default)", underline=12, command=self._reset_config
+            label="Reset To User Default", underline=12, command=self._reset_config
         )
         settings_menu.add_command(
-            label="Reset (Program Default)",
+            label="Reset To Program Default",
             underline=0,
             command=lambda: self._reset_config(program_default=True),
         )
@@ -1287,7 +1411,16 @@ class Application:
             self._root.deiconify()
             self._root.focus()
 
-        self._scan_window = ScanWindow(self._root, settings, on_closed, PADDING)
+        try:
+            self._scan_window = ScanWindow(self._root, settings, on_closed, PADDING)
+        except BackendUnavailable:
+            tkinter.messagebox.showerror(
+                title="Input Mode Unavailable",
+                message=f"The specified input mode ({settings.get('input-mode')}) "
+                "is not available on this system.",
+            )
+            return
+
         self._scan_area.disable()
         self._scan_window.show()
 
@@ -1355,7 +1488,8 @@ class Application:
                 message="Warning: region file from config was not loaded.\n\n"
                 "You can load it from the Region Editor.",
             )
-        self._settings_area.set(settings)
+        self._input_settings_window.set(settings)
+        self._motion_settings_window.set(settings)
         self._output_area.load(settings)
         if OutputMode[settings.get("output-mode").upper()] == OutputMode.SCAN_ONLY:
             self._scan_area.scan_only = True
@@ -1371,34 +1505,43 @@ class Application:
         if not save_path:
             return
         settings = self._get_config_settings()
+        logger.debug(f"saving config to {save_path}")
         with open(save_path, "w") as file:
             settings.write_to_file(file)
+
+    def _on_save_config_as_user_default(self):
+        if not tkinter.messagebox.askyesno(
+            title="Save As User Default",
+            message="Existing user config will be overwritten. Do you want to continue?",
+            icon=tkinter.messagebox.WARNING,
+        ):
+            return
+
+        settings = self._get_config_settings()
+        logger.debug(f"saving config to {USER_CONFIG_FILE_PATH}")
+        with NamedTemporaryFile(mode="w", delete_on_close=False) as file:
+            settings.write_to_file(file)
+            file.close()
+            Path(file.name).replace(USER_CONFIG_FILE_PATH)
 
     def _get_config_settings(self) -> ScanSettings:
         """Get current UI state for writing a config file."""
         settings = ScanSettings(args=None, config=ConfigRegistry())
-        # Only include settings/output areas, exclude input/scan area.
-        settings = self._settings_area.update(settings)
+        settings = self._input_settings_window.update(settings)
+        settings = self._motion_settings_window.update(settings)
         settings = self._output_area.save(settings)
         return settings
 
     def _get_settings(self) -> ty.Optional[ScanSettings]:
         """Get current UI state with all options to run a scan."""
         settings = copy.deepcopy(self._settings)
-
-        # Input Area
         settings = self._input_area.update(settings)
         if not settings:
-            return None
-
-        # Settings Area
-        settings = self._settings_area.update(settings)
-
-        # Output Area
+            return None  # No videos to process.
+        settings = self._input_settings_window.update(settings)
+        settings = self._motion_settings_window.update(settings)
         settings = self._output_area.save(settings)
 
-        # Scan Area
-        # TODO: Move this logic into the scan area.
         settings.set("scan-only", self._scan_area.scan_only)
         if not settings.get("output-dir") and (
             not settings.get("scan-only") or settings.get("mask-output")

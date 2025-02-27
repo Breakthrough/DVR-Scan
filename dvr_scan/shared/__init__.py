@@ -25,7 +25,10 @@ from dvr_scan.shared.settings import ScanSettings
 logger = logging.getLogger("dvr_scan")
 
 
-def init_logging(args: ty.Optional[argparse.ArgumentParser], config: ty.Optional[ScanSettings]):
+def init_logging(
+    args: ty.Optional[argparse.ArgumentParser],
+    config: ty.Optional[ScanSettings],
+):
     verbosity = logging.INFO
     if args is not None and hasattr(args, "verbosity"):
         verbosity = getattr(logging, args.verbosity.upper())
@@ -51,6 +54,7 @@ def init_scanner(
     logger.info("initializing motion scan")
     scanner = MotionScanner(
         input_videos=settings.get_arg("input"),
+        input_mode=settings.get("input-mode"),
         frame_skip=settings.get("frame-skip"),
         show_progress=not settings.get("quiet-mode"),
         debug_mode=settings.get("debug"),
