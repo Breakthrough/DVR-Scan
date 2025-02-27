@@ -4,15 +4,7 @@
 
 ------------------------------------------------
 
-### Beta Release: v1.7-dev0 (January 16, 2025)
-
-The latest beta of DVR-Scan includes a new GUI.  See [the release page](https://github.com/Breakthrough/DVR-Scan/releases/tag/v1.7-dev0) for download links and screenshots.  Feedback is most welcome (see issue [#198](https://github.com/Breakthrough/DVR-Scan/issues/198)).
-
-![GUI Beta Screenshot](https://github.com/user-attachments/assets/6d6bb509-f40c-48ba-95d9-a7912935e9eb)
-
-------------------------------------------------
-
-### Latest Release: v1.6.2 (December 17, 2024)
+### Latest Release: v1.7 (In Development)
 
 **Website**: [dvr-scan.com](https://www.dvr-scan.com)
 
@@ -28,9 +20,17 @@ DVR-Scan is a command-line application that **automatically detects motion event
 
     pip install dvr-scan[opencv] --upgrade
 
-Windows builds are also available on [the Downloads page](https://www.dvr-scan.com/download/).
+Windows builds (installer + portable) are also available on [the Downloads page](https://www.dvr-scan.com/download/).
 
-## Quickstart
+## Quickstart (UI)
+
+Start DVR-Scan (run `dvr-scan-app` or click the app shortcut), **Add** your input videos, and hit **Start**:
+
+<img alt="main app window" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.7/docs/assets/app-main-window.jpg" width="480"/>
+
+See the [User Guide](https://www.dvr-scan.com/guide/) for a more comprehensive overview.
+
+## Quickstart (CLI)
 
 Scan `video.mp4` (separate clips for each event):
 
@@ -40,7 +40,7 @@ Select a region to scan using [the region editor](https://www.dvr-scan.com/guide
 
     dvr-scan -i video.mp4 -r
 
-<img alt="example of region editor" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.6/docs/assets/region-editor-mask.jpg" width="480"/>
+<img alt="example of region editor" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.7/docs/assets/region-editor-mask.jpg" width="480"/>
 
 Select a region to scan using command line (list of points as X Y):
 
@@ -50,7 +50,7 @@ Draw boxes around motion:
 
     dvr-scan -i video.mp4 -bb
 
-<img alt="example of bounding boxes" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.6/docs/assets/bounding-box.gif" width="480"/>
+<img alt="example of bounding boxes" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.7/docs/assets/bounding-box.gif" width="480"/>
 
 Use `ffmpeg` to extract events:
 

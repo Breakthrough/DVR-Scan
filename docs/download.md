@@ -9,15 +9,7 @@ hide:
 
 -------------------------------
 
-## GUI Release (Beta)
-
-A new GUI is under development for the next version of DVR-Scan and is available now for beta testing. The beta release can be [downloaded from Github](https://github.com/Breakthrough/DVR-Scan/releases/tag/v1.7-dev0). All current stable versions of DVR-Scan are command-line only.
-
-Feedback for the new GUI is welcome. Users can download and install the beta ontop of an existing DVR-Scan installation, and it is compatible with all existing config and region files.
-
--------------------------------
-
-## Python <span class="dvr-scan-download-icons">:fontawesome-brands-windows::fontawesome-brands-apple::fontawesome-brands-linux:</span>
+## Python<span class="dvr-scan-download-icons">:fontawesome-brands-windows::fontawesome-brands-apple::fontawesome-brands-linux:</span>
 
 !!! python-download "**1.6.2**<span class="dvr-scan-release-date">December 17, 2024</span>"
 
@@ -35,7 +27,7 @@ Linux users may need to install the `python3-tk` package (e.g. `sudo apt install
 
 -------------------------------
 
-## Windows Distribution<span class="dvr-scan-download-icons">:fontawesome-brands-windows:</span>
+## Windows<span class="dvr-scan-download-icons">:fontawesome-brands-windows:</span>
 
 !!! windows-download "**1.6.2**<span class="dvr-scan-release-date">December 17, 2024</span>"
 
@@ -46,9 +38,9 @@ The installer is recommended for most users.  Windows builds include all require
 
 -------------------------------
 
-## Servers and Headless Systems
+## Servers
 
-For installation on servers and other headless systems that do not require a GUI, install `dvr-scan[opencv-headless]` instead of `dvr-scan[opencv]`.  This will make sure that [the headless version of OpenCV](https://pypi.org/project/opencv-python-headless/) is installed, which avoids any dependencies on X11 libraries or any other GUI components.  This allows DVR-Scan to run with less dependencies, and can result in smaller Docker images.
+For headless systems that do not require the UI,  you can install `dvr-scan[opencv-headless]`.  This will make sure that [the headless version of OpenCV](https://pypi.org/project/opencv-python-headless/) is installed, which avoids any dependencies on X11 libraries or any other GUI components.  This allows DVR-Scan to run with less dependencies, and can result in smaller Docker images.
 
 -------------------------------
 
@@ -59,13 +51,15 @@ The source code for [DVR-Scan is available on Github](https://github.com/Breakth
 -------------------------------
 
 
-## CUDA®-Enabled Builds
+## CUDA® Support
 
-GPU support currently requires a development environment setup including the Nvidia CUDA® SDK.
+DVR-Scan works with CUDA graphics cards *if* you are using the Python distribution, *and* you have a CUDA-enabled verison of the `opencv-python` package.
 
-DVR-Scan works with CUDA graphics cards if you are using the Python distribution, and you have a CUDA-enabled verison of the `opencv-python` package. Unfortunately pre-built binaries are not available, so this requires that you build from source (there are various tutorials online for how to do this).
+!!! warning "GPU support requires a development environment setup including the Nvidia CUDA® SDK."
 
-When available, you should see `cv2.cuda: Installed` under the features list when running `dvr-scan --version`. Make sure to set `-b MOG2_CUDA` when running DVR-Scan (e.g. `dvr-scan -i video.mp4 -b MOG2_CUDA`).
+It is recommended to build and install OpenCV with the CUDA module enabled (there are various tutorials online for how to do this).  There is also an [unofficial pre-built Python wheel](https://github.com/cudawarped/opencv-python-cuda-wheels/releases/tag/4.11.0.20250124) maintained by James Bowley which can be downloaded and installed via `pip`.
+
+When available, you should see `cv2.cuda: Installed` under the features list when running `dvr-scan --version`. Make sure to set `-b MOG2_CUDA` when running DVR-Scan (e.g. `dvr-scan -i video.mp4 -b MOG2_CUDA`).  In the UI, under this can be found under Settings -> Motion -> Subtractor.
 
 -------------------------------
 

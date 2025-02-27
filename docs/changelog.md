@@ -5,22 +5,25 @@
 
 ## DVR-Scan 1.7
 
-### 1.7 (In Development)
+### 1.7 (TBD)
 
-#### Beta 1 (1.7-dev0)
+#### Release Notes
+
+DVR-Scan 1.7 ships with a completely new UI, and supports faster video decoders (up to 50% better scanning performance):
+
+<img alt="example of region editor" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.7/docs/assets/app-main-window.jpg" width="480"/>
+
+The UI can be started by running `dvr-scan-app`, and is installed alongside the existing command line interface `dvr-scan`.  Config settings and region files can be shared seamlessly between both. Feedback on the new UI is welcome.
+
+#### Changelog
 
  - [feature] New GUI now available across all platforms, can be launched via `dvr-scan-app`
     - Has UI elements for all settings, supports editing motion regions
     - Shows scan progress in real-time
-    - Supports loading/saving config files compatible with the `dvr-scan` CLI command
+ - [feature] Add ability to control video decoder via `input-mode` config option (`opencv`, `pyav`, `moviepy`)
+    - Allows switching between `OpenCV` (default), `PyAV`, and `MoviePy` for video decoding
+    - Certain backends provide substantial performance benefits, up to 50% in some cases (let us know which one works best!)
  - [general] Minimum supported Python version is now 3.9
-
-#### Beta 2 (1.7-dev1)
-
- - [bugfix] Fix "too many values to unpack" exception when scanning video
- - [bugfix] Fix incorrect calculation of total frames when showing progress
- - [bugfix] Fix drag-and-drop shortcut not working due to not parsing input paths from command line
- - [general] Show alert on any errors during motion scanning
 
 ----------------------------------------------------------
 
