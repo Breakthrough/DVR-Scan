@@ -8,9 +8,63 @@
 # DVR-Scan is licensed under the BSD 2-Clause License; see the included
 # LICENSE file, or visit one of the above pages for details.
 #
-[build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+[project]
+name = "dvr-scan"
+dynamic = ["version"]
+description = "Tool for finding and extracting motion events in video files (e.g. security camera footage)."
+readme = "README.md"
+license = { text = "BSD-2-Clause" }
+requires-python = ">=3.8"
+authors = [
+    { name = "Brandon Castellano", email = "brandon248@gmail.com" },
+]
+keywords = [
+    "analysis",
+    "computer-vision",
+    "video",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Environment :: Console :: Curses",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Video",
+    "Topic :: Multimedia :: Video :: Conversion",
+    "Topic :: Multimedia :: Video :: Non-Linear Editor",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "numpy",
+    "platformdirs",
+    "scenedetect",
+    "screeninfo",
+    "tqdm",
+    "opencv-python",
+    "pillow",
+]
+
+[project.scripts]
+dvr-scan = "dvr_scan.__main__:main"
+
+[project.urls]
+"Bug Tracker" = "https://github.com/Breakthrough/DVR-Scan/issues"
+Documentation = "https://www.dvr-scan.com/docs"
+Homepage = "https://www.dvr-scan.com/"
+Repository = "https://github.com/Breakthrough/DVR-Scan"
+
+[tool.setuptools]
+packages = ["dvr_scan"]
 
 [tool.ruff]
 exclude = [
