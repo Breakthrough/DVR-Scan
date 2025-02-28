@@ -20,7 +20,7 @@ The latest beta of DVR-Scan includes a new GUI.  See [the release page](https://
 
 **Documentation**: [dvr-scan.com/docs](https://www.dvr-scan.com/docs/)
 
-**Discord**: [https://discord.gg/UtE6mMSA](https://discord.gg/UtE6mMSA)
+**Discord**: [discord.gg/69kf6f2Exb](https://discord.gg/69kf6f2Exb)
 
 ------------------------------------------------------
 

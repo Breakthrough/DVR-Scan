@@ -149,4 +149,4 @@ Bug reports can be submitted to the <a href="https://github.com/Breakthrough/DVR
 For technical help:
 
  - Try [starting a discussion](https://github.com/Breakthrough/DVR-Scan/discussions) on Github
- - Ask on the [DVR-Scan Discord server](https://discord.gg/UtE6mMSA)
+ - Ask on the [DVR-Scan Discord server](https://discord.gg/69kf6f2Exb)
