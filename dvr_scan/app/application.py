@@ -54,9 +54,6 @@ LARGE_BUTTON_WIDTH = 40
 MAX_THRESHOLD = 255.0
 MAX_DOWNSCALE_FACTOR = 128
 NO_REGIONS_SPECIFIED_TEXT = "No Region(s) Specified"
-
-# TODO: Remove this and use the "debug" setting instead.
-SUPPRESS_EXCEPTIONS = False
 EXPAND_HORIZONTAL = tk.EW
 
 logger = getLogger("dvr_scan")
@@ -1296,7 +1293,9 @@ class Application:
 
         self._create_menubar()
 
-        if not SUPPRESS_EXCEPTIONS:
+        # Make sure we don't suppress exceptions in debug mode.
+        # TODO: This should probably use the logger in release mode rather than the default from Tk.
+        if settings.get("debug"):
 
             def error_handler(*args):
                 raise
@@ -1304,7 +1303,7 @@ class Application:
             self._root.report_callback_exception = error_handler
 
         # Initialize UI state from config.
-        self._initialize_settings(settings)
+        self._initialize(settings)
         for path in initial_videos:
             self._input_area._add_video(path)
 
@@ -1365,6 +1364,11 @@ class Application:
             label="Help Guide",
             command=lambda: webbrowser.open_new_tab("www.dvr-scan.com/guide"),
             underline=0,
+        )
+        help_menu.add_command(
+            label="Join Discord Chat",
+            command=lambda: webbrowser.open_new_tab("https://discord.gg/69kf6f2Exb"),
+            underline=5,
         )
         # TODO: Add window to show log messages and copy them to clipboard or save to a logfile.
         # help_menu.add_command(label="Debug Log", underline=0, state=tk.DISABLED)
@@ -1475,9 +1479,9 @@ class Application:
 
     def _reload_config(self, config: ConfigRegistry):
         """Reinitialize UI from another config."""
-        self._initialize_settings(ScanSettings(args=self._settings._args, config=config))
+        self._initialize(ScanSettings(args=self._settings._args, config=config))
 
-    def _initialize_settings(self, settings: ScanSettings):
+    def _initialize(self, settings: ScanSettings):
         """Initialize UI from both UI command-line arguments and config file."""
         logger.debug("initializing UI state from settings")
         # Store copy of settings internally.

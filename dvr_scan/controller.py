@@ -24,9 +24,11 @@ import dvr_scan
 from dvr_scan.cli import get_cli_parser
 from dvr_scan.config import ConfigLoadFailure, ConfigRegistry, RegionValueDeprecated
 from dvr_scan.scanner import DetectorType, OutputMode
-from dvr_scan.shared import ScanSettings, init_logging, init_scanner
+from dvr_scan.shared import ScanSettings, init_logging, init_scanner, logfile_path, setup_logger
 
 logger = logging.getLogger("dvr_scan")
+
+LOGFILE_PATH = logfile_path(logfile_name="dvr-scan.log")
 
 
 def _preprocess_args(args):
@@ -64,26 +66,27 @@ def _preprocess_args(args):
     return True, args
 
 
-def parse_settings(args: ty.List[str] = None) -> ty.Optional[ScanSettings]:
+def parse_settings() -> ty.Optional[ScanSettings]:
     """Parse command line options and load config file settings."""
+    # We defer printing the debug log until we know where to put it.
     init_log = []
-    config_load_error = None
-    failed_to_load_config = False
+    failed_to_load_config = True
     debug_mode = False
     config = ConfigRegistry()
+    config_load_error = None
     # Try to load config from user settings folder.
     try:
         user_config = ConfigRegistry()
         user_config.load()
         config = user_config
+        init_logging(args=None, config=config)
     except ConfigLoadFailure as ex:
         config_load_error = ex
-    init_logging(args, config)
     # Parse CLI args, override config if an override was specified on the command line.
     try:
-        args = get_cli_parser(config).parse_args(args=args)
+        args = get_cli_parser(config).parse_args()
         debug_mode = args.debug
-        init_logging(args, config)
+        init_logging(args=args, config=config)
         init_log += [(logging.INFO, "DVR-Scan %s" % dvr_scan.__version__)]
         if config_load_error and not hasattr(args, "config"):
             raise config_load_error
@@ -95,23 +98,31 @@ def parse_settings(args: ty.List[str] = None) -> ty.Optional[ScanSettings]:
             init_logging(args, config_setting)
             config = config_setting
         init_log += config.consume_init_log()
+        if config.get("save-log"):
+            setup_logger(
+                logfile_path=LOGFILE_PATH,
+                max_size_bytes=config.get("max-log-size"),
+                max_files=config.get("max-log-files"),
+            )
+        failed_to_load_config = False
     except ConfigLoadFailure as ex:
+        failed_to_load_config = True
+        config_load_error = ex
         init_log += ex.init_log
         if ex.reason is not None:
             init_log += [(logging.ERROR, "Error: %s" % str(ex.reason).replace("\t", "  "))]
-        failed_to_load_config = True
-        config_load_error = ex
     finally:
         for log_level, log_str in init_log:
             logger.log(log_level, log_str)
-        if failed_to_load_config:
-            logger.critical("Failed to load config file.")
-            logger.debug("Error loading config file:", exc_info=config_load_error)
-            if debug_mode:
-                raise config_load_error
-            # Intentionally suppress the exception in release mode since we've already logged the
-            # failure reason to the user above. We can now exit with an error code.
-            return None  # noqa: B012
+
+    if failed_to_load_config:
+        logger.critical("Failed to load config file.")
+        logger.debug("Error loading config file:", exc_info=config_load_error)
+        if debug_mode:
+            raise config_load_error
+        # Intentionally suppress the exception in release mode since we've already logged the
+        # failure reason to the user above. We can now exit with an error code.
+        return None
 
     if config.config_dict:
         logger.debug("Loaded configuration:\n%s", str(config.config_dict))
@@ -142,16 +153,11 @@ def parse_settings(args: ty.List[str] = None) -> ty.Optional[ScanSettings]:
     return settings
 
 
-# TODO: Along with the TODO ontop of MotionScanner, the actual conversion from the ProgramSetting
-# to the option in MotionScanner should be done via properties, e.g. make a property in
-# ProgramSettings called 'output_dir' that just returns settings.get('output_dir'). These can then
-# be directly referenced from the MotionScanner.
 def run_dvr_scan(
     settings: ScanSettings,
 ) -> ty.List[ty.Tuple[FrameTimecode, FrameTimecode]]:
     """Run DVR-Scan scanning logic using validated `settings` from `parse_settings()`."""
 
-    logger.info("Initializing scan context...")
     scanner = init_scanner(settings)
 
     # Scan video for motion with specified parameters.

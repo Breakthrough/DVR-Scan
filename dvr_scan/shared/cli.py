@@ -18,7 +18,7 @@ from dvr_scan.platform import get_system_version_info
 # Version string shown for the -v/--version CLI argument.
 VERSION_STRING = f"""DVR-Scan {dvr_scan.__version__}
 ------------------------------------------------
-Copyright (C) 2024 Brandon Castellano
+Copyright (C) 2025 Brandon Castellano
 < https://www.dvr-scan.com >
 """
 

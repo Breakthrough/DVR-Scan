@@ -253,4 +253,5 @@ class ScanWindow:
         self._rate = (
             "%.2f" % (float(self._frames_processed) / elapsed) if self._frames_processed else "N/A"
         )
-        # TODO: Figure out how to open the output directory when scanning is complete.
+        # TODO: Figure out how to open the output directory when scanning is complete, or add a
+        # UI element so the user can do it with a button press.

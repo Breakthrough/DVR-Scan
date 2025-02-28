@@ -12,11 +12,8 @@
 import argparse
 import logging
 import sys
-from logging.handlers import RotatingFileHandler
-from pathlib import Path
 from subprocess import CalledProcessError
 
-from platformdirs import user_log_path
 from scenedetect import VideoOpenFailure
 from scenedetect.platform import FakeTqdmLoggingRedirect, logging_redirect_tqdm
 
@@ -24,8 +21,7 @@ import dvr_scan
 from dvr_scan import get_license_info
 from dvr_scan.app.application import Application
 from dvr_scan.config import CHOICE_MAP, USER_CONFIG_FILE_PATH, ConfigLoadFailure, ConfigRegistry
-from dvr_scan.platform import LOG_FORMAT_ROLLING_LOGS, attach_log_handler
-from dvr_scan.shared import ScanSettings, init_logging
+from dvr_scan.shared import ScanSettings, init_logging, logfile_path, setup_logger
 from dvr_scan.shared.cli import VERSION_STRING, LicenseAction, VersionAction, string_type_check
 
 logger = logging.getLogger("dvr_scan")
@@ -34,9 +30,7 @@ logger = logging.getLogger("dvr_scan")
 EXIT_SUCCESS: int = 0
 EXIT_ERROR: int = 1
 
-# Keep the last 16 KiB of logfiles automatically
-MAX_LOGFILE_SIZE_KB = 16384
-MAX_LOGFILE_BACKUPS = 4
+LOGFILE_PATH = logfile_path(logfile_name="dvr-scan-app.log")
 
 
 def get_cli_parser():
@@ -71,7 +65,7 @@ def get_cli_parser():
         metavar="type",
         type=string_type_check(CHOICE_MAP["verbosity"], False, "type"),
         help=(
-            "Amount of verbosity to use for log output. Must be one of: %s."
+            "Verbosity type to use for log output. Must be one of: %s."
             % (", ".join(CHOICE_MAP["verbosity"]),)
         ),
     )
@@ -81,8 +75,8 @@ def get_cli_parser():
         metavar="file",
         type=str,
         help=(
-            "Path to log file for writing application output. If FILE already exists, the program"
-            " output will be appended to the existing contents."
+            "Appends application output to file. If file does not exist it will be created. "
+            f"Debug log path: {LOGFILE_PATH}"
         ),
     )
 
@@ -109,20 +103,6 @@ def get_cli_parser():
     return parser
 
 
-def init_debug_logger() -> logging.Handler:
-    """Initialize rolling debug logger."""
-    folder = user_log_path("DVR-Scan", False)
-    folder.mkdir(parents=True, exist_ok=True)
-    handler = RotatingFileHandler(
-        folder / Path("dvr-scan.app.log"),
-        maxBytes=MAX_LOGFILE_SIZE_KB * 1024,
-        backupCount=MAX_LOGFILE_BACKUPS,
-    )
-    handler.setLevel(logging.DEBUG)
-    handler.setFormatter(logging.Formatter(fmt=LOG_FORMAT_ROLLING_LOGS))
-    return handler
-
-
 # TODO: There's a lot of duplicated code here between the CLI and GUI. See if we can combine some
 # of the handling of config file loading and exceptions to be consistent between the two.
 #
@@ -130,11 +110,11 @@ def init_debug_logger() -> logging.Handler:
 # existing CLI parser.
 def main():
     """Parse command line options and load config file settings."""
+    # We defer printing the debug log until we know where to put it.
     init_log = []
-    debug_log_handler = init_debug_logger()
-    config_load_error = None
-    failed_to_load_config = False
+    failed_to_load_config = True
     config = ConfigRegistry()
+    config_load_error = None
     # Create debug log handler and try to load the user config file.
     try:
         user_config = ConfigRegistry()
@@ -142,12 +122,9 @@ def main():
         config = user_config
     except ConfigLoadFailure as ex:
         config_load_error = ex
-
     # Parse CLI args, override config if an override was specified on the command line.
     try:
         args = get_cli_parser().parse_args()
-        # TODO: Add a UI element somewhere (e.g. in the about window) that indicates to the user
-        # where the log files are being written.
         init_logging(args, config)
         init_log += [(logging.INFO, "DVR-Scan Application %s" % dvr_scan.__version__)]
         if config_load_error and not hasattr(args, "config"):
@@ -158,6 +135,17 @@ def main():
             init_logging(args, config_setting)
             config = config_setting
         init_log += config.consume_init_log()
+        if config.config_dict:
+            logger.debug("Loaded configuration:\n%s", str(config.config_dict))
+        logger.debug("Program arguments:\n%s", str(args))
+        settings = ScanSettings(args=args, config=config)
+        if settings.get("save-log"):
+            setup_logger(
+                logfile_path=LOGFILE_PATH,
+                max_size_bytes=settings.get("max-log-size"),
+                max_files=settings.get("max-log-files"),
+            )
+        failed_to_load_config = False
     except ConfigLoadFailure as ex:
         init_log += ex.init_log
         if ex.reason is not None:
@@ -165,21 +153,20 @@ def main():
         failed_to_load_config = True
         config_load_error = ex
     finally:
-        attach_log_handler(debug_log_handler)
         for log_level, log_str in init_log:
             logger.log(log_level, log_str)
-        if failed_to_load_config:
-            logger.critical("Failed to load config file.")
-            logger.debug("Error loading config file:", exc_info=config_load_error)
-            # Intentionally suppress the exception in release mode since we've already logged the
-            # failure reason to the user above. We can now exit with an error code.
-            raise SystemExit(1)
 
-    if config.config_dict:
-        logger.debug("Loaded configuration:\n%s", str(config.config_dict))
+    if failed_to_load_config:
+        logger.critical("Failed to load config file.")
+        logger.debug("Error loading config file:", exc_info=config_load_error)
+        # Intentionally suppress the exception in release mode since we've already logged the
+        # failure reason to the user above. We can now exit with an error code.
+        raise SystemExit(1)
 
-    logger.debug("Program arguments:\n%s", str(args))
-    settings = ScanSettings(args=args, config=config)
+    # TODO(1.7): The logging redirect does not respect the original log level, which is now set to
+    # DEBUG mode for rolling log files. https://github.com/tqdm/tqdm/issues/1272
+    # We can just remove the use of a context manager here and install our own hooks into the
+    # loggers instead as a follow-up action.
     redirect = FakeTqdmLoggingRedirect if settings.get("quiet-mode") else logging_redirect_tqdm
     show_traceback = getattr(logging, settings.get("verbosity").upper()) == logging.DEBUG
     # TODO: Use Python __debug__ mode instead of hard-coding as config option.

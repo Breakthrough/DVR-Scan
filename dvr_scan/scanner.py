@@ -33,12 +33,18 @@ from tqdm import tqdm
 
 from dvr_scan.detector import MotionDetector
 from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
-from dvr_scan.platform import HAS_TKINTER, get_filename, get_min_screen_bounds, is_ffmpeg_available
+from dvr_scan.platform import (
+    HAS_PILLOW,
+    HAS_TKINTER,
+    get_filename,
+    get_min_screen_bounds,
+    is_ffmpeg_available,
+)
 from dvr_scan.region import Point, Size, bound_point, load_regions
 from dvr_scan.subtractor import SubtractorCNT, SubtractorCudaMOG2, SubtractorMOG2
 from dvr_scan.video_joiner import VideoJoiner
 
-if HAS_TKINTER:
+if HAS_TKINTER and HAS_PILLOW:
     from dvr_scan.app.region_editor import RegionEditor
 
 logger = logging.getLogger("dvr_scan")
@@ -61,7 +67,7 @@ DEFAULT_FFMPEG_OUTPUT_ARGS = "-map 0 -c:v libx264 -preset fast -crf 21 -c:a aac 
 COPY_MODE_OUTPUT_ARGS = "-map 0 -c:v copy -c:a copy -sn"
 """Default arguments passed to ffmpeg when using OutputMode.COPY."""
 
-# TODO(v1.7): Allow setting template in the config file.
+# TODO(1.8): Add ability to set output name template."
 OUTPUT_FILE_TEMPLATE = "{VIDEO_NAME}.DSME_{EVENT_NUMBER}.{EXTENSION}"
 """Template to use for generating output files."""
 
@@ -532,10 +538,16 @@ class MotionScanner:
                     "the python3-tk package (sudo apt install python3-tk)."
                 )
                 raise SystemExit(1)
+            if not HAS_PILLOW:
+                logger.error(
+                    "Error: Region editor requires pillow to run. Try installing "
+                    "the pillow package (pip install pillow)."
+                )
+                raise SystemExit(1)
 
             logger.info("Selecting area of interest:")
-            # TODO(v1.7): Ensure ROI window respects start time if set.
-            # TODO(v1.7): We should process this frame (right now it gets skipped).
+            # TODO(1.8): Ensure ROI window respects start time if set.
+            # TODO(1.8): We should process this frame (right now it gets skipped).
             frame_for_crop = self._input.read()
             scale_factor = 1
             screen_bounds = get_min_screen_bounds()
@@ -586,7 +598,7 @@ class MotionScanner:
                 f"region{'s' if len(self._regions) > 1 else ''}."
             )
         else:
-            logger.debug("No regions selected.")
+            logger.debug("no regions selected")
         return True
 
     @property
@@ -636,7 +648,6 @@ class MotionScanner:
         frames_processed = 0
 
         # Seek to starting position if required.
-        # TODO: Offload this seek to the decode thread.
         if self._start_time is not None:
             self._input.seek(self._start_time)
 
@@ -660,8 +671,8 @@ class MotionScanner:
             kernel_size = _scale_kernel_size(self._kernel_size, self._downscale_factor)
 
         # Create background subtractor and motion detector.
-        # TODO(v1.7): Don't set or log unused parameter variance_threshold
-        # if CNT is used.
+        # TODO: Figure out how to avoid logging unused parameters or emit a warning. For example,
+        # the `variance_threshold` parameter is ignored by the `CNT` subtractor.
         detector = MotionDetector(
             subtractor=self._subtractor_type.value(
                 variance_threshold=self._variance_threshold,
@@ -756,7 +767,8 @@ class MotionScanner:
         if self._scan_started:
             self._scan_started(num_frames=num_frames_to_process)
 
-        # TODO: The main scanning loop should be refactored into a state machine.
+        # TODO: The main scanning loop should be refactored into a state machine. The main loop
+        # # has grown far too complicated and is difficult to maintain.
         while not self._stop.is_set():
             if self._processed_frame:
                 num_events = len(event_list)
@@ -779,8 +791,9 @@ class MotionScanner:
                 )
             result = detector.update(frame.frame_bgr)
             frame_score = result.score
-            # TODO(1.7): Allow disabling the rejection filter or customizing amount of
-            # consecutive frames it will ignore.
+            # TODO: The rejection filter can be disabled by providing values > 255.0, but we should
+            # provide a better method of disabling it. It might also be useful to allow users to
+            # specify the amount of consecutive frames the filter can be active for.
             if frame_score >= self._max_threshold:
                 frame_score = 0
             above_threshold = frame_score >= self._threshold
@@ -1208,7 +1221,6 @@ class MotionScanner:
                 "Use -r/--region-editor instead.\n"
             )
             logger.info("Selecting area of interest:")
-            # TODO: We should process this frame.
             frame_for_crop = self._input.read()
             scale_factor = None
             if self._max_roi_size_deprecated is None:

@@ -23,6 +23,11 @@ The UI can be started by running `dvr-scan-app`, and is installed alongside the 
  - [feature] Add ability to control video decoder via `input-mode` config option (`opencv`, `pyav`, `moviepy`)
     - Allows switching between `OpenCV` (default), `PyAV`, and `MoviePy` for video decoding
     - Certain backends provide substantial performance benefits, up to 50% in some cases (let us know which one works best!)
+ - [bugfix] Fix crash on headless systems that don't have `pillow` installed
+ - [general] The region editor no longer prompts for a save path if one was already specified via the `-s`/`--save-regions` option
+ - [general] A size-limited logfile is now kept locally, useful for filing bug reports
+    - Can be controlled with config file options `save-log` (default: yes), `max-log-size` (default: 20 kB), `max-log-files` (default: 4)
+    - Path can be found under help entry for `--logfile` by running `dvr-scan --help` or `dvr-scan-app --help`
  - [general] Minimum supported Python version is now 3.9
 
 ----------------------------------------------------------

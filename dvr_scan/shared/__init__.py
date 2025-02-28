@@ -14,10 +14,14 @@
 import argparse
 import logging
 import typing as ty
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
+from platformdirs import user_log_path
 from scenedetect import FrameTimecode
 
 from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
+from dvr_scan.platform import LOG_FORMAT_ROLLING_LOGS, attach_log_handler
 from dvr_scan.platform import init_logger as _init_logger
 from dvr_scan.scanner import DetectorType, MotionScanner, OutputMode
 from dvr_scan.shared.settings import ScanSettings
@@ -48,10 +52,36 @@ def init_logging(
     )
 
 
+def logfile_path(logfile_name: str):
+    """Initialize rolling debug logger."""
+    folder = user_log_path("DVR-Scan", False)
+    folder.mkdir(parents=True, exist_ok=True)
+    return folder / Path(logfile_name)
+
+
+def setup_logger(logfile_path: str, max_size_bytes: int, max_files: int):
+    """Initialize rolling debug logger."""
+    folder = user_log_path("DVR-Scan", False)
+    folder.mkdir(parents=True, exist_ok=True)
+    handler = RotatingFileHandler(
+        logfile_path,
+        maxBytes=max_size_bytes,
+        backupCount=max_files,
+    )
+    handler.setLevel(logging.DEBUG)
+    handler.setFormatter(logging.Formatter(fmt=LOG_FORMAT_ROLLING_LOGS))
+    # *WARNING*: This log message must come before we attach the handler otherwise it will get
+    # written to the log file each time.
+    logger.debug(
+        f"writing logs to {logfile_path} (max_size_bytes: {max_size_bytes}, max_files: {max_files})"
+    )
+    attach_log_handler(handler)
+
+
 def init_scanner(
     settings: ScanSettings,
 ) -> MotionScanner:
-    logger.info("initializing motion scan")
+    logger.debug("initializing motion scan")
     scanner = MotionScanner(
         input_videos=settings.get_arg("input"),
         input_mode=settings.get("input-mode"),

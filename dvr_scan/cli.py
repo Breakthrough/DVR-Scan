@@ -15,6 +15,7 @@ from dvr_scan import get_license_info
 from dvr_scan.config import CHOICE_MAP, USER_CONFIG_FILE_PATH, ConfigRegistry
 from dvr_scan.platform import HAS_MOG2_CUDA
 from dvr_scan.region import RegionValidator
+from dvr_scan.shared import logfile_path
 from dvr_scan.shared.cli import (
     VERSION_STRING,
     LicenseAction,
@@ -35,6 +36,9 @@ assert SCAN_ONLY_MODE in CHOICE_MAP["output-mode"]
 VALID_OUTPUT_MODES = [mode for mode in CHOICE_MAP["output-mode"] if mode != SCAN_ONLY_MODE]
 
 BACKGROUND_SUBTRACTORS = ["MOG2", "CNT", "MOG2_CUDA"] if HAS_MOG2_CUDA else ["MOG2", "CNT"]
+
+
+LOGFILE_PATH = logfile_path(logfile_name="dvr-scan-app.log")
 
 
 class RegionAction(argparse.Action):
@@ -80,15 +84,11 @@ class RegionAction(argparse.Action):
             ) from ex
 
         # Append this ROI to any existing ones, if any.
-        # TODO(v1.7): Audit uses of the 'regions' constant for -a/--add-region, replace with a named
-        # constant where possible.
-        items = getattr(namespace, "regions", [])
+        items = getattr(namespace, self.dest, [])
         items += [region.value]
-        namespace.regions = items
+        setattr(namespace, self.dest, items)
 
 
-# TODO: To help with debugging, add a `debug` option to the config file as well that, if set in the
-# user config file, initializes the parser with exit_on_error=False.
 def get_cli_parser(user_config: ConfigRegistry):
     """Creates the DVR-Scan argparse command-line interface.
 
@@ -102,6 +102,7 @@ def get_cli_parser(user_config: ConfigRegistry):
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         argument_default=argparse.SUPPRESS,
+        exit_on_error=not user_config.get("debug"),
     )
 
     if hasattr(parser, "_optionals"):
@@ -222,8 +223,6 @@ def get_cli_parser(user_config: ConfigRegistry):
             "times to add more regions."
         ),
     )
-
-    # TODO: Consider merging the load/save region options into a single --region-file option.
 
     parser.add_argument(
         "-R",
@@ -355,7 +354,7 @@ def get_cli_parser(user_config: ConfigRegistry):
         help=("Timecode to stop processing the input (see -st for valid timecode formats)."),
     )
 
-    # TODO(v2.0): Remove -roi (replaced by -r/--region-editor and -a/--add-region).
+    # TODO(1.8): Remove -roi (replaced by -r/--region-editor and -a/--add-region).
     parser.add_argument(
         "-roi",
         "--region-of-interest",
@@ -459,8 +458,8 @@ def get_cli_parser(user_config: ConfigRegistry):
         metavar="file",
         type=str,
         help=(
-            "Path to log file for writing application output. If FILE already exists, the program"
-            " output will be appended to the existing contents."
+            "Appends application output to file. If file does not exist it will be created. "
+            f"Debug log path: {LOGFILE_PATH}"
         ),
     )
 

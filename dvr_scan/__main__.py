@@ -32,6 +32,9 @@ def main():
     if settings is None:
         sys.exit(EXIT_ERROR)
     logger = logging.getLogger("dvr_scan")
+    # TODO(1.7): The logging redirect does not respect the original log level, which is now set to
+    # DEBUG mode for rolling log files. https://github.com/tqdm/tqdm/issues/1272
+    # We might have to just roll our own instead of relying on this one.
     redirect = FakeTqdmLoggingRedirect if settings.get("quiet-mode") else logging_redirect_tqdm
     # TODO: Use Python __debug__ mode instead of hard-coding as config option.
     debug_mode = settings.get("debug")
@@ -48,7 +51,6 @@ def main():
             if debug_mode:
                 raise
         except KeyboardInterrupt:
-            # TODO: This doesn't always work when the GUI is running.
             logger.info("Stopping (interrupt received)...", exc_info=show_traceback)
             if debug_mode:
                 raise

@@ -23,6 +23,11 @@ import sys
 import typing as ty
 
 try:
+    import PIL
+except ImportError:
+    PIL = None
+
+try:
     import screeninfo
 except ImportError:
     screeninfo = None
@@ -44,7 +49,7 @@ except:  # noqa: E722
     # We make sure importing OpenCV succeeds elsewhere so it's okay to suppress any exceptions here.
     HAS_MOG2_CUDA = False
 
-
+HAS_PILLOW = PIL is not None
 HAS_TKINTER = tkinter is not None
 
 IS_FROZEN = bool(not (getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS")))
@@ -95,14 +100,13 @@ def _init_logger_impl(
     format_str: str,
     show_stdout: bool,
     log_file: ty.Optional[str],
-    log_handlers: ty.Optional[ty.List[logging.Handler]] = None,
 ):
     logger.handlers = []
     logger.setLevel(logging.DEBUG)
     # Add stdout handler if required.
     if show_stdout:
         handler = logging.StreamHandler(stream=sys.stdout)
-        handler.setLevel(log_level)
+        handler.setLevel(log_level)  # TODO: Why does this seem to have no effect?
         handler.setFormatter(logging.Formatter(fmt=format_str))
         logger.addHandler(handler)
     # Add file handler if required.
@@ -112,10 +116,6 @@ def _init_logger_impl(
         handler.setLevel(log_level)
         handler.setFormatter(logging.Formatter(fmt=format_str))
         logger.addHandler(handler)
-    # Add any additional handlers.
-    if log_handlers:
-        for handler in log_handlers:
-            logger.addHandler(handler)
 
 
 def attach_log_handler(handler: logging.Handler):

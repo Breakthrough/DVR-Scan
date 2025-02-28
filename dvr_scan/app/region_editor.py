@@ -38,11 +38,11 @@ from dvr_scan.region import Point, Size, bound_point, load_regions
 WINDOW_TITLE = "DVR-Scan Region Editor"
 OWNED_WINDOW_TITLE = "Region Editor"
 PROMPT_TITLE = "DVR-Scan"
-# TODO: Use a different prompt on quit vs. scan start.
 PROMPT_MESSAGE = "You have unsaved region changes.\nDo you want to save them?"
 SAVE_TITLE = "Save Region File"
 LOAD_TITLE = "Load Region File"
-
+SAVE_REGIONS = "Save Regions"
+SAVE_REGIONS_PROMPT = "Save Regions..."
 ABOUT_WINDOW_COPYRIGHT = (
     f"DVR-Scan {dvr_scan.__version__}\n\nCopyright © Brandon Castellano.\nAll rights reserved."
 )
@@ -60,7 +60,7 @@ class Snapshot:
     active_shape: ty.Optional[int]
 
 
-# TODO(v1.7): Allow controlling some of these settings in the config file.
+# TODO: Allow controlling some of these settings in the config file.
 @dataclass
 class EditorSettings:
     video_path: str
@@ -75,8 +75,6 @@ class EditorSettings:
     hover_color: ty.Tuple[int, int, int] = (0, 127, 255)
     hover_color_alt: ty.Tuple[int, int, int] = (0, 0, 255)
     interact_color: ty.Tuple[int, int, int] = (0, 255, 255)
-    # TODO: Save window position.
-    # TODO: Save these settings automagically in the user settings folder.
 
 
 class AutoHideScrollbar(tk.Scrollbar):
@@ -88,7 +86,6 @@ class AutoHideScrollbar(tk.Scrollbar):
             tk.Scrollbar.set(self, lo, hi)
 
 
-# TODO(v1.7): Move more of these constants to EditorSettings.
 MIN_NUM_POINTS = 3
 MAX_HISTORY_SIZE = 1024
 MIN_DOWNSCALE_FACTOR = 1
@@ -99,7 +96,6 @@ HOVER_DISPLAY_DISTANCE = 260**2
 MAX_DOWNSCALE_AA_LEVEL = 4
 
 ACCELERATOR_KEY = "Command" if sys.platform == "darwin" else "Ctrl"
-# TODO: In v1.8 we need to have actual UI elements for this stuff and remove keyboard shortcuts.
 KEYBIND_POINT_ADD = "+"
 KEYBIND_POINT_ADD_ALT1 = "="
 KEYBIND_POINT_ADD_ALT2 = "KP_Add"
@@ -129,7 +125,7 @@ KEYBIND_REDO = "Ctrl+Y" if os.name == "nt" else f"{ACCELERATOR_KEY}+Shift+Z"
 
 def control_handle_radius(scale: int):
     """Get size of point control handles based on scale factor."""
-    # TODO: This should be based on the video resolution as well, not just scale factor.
+    # TODO: This should be based on the video resolution in addition to scale factor.
     if scale == 1:
         return 12
     elif scale == 2:
@@ -147,7 +143,7 @@ def control_handle_radius(scale: int):
 
 def edge_thickness(scale: int, ext: int = 0):
     """Get thickness of polygon connecting edges based on scale factor."""
-    # TODO: This should be based on the video resolution as well, not just scale factor.
+    # TODO: This should be based on the video resolution in addition to scale factor.
     if scale < 2:
         return 4 + ext
     elif scale < 5:
@@ -173,8 +169,7 @@ def squared_distance(a: Point, b: Point) -> int:
     return (a.x - b.x) ** 2 + (a.y - b.y) ** 2
 
 
-# TODO(v1.7): Allow multiple polygons by adding new ones using keyboard.
-# TODO(v1.7): Allow shifting polygons by using middle mouse button.
+# TODO: Allow translating polygons using middle mouse button.
 class RegionEditor:
     def __init__(
         self,
@@ -261,7 +256,6 @@ class RegionEditor:
     def persisted_path(self) -> str:
         return self._persisted_path
 
-    # TODO: Using a virtual event for this would be much cleaner.
     def _rescale(self, draw=True, allow_resize=True):
         assert self._scale > 0
         logger.info(f"Downscale factor: {self._scale}")
@@ -316,8 +310,6 @@ class RegionEditor:
         self._update_ui_state()
 
     def _commit(self, persisted=False):
-        # TODO: Make it so if we edit a snapshot, that adds a new entry in the buffer, instead of
-        # rewriting history from that point.
         # Take a copy of the current state and put it in the history buffer.
         snapshot = deepcopy(Snapshot(regions=self._regions, active_shape=self._active_shape))
         self._history = self._history[self._history_pos :]
@@ -396,7 +388,6 @@ class RegionEditor:
                 if self._scale > 1:
                     points = points // self._scale
                 mask = cv2.fillPoly(mask, points, color=(255, 255, 255), lineType=curr_aa)
-            # TODO: We can pre-calculate a masked version of the frame and just swap both out.
             frame = np.bitwise_and(frame, mask).astype(np.uint8)
 
         thickness = edge_thickness(self._scale)
@@ -729,7 +720,6 @@ class RegionEditor:
 
     def _create_menubar(self):
         root_menu = tk.Menu(self._root)
-
         file_menu = tk.Menu(root_menu)
         root_menu.add_cascade(menu=file_menu, label="File", underline=0)
         if not self._launched_from_app:
@@ -747,7 +737,7 @@ class RegionEditor:
             underline=0,
         )
         file_menu.add_command(
-            label="Save Regions...",
+            label=SAVE_REGIONS if self._settings.save_path else SAVE_REGIONS_PROMPT,
             command=self._prompt_save,
             accelerator=KEYBIND_SAVE,
             underline=0,
@@ -799,11 +789,18 @@ class RegionEditor:
         help_menu.add_command(
             label="Show Controls", command=self._show_help, accelerator=KEYBIND_HELP, underline=5
         )
-        # TODO: Build local copy of docs to include inside app.
+        # TODO: Link to local copy of documentation included with distributions instead where
+        # possible. This isn't always possible with how Python manages package resources, so we
+        # might need to probe the directory the application was run from.
         help_menu.add_command(
             label="Online Manual",
             command=lambda: webbrowser.open_new_tab("www.dvr-scan.com/guide"),
             underline=0,
+        )
+        help_menu.add_command(
+            label="Join Discord Chat",
+            command=lambda: webbrowser.open_new_tab("https://discord.gg/69kf6f2Exb"),
+            underline=5,
         )
         help_menu.add_separator()
 
@@ -958,9 +955,11 @@ class RegionEditor:
         """Saves any changes that weren't persisted, prompting the user if a path wasn't specified.
         Returns True if we should quit the program, False if we should not quit."""
         # Don't prompt user if changes are already saved.
-        # TODO: If we launched this from the GUI, don't prompt the user to save when they close this
-        # window, only when they close the root application.
         if self._persisted:
+            return True
+        # Don't prompt the user if they lanched the region editor from the CLI and already specified
+        # a path to save the region data to.
+        if self._save():
             return True
         should_save = tkinter.messagebox.askyesnocancel(
             title=PROMPT_TITLE,

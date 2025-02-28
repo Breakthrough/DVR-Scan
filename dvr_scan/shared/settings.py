@@ -17,13 +17,13 @@ from dvr_scan.config import ConfigRegistry
 
 
 class ScanSettings:
-    """Settings represent the complete user input and output settings for a given scan.
-    This also includes the config to use for motion scanning."""
+    """Settings for a given scan job. This is shared across the CLI and the UI, and includes both
+    command-line options, config file options, and UI options."""
 
     def __init__(self, args: argparse.Namespace, config: ConfigRegistry):
-        self._args = args
-        self._config = config
-        self._app_settings = dict()
+        self._args = args  # CLI settings
+        self._config = config  # Config file settings
+        self._app_settings = dict()  # UI settings
 
     @property
     def app_settings(self) -> ty.Dict[str, ty.Any]:
@@ -41,12 +41,8 @@ class ScanSettings:
         return getattr(self._args, arg_name) if hasattr(self._args, arg_name) else None
 
     def get(self, option: str) -> ty.Union[str, int, float, bool]:
-        """Get setting based on following resolution order:
-        1. Argument specified via command line.
-        2. Option set in the active config file (either explicit with -c/--config, or
-           the dvr-scan.cfg file in the user's settings folder).
-        3. Default value specified in the config map (`dvr_scan.config.CONFIG_MAP`).
-        """
+        """Get the current value for `option`, preferring the current UI or CLI setting, falling
+        back to either the config file option, or the default value."""
         if option in self._app_settings:
             return self._app_settings[option]
         arg_val = self.get_arg(option)
@@ -59,7 +55,9 @@ class ScanSettings:
         self._app_settings[option] = value
 
     def write_to_file(self, file: ty.TextIO):
-        """Get application settings as a config file. Only works for the UI, not CLI."""
+        """Get application settings as a config file.
+
+        *NOTE*: This is only implemented for the UI settings currently."""
         file.write("# DVR-Scan Config File\n")
         file.write(f"# Created by: DVR-Scan {dvr_scan.__version__}\n")
         keys = sorted(self._app_settings.keys())
