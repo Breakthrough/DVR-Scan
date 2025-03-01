@@ -15,17 +15,24 @@ Provides logging and platform/operating system compatibility.
 
 import importlib
 import logging
+import logging.handlers
 import os
 import platform
 import subprocess
 import sys
-from typing import AnyStr, Optional
+import typing as ty
+
+try:
+    import PIL
+except ImportError:
+    PIL = None
 
 try:
     import screeninfo
 except ImportError:
     screeninfo = None
 
+from scenedetect import AVAILABLE_BACKENDS
 from scenedetect.platform import get_and_create_path, get_ffmpeg_version
 
 try:
@@ -42,10 +49,16 @@ except:  # noqa: E722
     # We make sure importing OpenCV succeeds elsewhere so it's okay to suppress any exceptions here.
     HAS_MOG2_CUDA = False
 
-
+HAS_PILLOW = PIL is not None
 HAS_TKINTER = tkinter is not None
 
 IS_FROZEN = bool(not (getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS")))
+
+LOG_FORMAT_NORMAL = "[DVR-Scan] %(message)s"
+LOG_FORMAT_DEBUG = "%(levelname)s: %(name)s %(module)s.%(funcName)s(): %(message)s"
+LOG_FORMAT_ROLLING_LOGS = (
+    "%(asctime)s %(levelname)s: %(name)s %(module)s.%(funcName)s(): %(message)s"
+)
 
 
 def get_min_screen_bounds():
@@ -65,7 +78,7 @@ def get_min_screen_bounds():
     return None
 
 
-def is_ffmpeg_available(ffmpeg_path: AnyStr = "ffmpeg"):
+def is_ffmpeg_available(ffmpeg_path: ty.AnyStr = "ffmpeg"):
     """Is ffmpeg Available: Gracefully checks if ffmpeg command is available.
 
     Returns:
@@ -86,14 +99,14 @@ def _init_logger_impl(
     log_level: int,
     format_str: str,
     show_stdout: bool,
-    log_file: Optional[str],
+    log_file: ty.Optional[str],
 ):
     logger.handlers = []
-    logger.setLevel(log_level)
+    logger.setLevel(logging.DEBUG)
     # Add stdout handler if required.
     if show_stdout:
         handler = logging.StreamHandler(stream=sys.stdout)
-        handler.setLevel(log_level)
+        handler.setLevel(log_level)  # TODO: Why does this seem to have no effect?
         handler.setFormatter(logging.Formatter(fmt=format_str))
         logger.addHandler(handler)
     # Add file handler if required.
@@ -105,38 +118,48 @@ def _init_logger_impl(
         logger.addHandler(handler)
 
 
+def attach_log_handler(handler: logging.Handler):
+    for logger_name in ("dvr_scan", "pyscenedetect"):
+        logging.getLogger(logger_name).addHandler(handler)
+
+
 def init_logger(
     log_level: int = logging.INFO,
     show_stdout: bool = False,
-    log_file: Optional[str] = None,
+    log_file: ty.Optional[str] = None,
 ) -> logging.Logger:
     """Initializes logging for DVR-Scan. The logger instance used is named 'dvr_scan'.
-    By default the logger has no handlers to suppress output. All existing log handlers
-    are replaced every time this function is invoked.
+    By default the logger has no handlers to suppress output.
+
+    *NOTE*: This function replaces all existing log handlers.
 
     Arguments:
         log_level: Verbosity of log messages. Should be one of [logging.INFO, logging.DEBUG,
             logging.WARNING, logging.ERROR, logging.CRITICAL].
         show_stdout: If True, add handler to show log messages on stdout (default: False).
         log_file: If set, add handler to dump log messages to given file path.
+        log_handlers: Additional log handlers to attach.
     """
     # Format of log messages depends on verbosity.
-    format_str = "[DVR-Scan] %(message)s"
-    if log_level == logging.DEBUG:
-        format_str = "%(levelname)s: %(module)s.%(funcName)s(): %(message)s"
-    _init_logger_impl(logging.getLogger("dvr_scan"), log_level, format_str, show_stdout, log_file)
-    # The `scenedetect` package also has useful log messages when opening and decoding videos.
-    # We still want to make sure we can tell the messages apart, so we add a short prefix [::].
-    format_str = "[DVR-Scan] :: %(message)s"
-    if log_level == logging.DEBUG:
-        format_str = "%(levelname)s: [scenedetect] %(module)s.%(funcName)s(): %(message)s"
+    format_str = LOG_FORMAT_NORMAL if log_level != logging.DEBUG else LOG_FORMAT_DEBUG
     _init_logger_impl(
-        logging.getLogger("pyscenedetect"), log_level, format_str, show_stdout, log_file
+        logging.getLogger("dvr_scan"),
+        log_level,
+        format_str,
+        show_stdout,
+        log_file,
+    )
+    _init_logger_impl(
+        logging.getLogger("pyscenedetect"),
+        log_level,
+        format_str,
+        show_stdout,
+        log_file,
     )
     return logging.getLogger("dvr_scan")
 
 
-def get_filename(path: AnyStr, include_extension: bool) -> AnyStr:
+def get_filename(path: ty.AnyStr, include_extension: bool) -> ty.AnyStr:
     """Get filename of the given path, optionally excluding extension."""
     filename = os.path.basename(path)
     if not include_extension:
@@ -172,8 +195,10 @@ def get_system_version_info(separator_width: int = 40) -> str:
     # Third-Party Packages
     out_lines += ["", "Packages", line_separator]
     third_party_packages = (
+        "av",
         "cv2",
         "dvr_scan",
+        "moviepy",
         "numpy",
         "platformdirs",
         "PIL",
@@ -196,8 +221,10 @@ def get_system_version_info(separator_width: int = 40) -> str:
 
     ffmpeg_version = get_ffmpeg_version()
     feature_version_info = [("ffmpeg", ffmpeg_version)] if ffmpeg_version else []
+    feature_version_info += [("MoviePy", "Installed")] if "moviepy" in AVAILABLE_BACKENDS else []
+    feature_version_info += [("OpenCV CUDA", "Installed")] if HAS_MOG2_CUDA else []
+    feature_version_info += [("PyAV", "Installed")] if "pyav" in AVAILABLE_BACKENDS else []
     feature_version_info += [("tkinter", "Installed")] if HAS_TKINTER else []
-    feature_version_info += [("cv2.cuda", "Installed")] if HAS_MOG2_CUDA else []
 
     for feature_name, feature_version in feature_version_info:
         out_lines.append(

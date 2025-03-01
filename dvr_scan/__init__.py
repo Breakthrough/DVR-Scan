@@ -34,13 +34,16 @@ There are also a few helper modules:
 import pkgutil
 import sys
 
+# Used for module/distribution identification.
+__version__ = "1.7"
+
 # Handle loading OpenCV. This **MUST** be first before any other DVR-Scan or third-party
 # packages are imported which might attempt to import the `cv2` module.
 import dvr_scan.opencv_loader as _  # noqa: F401
 from dvr_scan.platform import init_logger
 
-# Used for module/distribution identification.
-__version__ = "1.6.2"
+# Initialize logger.
+init_logger(show_stdout=True)
 
 
 def get_license_info() -> str:
@@ -50,7 +53,3 @@ def get_license_info() -> str:
     if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
         license_text += pkgutil.get_data(__name__, "LICENSE-THIRDPARTY").decode()
     return license_text
-
-
-# Initialize logger.
-init_logger(show_stdout=True)

@@ -32,10 +32,45 @@ cli_exe = EXE(cli_pyz,
           version='.version_info',
           icon='../dvr_scan/dvr-scan.ico')
 
-coll = COLLECT(cli_exe,
+app = Analysis(['../dvr_scan/app/__main__.py'],
+             pathex=['.'],
+             binaries=None,
+             datas=[
+                ('../dvr_scan/dvr-scan.ico', 'dvr_scan'),
+                ('../dvr_scan/dvr-scan-logo.png', 'dvr_scan'),
+                ('../dvr_scan/LICENSE*', 'dvr_scan'),
+            ],
+             hiddenimports=[],
+             hookspath=[],
+             runtime_hooks=[],
+             excludes=["av"],
+             win_no_prefer_redirects=False,
+             win_private_assemblies=False,
+             cipher=block_cipher)
+
+app_pyz = PYZ(app.pure, app.zipped_data,
+             cipher=block_cipher)
+
+app_exe = EXE(app_pyz,
+          app.scripts,
+          exclude_binaries=True,
+          name='dvr-scan-app',
+          debug=False,
+          strip=False,
+          upx=True,
+          console=False,
+          version='.version_info',
+          icon='../dvr_scan/dvr-scan.ico')
+
+coll = COLLECT(
+               cli_exe,
                cli.binaries,
                cli.zipfiles,
                cli.datas,
+               app_exe,
+               app.binaries,
+               app.zipfiles,
+               app.datas,
                strip=False,
                upx=True,
                name='dvr-scan')

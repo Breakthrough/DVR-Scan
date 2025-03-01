@@ -244,7 +244,9 @@ class RGBValue(ValidatedValue):
     _IGNORE_CHARS = [",", "/", "(", ")"]
     """Characters to ignore."""
 
-    def __init__(self, value: Union[int, str]):
+    def __init__(self, value: Union[int, str, "RGBValue"]):
+        if isinstance(value, RGBValue):
+            return value
         # If not an int, convert to one.
         # First try to convert values of the form 'ffffff'.
         if not isinstance(value, int) and len(value) == 6:
@@ -311,18 +313,22 @@ _CONFIG_FILE_DIR: AnyStr = user_config_dir("DVR-Scan", False)
 
 USER_CONFIG_FILE_PATH: AnyStr = os.path.join(_CONFIG_FILE_DIR, _CONFIG_FILE_NAME)
 
+# TODO: Investigate if centralizing user help strings here would be useful.
+# It might make CLI help and documentation are easier to create, as well as
+# for generating a default config file template.
+
 # TODO: Replace these default values with those set in dvr_scan.context.
 CONFIG_MAP: ConfigDict = {
     # General Options
-    "region-editor": False,
     "quiet-mode": False,
-    "verbosity": "info",
     # Input/Output
-    "output-dir": "",
-    "output-mode": "opencv",
     "ffmpeg-input-args": DEFAULT_FFMPEG_INPUT_ARGS,
     "ffmpeg-output-args": DEFAULT_FFMPEG_OUTPUT_ARGS,
+    "input-mode": "opencv",
     "opencv-codec": "XVID",
+    "output-dir": "",
+    "output-mode": "opencv",
+    "region-editor": False,
     # Motion Events
     "min-event-length": TimecodeValue("0.1s"),
     "time-before-event": TimecodeValue("1.5s"),
@@ -336,7 +342,7 @@ CONFIG_MAP: ConfigDict = {
     "kernel-size": KernelSizeValue(),
     "downscale-factor": 0,
     "learning-rate": float(-1),
-    # TODO(v1.7): Remove, replaced with region files.
+    # TODO(1.8): Remove, has been replaced with region files.
     "region-of-interest": RegionValueDeprecated(),
     "load-region": "",
     "frame-skip": 0,
@@ -357,13 +363,20 @@ CONFIG_MAP: ConfigDict = {
     "bounding-box-thickness": 0.0032,
     "bounding-box-min-size": 0.032,
     "thumbnails": None,
+    # Logging
+    "verbosity": "info",
+    "save-log": True,
+    "max-log-size": 20000,
+    "max-log-files": 4,
+    # Development
+    "debug": False,
 }
 """Mapping of valid configuration file parameters and their default values or placeholders.
 The types of these values are used when decoding the configuration file. Valid choices for
 certain string options are stored in `CHOICE_MAP`."""
 
-# TODO: This should be a validator. These sub- lists should also be constants somewhere.
 CHOICE_MAP: Dict[str, List[str]] = {
+    "input-mode": ["opencv", "pyav", "moviepy"],
     "opencv-codec": ["XVID", "MP4V", "MP42", "H264"],
     "output-mode": ["scan_only", "opencv", "copy", "ffmpeg"],
     "verbosity": ["debug", "info", "warning", "error"],
@@ -545,7 +558,7 @@ class ConfigRegistry:
         """True if the option is default, i.e. is NOT set by the user."""
         return option not in self._config
 
-    def get_value(
+    def get(
         self,
         option: str,
         override: Optional[ConfigValue] = None,

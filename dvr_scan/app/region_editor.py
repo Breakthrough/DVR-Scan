@@ -4,24 +4,10 @@
 #       [  Site: https://www.dvr-scan.com/                 ]
 #       [  Repo: https://github.com/Breakthrough/DVR-Scan  ]
 #
-# Copyright (C) 2014-2024 Brandon Castellano <http://www.bcastell.com>.
+# Copyright (C) 2024 Brandon Castellano <http://www.bcastell.com>.
 # DVR-Scan is licensed under the BSD 2-Clause License; see the included
 # LICENSE file, or visit one of the above pages for details.
 #
-"""DVR-Scan Region Editor handles detection region input and processing.
-
-Regions are represented as a set of closed polygons defined by lists of points.
-
-*NOTE*: The region editor is being transitioned to an offical GUI for DVR-Scan.
-During this period, there may still be some keyboard/CLI interaction required to
-run the program. Usability and accessibility bugs will be prioritized over feature
-development.
-
-The code in this module covers *all* the current UI logic, and consequently is not
-well organized. This should be resolved as we develop the UI further and start to
-better separate the CLI from the GUI. To facilitate this, a separate entry-point
-for the GUI will be developed, and the region editor functionality will be deprecated.
-"""
 
 import math
 import os
@@ -45,17 +31,18 @@ import PIL.Image
 import PIL.ImageTk
 
 import dvr_scan
-from dvr_scan.platform import get_system_version_info
+from dvr_scan.app.about_window import AboutWindow
+from dvr_scan.app.common import register_icon
 from dvr_scan.region import Point, Size, bound_point, load_regions
 
-# TODO: Update screenshots to reflect release title.
 WINDOW_TITLE = "DVR-Scan Region Editor"
+OWNED_WINDOW_TITLE = "Region Editor"
 PROMPT_TITLE = "DVR-Scan"
-# TODO: Use a different prompt on quit vs. scan start.
-PROMPT_MESSAGE = "You have unsaved changes.\nDo you want to save?"
+PROMPT_MESSAGE = "You have unsaved region changes.\nDo you want to save them?"
 SAVE_TITLE = "Save Region File"
 LOAD_TITLE = "Load Region File"
-
+SAVE_REGIONS = "Save Regions"
+SAVE_REGIONS_PROMPT = "Save Regions..."
 ABOUT_WINDOW_COPYRIGHT = (
     f"DVR-Scan {dvr_scan.__version__}\n\nCopyright © Brandon Castellano.\nAll rights reserved."
 )
@@ -66,23 +53,6 @@ MIN_SIZE = 16
 
 logger = getLogger("dvr_scan")
 
-SUPPORTS_RESOURCES = sys.version_info.minor >= 9
-if SUPPORTS_RESOURCES:
-    import importlib.resources as resources
-
-
-def register_icon(root: tk.Tk):
-    if SUPPORTS_RESOURCES:
-        # On Windows we always want a path so we can load the .ICO with `iconbitmap`.
-        # On other systems, we can just use the PNG logo directly with `iconphoto`.
-        if os.name == "nt":
-            icon_path = resources.files(dvr_scan).joinpath("dvr-scan.ico")
-            with resources.as_file(icon_path) as icon_path:
-                root.iconbitmap(default=icon_path)
-            return
-        icon = PIL.Image.open(resources.open_binary(dvr_scan, "dvr-scan.png"))
-        root.iconphoto(True, PIL.ImageTk.PhotoImage(icon))
-
 
 @dataclass
 class Snapshot:
@@ -90,7 +60,7 @@ class Snapshot:
     active_shape: ty.Optional[int]
 
 
-# TODO(v1.7): Allow controlling some of these settings in the config file.
+# TODO: Allow controlling some of these settings in the config file.
 @dataclass
 class EditorSettings:
     video_path: str
@@ -105,8 +75,6 @@ class EditorSettings:
     hover_color: ty.Tuple[int, int, int] = (0, 127, 255)
     hover_color_alt: ty.Tuple[int, int, int] = (0, 0, 255)
     interact_color: ty.Tuple[int, int, int] = (0, 255, 255)
-    # TODO: Save window position.
-    # TODO: Save these settings automagically in the user settings folder.
 
 
 class AutoHideScrollbar(tk.Scrollbar):
@@ -118,7 +86,6 @@ class AutoHideScrollbar(tk.Scrollbar):
             tk.Scrollbar.set(self, lo, hi)
 
 
-# TODO(v1.7): Move more of these constants to EditorSettings.
 MIN_NUM_POINTS = 3
 MAX_HISTORY_SIZE = 1024
 MIN_DOWNSCALE_FACTOR = 1
@@ -129,7 +96,6 @@ HOVER_DISPLAY_DISTANCE = 260**2
 MAX_DOWNSCALE_AA_LEVEL = 4
 
 ACCELERATOR_KEY = "Command" if sys.platform == "darwin" else "Ctrl"
-# TODO: In v1.8 we need to have actual UI elements for this stuff and remove keyboard shortcuts.
 KEYBIND_POINT_ADD = "+"
 KEYBIND_POINT_ADD_ALT1 = "="
 KEYBIND_POINT_ADD_ALT2 = "KP_Add"
@@ -159,7 +125,7 @@ KEYBIND_REDO = "Ctrl+Y" if os.name == "nt" else f"{ACCELERATOR_KEY}+Shift+Z"
 
 def control_handle_radius(scale: int):
     """Get size of point control handles based on scale factor."""
-    # TODO: This should be based on the video resolution as well, not just scale factor.
+    # TODO: This should be based on the video resolution in addition to scale factor.
     if scale == 1:
         return 12
     elif scale == 2:
@@ -177,7 +143,7 @@ def control_handle_radius(scale: int):
 
 def edge_thickness(scale: int, ext: int = 0):
     """Get thickness of polygon connecting edges based on scale factor."""
-    # TODO: This should be based on the video resolution as well, not just scale factor.
+    # TODO: This should be based on the video resolution in addition to scale factor.
     if scale < 2:
         return 4 + ext
     elif scale < 5:
@@ -203,8 +169,7 @@ def squared_distance(a: Point, b: Point) -> int:
     return (a.x - b.x) ** 2 + (a.y - b.y) ** 2
 
 
-# TODO(v1.7): Allow multiple polygons by adding new ones using keyboard.
-# TODO(v1.7): Allow shifting polygons by using middle mouse button.
+# TODO: Allow translating polygons using middle mouse button.
 class RegionEditor:
     def __init__(
         self,
@@ -214,6 +179,7 @@ class RegionEditor:
         debug_mode: bool,
         video_path: str,
         save_path: ty.Optional[str],
+        on_close: ty.Optional[ty.Callable[[], None]] = None,
     ):
         self._settings = EditorSettings(video_path=video_path, save_path=save_path)
         self._source_frame: np.ndarray = frame.copy()  # Frame before downscaling
@@ -241,19 +207,20 @@ class RegionEditor:
         self._mouse_dist: ty.List[int] = []  # Square distance of mouse to point i
         self._scale: int = 1 if initial_scale is None else initial_scale
         self._persisted: bool = True  # Indicates if we've saved outstanding changes to disk.
+        self._persisted_path: str = ""  # Path we've saved changes to, if any.
 
-        self._root: tk.Tk = None
+        self._launched_from_app: bool = False
+        self._on_close: ty.Optional[ty.Callable[[], None]] = on_close
+        self._root: ty.Union[tk.Tk, tk.Toplevel] = None
         self._edit_menu: tk.Menu = None
         self._editor_window: tk.Toplevel = None
         self._editor_canvas: tk.Canvas = None
         self._editor_scroll: ty.Tuple[tk.Scrollbar, tk.Scrollbar] = None
         self._should_scan: bool = False
-        self._version_info: ty.Optional[str] = None
         self._scale_widget: ttk.Scale = None
         self._pan_enabled: bool = False
         self._panning: bool = False
         self._controls_window: tk.Toplevel = None
-        self._about_image: PIL.Image = None
         self._region_selector: ttk.Combobox = None
 
         self._context_menu: tk.Menu = None
@@ -281,7 +248,14 @@ class RegionEditor:
             else None
         )
 
-    # TODO: Using a virtual event for this would be much cleaner.
+    @property
+    def persisted(self) -> bool:
+        return self._persisted
+
+    @property
+    def persisted_path(self) -> str:
+        return self._persisted_path
+
     def _rescale(self, draw=True, allow_resize=True):
         assert self._scale > 0
         logger.info(f"Downscale factor: {self._scale}")
@@ -336,8 +310,6 @@ class RegionEditor:
         self._update_ui_state()
 
     def _commit(self, persisted=False):
-        # TODO: Make it so if we edit a snapshot, that adds a new entry in the buffer, instead of
-        # rewriting history from that point.
         # Take a copy of the current state and put it in the history buffer.
         snapshot = deepcopy(Snapshot(regions=self._regions, active_shape=self._active_shape))
         self._history = self._history[self._history_pos :]
@@ -416,7 +388,6 @@ class RegionEditor:
                 if self._scale > 1:
                     points = points // self._scale
                 mask = cv2.fillPoly(mask, points, color=(255, 255, 255), lineType=curr_aa)
-            # TODO: We can pre-calculate a masked version of the frame and just swap both out.
             frame = np.bitwise_and(frame, mask).astype(np.uint8)
 
         thickness = edge_thickness(self._scale)
@@ -628,7 +599,6 @@ class RegionEditor:
 
         self._root.protocol("WM_DELETE_WINDOW", lambda: self._close(False))
         self._root.bind("<FocusOut>", lambda _: self._cancel_active_action())
-        self._root.bind("<Leave>", lambda _: self._on_mouse_leave())
 
         for i in range(9):
 
@@ -641,22 +611,35 @@ class RegionEditor:
         # by left-click and drag.
 
     def _close(self, should_scan: bool):
+        if self._launched_from_app:
+            self._root.destroy()
+            self._on_close()
+            return
+
         self._should_scan = should_scan
-        if self._prompt_save_on_quit():
+        if self.prompt_save_on_scan():
             self._root.destroy()
 
-    def _create_canvas(self):
-        pass
-
-    def run(self) -> bool:
+    def run(
+        self,
+        root: ty.Optional[tk.Tk] = None,
+    ) -> ty.Optional[bool]:
         """Run the region editor. Returns True if the video should be scanned, False otherwise."""
         logger.debug("Creating window for frame (scale = %d)", self._scale)
 
-        self._root = tk.Tk()
+        if root:
+            self._root = tk.Toplevel(master=root)
+            self._launched_from_app = True
+        else:
+            self._root = tk.Tk()
+
+        if not self._regions:
+            self._regions = [initial_point_list(self._frame_size)]
+
         # Withdraw root window until we're done adding everything to avoid visual flicker.
         self._root.withdraw()
         self._root.option_add("*tearOff", False)
-        self._root.title(WINDOW_TITLE)
+        self._root.title(OWNED_WINDOW_TITLE if self._launched_from_app else WINDOW_TITLE)
         register_icon(self._root)
         self._root.resizable(True, True)
         self._root.minsize(width=320, height=240)
@@ -731,21 +714,22 @@ class RegionEditor:
 
         self._root.focus()
         self._root.grab_release()
-        self._root.mainloop()
-        return self._should_scan
+        if not self._launched_from_app:
+            self._root.mainloop()
+            return self._should_scan
 
     def _create_menubar(self):
         root_menu = tk.Menu(self._root)
-
         file_menu = tk.Menu(root_menu)
         root_menu.add_cascade(menu=file_menu, label="File", underline=0)
-        file_menu.add_command(
-            label="Start Scan",
-            command=lambda: self._close(True),
-            accelerator=KEYBIND_START_SCAN,
-            underline=1,
-        )
-        file_menu.add_separator()
+        if not self._launched_from_app:
+            file_menu.add_command(
+                label="Start Scan",
+                command=lambda: self._close(True),
+                accelerator=KEYBIND_START_SCAN,
+                underline=1,
+            )
+            file_menu.add_separator()
         file_menu.add_command(
             label="Open Regions...",
             command=self._prompt_load,
@@ -753,14 +737,16 @@ class RegionEditor:
             underline=0,
         )
         file_menu.add_command(
-            label="Save Regions...",
+            label=SAVE_REGIONS if self._settings.save_path else SAVE_REGIONS_PROMPT,
             command=self._prompt_save,
             accelerator=KEYBIND_SAVE,
             underline=0,
         )
         file_menu.add_separator()
         file_menu.add_command(
-            label="Quit", command=lambda: self._close(False), accelerator=KEYBIND_QUIT
+            label="Close" if self._launched_from_app else "Quit",
+            command=lambda: self._close(False),
+            accelerator=KEYBIND_QUIT,
         )
 
         edit_menu = tk.Menu(root_menu)
@@ -803,128 +789,28 @@ class RegionEditor:
         help_menu.add_command(
             label="Show Controls", command=self._show_help, accelerator=KEYBIND_HELP, underline=5
         )
-        # TODO: Build local copy of docs to include inside app.
+        # TODO: Link to local copy of documentation included with distributions instead where
+        # possible. This isn't always possible with how Python manages package resources, so we
+        # might need to probe the directory the application was run from.
         help_menu.add_command(
             label="Online Manual",
             command=lambda: webbrowser.open_new_tab("www.dvr-scan.com/guide"),
             underline=0,
         )
+        help_menu.add_command(
+            label="Join Discord Chat",
+            command=lambda: webbrowser.open_new_tab("https://discord.gg/69kf6f2Exb"),
+            underline=5,
+        )
         help_menu.add_separator()
-        help_menu.add_command(label="About DVR-Scan", command=self._show_about, underline=0)
+
+        help_menu.add_command(
+            label="About DVR-Scan", command=lambda: AboutWindow().show(root=self._root), underline=0
+        )
 
         self._edit_menu = edit_menu
         self._root["menu"] = root_menu
         self._update_ui_state()
-
-    def _show_about(self):
-        about_window = tk.Toplevel(master=self._root)
-        about_window.withdraw()
-        about_window.title("About DVR-Scan")
-        about_window.resizable(True, True)
-
-        if SUPPORTS_RESOURCES:
-            app_logo = PIL.Image.open(resources.open_binary(dvr_scan, "dvr-scan-logo.png"))
-            self._about_image = app_logo.crop((8, 8, app_logo.width - 132, app_logo.height - 8))
-            self._about_image_tk = PIL.ImageTk.PhotoImage(self._about_image)
-            canvas = tk.Canvas(
-                about_window, width=self._about_image.width, height=self._about_image.height
-            )
-            canvas.grid()
-            canvas.create_image(0, 0, anchor=tk.NW, image=self._about_image_tk)
-
-        ttk.Separator(about_window, orient=tk.HORIZONTAL).grid(row=1, sticky="ew", padx=16.0)
-        ttk.Label(
-            about_window,
-            text=ABOUT_WINDOW_COPYRIGHT,
-        ).grid(row=2, sticky="nw", padx=24.0, pady=24.0)
-
-        # TODO: These should be buttons not labels.
-        website_link = ttk.Label(
-            about_window, text="www.dvr-scan.com", cursor="hand2", foreground="medium blue"
-        )
-        website_link.grid(row=2, sticky="ne", padx=24.0, pady=24.0)
-        website_link.bind("<Button-1>", lambda _: webbrowser.open_new_tab("www.dvr-scan.com"))
-
-        about_tabs = ttk.Notebook(about_window)
-        version_tab = ttk.Frame(about_tabs)
-        version_area = tkinter.scrolledtext.ScrolledText(
-            version_tab, wrap=tk.NONE, width=40, height=1
-        )
-        # TODO: See if we can add another button that will copy debug logs.
-        if not self._version_info:
-            self._version_info = get_system_version_info()
-        version_area.insert(tk.INSERT, self._version_info)
-        version_area.grid(sticky="nsew")
-        version_area.config(state="disabled")
-        version_tab.columnconfigure(0, weight=1)
-        version_tab.rowconfigure(0, weight=1)
-        tk.Button(
-            version_tab,
-            text="Copy to Clipboard",
-            command=lambda: self._root.clipboard_append(self._version_info),
-        ).grid(row=1, column=0)
-
-        license_tab = ttk.Frame(about_tabs)
-        scrollbar = tk.Scrollbar(license_tab, orient=tk.HORIZONTAL)
-        license_area = tkinter.scrolledtext.ScrolledText(
-            license_tab, wrap=tk.NONE, width=40, xscrollcommand=scrollbar.set, height=1
-        )
-        license_area.insert(tk.INSERT, dvr_scan.get_license_info())
-        license_area.grid(sticky="nsew")
-        scrollbar.config(command=license_area.xview)
-        scrollbar.grid(row=1, sticky="swe")
-        license_area.config(state="disabled")
-        license_tab.columnconfigure(0, weight=1)
-        license_tab.rowconfigure(0, weight=1)
-
-        # TODO: Add tab that has some useful links like submitting bug report, etc
-        about_tabs.add(version_tab, text="Version Info")
-        about_tabs.add(license_tab, text="License Info")
-
-        about_tabs.grid(
-            row=0, column=1, rowspan=4, padx=(0.0, 16.0), pady=(16.0, 16.0), sticky="nsew"
-        )
-        about_window.update()
-        if self._about_image is not None:
-            about_window.columnconfigure(0, minsize=self._about_image.width)
-            about_window.rowconfigure(0, minsize=self._about_image.height)
-        else:
-            about_window.columnconfigure(0, minsize=200)
-            about_window.rowconfigure(0, minsize=100)
-        # minsize includes padding
-        about_window.columnconfigure(1, weight=1, minsize=100)
-        about_window.rowconfigure(3, weight=1)
-
-        about_window.minsize(
-            width=about_window.winfo_reqwidth(), height=about_window.winfo_reqheight()
-        )
-        # can we query widget height?
-
-        self._root.grab_release()
-        if os == "nt":
-            self._root.attributes("-disabled", True)
-
-        about_window.transient(self._root)
-        about_window.focus()
-        about_window.grab_set()
-
-        def dismiss():
-            about_window.grab_release()
-            about_window.destroy()
-            if os == "nt":
-                self._root.attributes("-disabled", False)
-            self._root.grab_set()
-            self._root.focus()
-
-        about_window.protocol("WM_DELETE_WINDOW", dismiss)
-        about_window.attributes("-topmost", True)
-        about_window.bind("<Escape>", lambda _: about_window.destroy())
-        about_window.bind("<Destroy>", lambda _: dismiss())
-
-        about_window.deiconify()
-        about_window.wait_window()
-
-        self._draw()
 
     def _show_help(self):
         if self._controls_window is None:
@@ -1047,13 +933,7 @@ class RegionEditor:
     def _adjust_downscale(self, amount: int, allow_resize=True):
         # scale is clamped to MIN_DOWNSCALE_FACTOR/MAX_DOWNSCALE_FACTOR.
         scale = self._scale + amount
-        self._scale = (
-            MIN_DOWNSCALE_FACTOR
-            if scale < MIN_DOWNSCALE_FACTOR
-            else scale
-            if scale < MAX_DOWNSCALE_FACTOR
-            else MAX_DOWNSCALE_FACTOR
-        )
+        self._scale = min(MAX_DOWNSCALE_FACTOR, max(MIN_DOWNSCALE_FACTOR, scale))
         self._scale_widget.set(self._scale)
         self._rescale(allow_resize=allow_resize)
 
@@ -1066,20 +946,26 @@ class RegionEditor:
             filetypes=[("Region File", "*.txt")],
             defaultextension=".txt",
             confirmoverwrite=True,
+            parent=self._root,
         )
         if save_path:
             self._save(save_path)
 
-    def _prompt_save_on_quit(self):
+    def prompt_save_on_scan(self, root: ty.Optional[tk.Widget] = None):
         """Saves any changes that weren't persisted, prompting the user if a path wasn't specified.
         Returns True if we should quit the program, False if we should not quit."""
         # Don't prompt user if changes are already saved.
         if self._persisted:
             return True
+        # Don't prompt the user if they lanched the region editor from the CLI and already specified
+        # a path to save the region data to.
+        if self._save():
+            return True
         should_save = tkinter.messagebox.askyesnocancel(
             title=PROMPT_TITLE,
             message=PROMPT_MESSAGE,
             icon=tkinter.messagebox.WARNING,
+            parent=root if root else self._root,
         )
         if should_save is None:
             return False
@@ -1089,12 +975,13 @@ class RegionEditor:
                 filetypes=[("Region File", "*.txt")],
                 defaultextension=".txt",
                 confirmoverwrite=True,
+                parent=root if root else self._root,
             )
             if not save_path:
                 return False
             self._save(save_path)
         else:
-            logger.debug("Quitting with unsaved changes.")
+            logger.debug("Continuing with unsaved changes.")
         return True
 
     def _save(self, path=None):
@@ -1108,16 +995,18 @@ class RegionEditor:
                 region_file.write("\n")
         logger.info("Saved region data to: %s", path)
         self._persisted = True
+        self._persisted_path = path
         return True
 
     def _prompt_load(self):
         # TODO: Rename this function.
-        if not self._prompt_save_on_quit():
+        if not self.prompt_save_on_scan():
             return
         load_path = tkinter.filedialog.askopenfilename(
             title=LOAD_TITLE,
             filetypes=[("Region File", "*.txt")],
             defaultextension=".txt",
+            parent=self._root,
         )
         if not load_path:
             return

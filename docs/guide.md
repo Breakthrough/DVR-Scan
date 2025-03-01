@@ -1,101 +1,39 @@
 
 # :fontawesome-solid-circle-info: User Guide
 
+
+
 ## :fontawesome-solid-terminal:Running DVR-Scan
 
-After installation, the `dvr-scan` command should be available from a terminal or command prompt. Try running `dvr-scan --help`.
+After installation, you can run DVR-Scan by clicking on the application shortcut, or running `dvr-scan-app` from a terminal. If you downloaded the portable version, run `dvr-scan-app.exe`.
 
-!!! info "For portable versions, replace `dvr-scan` with the path to `dvr-scan.exe` in the extracted files on your system."
+!!! note "The `dvr-scan` command is the command-line interface for DVR-Scan. To launch the GUI, run `dvr-scan-app`. For help with the command-line interface or config files, see the [Documentation](docs.md) page for details. "
 
-To extract all motion events from a video, you can start with:
+Start by clicking the <b>Add</b> button to add one or more videos:
 
-    dvr-scan -i video.mp4
+<img alt="[Main App Window]" src="../assets/app-main-window.jpg"/>
 
-This will produce output events in your working directory starting with the prefix `video.DSME_` (e.g. `video.DSME_0001.avi`). If you want to limit scanning to a particular part of the video frame, you can use the [region editor](#region-editor):
+To extract and save the motion events from the input, click the <b>Start</b> button. You will be prompted for a location to save the events to, after which scanning will begin:
 
-    dvr-scan -i video.mp4 -r
 
-DVR-Scan should provide good results for most use cases, but can be fine tuned for specific use cases. There are two main categories of these settings: [detection and sensitivity](docs.md#detection), and [event parameters](docs.md#events).
+<img alt="[Scan Window]" src="../assets/app-scan-window.jpg"/>
 
-See [the documentation](docs.md) for a complete list of all command-line and configuration file options which can be set. You can also type `dvr-scan --help` for an overview of command line options. Lastly, most program options can be set [using a config file](docs.md#config-file).  DVR-Scan also looks for a `dvr-scan.cfg` file in the following locations:
+Once complete, each event will be saved to the output folder you selected.  To tune motion sensitivity, go to <b>Settings -> Motion</b> and adjust threshold, where lower values are more sensitive to motion, and higher values are less sensitive.  You can also adjust event settings and more:
 
- * Windows: `C:/Users/%USERNAME%/AppData/Local/DVR-Scan/dvr-scan.cfg`
- * Linux: `~/.config/DVR-Scan/dvr-scan.cfg` or `$XDG_CONFIG_HOME/dvr-scan.cfg`
- * OSX: `~/Library/Preferences/DVR-Scan/dvr-scan.cfg`
 
-These settings will be used by default each time you run DVR-Scan, unless you override them.
+<img alt="[Motion Settings Window]" src="../assets/app-motion-settings.jpg"/>
 
-### Running Without Terminal
-
-A GUI is being developed for DVR-Scan but is not yet available. In the meantime, Windows users can see [Issue #178](https://github.com/Breakthrough/DVR-Scan/issues/178) for instructions on how to create drag-and-drop shortcuts to run DVR-Scan without needing to type commands.
-
-### Multiple Videos
-
-You can specify multiple input videos as long as they have the same resolution and framerate:
-
-    dvr-scan -i video1.mp4 video2.mp4 video*.mp4
-
-Wildcards are also supported:
-
-    dvr-scan -i video*.mp4
-
-Note that this will **concatenate** the videos together *in the order they are specified*.
-
-This can be undesirable for some types of footage being analyzed.  For example, if a folder contains different dashcam footage clips, a significant amount of time can pass between clips (e.g. when the vehicle is shut off).  This can result in DVR-Scan generating false events between videos.
-
-To avoid this, you can run DVR-Scan on each video in a loop. For example, on Windows:
-
-    for /F %i in ('dir *.mp4 /b') do dvr-scan -i %i
-
-Or on Linux/OSX:
-
-    for f in /mnt/videos/*.mp4
-    do
-        dvr-scan -i $f
-    done
-
-Note that multiple inputs also do not support other output modes. You can use `ffmpeg` to [concatenate all input videos](https://trac.ffmpeg.org/wiki/Concatenate) before processing, or use a for-loop as above.
-
-### Output Format
-
-By default, DVR-Scan uses the OpenCV VideoWriter for video output. This usually requires the output files be in .AVI format of some kind.
-
-DVR-Scan also supports using `ffmpeg` to extract motion events. This is done by setting `-m`/`--output-mode` to `ffmpeg` (reencode) or `copy` (codec copy mode, may not be frame accurate). For example:
-
-    dvr-scan -i video.mp4 -m ffmpeg
-
-You can customize the options passed to `ffmpeg` using a [config file](docs.md#config-file) (see [the `ffmpeg-input-args` and `ffmpeg-output-args`](docs.md#output)) settings).
-
-Setting output mode to `ffmpeg` or `copy` has the following caveats:
-
- - inputs that have a variable framerate (VFR) may not be  extracted reliably
- - input concatenation is not supported
- - overlays are not supported
-
-You can customize the options passed to `ffmpeg` using a [config file](docs.md#config-file) (see [the `ffmpeg-input-args` and `ffmpeg-output-args`](docs.md#options)) settings).
-
-### VFR (Variable Framerate)
-
-!!! warning "Variable framerate (VFR) video support is still under development and may produce incorrect results."
-
-Variable framerate (VFR) videos are *not well supported*, but basic functionality does work. Motion detection and event extraction should work correctly with default settings. Note however that calculated timestamps may be incorrect, and extracted footage may playback at the wrong speed.
-
-Frame numbers will be accurate, but timestamps will not.  This can yield incorrect results when setting output mode to `ffmpeg` or `copy`, as well as inaccurate timestamps when using overlays. This issue is [tracked on Github](https://github.com/Breakthrough/PySceneDetect/issues/168).  If this workflow is required, you can re-encode the source material into fixed framerate before processing.
-
+See [the config option documentation](docs.md#config-file) for a detailed description of each setting.
 
 ## :fontawesome-solid-crop-simple:Region Editor
 
-With the Region Editor, you can limit motion detection to specific areas of the frame.  You can launch the region editor by by adding `-r`/`--region-editor` to the DVR-Scan command:
-
-    dvr-scan -i video.mp4 -r
-
-The region editor will open and display a rectangle over the first frame:
+The Region Editor allows you to limit motion detection to specific areas of the frame. Once you have a video loaded, check "Set Regions" and press the "Region Editor" button:
 
 <img alt="[Region Editor Startup Window]" src="../assets/region-editor-start.jpg"/>
 
 You can use the mouse to add or move points when editing regions. Left click to add a new point, or drag an existing one. Right click can be used to delete a point, and to add/remove shapes.
 
-To begin scanning, click File -> Start Scan. You will be prompted to save the regions you have created before scanning so you can re-use them if required.
+To begin scanning, close the region editor, and click the Start button.  You will be prompted to save the regions you have created before scanning so you can re-use them if required.
 
 ### Regions
 

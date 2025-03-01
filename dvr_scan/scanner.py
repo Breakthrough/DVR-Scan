@@ -20,6 +20,7 @@ import queue
 import subprocess
 import sys
 import threading
+import typing as ty
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, AnyStr, List, Optional, Tuple, Union
@@ -32,12 +33,18 @@ from tqdm import tqdm
 
 from dvr_scan.detector import MotionDetector
 from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
-from dvr_scan.platform import HAS_TKINTER, get_filename, get_min_screen_bounds, is_ffmpeg_available
+from dvr_scan.platform import (
+    HAS_PILLOW,
+    HAS_TKINTER,
+    get_filename,
+    get_min_screen_bounds,
+    is_ffmpeg_available,
+)
 from dvr_scan.region import Point, Size, bound_point, load_regions
 from dvr_scan.subtractor import SubtractorCNT, SubtractorCudaMOG2, SubtractorMOG2
 from dvr_scan.video_joiner import VideoJoiner
 
-if HAS_TKINTER:
+if HAS_TKINTER and HAS_PILLOW:
     from dvr_scan.app.region_editor import RegionEditor
 
 logger = logging.getLogger("dvr_scan")
@@ -60,7 +67,7 @@ DEFAULT_FFMPEG_OUTPUT_ARGS = "-map 0 -c:v libx264 -preset fast -crf 21 -c:a aac 
 COPY_MODE_OUTPUT_ARGS = "-map 0 -c:v copy -c:a copy -sn"
 """Default arguments passed to ffmpeg when using OutputMode.COPY."""
 
-# TODO(v1.7): Allow setting template in the config file.
+# TODO(1.8): Add ability to set output name template."
 OUTPUT_FILE_TEMPLATE = "{VIDEO_NAME}.DSME_{EVENT_NUMBER}.{EXTENSION}"
 """Template to use for generating output files."""
 
@@ -87,6 +94,16 @@ class OutputMode(Enum):
     """Output using ffmpeg in codec-copy mode."""
     FFMPEG = 4
     """Output using ffmpeg."""
+
+    def __str__(self):
+        if self == OutputMode.SCAN_ONLY:
+            return "SCAN_ONLY"
+        if self == OutputMode.OPENCV:
+            return "SCAN_ONLY"
+        if self == OutputMode.COPY:
+            return "SCAN_ONLY"
+        if self == OutputMode.FFMPEG:
+            return "SCAN_ONLY"
 
 
 @dataclass
@@ -206,21 +223,11 @@ class MotionScanner:
     def __init__(
         self,
         input_videos: List[AnyStr],
+        input_mode: str = "opencv",
         frame_skip: int = 0,
         show_progress: bool = False,
         debug_mode: bool = False,
     ):
-        """Initializes the MotionScanner with the supplied arguments.
-
-        Arguments:
-            config_file: List of paths of videos to process.
-            input_videos: List of paths of videos to process.
-            frame_skip: Skip every 1 in (frame_skip+1) frames to speed up processing at
-                expense of accuracy (default is 0 for no skipping).
-            show_progress: Show a progress bar using tqdm.
-        """
-
-        self._in_motion_event: bool = False
         self._show_progress: bool = show_progress
         self._debug_mode: bool = debug_mode
 
@@ -267,7 +274,7 @@ class MotionScanner:
         self._roi_deprecated = None
 
         # Input Video Parameters (set_video_time)
-        self._input: VideoJoiner = VideoJoiner(input_videos)  # -i/--input
+        self._input: VideoJoiner = VideoJoiner(input_videos, backend=input_mode)  # -i/--input
         self._frame_skip: int = frame_skip  # -fs/--frame-skip
         self._start_time: FrameTimecode = None  # -st/--start-time
         self._end_time: FrameTimecode = None  # -et/--end-time
@@ -285,6 +292,10 @@ class MotionScanner:
         self._thumbnails = None
         self._highscore = 0
         self._highframe = None
+
+        # Callbacks for UI integration
+        self._scan_started = None
+        self._processed_frame = None
 
         # Make sure we initialize defaults now that we loaded the input videos.
         self.set_detection_params()
@@ -501,7 +512,7 @@ class MotionScanner:
                 )
             try:
                 logger.info(f"Loading regions from file: {self._load_region}")
-                regions = load_regions(self._load_region)
+                region_editor = load_regions(self._load_region)
             except ValueError as ex:
                 reason = " ".join(str(arg) for arg in ex.args)
                 if not reason:
@@ -510,11 +521,11 @@ class MotionScanner:
             else:
                 logger.debug(
                     "Loaded %d region%s:\n%s",
-                    len(regions),
-                    "s" if len(regions) > 1 else "",
-                    "\n".join(f"[{i}] = {points}" for i, points in enumerate(regions)),
+                    len(region_editor),
+                    "s" if len(region_editor) > 1 else "",
+                    "\n".join(f"[{i}] = {points}" for i, points in enumerate(region_editor)),
                 )
-            self._regions += regions
+            self._regions += region_editor
         if self._regions:
             self._regions = [
                 [bound_point(point, Size(*self._input.resolution)) for point in shape]
@@ -527,10 +538,16 @@ class MotionScanner:
                     "the python3-tk package (sudo apt install python3-tk)."
                 )
                 raise SystemExit(1)
+            if not HAS_PILLOW:
+                logger.error(
+                    "Error: Region editor requires pillow to run. Try installing "
+                    "the pillow package (pip install pillow)."
+                )
+                raise SystemExit(1)
 
             logger.info("Selecting area of interest:")
-            # TODO(v1.7): Ensure ROI window respects start time if set.
-            # TODO(v1.7): We should process this frame (right now it gets skipped).
+            # TODO(1.8): Ensure ROI window respects start time if set.
+            # TODO(1.8): We should process this frame (right now it gets skipped).
             frame_for_crop = self._input.read()
             scale_factor = 1
             screen_bounds = get_min_screen_bounds()
@@ -543,7 +560,7 @@ class MotionScanner:
                     factor_h = frame_h / float(max_h) if max_h > 0 and frame_h > max_h else 1
                     factor_w = frame_w / float(max_w) if max_w > 0 and frame_w > max_w else 1
                     scale_factor = round(max(factor_h, factor_w))
-            regions = RegionEditor(
+            region_editor = RegionEditor(
                 frame=frame_for_crop,
                 initial_shapes=self._regions,
                 initial_scale=scale_factor,
@@ -551,11 +568,11 @@ class MotionScanner:
                 video_path=self._input.paths[0],
                 save_path=self._save_region,
             )
-            if not regions.run():
+            if not region_editor.run():
                 return False
-            self._regions = list(regions.shapes)
+            self._regions = list(region_editor.shapes)
         elif self._save_region:
-            regions = (
+            region_editor = (
                 self._regions
                 if self._regions
                 else [
@@ -581,27 +598,42 @@ class MotionScanner:
                 f"region{'s' if len(self._regions) > 1 else ''}."
             )
         else:
-            logger.debug("No regions selected.")
+            logger.debug("no regions selected")
         return True
 
-    def _create_progress_bar(self) -> tqdm:
+    @property
+    def frames_remaining(self) -> int:
         num_frames = self._input.total_frames
         # Correct for end time.
         if self._end_time and self._end_time.frame_num < num_frames:
             num_frames = self._end_time.frame_num
         # Correct for current seek position.
-        num_frames = max(0, num_frames - self._input.position.frame_num)
+        if self._start_time:
+            num_frames = max(0, num_frames - self._start_time.frame_num)
+        return num_frames
+
+    def _create_progress_bar(self) -> tqdm:
         return tqdm(
-            total=num_frames,
+            total=self.frames_remaining,
             unit=" frames",
             desc=PROGRESS_BAR_DESCRIPTION % 0,
             dynamic_ncols=True,
         )
 
     def stop(self):
-        """Stop the current scan call. This is the only thread-safe public method."""
+        """Stop the current scan call. Thread-safe."""
         self._stop.set()
         logger.debug("Stop event set.")
+
+    def is_stopped(self):
+        """Check if the current scan call was stopped, or `False` if one wasn't run. Thread-safe."""
+        return self._stop.is_set()
+
+    def set_callbacks(
+        self, scan_started: ty.Callable[[int], None], processed_frame: ty.Callable[[int], None]
+    ):
+        self._scan_started = scan_started
+        self._processed_frame = processed_frame
 
     def scan(self) -> Optional[DetectionResult]:
         """Performs motion analysis on the MotionScanner's input video(s)."""
@@ -639,8 +671,8 @@ class MotionScanner:
             kernel_size = _scale_kernel_size(self._kernel_size, self._downscale_factor)
 
         # Create background subtractor and motion detector.
-        # TODO(v1.7): Don't set or log unused parameter variance_threshold
-        # if CNT is used.
+        # TODO: Figure out how to avoid logging unused parameters or emit a warning. For example,
+        # the `variance_threshold` parameter is ignored by the `CNT` subtractor.
         detector = MotionDetector(
             subtractor=self._subtractor_type.value(
                 variance_threshold=self._variance_threshold,
@@ -709,8 +741,12 @@ class MotionScanner:
             if len(self._input.paths) > 1
             else "input video",
         )
+        logger.debug(
+            f"input mode = {self._input._backend.BACKEND_NAME}, output mode = {self._output_mode}"
+        )
 
         progress_bar = FakeTqdmObject() if not self._show_progress else self._create_progress_bar()
+        num_frames_to_process = self.frames_remaining
 
         decode_queue = queue.Queue(MAX_DECODE_QUEUE_SIZE)
         decode_thread = threading.Thread(
@@ -728,8 +764,17 @@ class MotionScanner:
             )
             encode_thread.start()
 
-        # TODO: The main scanning loop should be refactored into a state machine.
+        if self._scan_started:
+            self._scan_started(num_frames=num_frames_to_process)
+
+        # TODO: The main scanning loop should be refactored into a state machine. The main loop
+        # # has grown far too complicated and is difficult to maintain.
         while not self._stop.is_set():
+            if self._processed_frame:
+                num_events = len(event_list)
+                if in_motion_event:
+                    num_events += 1
+                self._processed_frame(progress_bar=progress_bar, num_events=num_events)
             # Keep polling decode queue until it's empty (signaled via None).
             frame: Optional[DecodeEvent] = decode_queue.get()
             if frame is None:
@@ -746,8 +791,9 @@ class MotionScanner:
                 )
             result = detector.update(frame.frame_bgr)
             frame_score = result.score
-            # TODO(1.7): Allow disabling the rejection filter or customizing amount of
-            # consecutive frames it will ignore.
+            # TODO: The rejection filter can be disabled by providing values > 255.0, but we should
+            # provide a better method of disabling it. It might also be useful to allow users to
+            # specify the amount of consecutive frames the filter can be active for.
             if frame_score >= self._max_threshold:
                 frame_score = 0
             above_threshold = frame_score >= self._threshold
@@ -1175,7 +1221,6 @@ class MotionScanner:
                 "Use -r/--region-editor instead.\n"
             )
             logger.info("Selecting area of interest:")
-            # TODO: We should process this frame.
             frame_for_crop = self._input.read()
             scale_factor = None
             if self._max_roi_size_deprecated is None:

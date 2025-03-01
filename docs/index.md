@@ -11,7 +11,7 @@ hide:
 
 ------------------------------------------------------
 
-!!! success "Latest Version: 1.6.2 (December 17, 2024)"
+!!! success "Latest Version: 1.7 (February 28, 2025)"
 
     <div class="buttongrid">[:fontawesome-solid-download: &nbsp; Download](download.md){ .md-button #download-button }[:fontawesome-solid-book: User Guide](guide.md){ .md-button #changelog-button }[:fontawesome-solid-bars: &nbsp; Documentation](docs.md){ .md-button #documentation-button }[:fontawesome-solid-gear: &nbsp; Resources](resources.md){ .md-button #quickstart-button }</div>
 
@@ -19,7 +19,17 @@ hide:
 
 DVR-Scan is a command-line application that **automatically detects motion events in video files** (e.g. security camera footage).  DVR-Scan looks for areas in footage containing motion, and saves each event to a separate video clip.  DVR-Scan is free and open-source software, and works on Windows, Linux, and Mac.
 
-## :fontawesome-solid-person-running:Quickstart
+## Quickstart <span class="dvr-scan-download-icons">:fontawesome-brands-windows::fontawesome-brands-apple::fontawesome-brands-linux:</span>
+
+### UI
+
+Launch DVR-Scan from the shortcut or run the `dvr-scan-app` command.  Press **Add** to add your input videos, and press **Start** to find and extract segments with motion:
+
+<img alt="ui example" src="assets/app-main-window.jpg" width="480"/>
+
+To limit detection to certain areas, press **Set Regions** and use [the **Region Editor**](guide.md#region-editor). Motion sensitivity can be adjusted under **Settings -> Motion**.  See the [User Guide](guide.md) for more information.
+
+### CLI
 
 Scan `video.mp4` (separate clips for each event):
 
