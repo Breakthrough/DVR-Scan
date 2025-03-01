@@ -32,6 +32,10 @@ def main():
     if settings is None:
         sys.exit(EXIT_ERROR)
     logger = logging.getLogger("dvr_scan")
+    # TODO(1.7): The logging redirect does not respect the original log level, which is now set to
+    # DEBUG mode for rolling log files.
+    # We might have to just roll our own instead of relying on this one.
+    # TODO: Use Python __debug__ mode instead of hard-coding as config option.
     debug_mode = settings.get("debug")
     show_traceback = getattr(logging, settings.get("verbosity").upper()) == logging.DEBUG
     with logging_redirect_tqdm(loggers=[logger]):
