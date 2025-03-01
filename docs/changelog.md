@@ -5,7 +5,7 @@
 
 ## DVR-Scan 1.7
 
-### 1.7 (TBD)
+### 1.7 (February 28, 2025)
 
 #### Release Notes
 

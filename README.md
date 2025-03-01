@@ -4,7 +4,7 @@
 
 ------------------------------------------------
 
-### Latest Release: v1.7 (In Development)
+### Latest Release: v1.7 (February 28, 2025)
 
 **Website**: [dvr-scan.com](https://www.dvr-scan.com)
 
