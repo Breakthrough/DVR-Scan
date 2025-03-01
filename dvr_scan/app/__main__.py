@@ -15,13 +15,18 @@ import sys
 from subprocess import CalledProcessError
 
 from scenedetect import VideoOpenFailure
-from scenedetect.platform import FakeTqdmLoggingRedirect, logging_redirect_tqdm
 
 import dvr_scan
 from dvr_scan import get_license_info
 from dvr_scan.app.application import Application
 from dvr_scan.config import CHOICE_MAP, USER_CONFIG_FILE_PATH, ConfigLoadFailure, ConfigRegistry
-from dvr_scan.shared import ScanSettings, init_logging, logfile_path, setup_logger
+from dvr_scan.shared import (
+    ScanSettings,
+    init_logging,
+    logfile_path,
+    logging_redirect_tqdm,
+    setup_logger,
+)
 from dvr_scan.shared.cli import VERSION_STRING, LicenseAction, VersionAction, string_type_check
 
 logger = logging.getLogger("dvr_scan")
@@ -163,15 +168,10 @@ def main():
         # failure reason to the user above. We can now exit with an error code.
         raise SystemExit(1)
 
-    # TODO(1.7): The logging redirect does not respect the original log level, which is now set to
-    # DEBUG mode for rolling log files. https://github.com/tqdm/tqdm/issues/1272
-    # We can just remove the use of a context manager here and install our own hooks into the
-    # loggers instead as a follow-up action.
-    redirect = FakeTqdmLoggingRedirect if settings.get("quiet-mode") else logging_redirect_tqdm
     show_traceback = getattr(logging, settings.get("verbosity").upper()) == logging.DEBUG
     # TODO: Use Python __debug__ mode instead of hard-coding as config option.
     debug_mode = settings.get("debug")
-    with redirect(loggers=[logger]):
+    with logging_redirect_tqdm(loggers=[logger]):
         try:
             app = Application(
                 settings=settings, initial_videos=args.input if hasattr(args, "input") else []

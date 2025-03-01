@@ -18,9 +18,9 @@ import sys
 from subprocess import CalledProcessError
 
 from scenedetect import VideoOpenFailure
-from scenedetect.platform import FakeTqdmLoggingRedirect, logging_redirect_tqdm
 
 from dvr_scan.controller import parse_settings, run_dvr_scan
+from dvr_scan.shared import logging_redirect_tqdm
 
 EXIT_SUCCESS: int = 0
 EXIT_ERROR: int = 1
@@ -32,14 +32,9 @@ def main():
     if settings is None:
         sys.exit(EXIT_ERROR)
     logger = logging.getLogger("dvr_scan")
-    # TODO(1.7): The logging redirect does not respect the original log level, which is now set to
-    # DEBUG mode for rolling log files. https://github.com/tqdm/tqdm/issues/1272
-    # We might have to just roll our own instead of relying on this one.
-    redirect = FakeTqdmLoggingRedirect if settings.get("quiet-mode") else logging_redirect_tqdm
-    # TODO: Use Python __debug__ mode instead of hard-coding as config option.
     debug_mode = settings.get("debug")
     show_traceback = getattr(logging, settings.get("verbosity").upper()) == logging.DEBUG
-    with redirect(loggers=[logger]):
+    with logging_redirect_tqdm(loggers=[logger]):
         try:
             run_dvr_scan(settings)
         except ValueError as ex:

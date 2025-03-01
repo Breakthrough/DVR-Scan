@@ -14,11 +14,22 @@
 import argparse
 import logging
 import typing as ty
+from contextlib import contextmanager
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
+import tqdm
 from platformdirs import user_log_path
 from scenedetect import FrameTimecode
+
+# TODO: This is a hack and will break eventually, but this is the only way to handle this
+# right now unfortunately. logging_redirect_tqdm from the tqdm contrib module doesn't respect
+# verbosity unfortunately. This is being tracked by https://github.com/tqdm/tqdm/issues/1272.
+from tqdm.contrib.logging import (
+    _get_first_found_console_logging_handler,
+    _is_console_logging_handler,
+    _TqdmLoggingHandler,
+)
 
 from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
 from dvr_scan.platform import LOG_FORMAT_ROLLING_LOGS, attach_log_handler
@@ -186,3 +197,57 @@ def init_scanner(
     )
 
     return scanner
+
+
+@contextmanager
+def logging_redirect_tqdm(
+    loggers: ty.Optional[ty.List[logging.Logger]], instance: ty.Type = tqdm.tqdm
+):
+    """
+    Context manager redirecting console logging to `tqdm.write()`, leaving
+    other logging handlers (e.g. log files) unaffected.
+
+    Parameters
+    ----------
+    loggers  : list, optional
+      Which handlers to redirect (default: [logging.root]).
+    tqdm_class  : optional
+
+    Example
+    -------
+    ```python
+    import logging
+    from tqdm import trange
+    from tqdm.contrib.logging import logging_redirect_tqdm
+
+    LOG = logging.getLogger(__name__)
+
+    if __name__ == "__main__":
+        logging.basicConfig(level=logging.INFO)
+        with logging_redirect_tqdm():
+            for i in trange(9):
+                if i == 4:
+                    LOG.info("console logging redirected to `tqdm.write()`")
+        # logging restored
+    ```
+    """
+    if loggers is None:
+        loggers = [logging.root]
+    original_handlers_list = [logger.handlers for logger in loggers]
+    try:
+        for logger in loggers:
+            tqdm_handler = _TqdmLoggingHandler(instance)
+            orig_handler = _get_first_found_console_logging_handler(logger.handlers)
+            if orig_handler is not None:
+                tqdm_handler.setFormatter(orig_handler.formatter)
+                tqdm_handler.stream = orig_handler.stream
+                # The following is missing from the original logging_redirect_tqdm.
+                # This is being tracked by https://github.com/tqdm/tqdm/issues/1272.
+                tqdm_handler.setLevel(orig_handler.level)
+            logger.handlers = [
+                handler for handler in logger.handlers if not _is_console_logging_handler(handler)
+            ] + [tqdm_handler]
+        yield
+    finally:
+        for logger, original_handlers in zip(loggers, original_handlers_list):
+            logger.handlers = original_handlers
