@@ -58,7 +58,8 @@ app_exe = EXE(app_pyz,
           debug=False,
           strip=False,
           upx=True,
-          console=False,
+          console=True,
+          hide_console="hide-late",
           version='.version_info',
           icon='../dvr_scan/dvr-scan.ico')
 

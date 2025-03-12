@@ -27,10 +27,11 @@ def write_version_info_for_windows_exe():
 
     with open("dist/.version_info", "wb") as f:
         elements = [int(elem) if elem.isnumeric() else 999 for elem in VERSION.split(".")]
-        assert 2 <= len(elements) <= 3
-        major = elements[0]
-        minor = elements[1]
-        patch = elements[2] if len(elements) == 3 else 0
+        assert len(elements) <= 4
+        elements.extend([0] * (4 - len(elements)))
+
+        assert len(elements) == 4
+        (major, minor, patch, build) = elements
 
         f.write(
             f"""# UTF-8
@@ -41,8 +42,8 @@ VSVersionInfo(
   ffi=FixedFileInfo(
 # filevers and prodvers should be always a tuple with four items: (1, 2, 3, 4)
 # Set not needed items to zero 0.
-filevers=(0, {major}, {minor}, {patch}),
-prodvers=(0, {major}, {minor}, {patch}),
+filevers=({major}, {minor}, {patch}, {build}),
+prodvers=({major}, {minor}, {patch}, {build}),
 # Contains a bitmask that specifies the valid bits 'flags'r
 mask=0x3f,
 # Contains a bitmask that specifies the Boolean attributes of the file.

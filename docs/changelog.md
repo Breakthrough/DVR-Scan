@@ -3,7 +3,11 @@
 
 ----------------------------------------------------------
 
-## DVR-Scan 1.7
+#### Changelog
+
+### 1.7.0.1 (March 11, 2025)
+
+Re-release of Windows distribution that fixes program hanging when starting scan ([#209](https://github.com/Breakthrough/DVR-Scan/issues/209)). This was caused due to the way the program was built. There are no code changes, so the Python distribution has not been re-released.
 
 ### 1.7 (February 28, 2025)
 
