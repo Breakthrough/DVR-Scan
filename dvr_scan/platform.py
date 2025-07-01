@@ -61,6 +61,16 @@ LOG_FORMAT_ROLLING_LOGS = (
 )
 
 
+def open_path(path: str):
+    """Open a path in the default file explorer."""
+    if platform.system() == "Windows":
+        os.startfile(path)
+    elif platform.system() == "Darwin":
+        subprocess.run(["open", path], check=True)
+    else:
+        subprocess.run(["xdg-open", path], check=True)
+
+
 def get_min_screen_bounds():
     """Attempts to get the minimum screen resolution of all monitors using the `screeninfo` package.
     Returns the minimum of all monitor's heights and widths with 10% padding, or None if the package

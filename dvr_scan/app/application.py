@@ -34,8 +34,9 @@ from dvr_scan.config import (
     ConfigLoadFailure,
     ConfigRegistry,
 )
+from dvr_scan.platform import open_path
 from dvr_scan.scanner import OutputMode, Point
-from dvr_scan.shared import ScanSettings
+from dvr_scan.shared import ScanSettings, logfile_path
 from dvr_scan.subtractor import SubtractorCudaMOG2
 from dvr_scan.video_joiner import BackendUnavailable
 
@@ -1366,13 +1367,18 @@ class Application:
             underline=0,
         )
         help_menu.add_command(
-            label="Join Discord Chat",
+            label="Open Discord",
             command=lambda: webbrowser.open_new_tab("https://discord.gg/69kf6f2Exb"),
+            underline=5,
+        )
+        help_menu.add_separator()
+        help_menu.add_command(
+            label="Open Logs",
+            command=lambda: open_path(logfile_path("dvr-scan.log").parent),
             underline=5,
         )
         # TODO: Add window to show log messages and copy them to clipboard or save to a logfile.
         # help_menu.add_command(label="Debug Log", underline=0, state=tk.DISABLED)
-        help_menu.add_separator()
 
         help_menu.add_command(
             label="About DVR-Scan",
