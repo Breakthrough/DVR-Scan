@@ -16,6 +16,7 @@ import tkinter.messagebox
 import tkinter.ttk as ttk
 import typing as ty
 import webbrowser
+from datetime import datetime
 from logging import getLogger
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -86,7 +87,7 @@ class InputArea:
 
         self._videos = ttk.Treeview(
             frame,
-            columns=("duration", "framerate", "resolution", "path"),
+            columns=("duration", "framerate", "resolution", "path", "date"),
         )
 
         scroll_horizontal = ttk.Scrollbar(frame, orient=tk.HORIZONTAL, command=self._videos.xview)
@@ -100,16 +101,24 @@ class InputArea:
         self._videos.grid(row=0, column=0, sticky=tk.NSEW)
         frame.grid(row=0, column=0, rowspan=2, columnspan=6, sticky=tk.NSEW)
 
-        self._videos.heading("#0", text="Name")
+        self._videos.heading("#0", text="Name", command=lambda: self._sort_column("#0", False))
         self._videos.column("#0", width=180, minwidth=80, stretch=False)
-        self._videos.heading("duration", text="Duration")
+        self._videos.heading(
+            "duration", text="Duration", command=lambda: self._sort_column("duration", False)
+        )
         self._videos.column("duration", width=80, minwidth=80, stretch=False)
-        self._videos.heading("framerate", text="Framerate")
+        self._videos.heading(
+            "framerate", text="Framerate", command=lambda: self._sort_column("framerate", False)
+        )
         self._videos.column("framerate", width=80, minwidth=80, stretch=False)
-        self._videos.heading("resolution", text="Resolution")
+        self._videos.heading(
+            "resolution", text="Resolution", command=lambda: self._sort_column("resolution", False)
+        )
         self._videos.column("resolution", width=80, minwidth=80, stretch=False)
-        self._videos.heading("path", text="Path")
+        self._videos.heading("path", text="Path", command=lambda: self._sort_column("path", False))
         self._videos.column("path", width=80, minwidth=80, stretch=False)
+        self._videos.heading("date", text="Date", command=lambda: self._sort_column("date", False))
+        self._videos.column("date", width=140, minwidth=80, stretch=False)
 
         self._videos.grid(row=0, column=0, columnspan=6, sticky=tk.NSEW)
 
@@ -213,6 +222,16 @@ class InputArea:
             settings.set("regions", self._region_editor.shapes)
         return settings
 
+    def _sort_column(self, col, reverse):
+        if col == "#0":
+            items = [(self._videos.item(k, "text"), k) for k in self._videos.get_children("")]
+        else:
+            items = [(self._videos.set(k, col), k) for k in self._videos.get_children("")]
+        items.sort(reverse=reverse)
+        for index, (_val, k) in enumerate(items):
+            self._videos.move(k, "", index)
+        self._videos.heading(col, command=lambda: self._sort_column(col, not reverse))
+
     def _add_video(self, path: str = ""):
         paths = []
         if not path:
@@ -232,7 +251,15 @@ class InputArea:
                 logger.error(f"File does not exist: {path}")
                 return
             try:
-                video = open_video(path, backend="opencv")
+                video = open_video(path, backend="opencv")  # logs errors on failure
+                try:
+                    # On Windows, ctime is creation time. On other systems, it may be the
+                    # last metadata change time.
+                    create_time = datetime.fromtimestamp(Path(path).stat().st_ctime)
+                    create_time_str = create_time.strftime("%Y-%m-%d %H:%M:%S")
+                except OSError as ex:
+                    logger.debug(f"Failed to stat {path}: {ex}")
+                    create_time_str = "N/A"
             except VideoOpenFailure:
                 failed_to_load = True
                 continue
@@ -244,7 +271,7 @@ class InputArea:
                 "",
                 tk.END,
                 text=video.name,
-                values=(duration, framerate, resolution, path),
+                values=(duration, framerate, resolution, path, create_time_str),
             )
         if failed_to_load:
             tkinter.messagebox.showwarning(
