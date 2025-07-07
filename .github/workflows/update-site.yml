@@ -1,11 +1,11 @@
 # Update www.dvr-scan.com
-# TODO: Add versioning for documentation. Currently only the latest docs are shown.
+# TODO(#173): Add versioning for documentation. Right now we only show docs for the latest release.
 name: Update Website
 
 on:
   push:
     branches:
-      - main
+      - release
     paths:
       - "docs/**"
       - "website/**"

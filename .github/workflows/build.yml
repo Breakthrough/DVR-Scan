@@ -16,7 +16,7 @@ on:
       - tests/**
     branches:
       - main
-      - develop
+      - release
       - 'releases/**'
     tags:
       - v*-release
