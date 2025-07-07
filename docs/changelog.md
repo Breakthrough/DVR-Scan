@@ -340,3 +340,12 @@ This version of DVR-Scan includes a new, faster background subtraction algorithm
  * [feature] allows input seeking, frame skipping, and output suppression mode
  * [feature] configurable detection windows and pre/post-event inclusion length
 
+
+----------------------------------------------------------
+
+
+### In Development
+
+ * [feature] various UI enhancements:
+     * input videos can now be sorted
+     * add button to open log folder
