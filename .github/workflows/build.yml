@@ -75,12 +75,23 @@ jobs:
           python -m build
           echo "dvr_scan_version=`python -c \"import dvr_scan; print(dvr_scan.__version__.replace('-', '.'))\"`" >> "$GITHUB_ENV"
 
+      - name: Build Package (Headless)
+        shell: bash
+        run: |
+          python dist/tweak_setup_cfg_for_headless.py
+          python -m build
+          git reset --hard HEAD
+
       - name: Smoke Test (Source)
         run: |
           uv pip install dist/dvr_scan-${{ env.dvr_scan_version }}.tar.gz
           python -m dvr_scan --version
           python -m dvr_scan -i tests/resources/simple_movement.mp4 -so -df 4 -et 100
           uv pip uninstall dvr-scan
+          uv pip install dist/dvr_scan_headless-${{ env.dvr_scan_version }}.tar.gz
+          python -m dvr_scan --version
+          python -m dvr_scan -i tests/resources/simple_movement.mp4 -so -df 4 -et 100
+          uv pip uninstall dvr-scan-headless
 
       - name: Smoke Test (Wheel)
         run: |
@@ -88,6 +99,10 @@ jobs:
           python -m dvr_scan --version
           python -m dvr_scan -i tests/resources/simple_movement.mp4 -so -df 4 -et 100
           uv pip uninstall dvr-scan
+          uv pip install dist/dvr_scan_headless-${{ env.dvr_scan_version }}-py3-none-any.whl
+          python -m dvr_scan --version
+          python -m dvr_scan -i tests/resources/simple_movement.mp4 -so -df 4 -et 100
+          uv pip uninstall dvr-scan-headless
 
       - name: Upload Package
         if: ${{ matrix.python-version == '3.13' && matrix.os == 'ubuntu-latest' }}

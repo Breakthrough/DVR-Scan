@@ -15,11 +15,11 @@ hide:
 
     <h3>pipx (recommended):</h3>
 
-        pipx install dvr-scan[opencv]
+        pipx install dvr-scan
 
     <h3>pip:</h3>
 
-        python3 -m pip install dvr-scan[opencv]
+        python3 -m pip install dvr-scan
 
 DVR-Scan requires Python 3.9 or higher to run, and works on Windows, Linux, and OSX. [`pipx` is recommended](https://pipx.pypa.io/stable/installation/) for installing DVR-Scan, however installing via `pip` or from source is also supported.
 
@@ -40,7 +40,7 @@ The installer is recommended for most users.  Windows builds include all require
 
 ## Servers
 
-For headless systems that do not require the UI,  you can install `dvr-scan[opencv-headless]`.  This will make sure that [the headless version of OpenCV](https://pypi.org/project/opencv-python-headless/) is installed, which avoids any dependencies on X11 libraries or any other GUI components.  This allows DVR-Scan to run with less dependencies, and can result in smaller Docker images.
+For headless systems that do not require the UI,  you can install `dvr-scan-headless`.  This will make sure that [the headless version of OpenCV](https://pypi.org/project/opencv-python-headless/) is installed, which avoids any dependencies on X11 libraries or any other GUI components.  This allows DVR-Scan to run with less dependencies, and can result in smaller Docker images.
 
 -------------------------------
 
