@@ -20,7 +20,7 @@ DVR-Scan is a command-line application that **automatically detects motion event
 
 ## Quick Install
 
-    pip install dvr-scan[opencv] --upgrade
+    pip install dvr-scan --upgrade
 
 Windows builds (installer + portable) are also available on [the Downloads page](https://www.dvr-scan.com/download/).
 
