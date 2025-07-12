@@ -667,6 +667,48 @@ class MotionSettingsWindow:
             row=1, column=4, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING
         )
 
+        tk.Label(frame, text="Max Area").grid(
+            row=0, column=0, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING
+        )
+        self._max_area = Spinbox(
+            frame,
+            value=str(CONFIG_MAP["max-area"]),
+            from_=0.0,
+            to=1.0,
+            increment=0.01,
+        )
+        self._max_area.grid(
+            row=0, column=1, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING
+        )
+
+        tk.Label(frame, text="Max Width").grid(
+            row=0, column=0, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING
+        )
+        self._max_width = Spinbox(
+            frame,
+            value=str(CONFIG_MAP["max-width"]),
+            from_=0.0,
+            to=1.0,
+            increment=0.01,
+        )
+        self._max_width.grid(
+            row=0, column=1, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING
+        )
+
+        tk.Label(frame, text="Max Height").grid(
+            row=0, column=0, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING
+        )
+        self._max_height = Spinbox(
+            frame,
+            value=str(CONFIG_MAP["max-height"]),
+            from_=0.0,
+            to=1.0,
+            increment=0.01,
+        )
+        self._max_height.grid(
+            row=0, column=1, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING
+        )
+
         tk.Button(self._window, text="Close", command=self._dismiss).grid(
             row=2, column=0, sticky=tk.E, padx=PADDING, pady=PADDING
         )
@@ -736,6 +778,9 @@ class MotionSettingsWindow:
         self._time_before_event.set(settings.get("time-before-event"))
         self._time_post_event.set(settings.get("time-post-event"))
         self._max_threshold.set(settings.get("max-threshold"))
+        self._max_area.set(settings.get("max-area"))
+        self._max_width.set(settings.get("max-width"))
+        self._max_height.set(settings.get("max-height"))
         self._variance_threshold.set(settings.get("variance-threshold"))
 
     def update(self, settings: ScanSettings) -> ScanSettings:
@@ -747,6 +792,9 @@ class MotionSettingsWindow:
         settings.set("time-post-event", self._time_post_event.get())
         settings.set("learning-rate", float(self._learning_rate))
         settings.set("max-threshold", float(self._max_threshold.get()))
+        settings.set("max-area", float(self._max_area.get()))
+        settings.set("max-width", float(self._max_width.get()))
+        settings.set("max-height", float(self._max_height.get()))
         settings.set("variance-threshold", float(self._variance_threshold.get()))
         # NOTE: There is no mask-output in the get function above as it does not exist in the
         # config file (CLI only).
