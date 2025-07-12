@@ -133,6 +133,7 @@ class MotionMaskEvent:
     timecode: FrameTimecode
     score: float
     bounding_box: Optional[Tuple[int, int, int, int]]
+    event_id: Optional[int] = None
 
 
 @dataclass
@@ -828,6 +829,7 @@ class MotionScanner:
                         timecode=frame.timecode,
                         score=frame_score,
                         bounding_box=bounding_box,
+                        event_id=self._num_events if in_motion_event else None,
                     )
                 )
 
@@ -1123,6 +1125,15 @@ class MotionScanner:
         if self._mask_writer is None:
             self._mask_size = event.motion_mask.shape[1], event.motion_mask.shape[0]
             self._mask_writer = self._init_video_writer(self._mask_file, self._mask_size)
+        # Write the bounding box to a new file for each event.
+        if event.event_id is not None and event.bounding_box is not None:
+            # TODO: Get base path from output settings.
+            path = f'EVENT-{event.event_id+1:05d}.txt'
+            if self._output_dir:
+                path = os.path.join(self._output_dir, path)
+            with open(path, 'a') as f:
+                f.write(f'{event.bounding_box[0]} {event.bounding_box[1]} '
+                        f'{event.bounding_box[2]} {event.bounding_box[3]}\n')
         # Write the motion mask to the output file.
         size = (event.motion_mask.shape[1], event.motion_mask.shape[0])
         if size != self._mask_size:
