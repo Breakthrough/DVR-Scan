@@ -523,6 +523,32 @@ All time values can be given as a timecode: (`HH:MM:SS` or `HH:MM:SS.nnn`), in s
     ```
     </span>
 
+ * <b><pre>max-area</pre></b>
+     Events whose bounding boxes have relative area bigger than this are ignored. Maximum area is 1.0 (relative area of the whole frame), so values equal or greater than 1.0 will disable this filter.
+
+    <span class="dvr-scan-default">
+    ```
+    max-area = 1.0
+    ```
+    </span>
+
+ * <b><pre>max-width</pre></b>
+     Events whose bounding boxes have relative width bigger than this are ignored. Maximum width is 1.0 (whole frame), so values equal or greater than 1.0 will disable this filter.
+
+    <span class="dvr-scan-default">
+    ```
+    max-width = 1.0
+    ```
+    </span>
+
+ * <b><pre>max-height</pre></b>
+     Events whose bounding boxes have relative height bigger than this are ignored. Maximum height is 1.0 (whole frame), so values equal or greater than 1.0 will disable this filter.
+
+    <span class="dvr-scan-default">
+    ```
+    max-height = 1.0
+    ```
+    </span>
 
 ### Overlays
 
