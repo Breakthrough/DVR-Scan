@@ -812,7 +812,11 @@ class MotionScanner:
             # specify the amount of consecutive frames the filter can be active for.
             if frame_score >= self._max_threshold:
                 frame_score = 0
-            if area_fraction > self._max_area or width_fraction > self._max_width or height_fraction > self._max_height:
+            if (
+                area_fraction > self._max_area or
+                width_fraction > self._max_width or
+                height_fraction > self._max_height
+            ):
                 frame_score = 0
             above_threshold = frame_score >= self._threshold
 
