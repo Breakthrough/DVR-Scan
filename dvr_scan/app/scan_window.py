@@ -214,23 +214,17 @@ class ScanWindow:
         self._num_events = num_events
         self._frames_processed += 1
         curr = time.time_ns()
+        # Update internal state used for UI labels using the progress bar in the scanner.
         if (curr - self._last_stats_update_ns) > STATS_UPDATE_RATE_NS:
             self._last_stats_update_ns = curr
             format_dict = progress_bar.format_dict
             format_dict.update(bar_format="{elapsed} {remaining} {rate_fmt}")
-            # TODO: Why do we sometimes not get enough or too many values here?
-            #
-            # The format above should always print a string similar to "NN:NN NN:NN NN.NN frames/s".
-            # Some extra spaces might be in there. Filter out empty values?
             values = tqdm.format_meter(**format_dict).strip().split(" ")
-            if len(values) != 4:
-                logger.error(f"[Issue 198] Incorrect meter format: {values}")
-            # While we determine the underlying cause of the issue, we don't want to stop scanning.
-            # Filter out empty values, ensure we got enough values, and guarad against too many.
+            # We have to filter out empty entries after we split by spaces because the meter format
+            # adds padding spaces to align numbers.
             values = list(filter(bool, values))
-            if len(values) >= 4:
-                # Update internal state used for UI labels.
-                (self._elapsed, self._remaining, self._rate, *_) = values
+            if len(values) == 4:
+                (self._elapsed, self._remaining, self._rate) = values
 
     def _do_scan(self):
         # We'll handle any errors below in the main Tkinter thread.
