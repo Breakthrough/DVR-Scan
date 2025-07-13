@@ -55,9 +55,9 @@ class VideoJoiner:
             paths = [paths]
         assert paths
         self._paths = paths
+        self._path_index = 0
 
         self._cap: Optional[VideoStream] = None
-        self._curr_cap_index = 0
         self._total_frames: int = 0
         self._decode_failures: int = 0
         self._load_input_videos(backend)
@@ -105,17 +105,17 @@ class VideoJoiner:
         """Read/decode the next frame."""
         next = self._cap.read(decode=decode)
         if next is False:
-            if (self._curr_cap_index + 1) < len(self._paths):
-                self._curr_cap_index += 1
+            if (self._path_index + 1) < len(self._paths):
+                self._path_index += 1
                 # Compensate for presentation time of last frame
                 self._position += 1
                 self._decode_failures += (
                     self._cap._decode_failures if hasattr(self._cap, "_decode_failures") else 0
                 )
-                logger.debug(
-                    "End of current video, loading next: %s" % self._paths[self._curr_cap_index]
+                logger.info(
+                    f"Processing complete, opening next video: {self._paths[self._path_index]}"
                 )
-                self._cap = self._backend(self._paths[self._curr_cap_index])
+                self._cap = self._backend(self._paths[self._path_index])
                 self._last_cap_pos = self._cap.base_timecode
                 return self.read(decode=decode)
             logger.debug("No more input to process.")
@@ -128,7 +128,7 @@ class VideoJoiner:
     def seek(self, target: FrameTimecode):
         """Seek to the target offset. Only seeking forward is supported (i.e. `target` must be
         greater than the current `position`."""
-        if len(self._paths) == 1 or self._curr_cap_index == 0 and target <= self._cap.duration:
+        if len(self._paths) == 1 or self._path_index == 0 and target <= self._cap.duration:
             self._cap.seek(target)
         else:
             # TODO: This is ineffient if we have multiple input videos.
