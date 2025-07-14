@@ -677,9 +677,7 @@ class MotionSettingsWindow:
             to=1.0,
             increment=0.01,
         )
-        self._max_area.grid(
-            row=0, column=1, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING
-        )
+        self._max_area.grid(row=0, column=1, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING)
 
         tk.Label(frame, text="Max Width").grid(
             row=0, column=0, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING
@@ -691,9 +689,7 @@ class MotionSettingsWindow:
             to=1.0,
             increment=0.01,
         )
-        self._max_width.grid(
-            row=0, column=1, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING
-        )
+        self._max_width.grid(row=0, column=1, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING)
 
         tk.Label(frame, text="Max Height").grid(
             row=0, column=0, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING
@@ -705,9 +701,7 @@ class MotionSettingsWindow:
             to=1.0,
             increment=0.01,
         )
-        self._max_height.grid(
-            row=0, column=1, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING
-        )
+        self._max_height.grid(row=0, column=1, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING)
 
         tk.Button(self._window, text="Close", command=self._dismiss).grid(
             row=2, column=0, sticky=tk.E, padx=PADDING, pady=PADDING
