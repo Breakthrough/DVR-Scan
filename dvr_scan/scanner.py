@@ -679,6 +679,10 @@ class MotionScanner:
         else:
             kernel_size = _scale_kernel_size(self._kernel_size, self._downscale_factor)
 
+        test_width_height_area = (
+            self._max_area < 1.0 or self._max_width < 1.0 or self._max_height < 1.0
+        )
+
         # Create background subtractor and motion detector.
         # TODO: Figure out how to avoid logging unused parameters or emit a warning. For example,
         # the `variance_threshold` parameter is ignored by the `CNT` subtractor.
@@ -801,18 +805,19 @@ class MotionScanner:
             result = detector.update(frame.frame_bgr)
             frame_score = result.score
 
-            box_width = cv2.boundingRect(result.subtracted)[2] * self._downscale_factor
-            box_height = cv2.boundingRect(result.subtracted)[3] * self._downscale_factor
-            width_fraction = box_width / self._input.resolution[0]
-            height_fraction = box_height / self._input.resolution[1]
-            area_fraction = width_fraction * height_fraction
+            if test_width_height_area:
+                box_width = cv2.boundingRect(result.subtracted)[2] * self._downscale_factor
+                box_height = cv2.boundingRect(result.subtracted)[3] * self._downscale_factor
+                width_fraction = box_width / self._input.resolution[0]
+                height_fraction = box_height / self._input.resolution[1]
+                area_fraction = width_fraction * height_fraction
 
             # TODO: The rejection filter can be disabled by providing values > 255.0, but we should
             # provide a better method of disabling it. It might also be useful to allow users to
             # specify the amount of consecutive frames the filter can be active for.
             if frame_score >= self._max_threshold:
                 frame_score = 0
-            if (
+            if test_width_height_area and (
                 area_fraction > self._max_area
                 or width_fraction > self._max_width
                 or height_fraction > self._max_height
