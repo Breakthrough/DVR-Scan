@@ -127,7 +127,7 @@ def init_scanner(
     )
 
     scanner.set_output(
-        comp_file=settings.get_arg("output"),
+        comp_file=settings.get("output", ignore_config=True),
         mask_file=settings.get_arg("mask-output"),
         output_mode=OutputMode.SCAN_ONLY
         if settings.get_arg("scan-only")
