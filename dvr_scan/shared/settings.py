@@ -40,7 +40,7 @@ class ScanSettings:
         arg_name = option.replace("-", "_")
         return getattr(self._args, arg_name) if hasattr(self._args, arg_name) else None
 
-    def get(self, option: str) -> ty.Union[str, int, float, bool]:
+    def get(self, option: str, ignore_config: bool = False) -> ty.Union[str, int, float, bool]:
         """Get the current value for `option`, preferring the current UI or CLI setting, falling
         back to either the config file option, or the default value."""
         if option in self._app_settings:
@@ -48,6 +48,8 @@ class ScanSettings:
         arg_val = self.get_arg(option)
         if arg_val is not None:
             return arg_val
+        if ignore_config:
+            return None
         return self._config.get(option)
 
     def set(self, option: str, value: ty.Union[str, int, float, bool]):
