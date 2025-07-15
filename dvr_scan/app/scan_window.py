@@ -224,7 +224,7 @@ class ScanWindow:
             # adds padding spaces to align numbers.
             values = list(filter(bool, values))
             if len(values) == 4:
-                (self._elapsed, self._remaining, self._rate) = values
+                (self._elapsed, self._remaining, self._rate, _unit) = values
 
     def _do_scan(self):
         # We'll handle any errors below in the main Tkinter thread.
