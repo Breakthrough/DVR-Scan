@@ -1303,15 +1303,28 @@ class ScanArea:
         )
         self._scan_only_button.grid(row=1, column=0, sticky=tk.W)
 
+        # TODO(#226): Add a config file option for this.
+        self._open_on_completion = tk.BooleanVar(frame, value=True)
+        self._open_on_completion_button = ttk.Checkbutton(
+            frame,
+            text="Open folder on completion",
+            variable=self._open_on_completion,
+            onvalue=True,
+            offvalue=False,
+        )
+        self._open_on_completion_button.grid(row=1, column=1, sticky=tk.W)
+
     def disable(self):
         self._start_button["text"] = "Scanning..."
         self._start_button["state"] = tk.DISABLED
         self._scan_only_button["state"] = tk.DISABLED
+        self._open_on_completion_button["state"] = tk.DISABLED
 
     def enable(self):
         self._start_button["text"] = "Start"
         self._start_button["state"] = tk.NORMAL
         self._scan_only_button["state"] = tk.NORMAL
+        self._open_on_completion_button["state"] = tk.NORMAL
 
     @property
     def scan_only(self) -> bool:
@@ -1320,6 +1333,10 @@ class ScanArea:
     @scan_only.setter
     def scan_only(self, newval: bool):
         self._scan_only.set(newval)
+
+    @property
+    def open_on_completion(self) -> bool:
+        return self._open_on_completion.get()
 
 
 class Application:
@@ -1622,6 +1639,7 @@ class Application:
         settings = self._output_area.save(settings)
 
         settings.set("scan-only", self._scan_area.scan_only)
+        settings.set("open-on-completion", self._scan_area.open_on_completion)
         if not settings.get("output-dir") and (
             not settings.get("scan-only") or settings.get("mask-output")
         ):
