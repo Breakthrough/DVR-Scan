@@ -370,7 +370,7 @@ def get_cli_parser(user_config: ConfigRegistry):
         metavar="smooth_time",
         type=timecode_type_check("smooth_time"),
         nargs="?",
-        const=False,
+        const=True,
         help=(
             "If set, draws a bounding box around the area where motion was detected. The amount"
             " of temporal smoothing can be specified in either frames (12345) or seconds (number"
