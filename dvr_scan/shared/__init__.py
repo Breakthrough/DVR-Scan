@@ -138,21 +138,23 @@ def init_scanner(
         )
 
     bounding_box = None
-    # bounding_box_arg will be None if -bb was not set, False if -bb was set without any args,
-    # otherwise it represents the desired smooth time.
-    bounding_box_arg = settings.get_arg("bounding-box")
-    if bounding_box_arg is not None or settings.get("bounding-box"):
-        if bounding_box_arg is not None and bounding_box_arg is not False:
-            smoothing_time = FrameTimecode(bounding_box_arg, scanner.framerate)
-        else:
-            smoothing_time = FrameTimecode(
-                settings.get("bounding-box-smooth-time"), scanner.framerate
-            )
+
+    # NOTE: The CLI overloads the type of the bounding-box setting by allowing an optional smooth
+    # time. When set, this means the flag is no longer boolean, and represents desired smoothing.
+    bounding_box_option_is_smoothing = not isinstance(settings.get("bounding-box"), bool)
+    bounding_box_enabled = bool(settings.get("bounding-box")) or bounding_box_option_is_smoothing
+    if bounding_box_enabled:
+        smoothing_time = (
+            settings.get("bounding-box")
+            if bounding_box_option_is_smoothing
+            else settings.get("bounding-box-smooth-time")
+        )
+        smoothing = FrameTimecode(smoothing_time, scanner.framerate).frame_num
         bounding_box = BoundingBoxOverlay(
             min_size_ratio=settings.get("bounding-box-min-size"),
             thickness_ratio=settings.get("bounding-box-thickness"),
             color=settings.get("bounding-box-color"),
-            smoothing=smoothing_time.frame_num,
+            smoothing=smoothing,
         )
 
     scanner.set_overlays(

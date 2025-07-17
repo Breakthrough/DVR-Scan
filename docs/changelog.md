@@ -346,6 +346,7 @@ This version of DVR-Scan includes a new, faster background subtraction algorithm
 
 ### In Development
 
+ * [bugfix] Fix bounding box overlay stuck on when using the OpenCV output mode [#213](https://github.com/Breakthrough/DVR-Scan/issues/209)
  * [feature] various UI enhancements:
      * input videos can now be sorted
      * add button to open log folder
