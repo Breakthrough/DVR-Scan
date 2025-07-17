@@ -346,6 +346,8 @@ This version of DVR-Scan includes a new, faster background subtraction algorithm
 
 ### In Development
 
+ * [general] The Python distribution now requires `opencv-python`
+    *  There is a separate `dvr-scan-headless` package available for servers which requires `opencv-python-headless` and only includes CLI functionality
  * [bugfix] Fix bounding box overlay stuck on when using the OpenCV output mode [#213](https://github.com/Breakthrough/DVR-Scan/issues/209)
  * [feature] various UI enhancements:
      * input videos can now be sorted
