@@ -72,6 +72,11 @@ def logfile_path(logfile_name: str):
 
 def setup_logger(logfile_path: str, max_size_bytes: int, max_files: int):
     """Initialize rolling debug logger."""
+    # TODO(#227): Multiple processes will try to write to the same log file causing issues.
+    # To fix this, we should consider using the PID of the current process to create a unique
+    # log file. When the program exits, we can create a lockfile and then merge the logs back
+    # into a contiguous file. This does mean we'll have to handle log rotation and sizing
+    # rather than using the Python logger framework however.
     folder = user_log_path("DVR-Scan", False)
     folder.mkdir(parents=True, exist_ok=True)
     handler = RotatingFileHandler(
