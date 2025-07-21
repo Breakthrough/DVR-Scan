@@ -13,3 +13,7 @@ issue62.mp4:
 issue53_brightness_change.avi:
     https://github.com/Breakthrough/DVR-Scan/issues/53
     Julian Chennales - https://github.com/jchennales
+
+haze.avi:
+    Original camera footage.
+    Elvis Pfützenreuter - https://github.com/elvis-epx
