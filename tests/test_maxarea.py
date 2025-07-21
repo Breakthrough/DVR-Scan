@@ -18,8 +18,6 @@ import platform
 import subprocess
 from typing import List
 
-import pytest
-
 MACHINE_ARCH = platform.machine().upper()
 
 DVR_SCAN_COMMAND: str = "python -m dvr_scan"
