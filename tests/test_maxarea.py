@@ -84,10 +84,12 @@ def _run_dvr_scan(args: List[str]) -> str:
 
 def test_scan_haze(tmp_path):
     """Test haze video without max-area filter"""
-    output = _run_dvr_scan(BASE_COMMAND
-        + [ "--output-dir",
+    output = _run_dvr_scan(
+        BASE_COMMAND
+        + [
+            "--output-dir",
             tmp_path,
-            "--scan-only", 
+            "--scan-only",
         ]
     )
 
@@ -103,10 +105,12 @@ def test_scan_haze_maxarea(tmp_path):
     cfg_path = os.path.join(tmp_path, "config.cfg")
     with open(cfg_path, "w") as file:
         file.write(TEST_CONFIG_FILE)
-    output = _run_dvr_scan(BASE_COMMAND
-        + [ "--output-dir",
+    output = _run_dvr_scan(
+        BASE_COMMAND
+        + [
+            "--output-dir",
             tmp_path,
-            "--scan-only", 
+            "--scan-only",
             "--config",
             cfg_path,
         ]
