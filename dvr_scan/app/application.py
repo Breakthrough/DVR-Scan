@@ -27,7 +27,7 @@ from dvr_scan.app.about_window import AboutWindow
 from dvr_scan.app.common import register_icon
 from dvr_scan.app.region_editor import RegionEditor
 from dvr_scan.app.scan_window import ScanWindow
-from dvr_scan.app.widgets import ColorPicker, Spinbox, TimecodeEntry
+from dvr_scan.app.widgets import CollapsibleFrame, ColorPicker, Spinbox, TimecodeEntry
 from dvr_scan.config import (
     CHOICE_MAP,
     CONFIG_MAP,
@@ -1297,22 +1297,44 @@ class Application:
         register_icon(self._root)
         self._root.resizable(True, True)
         self._root.minsize(width=MIN_WINDOW_WIDTH, height=MIN_WINDOW_HEIGHT)
-        self._root.columnconfigure(0, weight=1, pad=PADDING)
+        self._root.columnconfigure(0, weight=1)
         self._root.rowconfigure(0, weight=1)
+
+        # Create a canvas and a scrollbar.
+        canvas = tk.Canvas(self._root)
+        scrollbar = ttk.Scrollbar(self._root, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+
+        scrollable_frame.bind(
+            "<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+        canvas.grid(row=0, column=0, sticky="nsew")
+        scrollbar.grid(row=0, column=1, sticky="ns")
+
+        scrollable_frame.columnconfigure(0, weight=1)
 
         self._input_settings_window = InputSettingsWindow(self._root)
         self._motion_settings_window = MotionSettingsWindow(self._root)
 
-        input_frame = ttk.Labelframe(self._root, text="Input", padding=PADDING)
-        self._input_area = InputArea(input_frame)
+        input_frame = CollapsibleFrame(scrollable_frame, text="Input")
+        self._input_area = InputArea(input_frame.content_frame)
         input_frame.grid(row=0, sticky=tk.NSEW, padx=PADDING, pady=(PADDING, 0))
 
-        output_frame = ttk.Labelframe(self._root, text="Output", padding=PADDING)
-        self._output_area = OutputArea(output_frame)
+        output_frame = CollapsibleFrame(scrollable_frame, text="Output")
+        self._output_area = OutputArea(output_frame.content_frame)
         output_frame.grid(row=2, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0))
 
-        scan_frame = ttk.Labelframe(self._root, text="Run", padding=PADDING)
-        self._scan_area = ScanArea(self._root, scan_frame)
+        scan_frame = CollapsibleFrame(scrollable_frame, text="Run")
+        self._scan_area = ScanArea(self._root, scan_frame.content_frame)
         scan_frame.grid(row=3, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING)
 
         self._scan_window: ty.Optional[ScanWindow] = None

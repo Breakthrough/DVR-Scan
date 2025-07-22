@@ -211,3 +211,45 @@ class Spinbox:
             self._refresh()
 
         return True
+
+
+class CollapsibleFrame(ttk.Frame):
+    """A collapsible frame widget that can be expanded or collapsed."""
+
+    def __init__(self, parent, text="", initially_collapsed: bool = False):
+        super().__init__(parent)
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(1, weight=1)
+
+        self._text = text
+        self._is_collapsed = tk.BooleanVar(value=initially_collapsed)
+
+        style = ttk.Style(self)
+        # TODO(v1.0): Move this into a global style configuration.
+        style.configure("Collapsible.TButton", borderwidth=0, relief=tk.FLAT)
+
+        self._toggle_button = ttk.Button(
+            self,
+            text=self._get_toggle_text(),
+            command=self._toggle,
+            style="Collapsible.TButton",
+        )
+        self._toggle_button.grid(row=0, column=0, sticky=tk.W)
+
+        self.content_frame = ttk.Frame(self, padding=PADDING)
+        self.content_frame.grid(row=1, column=0, sticky=tk.NSEW)
+
+        if self._is_collapsed.get():
+            self.content_frame.grid_remove()
+
+    def _get_toggle_text(self):
+        arrow = "▶" if self._is_collapsed.get() else "▼"
+        return f"{arrow} {self._text}"
+
+    def _toggle(self, event=None):
+        self._is_collapsed.set(not self._is_collapsed.get())
+        if self._is_collapsed.get():
+            self.content_frame.grid_remove()
+        else:
+            self.content_frame.grid()
+        self._toggle_button.config(text=self._get_toggle_text())
