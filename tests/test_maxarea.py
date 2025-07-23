@@ -14,11 +14,8 @@ Tests parameters max-area, max-height, max-width
 """
 
 import os
-import platform
 import subprocess
 from typing import List
-
-MACHINE_ARCH = platform.machine().upper()
 
 DVR_SCAN_COMMAND: str = "python -m dvr_scan"
 BASE_OUTPUT_NAME: str = "haze"
@@ -59,10 +56,6 @@ BASE_COMMAND_EVENT_LIST_GOLDEN = """
 # delta on the events for those platforms.
 BASE_COMMAND_TIMECODE_LIST_GOLDEN = (
     """
-00:00:08.229,00:00:32.113,00:00:33.117,00:00:38.937
-"""[1:]
-    if not ("ARM" in MACHINE_ARCH or "AARCH" in MACHINE_ARCH)
-    else """
 00:00:08.229,00:00:32.113,00:00:33.117,00:00:38.937
 """[1:]
 )
