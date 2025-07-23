@@ -54,11 +54,9 @@ BASE_COMMAND_EVENT_LIST_GOLDEN = """
 
 # On some ARM chips (e.g. Apple M1), results are slightly different, so we allow a 1 frame
 # delta on the events for those platforms.
-BASE_COMMAND_TIMECODE_LIST_GOLDEN = (
-    """
+BASE_COMMAND_TIMECODE_LIST_GOLDEN = """
 00:00:08.229,00:00:32.113,00:00:33.117,00:00:38.937
 """[1:]
-)
 
 
 def _run_dvr_scan(args: List[str]) -> str:
