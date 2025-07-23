@@ -1300,25 +1300,32 @@ class Application:
         self._root.columnconfigure(0, weight=1)
         self._root.rowconfigure(0, weight=1)
 
-        # Create a canvas and a scrollbar.
-        canvas = tk.Canvas(self._root)
-        scrollbar = ttk.Scrollbar(self._root, orient="vertical", command=canvas.yview)
+        # Create a canvas and scrollbars.
+        canvas = tk.Canvas(self._root, borderwidth=0, highlightthickness=0)
+        v_scrollbar = ttk.Scrollbar(self._root, orient="vertical", command=canvas.yview)
+        h_scrollbar = ttk.Scrollbar(self._root, orient="horizontal", command=canvas.xview)
         scrollable_frame = ttk.Frame(canvas)
 
         scrollable_frame.bind(
             "<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
         )
 
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
+        scrollable_window = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
+
+        def _configure_canvas(event):
+            canvas.itemconfig(scrollable_window, width=event.width)
+
+        canvas.bind("<Configure>", _configure_canvas)
 
         def _on_mousewheel(event):
             canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
         canvas.bind_all("<MouseWheel>", _on_mousewheel)
 
-        canvas.grid(row=0, column=0, sticky="nsew")
-        scrollbar.grid(row=0, column=1, sticky="ns")
+        v_scrollbar.pack(side="right", fill="y")
+        h_scrollbar.pack(side="bottom", fill="x")
+        canvas.pack(side="left", fill="both", expand=True)
 
         scrollable_frame.columnconfigure(0, weight=1)
 
@@ -1334,6 +1341,7 @@ class Application:
         output_frame.grid(row=2, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0))
 
         scan_frame = CollapsibleFrame(scrollable_frame, text="Run")
+        # TODO: Avoid passing self._root to child widgets.
         self._scan_area = ScanArea(self._root, scan_frame.content_frame)
         scan_frame.grid(row=3, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING)
 
