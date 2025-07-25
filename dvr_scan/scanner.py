@@ -257,6 +257,9 @@ class MotionScanner:
         self._downscale_factor = 1  # -df/--downscale-factor
         self._learning_rate = -1  # learning-rate
         self._max_threshold = 255.0  # max-threshold
+        self._max_area = 1.0  # max-area
+        self._max_width = 1.0  # max-width
+        self._max_height = 1.0  # max-height
 
         # Motion Event Parameters (set_event_params)
         self._min_event_len = None  # -l/--min-event-length
@@ -400,6 +403,9 @@ class MotionScanner:
         detector_type: DetectorType = DetectorType.MOG2,
         threshold: float = 0.15,
         max_threshold: float = 255.0,
+        max_area: float = 1.0,
+        max_width: float = 1.0,
+        max_height: float = 1.0,
         variance_threshold: float = 16.0,
         kernel_size: int = -1,
         downscale_factor: int = 1,
@@ -408,6 +414,9 @@ class MotionScanner:
         """Set detection parameters."""
         self._threshold = threshold
         self._max_threshold = max_threshold
+        self._max_area = max_area
+        self._max_width = max_width
+        self._max_height = max_height
         self._subtractor_type = detector_type
         if downscale_factor < 0:
             raise ValueError("Downscale factor must be positive.")
@@ -670,6 +679,10 @@ class MotionScanner:
         else:
             kernel_size = _scale_kernel_size(self._kernel_size, self._downscale_factor)
 
+        test_width_height_area = (
+            self._max_area < 1.0 or self._max_width < 1.0 or self._max_height < 1.0
+        )
+
         # Create background subtractor and motion detector.
         # TODO: Figure out how to avoid logging unused parameters or emit a warning. For example,
         # the `variance_threshold` parameter is ignored by the `CNT` subtractor.
@@ -791,10 +804,24 @@ class MotionScanner:
                 )
             result = detector.update(frame.frame_bgr)
             frame_score = result.score
+
+            if test_width_height_area:
+                box_width = cv2.boundingRect(result.subtracted)[2] * self._downscale_factor
+                box_height = cv2.boundingRect(result.subtracted)[3] * self._downscale_factor
+                width_fraction = box_width / self._input.resolution[0]
+                height_fraction = box_height / self._input.resolution[1]
+                area_fraction = width_fraction * height_fraction
+
             # TODO: The rejection filter can be disabled by providing values > 255.0, but we should
             # provide a better method of disabling it. It might also be useful to allow users to
             # specify the amount of consecutive frames the filter can be active for.
             if frame_score >= self._max_threshold:
+                frame_score = 0
+            if test_width_height_area and (
+                area_fraction > self._max_area
+                or width_fraction > self._max_width
+                or height_fraction > self._max_height
+            ):
                 frame_score = 0
             above_threshold = frame_score >= self._threshold
 
