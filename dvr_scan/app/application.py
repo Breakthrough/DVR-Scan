@@ -824,6 +824,16 @@ class OutputArea:
         )
         self._options_button.grid(row=0, column=2, sticky=EXPAND_HORIZONTAL, pady=(0, PADDING))
 
+        self._combine = tk.BooleanVar(root, value=False)
+        self._combine_button = ttk.Checkbutton(
+            root,
+            text="Combine Events",
+            variable=self._combine,
+            onvalue=True,
+            offvalue=False,
+        )
+        self._combine_button.grid(row=0, column=3, sticky=tk.W, padx=PADDING)
+
         self._output_mode_combo["values"] = (
             "OpenCV (.avi)",
             "ffmpeg",
@@ -1185,6 +1195,16 @@ class OutputArea:
             tk.DISABLED if self._output_mode == OutputMode.COPY else tk.NORMAL
         )
 
+        # TODO: Why does output mode not compare properly?
+        combine_allowed = str(self._output_mode) in ("OPENCV", "SCAN_ONLY")
+        self._combine_button["state"] = tk.NORMAL if combine_allowed else tk.DISABLED
+        if not combine_allowed:
+            self._combine.set(False)
+
+    @property
+    def combine(self) -> bool:
+        return self._output_mode == OutputMode.OPENCV and self._combine.get()
+
     @property
     def _output_mode(self) -> OutputMode:
         index = self._output_mode_combo.current()
@@ -1223,6 +1243,7 @@ class OutputArea:
     def load(self, settings: ScanSettings):
         output_mode = OutputMode[settings.get("output-mode").upper()]
         if output_mode != OutputMode.SCAN_ONLY:
+            # TODO: Why does this still happen when output mode is clearly SCAN_ONLY?
             self._output_mode = output_mode
         output_dir = settings.get("output-dir")
         if output_dir:
@@ -1245,6 +1266,7 @@ class OutputArea:
         self._bounding_box_min_size.set(settings.get("bounding-box-min-size"))
         self._bounding_box_smooth_time.set(settings.get("bounding-box-smooth-time"))
         self._bounding_box_thickness.set(settings.get("bounding-box-thickness"))
+        self._combine.set(False)
 
     def save(self, settings: ScanSettings) -> ScanSettings:
         settings.set("output-mode", self._output_mode)
@@ -1623,7 +1645,9 @@ class Application:
 
         settings.set("scan-only", self._scan_area.scan_only)
         if not settings.get("output-dir") and (
-            not settings.get("scan-only") or settings.get("mask-output")
+            not settings.get("scan-only")
+            or settings.get("mask-output")
+            or self._output_area.combine
         ):
             # We will create files but an output directory wasn't set ahead of time - prompt the
             # user to select one.
@@ -1635,8 +1659,11 @@ class Application:
             else:
                 return None
 
+        video_name = Path(settings.get("input")[0]).stem
+        if self._output_area.combine:
+            settings.set("output", f"{video_name}-events.avi")
+
         if settings.get("mask-output"):
-            video_name = Path(settings.get("input")[0]).stem
             settings.set("mask-output", f"{video_name}-mask.avi")
 
         if not self._input_area.concatenate and len(settings.get_arg("input")) > 1:
