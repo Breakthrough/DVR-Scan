@@ -1303,7 +1303,6 @@ class ScanArea:
         )
         self._scan_only_button.grid(row=1, column=0, sticky=tk.W)
 
-        # TODO(#226): Add a config file option for this.
         self._open_on_completion = tk.BooleanVar(frame, value=True)
         self._open_on_completion_button = ttk.Checkbutton(
             frame,
@@ -1337,6 +1336,20 @@ class ScanArea:
     @property
     def open_on_completion(self) -> bool:
         return self._open_on_completion.get()
+
+    @open_on_completion.setter
+    def open_on_completion(self, newval: bool):
+        self._open_on_completion.set(newval)
+
+    def save(self, settings: ScanSettings) -> ScanSettings:
+        settings.set("scan-only", self.scan_only)
+        settings.set("open-output-dir", self.open_on_completion)
+        return settings
+
+    def load(self, settings: ScanSettings):
+        if OutputMode[settings.get("output-mode").upper()] == OutputMode.SCAN_ONLY:
+            self.scan_only = True
+        self.open_on_completion = settings.get("open-output-dir")
 
 
 class Application:
@@ -1587,8 +1600,7 @@ class Application:
         self._input_settings_window.set(settings)
         self._motion_settings_window.set(settings)
         self._output_area.load(settings)
-        if OutputMode[settings.get("output-mode").upper()] == OutputMode.SCAN_ONLY:
-            self._scan_area.scan_only = True
+        self._scan_area.load(settings)
 
     def _on_save_config(self):
         save_path = tkinter.filedialog.asksaveasfilename(
@@ -1626,6 +1638,7 @@ class Application:
         settings = self._input_settings_window.update(settings)
         settings = self._motion_settings_window.update(settings)
         settings = self._output_area.save(settings)
+        settings = self._scan_area.save(settings)
         return settings
 
     def _get_settings(self) -> ty.Optional[ScanSettings]:
@@ -1637,9 +1650,11 @@ class Application:
         settings = self._input_settings_window.update(settings)
         settings = self._motion_settings_window.update(settings)
         settings = self._output_area.save(settings)
+        settings = self._scan_area.save(settings)
 
-        settings.set("scan-only", self._scan_area.scan_only)
-        settings.set("open-on-completion", self._scan_area.open_on_completion)
+        # Check if we are going to create any output files.
+        # *NOTE*: Depending on the user's settings, we may generate output files even in scan-only
+        # mode (e.g. if the user is generating a mask file).
         if not settings.get("output-dir") and (
             not settings.get("scan-only") or settings.get("mask-output")
         ):
@@ -1648,10 +1663,9 @@ class Application:
             output_dir = tkinter.filedialog.askdirectory(
                 title="Set Output Directory", mustexist=True
             )
-            if output_dir:
-                settings.set("output-dir", output_dir)
-            else:
+            if not output_dir:
                 return None
+            settings.set("output-dir", output_dir)
 
         if settings.get("mask-output"):
             video_name = Path(settings.get("input")[0]).stem

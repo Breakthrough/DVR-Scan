@@ -40,11 +40,13 @@ class ScanWindow:
         self._root.withdraw()
         self._root.title(TITLE)
         self._root.resizable(True, True)
-        self._settings = settings
         self._scanner = init_scanner(settings)
         self._scanner.set_callbacks(
             scan_started=self._on_scan_started,
             processed_frame=self._on_processed_frame,
+        )
+        self._open_on_completion = (
+            settings.get("output-dir") if settings.get("open-output-dir") else None
         )
 
         self._root.bind("<<Shutdown>>", self.stop)
@@ -249,11 +251,8 @@ class ScanWindow:
         self._rate = (
             "%.2f" % (float(self._frames_processed) / elapsed) if self._frames_processed else "N/A"
         )
-        if (
-            self._settings.get("open-on-completion")
-            and not self._scanner.is_stopped()
-            and not self._scan_exception
-            and self._num_events > 0
-            and self._settings.get("output-dir")
-        ):
-            open_path(self._settings.get("output-dir"))
+        # Open the output folder on a successful scan. On error, or if the user stopped the scan,
+        # we don't open the window.
+        if self._open_on_completion and not self._scanner.is_stopped() and not self._scan_exception:
+            logger.debug("scan complete, opening output folder")
+            open_path(self._open_on_completion)
