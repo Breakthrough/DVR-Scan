@@ -1303,15 +1303,27 @@ class ScanArea:
         )
         self._scan_only_button.grid(row=1, column=0, sticky=tk.W)
 
+        self._open_on_completion = tk.BooleanVar(frame, value=True)
+        self._open_on_completion_button = ttk.Checkbutton(
+            frame,
+            text="Open folder on completion",
+            variable=self._open_on_completion,
+            onvalue=True,
+            offvalue=False,
+        )
+        self._open_on_completion_button.grid(row=1, column=1, sticky=tk.W)
+
     def disable(self):
         self._start_button["text"] = "Scanning..."
         self._start_button["state"] = tk.DISABLED
         self._scan_only_button["state"] = tk.DISABLED
+        self._open_on_completion_button["state"] = tk.DISABLED
 
     def enable(self):
         self._start_button["text"] = "Start"
         self._start_button["state"] = tk.NORMAL
         self._scan_only_button["state"] = tk.NORMAL
+        self._open_on_completion_button["state"] = tk.NORMAL
 
     @property
     def scan_only(self) -> bool:
@@ -1320,6 +1332,24 @@ class ScanArea:
     @scan_only.setter
     def scan_only(self, newval: bool):
         self._scan_only.set(newval)
+
+    @property
+    def open_on_completion(self) -> bool:
+        return self._open_on_completion.get()
+
+    @open_on_completion.setter
+    def open_on_completion(self, newval: bool):
+        self._open_on_completion.set(newval)
+
+    def save(self, settings: ScanSettings) -> ScanSettings:
+        settings.set("scan-only", self.scan_only)
+        settings.set("open-output-dir", self.open_on_completion)
+        return settings
+
+    def load(self, settings: ScanSettings):
+        if OutputMode[settings.get("output-mode").upper()] == OutputMode.SCAN_ONLY:
+            self.scan_only = True
+        self.open_on_completion = settings.get("open-output-dir")
 
 
 class Application:
@@ -1570,8 +1600,7 @@ class Application:
         self._input_settings_window.set(settings)
         self._motion_settings_window.set(settings)
         self._output_area.load(settings)
-        if OutputMode[settings.get("output-mode").upper()] == OutputMode.SCAN_ONLY:
-            self._scan_area.scan_only = True
+        self._scan_area.load(settings)
 
     def _on_save_config(self):
         save_path = tkinter.filedialog.asksaveasfilename(
@@ -1609,6 +1638,7 @@ class Application:
         settings = self._input_settings_window.update(settings)
         settings = self._motion_settings_window.update(settings)
         settings = self._output_area.save(settings)
+        settings = self._scan_area.save(settings)
         return settings
 
     def _get_settings(self) -> ty.Optional[ScanSettings]:
@@ -1620,8 +1650,8 @@ class Application:
         settings = self._input_settings_window.update(settings)
         settings = self._motion_settings_window.update(settings)
         settings = self._output_area.save(settings)
+        settings = self._scan_area.save(settings)
 
-        settings.set("scan-only", self._scan_area.scan_only)
         if not settings.get("output-dir") and (
             not settings.get("scan-only") or settings.get("mask-output")
         ):
