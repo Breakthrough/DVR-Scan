@@ -250,7 +250,7 @@ class ScanWindow:
             "%.2f" % (float(self._frames_processed) / elapsed) if self._frames_processed else "N/A"
         )
         if (
-            self._settings.get("open-on-completion")
+            self._settings.get("open-output-dir")
             and not self._scanner.is_stopped()
             and not self._scan_exception
             and self._num_events > 0
