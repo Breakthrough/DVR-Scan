@@ -369,7 +369,6 @@ CONFIG_MAP: ConfigDict = {
     # Logging
     "verbosity": "info",
     "save-log": True,
-    "max-log-size": 20000,
     "max-log-files": 4,
     # Development
     "debug": False,
