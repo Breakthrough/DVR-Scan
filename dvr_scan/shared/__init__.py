@@ -89,7 +89,13 @@ def prune_log_files(log_folder: Path, max_files: int, name_prefix: str):
             log_files.sort(key=os.path.getmtime)
             for i in range(len(log_files) - max_files):
                 logger.debug("Removing old log file: %s", log_files[i])
-                os.remove(log_files[i])
+                try:
+                    os.remove(log_files[i])
+                except PermissionError:
+                    logger.warning(
+                        "Failed to remove old log file: %s. It might be in use by another DVR-Scan process.",
+                        log_files[i],
+                    )
 
 
 def setup_logger(logfile_path: Path, max_files: int, name_prefix: str):
