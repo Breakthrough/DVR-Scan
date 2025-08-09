@@ -30,7 +30,7 @@ The UI can be started by running `dvr-scan-app`, and is installed alongside the 
  - [bugfix] Fix crash on headless systems that don't have `pillow` installed
  - [general] The region editor no longer prompts for a save path if one was already specified via the `-s`/`--save-regions` option
  - [general] A size-limited logfile is now kept locally, useful for filing bug reports
-    - Can be controlled with config file options `save-log` (default: yes) and `max-log-files` (default: 4)
+    - Can be controlled with config file options `save-log` (default: yes), `max-log-size` (default: 20 kB), `max-log-files` (default: 4)
     - Path can be found under help entry for `--logfile` by running `dvr-scan --help` or `dvr-scan-app --help`
  - [general] Minimum supported Python version is now 3.9
 
@@ -353,3 +353,4 @@ This version of DVR-Scan includes a new, faster background subtraction algorithm
      * input videos can now be sorted
      * add button to open log folder
  * [feature] Add `max-area`, `max-width`, and `max-height` options to help suppress improbable motion events, such as those caused by rain or fog  [#224](https://github.com/Breakthrough/DVR-Scan/issues/224) (thanks @elvis-epx)
+ * [feature] Log files are now created with random names, and size limits have been removed. The number of logs to keep can be configured via `max-log-files`.
