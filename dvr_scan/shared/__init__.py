@@ -68,22 +68,22 @@ def init_logging(
     )
 
 
-def logfile_path() -> Path:
+def logfile_path(name_prefix: str) -> Path:
     """Get path to log file, creating the folder if it does not exist."""
     folder = user_log_path("DVR-Scan", False)
     folder.mkdir(parents=True, exist_ok=True)
     # Generate a random suffix so multiple instances of dvr-scan don't try to write to the same
     # log file.
     random_suffix = "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
-    return folder / Path(f"dvr-scan-{datetime.now():%Y%m%d-%H%M%S}-{random_suffix}.log")
+    return folder / Path(f"{name_prefix}-{datetime.now():%Y%m%d-%H%M%S}-{random_suffix}.log")
 
 
-def prune_log_files(log_folder: Path, max_files: int):
+def prune_log_files(log_folder: Path, max_files: int, name_prefix: str):
     """Prune log files, keeping the latest `max_files` number of logs."""
     # Prune oldest log files if we have too many.
     if max_files > 0:
         # We find all DVR-Scan log files by globbing, then remove the oldest ones.
-        log_file_pattern = str(log_folder / "dvr-scan-*.log")
+        log_file_pattern = str(log_folder / f"{name_prefix}-*.log")
         log_files = list(glob.glob(log_file_pattern))
         if len(log_files) > max_files:
             log_files.sort(key=os.path.getmtime)
@@ -92,10 +92,10 @@ def prune_log_files(log_folder: Path, max_files: int):
                 os.remove(log_files[i])
 
 
-def setup_logger(logfile_path: str, max_files: int):
+def setup_logger(logfile_path: Path, max_files: int, name_prefix: str):
     """Initialize rolling debug logger."""
-    prune_log_files(logfile_path.parent, max_files)
-    handler = FileHandler(logfile_path)
+    prune_log_files(logfile_path.parent, max_files, name_prefix)
+    handler = FileHandler(str(logfile_path))
     handler.setLevel(logging.DEBUG)
     handler.setFormatter(logging.Formatter(fmt=LOG_FORMAT_ROLLING_LOGS))
     # *WARNING*: This log message must come before we attach the handler otherwise it will get

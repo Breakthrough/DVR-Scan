@@ -28,7 +28,7 @@ from dvr_scan.shared import ScanSettings, init_logging, init_scanner, logfile_pa
 
 logger = logging.getLogger("dvr_scan")
 
-LOGFILE_PATH = logfile_path()
+LOGFILE_PATH = logfile_path(name_prefix="dvr-scan")
 
 
 def _preprocess_args(args):
@@ -102,6 +102,7 @@ def parse_settings() -> ty.Optional[ScanSettings]:
             setup_logger(
                 logfile_path=LOGFILE_PATH,
                 max_files=config.get("max-log-files"),
+                name_prefix="dvr-scan",
             )
         failed_to_load_config = False
     except ConfigLoadFailure as ex:

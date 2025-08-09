@@ -35,7 +35,7 @@ logger = logging.getLogger("dvr_scan")
 EXIT_SUCCESS: int = 0
 EXIT_ERROR: int = 1
 
-LOGFILE_PATH = logfile_path()
+LOGFILE_PATH = logfile_path(name_prefix="dvr-scan-app")
 
 
 def get_cli_parser():
@@ -148,6 +148,7 @@ def main():
             setup_logger(
                 logfile_path=LOGFILE_PATH,
                 max_files=settings.get("max-log-files"),
+                name_prefix="dvr-scan-app",
             )
         failed_to_load_config = False
     except ConfigLoadFailure as ex:

@@ -38,7 +38,7 @@ VALID_OUTPUT_MODES = [mode for mode in CHOICE_MAP["output-mode"] if mode != SCAN
 BACKGROUND_SUBTRACTORS = ["MOG2", "CNT", "MOG2_CUDA"] if HAS_MOG2_CUDA else ["MOG2", "CNT"]
 
 
-LOGFILE_PATH = logfile_path()
+LOGFILE_PATH = logfile_path(name_prefix="dvr-scan")
 
 
 class RegionAction(argparse.Action):

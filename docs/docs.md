@@ -338,6 +338,24 @@ bounding-box-color = 0xFF0000
     ```
     </span>
 
+#### Logging
+
+ * <b><pre>save-log</pre></b>
+   Save a detailed log for each run of DVR-Scan. Each log file is named using a timestamp in the format `dvr-scan-YYYY-MM-DD-HH-MM-SS-RANDOM.log`. For the GUI, the prefix `dvr-scan-app` is used instead.
+    <span class="dvr-scan-default">
+    ```
+    save-log = yes
+    ```
+    </span>
+
+ * <b><pre>max-log-files</pre></b>
+   Maximum number of log files to keep. Set to 0 to keep all log files.
+    <span class="dvr-scan-default">
+    ```
+    max-log-files = 4
+    ```
+    </span>
+
 
 ### Input
 
