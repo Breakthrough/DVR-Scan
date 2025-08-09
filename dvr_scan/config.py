@@ -369,11 +369,11 @@ CONFIG_MAP: ConfigDict = {
     # Logging
     "verbosity": "info",
     "save-log": True,
-    # TODO: max-log-size is not implemented. This is kept for backwards compatibility with older
-    # config files. Re-implementing size-based rotation is likely overly complicated since log
-    # files are not expected to be very large.
+    # max-log-size is not implemented, but is kept for backwards compatibility with older
+    # config files. Previously, logs would be appended to the same file until they reached this size
+    # after which a new file would be created.
     "max-log-size": 20000,
-    "max-log-files": 4,
+    "max-log-files": 15,
     # Development
     "debug": False,
 }

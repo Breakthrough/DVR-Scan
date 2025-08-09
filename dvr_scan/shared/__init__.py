@@ -19,7 +19,6 @@ import random
 import string
 import typing as ty
 from contextlib import contextmanager
-from datetime import datetime
 from logging import FileHandler
 from pathlib import Path
 
@@ -74,40 +73,44 @@ def logfile_path(name_prefix: str) -> Path:
     folder.mkdir(parents=True, exist_ok=True)
     # Generate a random suffix so multiple instances of dvr-scan don't try to write to the same
     # log file.
-    random_suffix = "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
-    return folder / Path(f"{name_prefix}-{datetime.now():%Y%m%d-%H%M%S}-{random_suffix}.log")
+    random_suffix = "".join(random.choices(string.ascii_lowercase + string.digits, k=12))
+    return folder / Path(f"{name_prefix}.{random_suffix}.log")
 
 
-def prune_log_files(log_folder: Path, max_files: int, name_prefix: str):
+def prune_log_files(log_folder: Path, max_log_files: int, name_prefix: str):
     """Prune log files, keeping the latest `max_files` number of logs."""
     # Prune oldest log files if we have too many.
-    if max_files > 0:
+    if max_log_files > 0:
         # We find all DVR-Scan log files by globbing, then remove the oldest ones.
-        log_file_pattern = str(log_folder / f"{name_prefix}-*.log")
+        log_file_pattern = str(log_folder / f"{name_prefix}.*.log")
         log_files = list(glob.glob(log_file_pattern))
-        if len(log_files) > max_files:
+        if len(log_files) > max_log_files:
+            logger.debug(
+                "pruning oldest logs:"
+                f" max-log-files = {max_log_files}, len(log_files) = {len(log_files)}"
+            )
             log_files.sort(key=os.path.getmtime)
-            for i in range(len(log_files) - max_files):
-                logger.debug("Removing old log file: %s", log_files[i])
+            for i in range(len(log_files) - max_log_files):
                 try:
                     os.remove(log_files[i])
+                    logger.debug("removed log: %s", log_files[i])
                 except PermissionError:
                     logger.warning(
-                        "Failed to remove old log file: %s. It might be in use by another "
-                        "DVR-Scan process.",
+                        "Failed to remove log file: %s. It might be in use by another process. "
+                        "Try raising `max-log-files` if this is the case.",
                         log_files[i],
                     )
 
 
-def setup_logger(logfile_path: Path, max_files: int, name_prefix: str):
+def setup_logger(logfile_path: Path, max_log_files: int, name_prefix: str):
     """Initialize rolling debug logger."""
-    prune_log_files(logfile_path.parent, max_files, name_prefix)
+    prune_log_files(logfile_path.parent, max_log_files, name_prefix)
+    logger.debug(f"writing logs to {logfile_path}")
     handler = FileHandler(str(logfile_path))
     handler.setLevel(logging.DEBUG)
     handler.setFormatter(logging.Formatter(fmt=LOG_FORMAT_ROLLING_LOGS))
     # *WARNING*: This log message must come before we attach the handler otherwise it will get
     # written to the log file each time.
-    logger.debug(f"writing logs to {logfile_path} (max_files: {max_files})")
     attach_log_handler(handler)
 
 

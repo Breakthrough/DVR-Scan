@@ -459,7 +459,7 @@ def get_cli_parser(user_config: ConfigRegistry):
         type=str,
         help=(
             "Appends application output to file. If file does not exist it will be created. "
-            f"Debug log path: {LOGFILE_PATH}"
+            f"Log path: {LOGFILE_PATH.parent}"
         ),
     )
 

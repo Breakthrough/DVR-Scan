@@ -81,7 +81,7 @@ def get_cli_parser():
         type=str,
         help=(
             "Appends application output to file. If file does not exist it will be created. "
-            f"Debug log path: {LOGFILE_PATH}"
+            f"Log path: {LOGFILE_PATH.parent}"
         ),
     )
 
@@ -147,7 +147,7 @@ def main():
         if settings.get("save-log"):
             setup_logger(
                 logfile_path=LOGFILE_PATH,
-                max_files=settings.get("max-log-files"),
+                max_log_files=settings.get("max-log-files"),
                 name_prefix="dvr-scan-app",
             )
         failed_to_load_config = False

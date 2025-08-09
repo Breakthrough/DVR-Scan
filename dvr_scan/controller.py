@@ -101,7 +101,7 @@ def parse_settings() -> ty.Optional[ScanSettings]:
         if config.get("save-log"):
             setup_logger(
                 logfile_path=LOGFILE_PATH,
-                max_files=config.get("max-log-files"),
+                max_log_files=config.get("max-log-files"),
                 name_prefix="dvr-scan",
             )
         failed_to_load_config = False
