@@ -353,3 +353,4 @@ This version of DVR-Scan includes a new, faster background subtraction algorithm
      * input videos can now be sorted
      * add button to open log folder
  * [feature] Add `max-area`, `max-width`, and `max-height` options to help suppress improbable motion events, such as those caused by rain or fog  [#224](https://github.com/Breakthrough/DVR-Scan/issues/224) (thanks @elvis-epx)
+ * [feature] Log files are now created with random names, and size limits have been removed. The number of logs to keep can be configured via `max-log-files`.

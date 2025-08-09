@@ -12,10 +12,15 @@
 """Business logic shared between the DVR-Scan CLI and the DVR-Scan GUI."""
 
 import argparse
+import glob
 import logging
+import os
+import random
+import string
 import typing as ty
 from contextlib import contextmanager
-from logging.handlers import RotatingFileHandler
+from datetime import datetime
+from logging import FileHandler
 from pathlib import Path
 
 import tqdm
@@ -63,29 +68,46 @@ def init_logging(
     )
 
 
-def logfile_path(logfile_name: str):
-    """Initialize rolling debug logger."""
+def logfile_path(name_prefix: str) -> Path:
+    """Get path to log file, creating the folder if it does not exist."""
     folder = user_log_path("DVR-Scan", False)
     folder.mkdir(parents=True, exist_ok=True)
-    return folder / Path(logfile_name)
+    # Generate a random suffix so multiple instances of dvr-scan don't try to write to the same
+    # log file.
+    random_suffix = "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
+    return folder / Path(f"{name_prefix}-{datetime.now():%Y%m%d-%H%M%S}-{random_suffix}.log")
 
 
-def setup_logger(logfile_path: str, max_size_bytes: int, max_files: int):
+def prune_log_files(log_folder: Path, max_files: int, name_prefix: str):
+    """Prune log files, keeping the latest `max_files` number of logs."""
+    # Prune oldest log files if we have too many.
+    if max_files > 0:
+        # We find all DVR-Scan log files by globbing, then remove the oldest ones.
+        log_file_pattern = str(log_folder / f"{name_prefix}-*.log")
+        log_files = list(glob.glob(log_file_pattern))
+        if len(log_files) > max_files:
+            log_files.sort(key=os.path.getmtime)
+            for i in range(len(log_files) - max_files):
+                logger.debug("Removing old log file: %s", log_files[i])
+                try:
+                    os.remove(log_files[i])
+                except PermissionError:
+                    logger.warning(
+                        "Failed to remove old log file: %s. It might be in use by another "
+                        "DVR-Scan process.",
+                        log_files[i],
+                    )
+
+
+def setup_logger(logfile_path: Path, max_files: int, name_prefix: str):
     """Initialize rolling debug logger."""
-    folder = user_log_path("DVR-Scan", False)
-    folder.mkdir(parents=True, exist_ok=True)
-    handler = RotatingFileHandler(
-        logfile_path,
-        maxBytes=max_size_bytes,
-        backupCount=max_files,
-    )
+    prune_log_files(logfile_path.parent, max_files, name_prefix)
+    handler = FileHandler(str(logfile_path))
     handler.setLevel(logging.DEBUG)
     handler.setFormatter(logging.Formatter(fmt=LOG_FORMAT_ROLLING_LOGS))
     # *WARNING*: This log message must come before we attach the handler otherwise it will get
     # written to the log file each time.
-    logger.debug(
-        f"writing logs to {logfile_path} (max_size_bytes: {max_size_bytes}, max_files: {max_files})"
-    )
+    logger.debug(f"writing logs to {logfile_path} (max_files: {max_files})")
     attach_log_handler(handler)
 
 
