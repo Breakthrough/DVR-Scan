@@ -93,7 +93,8 @@ def prune_log_files(log_folder: Path, max_files: int, name_prefix: str):
                     os.remove(log_files[i])
                 except PermissionError:
                     logger.warning(
-                        "Failed to remove old log file: %s. It might be in use by another DVR-Scan process.",
+                        "Failed to remove old log file: %s. It might be in use by another "
+                        "DVR-Scan process.",
                         log_files[i],
                     )
 
