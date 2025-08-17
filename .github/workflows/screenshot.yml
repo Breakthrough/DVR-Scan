@@ -1,4 +1,4 @@
-# Take a screenshot of the DVR-Scan UI and upload it as an artifact.
+# Take screenshots of the DVR-Scan UI on Windows, Linux, and macOS and upload them as artifacts.
 name: Screenshot UI
 
 on:
@@ -8,7 +8,7 @@ env:
   ffmpeg_version: "7.1"
 
 jobs:
-  run-ui-and-screenshot:
+  screenshot-windows:
     runs-on: windows-latest
     strategy:
       matrix:
@@ -76,7 +76,7 @@ jobs:
           $bitmap = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
           $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
           $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
-          $bitmap.Save("dvr-scan-screenshot-${{ matrix.resolution.scale }}.png", [System.Drawing.Imaging.ImageFormat]::Png)
+          $bitmap.Save("dvr-scan-screenshot-windows-${{ matrix.resolution.width }}x${{ matrix.resolution.height }}-${{ matrix.resolution.scale }}.png", [System.Drawing.Imaging.ImageFormat]::Png)
           $graphics.Dispose()
           $bitmap.Dispose()
         shell: powershell
@@ -84,5 +84,107 @@ jobs:
       - name: Upload Screenshot
         uses: actions/upload-artifact@v4
         with:
-          name: dvr-scan-screenshot-${{ matrix.resolution.scale }}
-          path: dvr-scan-screenshot-${{ matrix.resolution.scale }}.png
+          name: dvr-scan-screenshot-windows-${{ matrix.resolution.width }}x${{ matrix.resolution.height }}-${{ matrix.resolution.scale }}
+          path: dvr-scan-screenshot-windows-${{ matrix.resolution.width }}x${{ matrix.resolution.height }}-${{ matrix.resolution.scale }}.png
+
+  screenshot-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+        resolution:
+          - {width: 1920, height: 1080}
+          - {width: 2560, height: 1440}
+          - {width: 3840, height: 2160}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install uv and set the python version
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "0.5.11"
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb scrot
+
+      - name: Install Python Dependencies
+        run: |
+          uv pip install --upgrade pip build wheel virtualenv setuptools
+          uv pip install -r requirements.txt
+
+      - name: Run UI Test
+        run: |
+          # Start Xvfb in the background on display :99
+          Xvfb :99 -screen 0 ${{ matrix.resolution.width }}x${{ matrix.resolution.height }}x24 &
+
+          # Set the DISPLAY environment variable for the following commands
+          export DISPLAY=:99
+
+          # Run the application in the background
+          python -m dvr_scan.app &
+
+          # Wait for the application to launch
+          sleep 10
+
+          # Take a screenshot
+          scrot -d 0 "dvr-scan-screenshot-linux-${{ matrix.resolution.width }}x${{ matrix.resolution.height }}.png"
+
+      - name: Upload Screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: dvr-scan-screenshot-linux-${{ matrix.resolution.width }}x${{ matrix.resolution.height }}
+          path: "dvr-scan-screenshot-linux-${{ matrix.resolution.width }}x${{ matrix.resolution.height }}.png"
+
+  # TODO: Resolution matrix
+  screenshot-macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install uv and set the python version
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "0.5.11"
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Python Dependencies
+        run: |
+          uv pip install --upgrade pip build wheel virtualenv setuptools
+          uv pip install -r requirements.txt
+
+      - name: Run UI Test
+        run: |
+          # Run the application in the background
+          python -m dvr_scan.app &
+
+          # Wait for the application to launch
+          sleep 10
+
+          # Take a screenshot
+          screencapture "dvr-scan-screenshot-macos.png"
+
+      - name: Upload Screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: dvr-scan-screenshot-macos
+          path: "dvr-scan-screenshot-macos.png"
