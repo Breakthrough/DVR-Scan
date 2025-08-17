@@ -1,0 +1,88 @@
+# Take a screenshot of the DVR-Scan UI and upload it as an artifact.
+name: Screenshot UI
+
+on:
+  workflow_dispatch:
+
+env:
+  ffmpeg_version: "7.1"
+
+jobs:
+  run-ui-and-screenshot:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+        resolution:
+          - {width: 1920, height: 1080, scale: 100}
+          - {width: 2560, height: 1440, scale: 150}
+          - {width: 3840, height: 2160, scale: 200}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install uv and set the python version
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "0.5.11"
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Dependencies
+        run: |
+          uv pip install --upgrade pip build wheel virtualenv setuptools
+          uv pip install -r requirements.txt
+
+      - name: Download FFMPEG
+        uses: dsaltares/fetch-gh-release-asset@1.1.2
+        with:
+          repo: 'GyanD/codexffmpeg'
+          version: 'tags/${{ env.ffmpeg_version }}'
+          file: 'ffmpeg-${{ env.ffmpeg_version }}-full_build.7z'
+
+      - name: Extract FFMPEG
+        run: |
+          7z e ffmpeg-${{ env.ffmpeg_version }}-full_build.7z ffmpeg.exe -r
+
+      - name: Set screen resolution to ${{ matrix.resolution.width }}x${{ matrix.resolution.height }}
+        uses: any-user/setup-screen-resolution-for-windows@v1.0.0
+        with:
+          width: ${{ matrix.resolution.width }}
+          height: ${{ matrix.resolution.height }}
+
+      - name: Set display scaling to ${{ matrix.resolution.scale }}%
+        run: |
+          Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "LogPixels" -Value ([int]($env:SCALE * 96 / 100))
+          Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "Win8DpiScaling" -Value 1
+          Rundll32.exe user32.dll, UpdatePerUserSystemParameters
+        env:
+          SCALE: ${{ matrix.resolution.scale }}
+        shell: powershell
+
+      - name: Run DVR-Scan
+        run: |
+          python -m dvr_scan.app &
+
+      - name: Take Screenshot
+        run: |
+          Add-Type -AssemblyName System.Windows.Forms
+          Start-Sleep -Seconds 10
+          $bounds = [System.Windows.Forms.SystemInformation]::VirtualScreen
+          $bitmap = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
+          $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+          $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+          $bitmap.Save("dvr-scan-screenshot-${{ matrix.resolution.scale }}.png", [System.Drawing.Imaging.ImageFormat]::Png)
+          $graphics.Dispose()
+          $bitmap.Dispose()
+        shell: powershell
+
+      - name: Upload Screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: dvr-scan-screenshot-${{ matrix.resolution.scale }}
+          path: dvr-scan-screenshot-${{ matrix.resolution.scale }}.png
