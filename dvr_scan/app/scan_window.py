@@ -21,6 +21,7 @@ from logging import getLogger
 from scenedetect import FrameTimecode
 from tqdm import tqdm
 
+from dvr_scan.platform import open_path
 from dvr_scan.shared import ScanSettings, init_scanner
 
 TITLE = "Scanning..."
@@ -43,6 +44,9 @@ class ScanWindow:
         self._scanner.set_callbacks(
             scan_started=self._on_scan_started,
             processed_frame=self._on_processed_frame,
+        )
+        self._open_on_completion = (
+            settings.get("output-dir") if settings.get("open-output-dir") else None
         )
 
         self._root.bind("<<Shutdown>>", self.stop)
@@ -247,5 +251,8 @@ class ScanWindow:
         self._rate = (
             "%.2f" % (float(self._frames_processed) / elapsed) if self._frames_processed else "N/A"
         )
-        # TODO: Figure out how to open the output directory when scanning is complete, or add a
-        # UI element so the user can do it with a button press.
+        # Open the output folder on a successful scan. On error, or if the user stopped the scan,
+        # we don't open the window.
+        if self._open_on_completion and not self._scanner.is_stopped() and not self._scan_exception:
+            logger.debug("scan complete, opening output folder")
+            open_path(self._open_on_completion)
