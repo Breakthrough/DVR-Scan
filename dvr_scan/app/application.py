@@ -824,6 +824,16 @@ class OutputArea:
         )
         self._options_button.grid(row=0, column=2, sticky=EXPAND_HORIZONTAL, pady=(0, PADDING))
 
+        self._combine = tk.BooleanVar(root, value=False)
+        self._combine_button = ttk.Checkbutton(
+            root,
+            text="Combine Events",
+            variable=self._combine,
+            onvalue=True,
+            offvalue=False,
+        )
+        self._combine_button.grid(row=0, column=3, sticky=tk.W, padx=PADDING)
+
         self._output_mode_combo["values"] = (
             "OpenCV (.avi)",
             "ffmpeg",
@@ -1184,6 +1194,12 @@ class OutputArea:
         self._options_button["state"] = (
             tk.DISABLED if self._output_mode == OutputMode.COPY else tk.NORMAL
         )
+        combine_allowed = self._output_mode is OutputMode.OPENCV
+        self._combine_button["state"] = tk.NORMAL if combine_allowed else tk.DISABLED
+
+    @property
+    def combine(self) -> bool:
+        return self._output_mode == OutputMode.OPENCV and self._combine.get()
 
     @property
     def _output_mode(self) -> OutputMode:
@@ -1197,12 +1213,12 @@ class OutputArea:
 
     @_output_mode.setter
     def _output_mode(self, newval: OutputMode):
-        assert newval != OutputMode.SCAN_ONLY  # Scan only is a separate checkbox in the UI.
-        if newval == OutputMode.OPENCV:
+        assert newval is not OutputMode.SCAN_ONLY  # Scan only is a separate checkbox in the UI.
+        if newval is OutputMode.OPENCV:
             self._output_mode_combo.current(0)
-        elif newval == OutputMode.FFMPEG:
+        elif newval is OutputMode.FFMPEG:
             self._output_mode_combo.current(1)
-        elif newval == OutputMode.COPY:
+        elif newval is OutputMode.COPY:
             self._output_mode_combo.current(2)
 
     @property
@@ -1222,7 +1238,7 @@ class OutputArea:
 
     def load(self, settings: ScanSettings):
         output_mode = OutputMode[settings.get("output-mode").upper()]
-        if output_mode != OutputMode.SCAN_ONLY:
+        if output_mode is not OutputMode.SCAN_ONLY:
             self._output_mode = output_mode
         output_dir = settings.get("output-dir")
         if output_dir:
@@ -1245,6 +1261,7 @@ class OutputArea:
         self._bounding_box_min_size.set(settings.get("bounding-box-min-size"))
         self._bounding_box_smooth_time.set(settings.get("bounding-box-smooth-time"))
         self._bounding_box_thickness.set(settings.get("bounding-box-thickness"))
+        self._on_mode_combo_selected()
 
     def save(self, settings: ScanSettings) -> ScanSettings:
         settings.set("output-mode", self._output_mode)
@@ -1656,7 +1673,9 @@ class Application:
         # *NOTE*: Depending on the user's settings, we may generate output files even in scan-only
         # mode (e.g. if the user is generating a mask file).
         if not settings.get("output-dir") and (
-            not settings.get("scan-only") or settings.get("mask-output")
+            not settings.get("scan-only")
+            or settings.get("mask-output")
+            or self._output_area.combine
         ):
             # We will create files but an output directory wasn't set ahead of time - prompt the
             # user to select one.
@@ -1667,8 +1686,11 @@ class Application:
                 return None
             settings.set("output-dir", output_dir)
 
+        video_name = Path(settings.get("input")[0]).stem
+        if self._output_area.combine:
+            settings.set("output", f"{video_name}-events.avi")
+
         if settings.get("mask-output"):
-            video_name = Path(settings.get("input")[0]).stem
             settings.set("mask-output", f"{video_name}-mask.avi")
 
         if not self._input_area.concatenate and len(settings.get_arg("input")) > 1:
