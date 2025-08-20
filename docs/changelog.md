@@ -356,3 +356,4 @@ This version of DVR-Scan includes a new, faster background subtraction algorithm
  * [bugfix] Log files no longer append to the same file, and now have randomized suffixes to support multiple instances [#227](https://github.com/Breakthrough/DVR-Scan/issues/227)
      * Config option changes: logs are no longer appended to the same file, so `max-log-size` is no longer required, and `max-log-files` has been raised from 4 to 15
 * [feature] Add ability to open output folder on completion, on by default [#226](https://github.com/Breakthrough/DVR-Scan/issues/226)
+* [improvement] Add UI option for enabling output concatenation [#223](https://github.com/Breakthrough/DVR-Scan/issues/223)
