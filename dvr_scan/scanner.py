@@ -20,10 +20,9 @@ import queue
 import subprocess
 import sys
 import threading
-import typing as ty
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, AnyStr, List, Optional, Tuple, Union
+import typing as ty
 
 import cv2
 import numpy as np
@@ -121,7 +120,7 @@ class EncodeFrameEvent:
     frame_bgr: np.ndarray
     timecode: FrameTimecode
     score: float
-    bounding_box: Tuple[int, int, int, int]
+    bounding_box: ty.Tuple[int, int, int, int]
     end_of_event: bool = False
 
 
@@ -132,7 +131,7 @@ class MotionMaskEvent:
     motion_mask: np.ndarray
     timecode: FrameTimecode
     score: float
-    bounding_box: Optional[Tuple[int, int, int, int]]
+    bounding_box: ty.Optional[ty.Tuple[int, int, int, int]]
 
 
 @dataclass
@@ -147,7 +146,7 @@ class MotionEvent:
 class DetectionResult:
     """Motion events detected from scanning `num_frames` consecutive frames."""
 
-    event_list: List[MotionEvent]
+    event_list: ty.List[MotionEvent]
     num_frames: int
 
 
@@ -167,15 +166,15 @@ def _recommended_kernel_size(frame_width: int, downscale_factor: int) -> int:
 
 
 def _extract_event_ffmpeg(
-    input_path: AnyStr,
-    output_path: AnyStr,
+    input_path: ty.AnyStr,
+    output_path: ty.AnyStr,
     start_time: FrameTimecode,
     end_time: FrameTimecode,
     ffmpeg_input_args: str,
     ffmpeg_out_args: str,
     log_args: bool = False,
 ) -> bool:
-    args: List[str] = [
+    args: ty.List[str] = [
         "ffmpeg",
         "-y",
         "-nostdin",
@@ -222,7 +221,7 @@ class MotionScanner:
 
     def __init__(
         self,
-        input_videos: List[AnyStr],
+        input_videos: ty.List[ty.AnyStr],
         input_mode: str = "opencv",
         frame_skip: int = 0,
         show_progress: bool = False,
@@ -234,13 +233,13 @@ class MotionScanner:
         # Scan state and options they come from:
 
         # Output Parameters (set_output)
-        self._comp_file: Optional[AnyStr] = None  # -o/--output
-        self._mask_file: Optional[AnyStr] = None  # -mo/--mask-output
-        self._fourcc: Any = None  # opencv-codec
+        self._comp_file: ty.Optional[ty.AnyStr] = None  # -o/--output
+        self._mask_file: ty.Optional[ty.AnyStr] = None  # -mo/--mask-output
+        self._fourcc: ty.Any = None  # opencv-codec
         self._output_mode: OutputMode = None  # -m/--output-mode / -so/--scan-only
-        self._ffmpeg_input_args: Optional[str] = None  # input args for OutputMode.FFMPEG/COPY
-        self._ffmpeg_output_args: Optional[str] = None  # output args for OutputMode.FFMPEG
-        self._output_dir: AnyStr = ""  # -d/--directory
+        self._ffmpeg_input_args: ty.Optional[str] = None  # input args for OutputMode.FFMPEG/COPY
+        self._ffmpeg_output_args: ty.Optional[str] = None  # output args for OutputMode.FFMPEG
+        self._output_dir: ty.AnyStr = ""  # -d/--directory
         # TODO: Replace uses of self._output_dir with
         # a helper function called "get_output_path".
 
@@ -269,9 +268,9 @@ class MotionScanner:
 
         # Region Parameters (set_region)
         self._region_editor = False  # -w/--region-window
-        self._regions: List[List[Point]] = []  # -a/--add-region, -w/--region-window
-        self._load_region: Optional[str] = None  # -R/--load-region
-        self._save_region: Optional[str] = None  # -s/--save-region
+        self._regions: ty.List[ty.List[Point]] = []  # -a/--add-region, -w/--region-window
+        self._load_region: ty.Optional[str] = None  # -R/--load-region
+        self._save_region: ty.Optional[str] = None  # -s/--save-region
         self._max_roi_size_deprecated = None
         self._show_roi_window_deprecated = False
         self._roi_deprecated = None
@@ -286,9 +285,9 @@ class MotionScanner:
         self._stop: threading.Event = threading.Event()
         self._decode_thread_exception = None
         self._encode_thread_exception = None
-        self._video_writer: Optional[cv2.VideoWriter] = None
-        self._mask_size: Tuple[int, int] = None
-        self._mask_writer: Optional[cv2.VideoWriter] = None
+        self._video_writer: ty.Optional[cv2.VideoWriter] = None
+        self._mask_size: ty.Tuple[int, int] = None
+        self._mask_writer: ty.Optional[cv2.VideoWriter] = None
         self._num_events: int = 0
 
         # Thumbnail production (set_thumbnail_params)
@@ -313,10 +312,10 @@ class MotionScanner:
 
     def set_output(
         self,
-        output_dir: AnyStr = "",
-        comp_file: Optional[AnyStr] = None,
-        mask_file: Optional[AnyStr] = None,
-        output_mode: Union[OutputMode, str] = OutputMode.SCAN_ONLY,
+        output_dir: ty.AnyStr = "",
+        comp_file: ty.Optional[ty.AnyStr] = None,
+        mask_file: ty.Optional[ty.AnyStr] = None,
+        output_mode: ty.Union[OutputMode, str] = OutputMode.SCAN_ONLY,
         opencv_fourcc: str = DEFAULT_VIDEOWRITER_CODEC,
         ffmpeg_input_args: str = DEFAULT_FFMPEG_INPUT_ARGS,
         ffmpeg_output_args: str = DEFAULT_FFMPEG_OUTPUT_ARGS,
@@ -382,9 +381,9 @@ class MotionScanner:
 
     def set_overlays(
         self,
-        timecode_overlay: Optional[TextOverlay] = None,
-        metrics_overlay: Optional[TextOverlay] = None,
-        bounding_box: Optional[BoundingBoxOverlay] = None,
+        timecode_overlay: ty.Optional[TextOverlay] = None,
+        metrics_overlay: ty.Optional[TextOverlay] = None,
+        bounding_box: ty.Optional[BoundingBoxOverlay] = None,
     ):
         """Sets options to use if/when drawing overlays on the resulting frames.
 
@@ -436,10 +435,10 @@ class MotionScanner:
     def set_regions(
         self,
         region_editor: bool = False,
-        regions: Optional[List[List[Point]]] = None,
-        load_region: Optional[str] = None,
-        save_region: Optional[str] = None,
-        roi_deprecated: Optional[List[int]] = None,
+        regions: ty.Optional[ty.List[ty.List[Point]]] = None,
+        load_region: ty.Optional[str] = None,
+        save_region: ty.Optional[str] = None,
+        roi_deprecated: ty.Optional[ty.List[int]] = None,
     ):
         """Set options for limiting detection regions."""
         self._region_editor = region_editor
@@ -469,9 +468,9 @@ class MotionScanner:
 
     def set_event_params(
         self,
-        min_event_len: Union[int, float, str] = "0.1s",
-        time_pre_event: Union[int, float, str] = "1.5s",
-        time_post_event: Union[int, float, str] = "2s",
+        min_event_len: ty.Union[int, float, str] = "0.1s",
+        time_pre_event: ty.Union[int, float, str] = "1.5s",
+        time_post_event: ty.Union[int, float, str] = "2s",
         use_pts: bool = False,
     ):
         """Set motion event parameters."""
@@ -486,9 +485,9 @@ class MotionScanner:
 
     def set_video_time(
         self,
-        start_time: Optional[Union[int, float, str]] = None,
-        end_time: Optional[Union[int, float, str]] = None,
-        duration: Optional[Union[int, float, str]] = None,
+        start_time: ty.Optional[ty.Union[int, float, str]] = None,
+        end_time: ty.Optional[ty.Union[int, float, str]] = None,
+        duration: ty.Optional[ty.Union[int, float, str]] = None,
     ):
         """Set a sub-set of the video in time for processing."""
         assert self._input.framerate is not None
@@ -644,12 +643,12 @@ class MotionScanner:
         self._scan_started = scan_started
         self._processed_frame = processed_frame
 
-    def scan(self) -> Optional[DetectionResult]:
+    def scan(self) -> ty.Optional[DetectionResult]:
         """Performs motion analysis on the MotionScanner's input video(s)."""
         self._stop.clear()
-        buffered_frames: List[np.ndarray] = []
-        event_window: List[float] = []
-        event_list: List[MotionEvent] = []
+        buffered_frames: ty.List[np.ndarray] = []
+        event_window: ty.List[float] = []
+        event_list: ty.List[MotionEvent] = []
         num_frames_post_event = 0
         event_start = None
 
@@ -789,7 +788,7 @@ class MotionScanner:
                     num_events += 1
                 self._processed_frame(progress_bar=progress_bar, num_events=num_events)
             # Keep polling decode queue until it's empty (signaled via None).
-            frame: Optional[DecodeEvent] = decode_queue.get()
+            frame: ty.Optional[DecodeEvent] = decode_queue.get()
             if frame is None:
                 break
             assert frame.frame_bgr is not None
@@ -1086,7 +1085,7 @@ class MotionScanner:
             # Make sure main thread stops processing loop.
             decode_queue.put(None)
 
-    def _init_video_writer(self, path: AnyStr, frame_size: Tuple[int, int]) -> cv2.VideoWriter:
+    def _init_video_writer(self, path: ty.AnyStr, frame_size: ty.Tuple[int, int]) -> cv2.VideoWriter:
         """Create a new cv2.VideoWriter using the correct framerate."""
         if self._output_dir:
             path = os.path.join(self._output_dir, path)
@@ -1131,7 +1130,7 @@ class MotionScanner:
         frame: np.ndarray,
         timecode: FrameTimecode,
         frame_score: float,
-        bounding_box: Optional[Tuple[int, int, int, int]],
+        bounding_box: ty.Optional[ty.Tuple[int, int, int, int]],
         use_shift=True,
     ):
         if self._timecode_overlay is not None:
@@ -1213,7 +1212,7 @@ class MotionScanner:
     def _encode_thread(self, encode_queue: queue.Queue):
         try:
             while True:
-                event: Optional[Union[EncodeFrameEvent, MotionMaskEvent, MotionEvent]] = (
+                event: ty.Optional[ty.Union[EncodeFrameEvent, MotionMaskEvent, MotionEvent]] = (
                     encode_queue.get()
                 )
                 if event is None:

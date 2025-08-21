@@ -16,7 +16,7 @@ Tests high level usage of the DVR-Scan command line interface.
 import os
 import platform
 import subprocess
-from typing import List
+import typing as ty
 
 import pytest
 from scenedetect.video_splitter import is_ffmpeg_available
@@ -75,7 +75,7 @@ BASE_COMMAND_TIMECODE_LIST_GOLDEN = (
 )
 
 
-def _run_dvr_scan(args: List[str]) -> str:
+def _run_dvr_scan(args: ty.List[str]) -> str:
     """Helper to run dvr-scan with a list of arguments and return the output."""
     # Add quotes around arguments with spaces.
     processed_args = []
