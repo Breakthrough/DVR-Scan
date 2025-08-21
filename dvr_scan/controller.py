@@ -13,10 +13,10 @@
 This module manages the DVR-Scan program control flow, starting with `run_dvr_scan()`.
 """
 
-import glob
 import logging
 import time
 import typing as ty
+from pathlib import Path
 
 from scenedetect import FrameTimecode
 
@@ -39,7 +39,8 @@ def _preprocess_args(args):
     input_files = []
     for files in args.input:
         for file in files:
-            expanded = glob.glob(file)
+            path = Path(file)
+            expanded = list(Path.cwd().glob(file)) if not path.is_absolute() else [path]
             if not expanded:
                 logger.error("Error: Input file does not exist:\n  %s", file)
                 return False, None
@@ -94,7 +95,7 @@ def parse_settings() -> ty.Optional[ScanSettings]:
             init_log += config.consume_init_log()
         if hasattr(args, "config"):
             config_setting = ConfigRegistry()
-            config_setting.load(args.config)
+            config_setting.load(Path(args.config))
             init_logging(args, config_setting)
             config = config_setting
         init_log += config.consume_init_log()

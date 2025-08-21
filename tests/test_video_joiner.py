@@ -18,7 +18,7 @@ CORRUPT_VIDEO_TOTAL_FRAMES = 596
 
 def test_decode_single(traffic_camera_video):
     """Test VideoJoiner with a single video as input."""
-    video = VideoJoiner(traffic_camera_video)
+    video = VideoJoiner([traffic_camera_video])
     assert video.total_frames == TRAFFIC_CAMERA_VIDEO_TOTAL_FRAMES
     while video.read(False) is True:
         pass

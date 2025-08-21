@@ -19,11 +19,10 @@ in the `dvr_scan` module.
 """
 
 import logging
-import os
-import os.path
 import typing as ty
 from abc import ABC, abstractmethod
 from configparser import DEFAULTSECT, ConfigParser, ParsingError
+from pathlib import Path
 
 from platformdirs import user_config_dir
 from scenedetect.frame_timecode import FrameTimecode
@@ -305,13 +304,13 @@ class RGBValue(ValidatedValue):
             ) from ex
 
 
-ConfigValue = ty.Union[bool, int, float, str]
+ConfigValue = ty.Union[bool, int, float, str, Path]
 ConfigDict = ty.Dict[str, ConfigValue]
 
-_CONFIG_FILE_NAME: ty.AnyStr = "dvr-scan.cfg"
-_CONFIG_FILE_DIR: ty.AnyStr = user_config_dir("DVR-Scan", False)
+_CONFIG_FILE_NAME: str = "dvr-scan.cfg"
+_CONFIG_FILE_DIR: Path = Path(user_config_dir("DVR-Scan", False))
 
-USER_CONFIG_FILE_PATH: ty.AnyStr = os.path.join(_CONFIG_FILE_DIR, _CONFIG_FILE_NAME)
+USER_CONFIG_FILE_PATH: Path = _CONFIG_FILE_DIR / _CONFIG_FILE_NAME
 
 # TODO: Investigate if centralizing user help strings here would be useful.
 # It might make CLI help and documentation are easier to create, as well as
@@ -426,7 +425,7 @@ class ConfigRegistry:
     def _log(self, level: int, message: str):
         self._init_log.append((level, message))
 
-    def load(self, path=None):
+    def load(self, path: ty.Optional[Path] = None):
         """Loads configuration file from given `path`. If `path` is not specified, tries
         to load from the default location (USER_CONFIG_FILE_PATH).
 
@@ -437,12 +436,12 @@ class ConfigRegistry:
         # Validate `path`, or if not provided, use USER_CONFIG_FILE_PATH if it exists.
         if path:
             self._log(logging.INFO, "Loading config from file: %s" % path)
-            if not os.path.exists(path):
+            if not path.exists():
                 self._log(logging.ERROR, "File not found: %s" % path)
                 raise ConfigLoadFailure(self._init_log)
         else:
             # Gracefully handle the case where there isn't a user config file.
-            if not os.path.exists(USER_CONFIG_FILE_PATH):
+            if not USER_CONFIG_FILE_PATH.exists():
                 self._log(logging.DEBUG, "User config file not found.")
                 return
             path = USER_CONFIG_FILE_PATH
@@ -451,7 +450,7 @@ class ConfigRegistry:
         config = ConfigParser()
         try:
             config_file_contents = "[%s]\n%s" % (DEFAULTSECT, open(path).read())
-            config.read_string(config_file_contents, source=path)
+            config.read_string(config_file_contents, source=str(path))
         except ParsingError as ex:
             raise ConfigLoadFailure(self._init_log, reason=ex) from ex
         except OSError as ex:

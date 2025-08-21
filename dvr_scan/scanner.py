@@ -14,8 +14,6 @@ Contains the motion scanning engine (`MotionScanner`) for DVR-Scan.
 """
 
 import logging
-import os
-import os.path
 import queue
 import subprocess
 import sys
@@ -23,6 +21,7 @@ import threading
 import typing as ty
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -35,7 +34,6 @@ from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
 from dvr_scan.platform import (
     HAS_PILLOW,
     HAS_TKINTER,
-    get_filename,
     get_min_screen_bounds,
     is_ffmpeg_available,
 )
@@ -166,8 +164,8 @@ def _recommended_kernel_size(frame_width: int, downscale_factor: int) -> int:
 
 
 def _extract_event_ffmpeg(
-    input_path: ty.AnyStr,
-    output_path: ty.AnyStr,
+    input_path: Path,
+    output_path: Path,
     start_time: FrameTimecode,
     end_time: FrameTimecode,
     ffmpeg_input_args: str,
@@ -182,16 +180,13 @@ def _extract_event_ffmpeg(
         "-ss",
         start_time.get_timecode(),
         "-i",
-        input_path,
+        str(input_path),
         "-t",
         (end_time - start_time).get_timecode(),
         *ffmpeg_out_args.split(" "),
-        output_path,
+        str(output_path),
     ]
-    # Log the arguments we're passing to ffmpeg.
-    if logger.getEffectiveLevel() == logging.DEBUG:
-        logger.debug("Running ffmpeg, args:\n  %s", " ".join(args))
-    elif log_args:
+    if log_args or logger.getEffectiveLevel() == logging.DEBUG:
         logger.info("%s", " ".join(args))
     # Invoke the command and capture the output (exception is raised on non-zero return code).
     output: str = subprocess.check_output(
@@ -221,7 +216,7 @@ class MotionScanner:
 
     def __init__(
         self,
-        input_videos: ty.List[ty.AnyStr],
+        input_videos: ty.List[Path],
         input_mode: str = "opencv",
         frame_skip: int = 0,
         show_progress: bool = False,
@@ -233,13 +228,13 @@ class MotionScanner:
         # Scan state and options they come from:
 
         # Output Parameters (set_output)
-        self._comp_file: ty.Optional[ty.AnyStr] = None  # -o/--output
-        self._mask_file: ty.Optional[ty.AnyStr] = None  # -mo/--mask-output
+        self._comp_file: ty.Optional[Path] = None  # -o/--output
+        self._mask_file: ty.Optional[Path] = None  # -mo/--mask-output
         self._fourcc: ty.Any = None  # opencv-codec
         self._output_mode: OutputMode = None  # -m/--output-mode / -so/--scan-only
         self._ffmpeg_input_args: ty.Optional[str] = None  # input args for OutputMode.FFMPEG/COPY
         self._ffmpeg_output_args: ty.Optional[str] = None  # output args for OutputMode.FFMPEG
-        self._output_dir: ty.AnyStr = ""  # -d/--directory
+        self._output_dir: ty.Optional[Path] = None  # -d/--directory
         # TODO: Replace uses of self._output_dir with
         # a helper function called "get_output_path".
 
@@ -269,8 +264,8 @@ class MotionScanner:
         # Region Parameters (set_region)
         self._region_editor = False  # -w/--region-window
         self._regions: ty.List[ty.List[Point]] = []  # -a/--add-region, -w/--region-window
-        self._load_region: ty.Optional[str] = None  # -R/--load-region
-        self._save_region: ty.Optional[str] = None  # -s/--save-region
+        self._load_region: ty.Optional[Path] = None  # -R/--load-region
+        self._save_region: ty.Optional[Path] = None  # -s/--save-region
         self._max_roi_size_deprecated = None
         self._show_roi_window_deprecated = False
         self._roi_deprecated = None
@@ -312,9 +307,9 @@ class MotionScanner:
 
     def set_output(
         self,
-        output_dir: ty.AnyStr = "",
-        comp_file: ty.Optional[ty.AnyStr] = None,
-        mask_file: ty.Optional[ty.AnyStr] = None,
+        output_dir: ty.Optional[Path] = None,
+        comp_file: ty.Optional[Path] = None,
+        mask_file: ty.Optional[Path] = None,
         output_mode: ty.Union[OutputMode, str] = OutputMode.SCAN_ONLY,
         opencv_fourcc: str = DEFAULT_VIDEOWRITER_CODEC,
         ffmpeg_input_args: str = DEFAULT_FFMPEG_INPUT_ARGS,
@@ -335,7 +330,7 @@ class MotionScanner:
                 XVID, MP4V, MP42, H264.
             ffmpeg_input_args: Arguments to pass to ffmpeg before the input video. Only used
                 when output_mode is OutputMode.FFMPEG or OutputMode.COPY.
-            ffmpeg_out_args: Arguments to pass to ffmpeg for the output video. Only used when
+            ffmpeg_output_args: Arguments to pass to ffmpeg for the output video. Only used when
                 output_mode is OutputMode.FFMPEG.
 
         Raises:
@@ -349,9 +344,9 @@ class MotionScanner:
              - output_mode does not exist in OutputMode
         """
         if output_dir:
-            if comp_file and os.path.isabs(comp_file):
+            if comp_file and comp_file.is_absolute():
                 raise ValueError("output file cannot be absolute path if output directory is set!")
-            if mask_file and os.path.isabs(mask_file):
+            if mask_file and mask_file.is_absolute():
                 raise ValueError("mask file cannot be absolute path if output directory is set!")
         if len(opencv_fourcc) != 4:
             raise ValueError("codec must be exactly FOUR (4) characters")
@@ -376,7 +371,7 @@ class MotionScanner:
         self._ffmpeg_output_args = ffmpeg_output_args
         # If an output directory is defined, ensure it exists, and if not, try to create it.
         if output_dir:
-            os.makedirs(output_dir, exist_ok=True)
+            output_dir.mkdir(parents=True, exist_ok=True)
         self._output_dir = output_dir
 
     def set_overlays(
@@ -436,8 +431,8 @@ class MotionScanner:
         self,
         region_editor: bool = False,
         regions: ty.Optional[ty.List[ty.List[Point]]] = None,
-        load_region: ty.Optional[str] = None,
-        save_region: ty.Optional[str] = None,
+        load_region: ty.Optional[Path] = None,
+        save_region: ty.Optional[Path] = None,
         roi_deprecated: ty.Optional[ty.List[int]] = None,
     ):
         """Set options for limiting detection regions."""
@@ -512,7 +507,7 @@ class MotionScanner:
             return
 
         if self._load_region:
-            if not os.path.exists(self._load_region):
+            if not self._load_region.exists():
                 logger.error(f"File does not exist: {self._load_region}")
                 raise ValueError(
                     "Could not find specified region file. Ensure the specified path is valid "
@@ -527,7 +522,7 @@ class MotionScanner:
                     reason = "Could not parse region file!"
                 logger.error(f"Error loading region from {self._load_region}: {reason}")
             else:
-                logger.debug(
+                logger.info(
                     "Loaded %d region%s:\n%s",
                     len(region_editor),
                     "s" if len(region_editor) > 1 else "",
@@ -594,7 +589,7 @@ class MotionScanner:
             )
             path = self._save_region
             if self._output_dir:
-                path = os.path.join(self._output_dir, path)
+                path = self._output_dir / path
             with open(path, "w") as region_file:
                 for shape in self._regions:
                     region_file.write(" ".join(f"{x} {y}" for x, y in shape))
@@ -880,21 +875,21 @@ class MotionScanner:
                             "event %d high score %f" % (1 + self._num_events, self._highscore)
                         )
                         if self._thumbnails == "highscore":
-                            video_name = get_filename(
-                                path=self._input.paths[0], include_extension=False
-                            )
-                            output_path = (
+                            video_name = self._input.paths[0].stem
+                            output_path: Path = (
                                 self._comp_file
                                 if self._comp_file
-                                else OUTPUT_FILE_TEMPLATE.format(
-                                    VIDEO_NAME=video_name,
-                                    EVENT_NUMBER="%04d" % (1 + self._num_events),
-                                    EXTENSION="jpg",
+                                else Path(
+                                    OUTPUT_FILE_TEMPLATE.format(
+                                        VIDEO_NAME=video_name,
+                                        EVENT_NUMBER="%04d" % (1 + self._num_events),
+                                        EXTENSION="jpg",
+                                    )
                                 )
                             )
                             if self._output_dir:
-                                output_path = os.path.join(self._output_dir, output_path)
-                            cv2.imwrite(output_path, self._highframe)
+                                output_path = self._output_dir / output_path
+                            cv2.imwrite(str(output_path), self._highframe)
                             self._highscore = 0
                             self._highframe = None
 
@@ -1007,19 +1002,21 @@ class MotionScanner:
 
             logger.debug("event %d high score %f" % (1 + self._num_events, self._highscore))
             if self._thumbnails == "highscore":
-                video_name = get_filename(path=self._input.paths[0], include_extension=False)
+                video_name = self._input.paths[0].stem
                 output_path = (
                     self._comp_file
                     if self._comp_file
-                    else OUTPUT_FILE_TEMPLATE.format(
-                        VIDEO_NAME=video_name,
-                        EVENT_NUMBER="%04d" % (1 + self._num_events),
-                        EXTENSION="jpg",
+                    else Path(
+                        OUTPUT_FILE_TEMPLATE.format(
+                            VIDEO_NAME=video_name,
+                            EVENT_NUMBER="%04d" % (1 + self._num_events),
+                            EXTENSION="jpg",
+                        )
                     )
                 )
                 if self._output_dir:
-                    output_path = os.path.join(self._output_dir, output_path)
-                cv2.imwrite(output_path, self._highframe)
+                    output_path = self._output_dir / output_path
+                cv2.imwrite(str(output_path), self._highframe)
                 self._highscore = 0
                 self._highframe = None
 
@@ -1085,18 +1082,16 @@ class MotionScanner:
             # Make sure main thread stops processing loop.
             decode_queue.put(None)
 
-    def _init_video_writer(
-        self, path: ty.AnyStr, frame_size: ty.Tuple[int, int]
-    ) -> cv2.VideoWriter:
+    def _init_video_writer(self, path: Path, frame_size: ty.Tuple[int, int]) -> cv2.VideoWriter:
         """Create a new cv2.VideoWriter using the correct framerate."""
         if self._output_dir:
-            path = os.path.join(self._output_dir, path)
+            path = self._output_dir / path
         effective_framerate = (
             self._input.framerate
             if self._frame_skip < 1
             else self._input.framerate / (1 + self._frame_skip)
         )
-        return cv2.VideoWriter(path, self._fourcc, effective_framerate, frame_size)
+        return cv2.VideoWriter(str(path), self._fourcc, effective_framerate, frame_size)
 
     def _on_encode_frame_event(self, event: EncodeFrameEvent):
         size = (event.frame_bgr.shape[1], event.frame_bgr.shape[0])
@@ -1110,14 +1105,16 @@ class MotionScanner:
             return
         if self._video_writer is None:
             # Use the first input video name as a filename template.
-            video_name = get_filename(path=self._input.paths[0], include_extension=False)
+            video_name = self._input.paths[0].stem
             output_path = (
                 self._comp_file
                 if self._comp_file
-                else OUTPUT_FILE_TEMPLATE.format(
-                    VIDEO_NAME=video_name,
-                    EVENT_NUMBER="%04d" % (1 + self._num_events),
-                    EXTENSION="avi",
+                else Path(
+                    OUTPUT_FILE_TEMPLATE.format(
+                        VIDEO_NAME=video_name,
+                        EVENT_NUMBER="%04d" % (1 + self._num_events),
+                        EXTENSION="avi",
+                    )
                 )
             )
             self._video_writer = self._init_video_writer(output_path, size)
@@ -1184,18 +1181,20 @@ class MotionScanner:
             else COPY_MODE_OUTPUT_ARGS
         )
         # Use the first input video name as a filename template.
-        video_name = get_filename(path=self._input.paths[0], include_extension=False)
+        video_name = self._input.paths[0].stem
         output_path = (
             self._comp_file
             if self._comp_file
-            else OUTPUT_FILE_TEMPLATE.format(
-                VIDEO_NAME=video_name,
-                EVENT_NUMBER="%04d" % self._num_events,
-                EXTENSION="mp4",
+            else Path(
+                OUTPUT_FILE_TEMPLATE.format(
+                    VIDEO_NAME=video_name,
+                    EVENT_NUMBER="%04d" % self._num_events,
+                    EXTENSION="mp4",
+                )
             )
         )
         if self._output_dir:
-            output_path = os.path.join(self._output_dir, output_path)
+            output_path = self._output_dir / output_path
         # Only log the args passed to ffmpeg on the first event, to reduce log spam.
         log_args = False
         if self._num_events == 1:

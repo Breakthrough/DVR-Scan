@@ -15,8 +15,8 @@ contiguous video file.
 """
 
 import logging
-import os
 import typing as ty
+from pathlib import Path
 
 import cv2
 import numpy
@@ -46,15 +46,13 @@ class VideoJoiner:
         VideoOpenFailure: Failed to open a video, or video parameters don't match.
     """
 
-    def __init__(self, paths: ty.Union[ty.AnyStr, ty.List[ty.AnyStr]], backend: str = "opencv"):
+    def __init__(self, paths: ty.List[Path], backend: str = "opencv"):
         if backend not in AVAILABLE_BACKENDS:
             raise BackendUnavailable(backend=backend)
         self._backend: VideoStream = AVAILABLE_BACKENDS[backend]
 
-        if isinstance(paths, (str, bytes)):
-            paths = [paths]
         assert paths
-        self._paths = paths
+        self._paths = [Path(p) for p in paths]
         self._path_index = 0
 
         self._cap: ty.Optional[VideoStream] = None
@@ -66,7 +64,7 @@ class VideoJoiner:
         self._last_cap_pos: FrameTimecode = FrameTimecode(0, self.framerate)
 
     @property
-    def paths(self) -> ty.List[ty.AnyStr]:
+    def paths(self) -> ty.List[Path]:
         """All paths this object was created with."""
         return self._paths
 
@@ -115,7 +113,7 @@ class VideoJoiner:
                 logger.info(
                     f"Processing complete, opening next video: {self._paths[self._path_index]}"
                 )
-                self._cap = self._backend(self._paths[self._path_index])
+                self._cap = self._backend(str(self._paths[self._path_index]))
                 self._last_cap_pos = self._cap.base_timecode
                 return self.read(decode=decode)
             logger.debug("No more input to process.")
@@ -138,13 +136,13 @@ class VideoJoiner:
 
     def _load_input_videos(self, backend: str):
         unsupported_codec: bool = False
-        validated_paths: ty.List[str] = []
+        validated_paths: ty.List[Path] = []
         opened_video: bool = False
         for path in self._paths:
-            video_name = os.path.basename(path)
+            video_name = path.name
             try:
                 assert backend in AVAILABLE_BACKENDS
-                cap = self._backend(path)
+                cap = self._backend(str(path))
             except VideoOpenFailure:
                 logger.error(f"Error: Couldn't load video {path} with {backend}")
                 raise
