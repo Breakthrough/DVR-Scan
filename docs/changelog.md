@@ -5,9 +5,36 @@
 
 #### Changelog
 
+
+### 1.8 (TBD)
+
+#### Release Notes
+
+DVR-Scan 1.8 includes several UI additions and enhancements, and fixes a long-standing issue with Python packaging dependencies.
+
+#### Changelog
+
+ * [general] The Python distribution now correctly requires `opencv-python` [#204](https://github.com/Breakthrough/DVR-Scan/issues/204)
+    * There is a separate `dvr-scan-headless` package available for servers which requires `opencv-python-headless` and only includes CLI functionality
+ * [bugfix] Fix bounding box overlay stuck on when using the OpenCV output mode [#218](https://github.com/Breakthrough/DVR-Scan/issues/218)
+ * [feature] UI additions and enhancements:
+     * add option for enabling output concatenation [#223](https://github.com/Breakthrough/DVR-Scan/issues/223)
+     * output folder now opens on completion by default [#226](https://github.com/Breakthrough/DVR-Scan/issues/226)
+     * input videos can now be sorted by each column
+     * add menu button to open DVR-Scan log folder
+ * [feature] Add `max-area`, `max-width`, and `max-height` options to help suppress improbable motion events, such as those caused by rain or fog [#224](https://github.com/Breakthrough/DVR-Scan/issues/224) (thanks @elvis-epx)
+ * [bugfix] Log files no longer append to the same file, and now have randomized suffixes to support multiple instances [#227](https://github.com/Breakthrough/DVR-Scan/issues/227)
+     * Config option changes: logs are no longer appended to the same file, so `max-log-size` is no longer required, and `max-log-files` has been raised from 4 to 15
+ * [bugfix] Use `pathlib.Path` everywhere for path handling to mitigate issues with ffmpeg output mode on Windows [#220](https://github.com/Breakthrough/DVR-Scan/issues/220)
+ * [bugfix] Fix inaccurate progress bar when using `-st`/`--start-time` [#191](https://github.com/Breakthrough/DVR-Scan/issues/191)
+ * [bugfix] Fix missing log message when processing next video [#213](https://github.com/Breakthrough/DVR-Scan/issues/213)
+ * [improvement] Update default ffmpeg stream mapping to more gracefully handle audio/subtitles [#219](https://github.com/Breakthrough/DVR-Scan/issues/219)
+
+
 ### 1.7.0.1 (March 11, 2025)
 
 Re-release of Windows distribution that fixes program hanging when starting scan ([#209](https://github.com/Breakthrough/DVR-Scan/issues/209)). This was caused due to the way the program was built. There are no code changes, so the Python distribution has not been re-released.
+
 
 ### 1.7 (February 28, 2025)
 
@@ -343,17 +370,4 @@ This version of DVR-Scan includes a new, faster background subtraction algorithm
 
 ----------------------------------------------------------
 
-
 ### In Development
-
- * [general] The Python distribution now requires `opencv-python`
-    *  There is a separate `dvr-scan-headless` package available for servers which requires `opencv-python-headless` and only includes CLI functionality
- * [bugfix] Fix bounding box overlay stuck on when using the OpenCV output mode [#218](https://github.com/Breakthrough/DVR-Scan/issues/218)
- * [feature] various UI enhancements:
-     * input videos can now be sorted
-     * add button to open log folder
- * [feature] Add `max-area`, `max-width`, and `max-height` options to help suppress improbable motion events, such as those caused by rain or fog [#224](https://github.com/Breakthrough/DVR-Scan/issues/224) (thanks @elvis-epx)
- * [bugfix] Log files no longer append to the same file, and now have randomized suffixes to support multiple instances [#227](https://github.com/Breakthrough/DVR-Scan/issues/227)
-     * Config option changes: logs are no longer appended to the same file, so `max-log-size` is no longer required, and `max-log-files` has been raised from 4 to 15
-* [feature] Add ability to open output folder on completion, on by default [#226](https://github.com/Breakthrough/DVR-Scan/issues/226)
-* [improvement] Add UI option for enabling output concatenation [#223](https://github.com/Breakthrough/DVR-Scan/issues/223)
