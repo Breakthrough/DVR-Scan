@@ -12,7 +12,6 @@
 """Business logic shared between the DVR-Scan CLI and the DVR-Scan GUI."""
 
 import argparse
-import glob
 import logging
 import os
 import random
@@ -82,8 +81,7 @@ def prune_log_files(log_folder: Path, max_log_files: int, name_prefix: str):
     # Prune oldest log files if we have too many.
     if max_log_files > 0:
         # We find all DVR-Scan log files by globbing, then remove the oldest ones.
-        log_file_pattern = str(log_folder / f"{name_prefix}.*.log")
-        log_files = list(glob.glob(log_file_pattern))
+        log_files = list(log_folder.glob(f"{name_prefix}.*.log"))
         if len(log_files) > max_log_files:
             logger.debug(
                 "pruning oldest logs:"
@@ -92,7 +90,7 @@ def prune_log_files(log_folder: Path, max_log_files: int, name_prefix: str):
             log_files.sort(key=os.path.getmtime)
             for i in range(len(log_files) - max_log_files):
                 try:
-                    os.remove(log_files[i])
+                    log_files[i].unlink()
                     logger.debug("removed log: %s", log_files[i])
                 except PermissionError:
                     logger.warning(
@@ -126,16 +124,21 @@ def init_scanner(
         debug_mode=settings.get("debug"),
     )
 
+    output_dir = settings.get("output-dir")
     scanner.set_output(
-        comp_file=settings.get("output", ignore_config=True),
-        mask_file=settings.get_arg("mask-output"),
+        comp_file=Path(settings.get("output", ignore_config=True))
+        if settings.get("output", ignore_config=True)
+        else None,
+        mask_file=Path(settings.get_arg("mask-output"))
+        if settings.get_arg("mask-output")
+        else None,
         output_mode=OutputMode.SCAN_ONLY
         if settings.get_arg("scan-only")
         else settings.get("output-mode"),
         opencv_fourcc=settings.get("opencv-codec"),
         ffmpeg_input_args=settings.get("ffmpeg-input-args"),
         ffmpeg_output_args=settings.get("ffmpeg-output-args"),
-        output_dir=settings.get("output-dir"),
+        output_dir=Path(output_dir) if output_dir else None,
     )
 
     timecode_overlay = None
@@ -217,12 +220,13 @@ def init_scanner(
         end_time=settings.get_arg("end-time"),
         duration=settings.get_arg("duration"),
     )
-
+    load_region = settings.get("load-region")
+    save_region = settings.get_arg("save-region")
     scanner.set_regions(
         region_editor=settings.get("region-editor"),
         regions=settings.get_arg("regions"),
-        load_region=settings.get("load-region"),
-        save_region=settings.get_arg("save-region"),
+        load_region=Path(load_region) if load_region else None,
+        save_region=Path(save_region) if save_region else None,
         roi_deprecated=settings.get("region-of-interest"),
     )
 

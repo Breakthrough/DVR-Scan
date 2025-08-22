@@ -169,16 +169,6 @@ def init_logger(
     return logging.getLogger("dvr_scan")
 
 
-def get_filename(path: ty.AnyStr, include_extension: bool) -> ty.AnyStr:
-    """Get filename of the given path, optionally excluding extension."""
-    filename = os.path.basename(path)
-    if not include_extension:
-        dot_position = filename.rfind(".")
-        if dot_position > 0:
-            filename = filename[:dot_position]
-    return filename
-
-
 def get_system_version_info(separator_width: int = 40) -> str:
     """Get the system's operating system, Python, packages, and external tool versions.
     Useful for debugging or filing bug reports.
