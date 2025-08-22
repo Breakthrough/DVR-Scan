@@ -66,7 +66,7 @@ DEFAULT_FFMPEG_OUTPUT_ARGS = (
 COPY_MODE_OUTPUT_ARGS = "-map 0:v:0 -map 0:a? -map 0:s? -c:v copy -c:a copy"
 """Default arguments passed to ffmpeg when using OutputMode.COPY."""
 
-# TODO(1.8): Add ability to set output name template.
+# TODO(#89): Add ability to set output name template.
 OUTPUT_FILE_TEMPLATE = "{VIDEO_NAME}.DSME_{EVENT_NUMBER}.{EXTENSION}"
 """Template to use for generating output files."""
 
@@ -551,8 +551,7 @@ class MotionScanner:
                 raise SystemExit(1)
 
             logger.info("Selecting area of interest:")
-            # TODO(1.8): Ensure ROI window respects start time if set.
-            # TODO(1.8): We should process this frame (right now it gets skipped).
+            # TODO(#239): We should process this frame (right now it gets skipped).
             frame_for_crop = self._input.read()
             scale_factor = 1
             screen_bounds = get_min_screen_bounds()

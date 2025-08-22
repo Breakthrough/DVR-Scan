@@ -345,7 +345,7 @@ CONFIG_MAP: ConfigDict = {
     "kernel-size": KernelSizeValue(),
     "downscale-factor": 0,
     "learning-rate": float(-1),
-    # TODO(1.8): Remove, has been replaced with region files.
+    # TODO(1.9): Remove, has been replaced with region files.
     "region-of-interest": RegionValueDeprecated(),
     "load-region": "",
     "frame-skip": 0,

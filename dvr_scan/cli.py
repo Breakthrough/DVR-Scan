@@ -354,7 +354,7 @@ def get_cli_parser(user_config: ConfigRegistry):
         help=("Timecode to stop processing the input (see -st for valid timecode formats)."),
     )
 
-    # TODO(1.8): Remove -roi (replaced by -r/--region-editor and -a/--add-region).
+    # TODO(1.9): Remove -roi (replaced by -r/--region-editor and -a/--add-region).
     parser.add_argument(
         "-roi",
         "--region-of-interest",
