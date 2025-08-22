@@ -138,7 +138,7 @@ class VideoJoiner:
 
     def _load_input_videos(self, backend: str):
         unsupported_codec: bool = False
-        validated_paths: List[str] = []
+        validated_paths: ty.List[str] = []
         opened_video: bool = False
         for path in self._paths:
             video_name = os.path.basename(path)

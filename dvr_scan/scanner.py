@@ -20,9 +20,9 @@ import queue
 import subprocess
 import sys
 import threading
+import typing as ty
 from dataclasses import dataclass
 from enum import Enum
-import typing as ty
 
 import cv2
 import numpy as np
@@ -1085,7 +1085,9 @@ class MotionScanner:
             # Make sure main thread stops processing loop.
             decode_queue.put(None)
 
-    def _init_video_writer(self, path: ty.AnyStr, frame_size: ty.Tuple[int, int]) -> cv2.VideoWriter:
+    def _init_video_writer(
+        self, path: ty.AnyStr, frame_size: ty.Tuple[int, int]
+    ) -> cv2.VideoWriter:
         """Create a new cv2.VideoWriter using the correct framerate."""
         if self._output_dir:
             path = os.path.join(self._output_dir, path)
