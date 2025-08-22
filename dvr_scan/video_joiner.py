@@ -16,7 +16,7 @@ contiguous video file.
 
 import logging
 import os
-from typing import AnyStr, List, Optional, Tuple, Union
+import typing as ty
 
 import cv2
 import numpy
@@ -46,7 +46,7 @@ class VideoJoiner:
         VideoOpenFailure: Failed to open a video, or video parameters don't match.
     """
 
-    def __init__(self, paths: Union[AnyStr, List[AnyStr]], backend: str = "opencv"):
+    def __init__(self, paths: ty.Union[ty.AnyStr, ty.List[ty.AnyStr]], backend: str = "opencv"):
         if backend not in AVAILABLE_BACKENDS:
             raise BackendUnavailable(backend=backend)
         self._backend: VideoStream = AVAILABLE_BACKENDS[backend]
@@ -57,7 +57,7 @@ class VideoJoiner:
         self._paths = paths
         self._path_index = 0
 
-        self._cap: Optional[VideoStream] = None
+        self._cap: ty.Optional[VideoStream] = None
         self._total_frames: int = 0
         self._decode_failures: int = 0
         self._load_input_videos(backend)
@@ -66,12 +66,12 @@ class VideoJoiner:
         self._last_cap_pos: FrameTimecode = FrameTimecode(0, self.framerate)
 
     @property
-    def paths(self) -> List[AnyStr]:
+    def paths(self) -> ty.List[ty.AnyStr]:
         """All paths this object was created with."""
         return self._paths
 
     @property
-    def resolution(self) -> Tuple[int, int]:
+    def resolution(self) -> ty.Tuple[int, int]:
         """Video resolution (width x height) in pixels."""
         return self._cap.frame_size
 
@@ -101,7 +101,7 @@ class VideoJoiner:
     def position_ms(self) -> float:
         return self._cap.position_ms
 
-    def read(self, decode: bool = True) -> Optional[numpy.ndarray]:
+    def read(self, decode: bool = True) -> ty.Optional[numpy.ndarray]:
         """Read/decode the next frame."""
         next = self._cap.read(decode=decode)
         if next is False:
@@ -138,7 +138,7 @@ class VideoJoiner:
 
     def _load_input_videos(self, backend: str):
         unsupported_codec: bool = False
-        validated_paths: List[str] = []
+        validated_paths: ty.List[str] = []
         opened_video: bool = False
         for path in self._paths:
             video_name = os.path.basename(path)

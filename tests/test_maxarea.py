@@ -15,7 +15,7 @@ Tests parameters max-area, max-height, max-width
 
 import os
 import subprocess
-from typing import List
+import typing as ty
 
 DVR_SCAN_COMMAND: str = "python -m dvr_scan"
 BASE_OUTPUT_NAME: str = "haze"
@@ -59,7 +59,7 @@ BASE_COMMAND_TIMECODE_LIST_GOLDEN = """
 """[1:]
 
 
-def _run_dvr_scan(args: List[str]) -> str:
+def _run_dvr_scan(args: ty.List[str]) -> str:
     """Helper to run dvr-scan with a list of arguments and return the output."""
     # Add quotes around arguments with spaces.
     processed_args = []

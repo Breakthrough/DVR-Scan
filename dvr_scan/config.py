@@ -21,9 +21,9 @@ in the `dvr_scan` module.
 import logging
 import os
 import os.path
+import typing as ty
 from abc import ABC, abstractmethod
 from configparser import DEFAULTSECT, ConfigParser, ParsingError
-from typing import Any, AnyStr, Dict, List, Optional, Tuple, Union
 
 from platformdirs import user_config_dir
 from scenedetect.frame_timecode import FrameTimecode
@@ -31,7 +31,7 @@ from scenedetect.frame_timecode import FrameTimecode
 from dvr_scan.scanner import DEFAULT_FFMPEG_INPUT_ARGS, DEFAULT_FFMPEG_OUTPUT_ARGS
 
 # Backwards compatibility for config options that were renamed/replaced.
-MIGRATED_CONFIG_OPTION: Dict[str, str] = {
+MIGRATED_CONFIG_OPTION: ty.Dict[str, str] = {
     "timecode": "time-code",
     "timecode-margin": "text-margin",
     "timecode-font-scale": "text-font-scale",
@@ -40,7 +40,7 @@ MIGRATED_CONFIG_OPTION: Dict[str, str] = {
     "timecode-bg-color": "text-bg-color",
 }
 
-DEPRECATED_CONFIG_OPTION: Dict[str, str] = {
+DEPRECATED_CONFIG_OPTION: ty.Dict[str, str] = {
     "region-of-interest": "The region-of-interest config option is deprecated and may be removed. "
     "Use the load-region option instead, or specify -R/--load-region."
 }
@@ -51,7 +51,7 @@ class ValidatedValue(ABC):
 
     @property
     @abstractmethod
-    def value(self) -> Any:
+    def value(self) -> ty.Any:
         """Get the value after validation."""
         raise NotImplementedError()
 
@@ -79,13 +79,13 @@ class TimecodeValue(ValidatedValue):
 
     Stores value in original representation."""
 
-    def __init__(self, value: Union[int, float, str]):
+    def __init__(self, value: ty.Union[int, float, str]):
         # Ensure value is a valid timecode.
         FrameTimecode(timecode=value, fps=100.0)
         self._value = value
 
     @property
-    def value(self) -> Union[int, float, str]:
+    def value(self) -> ty.Union[int, float, str]:
         return self._value
 
     def __repr__(self) -> str:
@@ -109,9 +109,9 @@ class RangeValue(ValidatedValue):
 
     def __init__(
         self,
-        value: Union[int, float],
-        min_val: Union[int, float],
-        max_val: Union[int, float],
+        value: ty.Union[int, float],
+        min_val: ty.Union[int, float],
+        max_val: ty.Union[int, float],
     ):
         if value < min_val or value > max_val:
             # min and max are inclusive.
@@ -121,16 +121,16 @@ class RangeValue(ValidatedValue):
         self._max_val = max_val
 
     @property
-    def value(self) -> Union[int, float]:
+    def value(self) -> ty.Union[int, float]:
         return self._value
 
     @property
-    def min_val(self) -> Union[int, float]:
+    def min_val(self) -> ty.Union[int, float]:
         """Minimum value of the range."""
         return self._min_val
 
     @property
-    def max_val(self) -> Union[int, float]:
+    def max_val(self) -> ty.Union[int, float]:
         """Maximum value of the range."""
         return self._max_val
 
@@ -193,7 +193,7 @@ class RegionValueDeprecated(ValidatedValue):
     _IGNORE_CHARS = [",", "/", "(", ")"]
     """Characters to ignore."""
 
-    def __init__(self, value: Optional[str] = None, allow_size: bool = False):
+    def __init__(self, value: ty.Optional[str] = None, allow_size: bool = False):
         if value is not None:
             translation_table = str.maketrans(
                 {char: " " for char in RegionValueDeprecated._IGNORE_CHARS}
@@ -211,7 +211,7 @@ class RegionValueDeprecated(ValidatedValue):
             self._value = None
 
     @property
-    def value(self) -> Optional[List[int]]:
+    def value(self) -> ty.Optional[ty.List[int]]:
         return self._value
 
     def __repr__(self) -> str:
@@ -244,7 +244,7 @@ class RGBValue(ValidatedValue):
     _IGNORE_CHARS = [",", "/", "(", ")"]
     """Characters to ignore."""
 
-    def __init__(self, value: Union[int, str, "RGBValue"]):
+    def __init__(self, value: ty.Union[int, str, "RGBValue"]):
         if isinstance(value, RGBValue):
             return value
         # If not an int, convert to one.
@@ -281,7 +281,7 @@ class RGBValue(ValidatedValue):
         )
 
     @property
-    def value(self) -> Tuple[int, int, int]:
+    def value(self) -> ty.Tuple[int, int, int]:
         return self._value
 
     @property
@@ -305,13 +305,13 @@ class RGBValue(ValidatedValue):
             ) from ex
 
 
-ConfigValue = Union[bool, int, float, str]
-ConfigDict = Dict[str, ConfigValue]
+ConfigValue = ty.Union[bool, int, float, str]
+ConfigDict = ty.Dict[str, ConfigValue]
 
-_CONFIG_FILE_NAME: AnyStr = "dvr-scan.cfg"
-_CONFIG_FILE_DIR: AnyStr = user_config_dir("DVR-Scan", False)
+_CONFIG_FILE_NAME: ty.AnyStr = "dvr-scan.cfg"
+_CONFIG_FILE_DIR: ty.AnyStr = user_config_dir("DVR-Scan", False)
 
-USER_CONFIG_FILE_PATH: AnyStr = os.path.join(_CONFIG_FILE_DIR, _CONFIG_FILE_NAME)
+USER_CONFIG_FILE_PATH: ty.AnyStr = os.path.join(_CONFIG_FILE_DIR, _CONFIG_FILE_NAME)
 
 # TODO: Investigate if centralizing user help strings here would be useful.
 # It might make CLI help and documentation are easier to create, as well as
@@ -382,7 +382,7 @@ CONFIG_MAP: ConfigDict = {
 The types of these values are used when decoding the configuration file. Valid choices for
 certain string options are stored in `CHOICE_MAP`."""
 
-CHOICE_MAP: Dict[str, List[str]] = {
+CHOICE_MAP: ty.Dict[str, ty.List[str]] = {
     "input-mode": ["opencv", "pyav", "moviepy"],
     "opencv-codec": ["XVID", "MP4V", "MP42", "H264"],
     "output-mode": ["scan_only", "opencv", "copy", "ffmpeg"],
@@ -398,7 +398,7 @@ in lowercase in this map."""
 class ConfigLoadFailure(Exception):
     """Raised when a user-specified configuration file fails to be loaded or validated."""
 
-    def __init__(self, init_log: Tuple[int, str], reason: Optional[Exception] = None):
+    def __init__(self, init_log: ty.Tuple[int, str], reason: ty.Optional[Exception] = None):
         super().__init__()
         self.init_log = init_log
         self.reason = reason
@@ -409,7 +409,7 @@ class ConfigRegistry:
     default values specified in the global CONFIG_MAP."""
 
     def __init__(self):
-        self._init_log: List[Tuple[int, str]] = []
+        self._init_log: ty.List[ty.Tuple[int, str]] = []
         self._config: ConfigDict = {}
 
     @property
@@ -482,7 +482,7 @@ class ConfigRegistry:
 
     def _parse_config(
         self, config: ConfigParser
-    ) -> Tuple[Optional[ConfigDict], List[Tuple[int, str]]]:
+    ) -> ty.Tuple[ty.Optional[ConfigDict], ty.List[ty.Tuple[int, str]]]:
         """Process the given configuration into a key-value mapping.
 
         Returns:
@@ -568,7 +568,7 @@ class ConfigRegistry:
     def get(
         self,
         option: str,
-        override: Optional[ConfigValue] = None,
+        override: ty.Optional[ConfigValue] = None,
         ignore_default: bool = False,
     ) -> ConfigValue:
         """Get the current setting or default value of the specified option."""
@@ -585,7 +585,7 @@ class ConfigRegistry:
             return value.value  # Extract validated value.
         return value
 
-    def get_help_string(self, option: str, show_default: Optional[bool] = None) -> str:
+    def get_help_string(self, option: str, show_default: ty.Optional[bool] = None) -> str:
         """Get string for help text including the option's value, if set, otherwise the default.
 
         Arguments:
