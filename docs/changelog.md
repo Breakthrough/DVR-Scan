@@ -29,6 +29,7 @@ DVR-Scan 1.8 includes several UI additions and enhancements, and fixes a long-st
  * [bugfix] Fix inaccurate progress bar when using `-st`/`--start-time` [#191](https://github.com/Breakthrough/DVR-Scan/issues/191)
  * [bugfix] Fix missing log message when processing next video [#213](https://github.com/Breakthrough/DVR-Scan/issues/213)
  * [improvement] Update default ffmpeg stream mapping to more gracefully handle audio/subtitles [#219](https://github.com/Breakthrough/DVR-Scan/issues/219)
+ * [dist] Update ffmpeg from 7.1 -> 8.0 in binary distributions
 
 
 ### 1.7.0.1 (March 11, 2025)

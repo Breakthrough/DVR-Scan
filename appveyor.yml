@@ -19,7 +19,7 @@ environment:
     secure: of3o1pInqCJYwKLFsiadbsRYazCmCuZq7r2roaYvYXmBvm6e6JHsRU47waylTmhm
   ai_license_salt:
     secure: +NKWwlkEptlThgfeL35pLo7EsnkJc+4WODm8tTg1aO5fc0duQ4r100fHQYj6nzhyUdy3Dhs/mOLkxD8rNbBiEQ==
-  ffmpeg_version: "7.1"
+  ffmpeg_version: "8.0"
 
 # SignPath Config for Code Signing
 deploy:
@@ -66,7 +66,7 @@ install:
   - appveyor DownloadFile https://www.advancedinstaller.com/downloads/advinst.msi
   - msiexec /i advinst.msi /qn
   # TODO: Determine the path to Advanced Installer more programatically.
-  - 'SET PATH=%PATH%;C:\\Program Files (x86)\\Caphyon\\Advanced Installer 22.5\\bin\\x86'
+  - 'SET PATH=%PATH%;C:\\Program Files (x86)\\Caphyon\\Advanced Installer 22.9.1\\bin\\x86'
   # License path must be absolute
   - AdvancedInstaller.com /RegisterOffline "%cd%\license65.dat"
   # Create MSI installer

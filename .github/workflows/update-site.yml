@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 env:
-  ffmpeg_version: "7.1"
+  ffmpeg_version: "8.0"
   UV_SYSTEM_PYTHON: 1
 
 
