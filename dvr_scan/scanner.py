@@ -58,13 +58,15 @@ MAX_ENCODE_QUEUE_SIZE: int = 4
 DEFAULT_FFMPEG_INPUT_ARGS = "-v error"
 """Default arguments to add before input when invoking ffmpeg."""
 
-DEFAULT_FFMPEG_OUTPUT_ARGS = "-map 0 -c:v libx264 -preset fast -crf 21 -c:a aac -sn"
+DEFAULT_FFMPEG_OUTPUT_ARGS = (
+    "-map 0:v:0 -map 0:a? -map 0:s? -c:v libx264 -preset veryfast -crf 22 -c:a aac"
+)
 """Default arguments passed to ffmpeg when using OutputMode.FFMPEG."""
 
-COPY_MODE_OUTPUT_ARGS = "-map 0 -c:v copy -c:a copy -sn"
+COPY_MODE_OUTPUT_ARGS = "-map 0:v:0 -map 0:a? -map 0:s? -c:v copy -c:a copy"
 """Default arguments passed to ffmpeg when using OutputMode.COPY."""
 
-# TODO(1.8): Add ability to set output name template."
+# TODO(1.8): Add ability to set output name template.
 OUTPUT_FILE_TEMPLATE = "{VIDEO_NAME}.DSME_{EVENT_NUMBER}.{EXTENSION}"
 """Template to use for generating output files."""
 
