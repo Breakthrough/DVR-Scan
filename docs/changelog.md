@@ -407,3 +407,4 @@ This version of DVR-Scan includes a new, faster background subtraction algorithm
 ## DVR-Scan 1.9
 
  * [general] Modernize project branding and logos, improve legibility at smaller sizes
+ * [feature] Allow translation of shapes in region editor (hold shift to drag)
