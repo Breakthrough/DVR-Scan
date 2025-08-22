@@ -169,7 +169,6 @@ def squared_distance(a: Point, b: Point) -> int:
     return (a.x - b.x) ** 2 + (a.y - b.y) ** 2
 
 
-# TODO: Allow translating polygons using middle mouse button.
 class RegionEditor:
     def __init__(
         self,
@@ -220,6 +219,8 @@ class RegionEditor:
         self._scale_widget: ttk.Scale = None
         self._pan_enabled: bool = False
         self._panning: bool = False
+        self._translate_enabled: bool = False
+        self._translating_shape: bool = False
         self._controls_window: tk.Toplevel = None
         self._region_selector: ttk.Combobox = None
 
@@ -356,6 +357,8 @@ class RegionEditor:
 
     def _set_cursor(self):
         if self._pan_enabled or self._panning:
+            self._editor_canvas.config(cursor="fleur")
+        elif self._translate_enabled:
             self._editor_canvas.config(cursor="fleur")
         elif self._hover_point is None:
             self._editor_canvas.config(cursor="crosshair")
@@ -597,6 +600,18 @@ class RegionEditor:
         self._root.bind("<KeyRelease-Control_L>", lambda _: set_pan_mode(False))
         self._root.bind("<KeyRelease-Control_R>", lambda _: set_pan_mode(False))
 
+        def set_translate_mode(mode: bool):
+            if self._dragging:
+                self._translate_enabled = False
+            else:
+                self._translate_enabled = mode
+            self._set_cursor()
+
+        self._root.bind("<KeyPress-Shift_L>", lambda _: set_translate_mode(True))
+        self._root.bind("<KeyPress-Shift_R>", lambda _: set_translate_mode(True))
+        self._root.bind("<KeyRelease-Shift_L>", lambda _: set_translate_mode(False))
+        self._root.bind("<KeyRelease-Shift_R>", lambda _: set_translate_mode(False))
+
         self._root.protocol("WM_DELETE_WINDOW", lambda: self._close(False))
         self._root.bind("<FocusOut>", lambda _: self._cancel_active_action())
 
@@ -606,9 +621,6 @@ class RegionEditor:
                 return lambda _: self._select_region(index)
 
             self._root.bind(f"{i + 1}", select_region(i))
-
-        # TODO: If Shift is held down, allow translating current shape
-        # by left-click and drag.
 
     def _close(self, should_scan: bool):
         if self._launched_from_app:
@@ -1153,6 +1165,11 @@ class RegionEditor:
             if not inside_canvas:
                 return
 
+            if self._translate_enabled:
+                self._translating_shape = True
+                self._drag_start = self._curr_mouse_pos
+                return
+
             if not self._regions:
                 logger.info("No regions to edit, add a new one by right clicking.")
             if self._hover_point is not None:
@@ -1164,6 +1181,22 @@ class RegionEditor:
         elif event == cv2.EVENT_MOUSEMOVE:
             if self._dragging:
                 self.active_region[self._hover_point] = self._curr_mouse_pos
+                self._recalculate = False
+                self._redraw = True
+            elif self._translating_shape:
+                # TODO: This can be optimized.
+                new_region = []
+                for i in range(len(self.active_region)):
+                    new_region.append(
+                        Point(
+                            x=self.active_region[i].x
+                            + (self._curr_mouse_pos.x - self._drag_start.x),
+                            y=self.active_region[i].y
+                            + (self._curr_mouse_pos.y - self._drag_start.y),
+                        )
+                    )
+                self._regions[self._active_shape] = new_region
+                self._drag_start = self._curr_mouse_pos
                 self._recalculate = False
                 self._redraw = True
             elif self._pan_enabled or self._panning:
@@ -1194,6 +1227,9 @@ class RegionEditor:
                 self._redraw = True
             self._dragging = False
             self._panning = False
+            if self._translating_shape:
+                self._translating_shape = False
+                self._commit()
             self._set_cursor()  # Pan mode could have changed.
 
         self._draw()
@@ -1219,6 +1255,8 @@ class RegionEditor:
         self._dragging = False
         self._panning = False
         self._pan_enabled = False
+        self._translating_shape = False
+        self._translate_enabled = False
 
         self._set_cursor()
         self._draw()
