@@ -4,7 +4,7 @@
 
 ------------------------------------------------
 
-### Latest Release: v1.7.0.1 (March 11, 2025)
+### Latest Release: v1.8 (August 23, 2025)
 
 **Website**: [dvr-scan.com](https://www.dvr-scan.com)
 
@@ -28,7 +28,7 @@ Windows builds (installer + portable) are also available on [the Downloads page]
 
 Start DVR-Scan (run `dvr-scan-app` or click the app shortcut), **Add** your input videos, and hit **Start**:
 
-<img alt="main app window" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.7/docs/assets/app-main-window.jpg" width="480"/>
+<img alt="main app window" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.8/docs/assets/app-main-window.jpg" width="480"/>
 
 See the [User Guide](https://www.dvr-scan.com/guide/) for a more comprehensive overview.
 
@@ -42,7 +42,7 @@ Select a region to scan using [the region editor](https://www.dvr-scan.com/guide
 
     dvr-scan -i video.mp4 -r
 
-<img alt="example of region editor" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.7/docs/assets/region-editor-mask.jpg" width="480"/>
+<img alt="example of region editor" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.8/docs/assets/region-editor-mask.jpg" width="480"/>
 
 Select a region to scan using command line (list of points as X Y):
 
@@ -52,7 +52,7 @@ Draw boxes around motion:
 
     dvr-scan -i video.mp4 -bb
 
-<img alt="example of bounding boxes" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.7/docs/assets/bounding-box.gif" width="480"/>
+<img alt="example of bounding boxes" src="https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.8/docs/assets/bounding-box.gif" width="480"/>
 
 Use `ffmpeg` to extract events:
 

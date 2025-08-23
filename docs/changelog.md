@@ -6,7 +6,7 @@
 #### Changelog
 
 
-### 1.8 (TBD)
+### 1.8 (August 23, 2025)
 
 #### Release Notes
 
