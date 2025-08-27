@@ -98,11 +98,11 @@ class OutputMode(Enum):
         if self == OutputMode.SCAN_ONLY:
             return "SCAN_ONLY"
         if self == OutputMode.OPENCV:
-            return "SCAN_ONLY"
+            return "OPENCV"
         if self == OutputMode.COPY:
-            return "SCAN_ONLY"
+            return "COPY"
         if self == OutputMode.FFMPEG:
-            return "SCAN_ONLY"
+            return "FFMPEG"
 
 
 @dataclass
@@ -301,6 +301,10 @@ class MotionScanner:
         self.set_event_params()
         self.set_thumbnail_params()
         self.set_video_time()
+
+    @property
+    def output_mode(self) -> OutputMode:
+        return self._output_mode
 
     @property
     def framerate(self) -> float:

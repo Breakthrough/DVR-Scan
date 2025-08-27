@@ -210,6 +210,5 @@ def run_dvr_scan(
         # start1-end1[,[+]start2-end2[,[+]start3-end3...]]
         print(",".join(timecode_list))
 
-    # TODO: Fix private variable access.
-    if scanner._output_mode != OutputMode.SCAN_ONLY:
+    if scanner.output_mode != OutputMode.SCAN_ONLY:
         logger.info("Motion events written to disk.")
