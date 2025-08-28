@@ -493,6 +493,13 @@ def get_cli_parser(user_config: ConfigRegistry):
     )
 
     parser.add_argument(
+        "--ignore-user-config",
+        action="store_true",
+        default=False,
+        help=("Ignore loading the user config file if present."),
+    )
+
+    parser.add_argument(
         "--debug",
         action="store_true",
         help=argparse.SUPPRESS,

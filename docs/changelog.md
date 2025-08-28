@@ -5,6 +5,16 @@
 
 #### Changelog
 
+### 1.8.1 (August 27, 2025)
+
+#### Release Notes
+
+Fixes issue with application not loading config files saved with v1.8.
+
+#### Changelog
+
+ * [general] Add `--ignore-user-config` flag to both `dvr-scan` and `dvr-scan-app` commands to allow the application to run even if the user config file is corrupted
+
 
 ### 1.8 (August 23, 2025)
 

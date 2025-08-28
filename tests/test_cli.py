@@ -42,6 +42,7 @@ BASE_COMMAND = [
     "0",
     "--threshold",
     "0.2",
+    "--ignore-user-config"
 ]
 BASE_COMMAND_NUM_EVENTS = 3
 

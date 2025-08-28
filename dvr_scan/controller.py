@@ -86,6 +86,9 @@ def parse_settings() -> ty.Optional[ScanSettings]:
     # Parse CLI args, override config if an override was specified on the command line.
     try:
         args = get_cli_parser(config).parse_args()
+        if args.ignore_user_config:
+            config_load_error = None
+            user_config = ConfigRegistry()
         debug_mode = args.debug
         init_logging(args=args, config=config)
         init_log += [(logging.INFO, "DVR-Scan %s" % dvr_scan.__version__)]

@@ -93,6 +93,13 @@ def get_cli_parser():
     )
 
     parser.add_argument(
+        "--ignore-user-config",
+        action="store_true",
+        default=False,
+        help=("Ignore loading the user config file if present."),
+    )
+
+    parser.add_argument(
         "--debug",
         action="store_true",
         help=argparse.SUPPRESS,
@@ -130,6 +137,9 @@ def main():
     # Parse CLI args, override config if an override was specified on the command line.
     try:
         args = get_cli_parser().parse_args()
+        if args.ignore_user_config:
+            config_load_error = None
+            user_config = ConfigRegistry()
         init_logging(args, config)
         init_log += [(logging.INFO, "DVR-Scan Application %s" % dvr_scan.__version__)]
         if config_load_error and not hasattr(args, "config"):
