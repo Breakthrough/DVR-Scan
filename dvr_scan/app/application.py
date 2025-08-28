@@ -839,7 +839,7 @@ class OutputArea:
             "ffmpeg",
             "ffmpeg (copy)",
         )
-        self._output_mode_combo.current(1)
+        self._output_mode_combo.current(0)
 
         self._output_dir_str = ""
         self._output_dir_label = tk.StringVar(root, value="Ask Me")

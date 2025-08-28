@@ -4,7 +4,7 @@
 
 ------------------------------------------------
 
-### Latest Release: v1.8 (August 23, 2025)
+### Latest Release: v1.8.1 (August 27, 2025)
 
 **Website**: [dvr-scan.com](https://www.dvr-scan.com)
 
