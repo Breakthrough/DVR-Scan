@@ -5,7 +5,7 @@
 
 #### Changelog
 
-### 1.8.1 (August 27, 2025)
+### 1.8.1 (2025-08-27)
 
 #### Release Notes
 
@@ -21,7 +21,7 @@ Fixes issue with application not loading config files saved with v1.8.
     * As a workaround for previous versions, you can manually remove the `scan-only` line in the saved config file
 
 
-### 1.8 (August 23, 2025)
+### 1.8 (2025-08-23)
 
 #### Release Notes
 
@@ -47,12 +47,12 @@ DVR-Scan 1.8 includes several UI additions and enhancements, and fixes a long-st
  * [dist] Update ffmpeg from 7.1 -> 8.0 in binary distributions
 
 
-### 1.7.0.1 (March 11, 2025)
+### 1.7.0.1 (2025-03-11)
 
 Re-release of Windows distribution that fixes program hanging when starting scan ([#209](https://github.com/Breakthrough/DVR-Scan/issues/209)). This was caused due to the way the program was built. There are no code changes, so the Python distribution has not been re-released.
 
 
-### 1.7 (February 28, 2025)
+### 1.7 (2025-02-28)
 
 #### Release Notes
 
@@ -81,7 +81,7 @@ The UI can be started by running `dvr-scan-app`, and is installed alongside the 
 
 ## DVR-Scan 1.6
 
-### 1.6.2 (December 17, 2024)
+### 1.6.2 (2024-12-17)
 
  - [feature] Vastly improved region editor UI:
     - Reimplemented entire UI with Tcl/Tk to provide much more consistent experience across platforms
@@ -98,7 +98,7 @@ The UI can be started by running `dvr-scan-app`, and is installed alongside the 
      - Ffmpeg 6.0 -> 7.1
 
 
-### 1.6.1 (May 18, 2024)
+### 1.6.1 (2024-06-18)
 
 #### Release Notes
 
@@ -117,7 +117,7 @@ DVR-Scan 1.6.1 includes some important fixes and improvements for the region edi
     - Default value of `-1` is for automatic, which is unchanged from previous releases
 
 
-### 1.6 (October 15, 2023)
+### 1.6 (2023-11-15)
 
 #### Release Notes
 
@@ -166,14 +166,14 @@ There are also several other bugfixes and improvements, such as improved seeking
 
 ## DVR-Scan 1.5
 
-### :fontawesome-solid-tags: 1.5.1 (August 15, 2022)
+### :fontawesome-solid-tags: 1.5.1 (2022-08-15)
 
 #### Changelog
 
  * [bugfix] Fix crash when opening multiple input videos ([#95](https://github.com/Breakthrough/DVR-Scan/issues/95))
  * [bugfix] Fix incorrect warning regarding frame decode failures at end of video
 
-### 1.5 (July 30, 2022)
+### 1.5 (2022-07-30)
 
 #### Release Notes
 
@@ -245,7 +245,7 @@ There are also several other bugfixes and improvements, such as improved seeking
 
 ## DVR-Scan 1.4
 
-### 1.4.1 (February 20, 2022)
+### 1.4.1 (2022-02-20)
 
 #### Release Notes
 
@@ -270,7 +270,7 @@ This release includes fixes for incorrect event start/end times when using frame
 
 ----------------------------------------------------------
 
-### 1.4 (February 8, 2022)
+### 1.4 (2022-02-08)
 
 #### Release Notes
 
@@ -310,7 +310,7 @@ In addition to several bugfixes, this release of DVR-Scan adds the ability to dr
 
 ## DVR-Scan 1.3
 
-### 1.3 (May 23, 2021)
+### 1.3 (2021-06-23)
 
 #### Release Notes
 
@@ -335,7 +335,7 @@ This version of DVR-Scan includes a new, faster background subtraction algorithm
 
 ## DVR-Scan 1.2
 
-### 1.2 (March 10, 2021)
+### 1.2 (2021-03-10)
 
 #### Changelog
 
@@ -354,7 +354,7 @@ This version of DVR-Scan includes a new, faster background subtraction algorithm
 
 ## DVR-Scan 1.1
 
-### 1.1 (July 12, 2020)
+### 1.1 (2020-07-12)
 
 #### Changelog
 
@@ -371,12 +371,12 @@ This version of DVR-Scan includes a new, faster background subtraction algorithm
 
 ## DVR-Scan 1.0
 
-### 1.0.1 (January 12, 2017)
+### 1.0.1 (2017-01-12)
 
  * [bugfix] unhandled exception affecting users running source distributions under Python 2.7 environments
 
 
-### 1.0 (January 11, 2017)
+### 1.0 (2017-01-11)
 
  * [feature] detects motion events with configurable sensitivity and noise removal thresholds
  * [feature] output events to individual video files, or as a single-file compilation
