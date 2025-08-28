@@ -1364,7 +1364,8 @@ class ScanArea:
         return settings
 
     def load(self, settings: ScanSettings):
-        if OutputMode[settings.get("output-mode").upper()] == OutputMode.SCAN_ONLY:
+        output_mode = OutputMode[settings.get("output-mode").upper()]
+        if settings.get("scan-only") or output_mode == OutputMode.SCAN_ONLY:
             self.scan_only = True
         self.open_on_completion = settings.get("open-output-dir")
 
@@ -1669,13 +1670,13 @@ class Application:
         settings = self._output_area.save(settings)
         settings = self._scan_area.save(settings)
 
-        # Check if we are going to create any output files.
-        # *NOTE*: Depending on the user's settings, we may generate output files even in scan-only
-        # mode (e.g. if the user is generating a mask file).
+        output_mode = (
+            OutputMode.SCAN_ONLY if settings.get("scan-only") else settings.get("output-mode")
+        )
+        # Check if we are going to create any output files. We will create files as long as we're
+        # not in scan-only mode, or if we
         if not settings.get("output-dir") and (
-            not settings.get("scan-only")
-            or settings.get("mask-output")
-            or self._output_area.combine
+            output_mode != OutputMode.SCAN_ONLY or settings.get("mask-output")
         ):
             # We will create files but an output directory wasn't set ahead of time - prompt the
             # user to select one.

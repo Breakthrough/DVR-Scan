@@ -139,7 +139,7 @@ def main():
         args = get_cli_parser().parse_args()
         if args.ignore_user_config:
             config_load_error = None
-            user_config = ConfigRegistry()
+            config = ConfigRegistry()
         init_logging(args, config)
         init_log += [(logging.INFO, "DVR-Scan Application %s" % dvr_scan.__version__)]
         if config_load_error and not hasattr(args, "config"):

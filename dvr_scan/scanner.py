@@ -349,6 +349,7 @@ class MotionScanner:
             KeyError:
              - output_mode does not exist in OutputMode
         """
+        print(output_mode)
         if output_dir:
             if comp_file and comp_file.is_absolute():
                 raise ValueError("output file cannot be absolute path if output directory is set!")

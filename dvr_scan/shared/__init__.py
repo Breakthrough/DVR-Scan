@@ -125,16 +125,16 @@ def init_scanner(
     )
 
     output_dir = settings.get("output-dir")
+    comp_file = settings.get_arg(
+        "output",
+    )
+    mask_file = settings.get_arg("mask-output")
+    output_mode = OutputMode.SCAN_ONLY if settings.get("scan-only") else settings.get("output-mode")
+
     scanner.set_output(
-        comp_file=Path(settings.get("output", ignore_config=True))
-        if settings.get("output", ignore_config=True)
-        else None,
-        mask_file=Path(settings.get_arg("mask-output"))
-        if settings.get_arg("mask-output")
-        else None,
-        output_mode=OutputMode.SCAN_ONLY
-        if settings.get_arg("scan-only")
-        else settings.get("output-mode"),
+        comp_file=Path(comp_file) if comp_file else None,
+        mask_file=Path(mask_file) if mask_file else None,
+        output_mode=output_mode,
         opencv_fourcc=settings.get("opencv-codec"),
         ffmpeg_input_args=settings.get("ffmpeg-input-args"),
         ffmpeg_output_args=settings.get("ffmpeg-output-args"),

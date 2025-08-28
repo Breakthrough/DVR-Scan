@@ -329,6 +329,7 @@ CONFIG_MAP: ConfigDict = {
     "open-output-dir": True,
     "output-mode": "opencv",
     "region-editor": False,
+    "scan-only": False,
     # Motion Events
     "min-event-length": TimecodeValue("0.1s"),
     "time-before-event": TimecodeValue("1.5s"),

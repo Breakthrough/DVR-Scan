@@ -14,6 +14,11 @@ Fixes issue with application not loading config files saved with v1.8.
 #### Changelog
 
  * [general] Add `--ignore-user-config` flag to both `dvr-scan` and `dvr-scan-app` commands to allow the application to run even if the user config file is corrupted
+ * [general] Add new `scan-only` config option to match the UI checkbox and the `--scan-only` CLI flag
+ * [bugfix] Fix crash on startup when trying to load user config saved with v1.8 [#240](https://github.com/Breakthrough/DVR-Scan/issues/240)
+    * This was caused by the `scan-only` UI option being emitted but the config file did not support it in v1.8
+    * Users who are running into this issue should be able to run DVR-Scan after updating to v1.8.1
+    * As a workaround for previous versions, you can manually remove the `scan-only` line in the saved config file
 
 
 ### 1.8 (August 23, 2025)
