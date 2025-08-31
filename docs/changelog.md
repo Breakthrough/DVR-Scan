@@ -387,3 +387,8 @@ This version of DVR-Scan includes a new, faster background subtraction algorithm
 ----------------------------------------------------------
 
 ### In Development
+
+
+### 1.9
+
+ * [bugfix] Fix `quiet-mode` setting (`-q`/`--quiet` flag) still allowing extraneous output

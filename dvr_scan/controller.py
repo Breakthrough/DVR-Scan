@@ -208,7 +208,6 @@ def run_dvr_scan(
             timecode_list.append(event.end.get_timecode())
         logger.info("Comma-separated timecode values:")
         # Print values regardless of quiet mode or not.
-        # TODO: This should not print in quiet mode, it should go through the logger.
         # TODO(#78): Fix this output format to be more usable, in the form:
         # start1-end1[,[+]start2-end2[,[+]start3-end3...]]
         print(",".join(timecode_list))

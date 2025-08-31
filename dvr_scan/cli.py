@@ -439,6 +439,9 @@ def get_cli_parser(user_config: ConfigRegistry):
             % (user_config.get_help_string("frame-skip"))
         ),
     )
+
+    # TODO: Is this a good name for this flag? If we do decide to rename it, we could keep this as
+    # a hidden flag for backwards compatibility.
     parser.add_argument(
         "-q",
         "--quiet",

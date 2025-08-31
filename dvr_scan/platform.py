@@ -116,7 +116,7 @@ def _init_logger_impl(
     # Add stdout handler if required.
     if show_stdout:
         handler = logging.StreamHandler(stream=sys.stdout)
-        handler.setLevel(log_level)  # TODO: Why does this seem to have no effect?
+        handler.setLevel(log_level)
         handler.setFormatter(logging.Formatter(fmt=format_str))
         logger.addHandler(handler)
     # Add file handler if required.

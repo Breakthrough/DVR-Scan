@@ -32,13 +32,11 @@ def main():
     if settings is None:
         sys.exit(EXIT_ERROR)
     logger = logging.getLogger("dvr_scan")
-    # TODO(1.7): The logging redirect does not respect the original log level, which is now set to
-    # DEBUG mode for rolling log files.
-    # We might have to just roll our own instead of relying on this one.
-    # TODO: Use Python __debug__ mode instead of hard-coding as config option.
-    debug_mode = settings.get("debug")
-    show_traceback = getattr(logging, settings.get("verbosity").upper()) == logging.DEBUG
-    with logging_redirect_tqdm(loggers=[logger]):
+
+    def main_impl():
+        # TODO: Use Python __debug__ mode instead of hard-coding as config option?
+        debug_mode = settings.get("debug")
+        show_traceback = getattr(logging, settings.get("verbosity").upper()) == logging.DEBUG
         try:
             run_dvr_scan(settings)
         except ValueError as ex:
@@ -74,6 +72,12 @@ def main():
         else:
             sys.exit(EXIT_SUCCESS)
         sys.exit(EXIT_ERROR)
+
+    if settings.get("quiet-mode"):
+        main_impl()
+    else:
+        with logging_redirect_tqdm(loggers=[logger]):
+            main_impl()
 
 
 if __name__ == "__main__":
