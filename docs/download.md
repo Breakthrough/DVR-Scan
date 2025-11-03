@@ -21,7 +21,7 @@ hide:
 
         python3 -m pip install dvr-scan
 
-DVR-Scan requires Python 3.9 or higher to run, and works on Windows, Linux, and OSX. [`pipx` is recommended](https://pipx.pypa.io/stable/installation/) for installing DVR-Scan, however installing via `pip` or from source is also supported.
+DVR-Scan requires Python 3.10 or higher to run, and works on Windows, Linux, and OSX. [`pipx` is recommended](https://pipx.pypa.io/stable/installation/) for installing DVR-Scan, however installing via `pip` or from source is also supported.
 
 Linux users may need to install the `python3-tk` package (e.g. `sudo apt install python3-tk`) to run the region editor.
 
