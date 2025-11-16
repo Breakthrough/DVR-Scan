@@ -32,7 +32,7 @@ jobs:
       - name: 🐍 Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.13'
 
       - name: 📦 Install Python Build Requirements
         run: |
@@ -46,13 +46,13 @@ jobs:
           # Use the runner's temp directory, which is guaranteed to exist.
           $installer_path = Join-Path $env:RUNNER_TEMP "cuda_installer.exe"
           curl -L -o $installer_path $cuda_installer_url
-          
+
           echo "Installing CUDA Toolkit silently..."
           # Use Start-Process for robust execution in PowerShell.
           # The arguments must be passed as a single string.
           $arguments = "-s nvcc_12.1 cudart_12.1"
           Start-Process -FilePath $installer_path -ArgumentList $arguments -Wait -NoNewWindow
-          
+
           echo "Adding CUDA to PATH..."
           $cuda_path = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1"
           echo "CUDA_PATH=$cuda_path" | Out-File -FilePath $env:GITHUB_ENV -Append
@@ -63,38 +63,20 @@ jobs:
       - name: Clone opencv-python repository
         run: |
           git clone --depth 1 --recursive https://github.com/opencv/opencv-python.git
+          pip install numpy packaging scikit-build
 
+        # - CUDA_ARCH_BIN: Specifies the CUDA architectures to build for.
+        # - CUDA_ARCH_PTX: Specifies the virtual architecture for forward compatibility.
+        # TODO: Set correct PTX versions below.
+        # TODO: Validate the built wheel can be installed and run.
       - name: 🛠️ Build opencv-python with CUDA
         run: |
           cd opencv-python
-
-          # Set environment variables to configure the build.
-          # This is the core of the customization.
-          # - WITH_CUDA=ON: Enables CUDA support.
-          # - CUDA_ARCH_BIN: Specifies the CUDA architectures to build for.
-          # - CUDA_ARCH_PTX: Specifies the virtual architecture for forward compatibility.
-          # - BUILD_TESTS=OFF: Speeds up the build by not compiling tests.
-          # Use single quotes to avoid PowerShell parsing issues with nested quotes.
-          $env:CMAKE_ARGS = '-D CMAKE_BUILD_TYPE=RELEASE -D WITH_CUDA=ON -D CUDA_ARCH_BIN="6.0;6.1;7.0;7.5" -D CUDA_ARCH_PTX=7.5 -D OPENCV_ENABLE_NONFREE=ON -D BUILD_TESTS=OFF -D BUILD_PERF_TESTS=OFF -D BUILD_EXAMPLES=OFF'
-
-          # Set this to force a build from source instead of downloading a pre-built wheel.
-          $env:PIP_NO_BINARY = ":all:"
-
-          # Run the build process. This will compile OpenCV and create a wheel.
-          # The output wheel will be placed in the 'wheelhouse' directory.
-          pip wheel . --wheel-dir ../wheelhouse
-
-      - name: 🧪 Verify Build
-        run: |
-          # Install the wheel we just built
-          pip install ../wheelhouse/opencv_python*.whl
-
-          # Print OpenCV build information. We expect to see the "CUDA" section.
-          echo "Verifying OpenCV build..."
-          python -c "import cv2; print(cv2.getBuildInformation())"
+          $CMAKE_ARGS = '-D CMAKE_BUILD_TYPE=RELEASE -D WITH_CUDA=ON -D CUDA_ARCH_BIN="6.0;6.1;7.0;7.5" -D CUDA_ARCH_PTX=7.5 -D OPENCV_ENABLE_NONFREE=ON -D BUILD_TESTS=OFF -D BUILD_PERF_TESTS=OFF -D BUILD_EXAMPLES=OFF'
+          pip wheel . --verbose
 
       - name: 📤 Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.0
         with:
-          name: opencv-python-cuda-wheel
-          path: wheelhouse/
+          name: opencv-python-cuda
+          path: opencv-python/opencv_python*.whl

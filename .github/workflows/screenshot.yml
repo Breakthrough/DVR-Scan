@@ -75,7 +75,7 @@ jobs:
         shell: powershell
 
       - name: Upload Screenshot
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.0
         with:
           name: dvr-scan-screenshot-windows
           path: dvr-scan-screenshot-windows.png
@@ -135,7 +135,7 @@ jobs:
           scrot -d 0 "dvr-scan-screenshot-linux-${{ matrix.resolution.width }}x${{ matrix.resolution.height }}.png"
 
       - name: Upload Screenshot
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.0
         with:
           name: dvr-scan-screenshot-linux-${{ matrix.resolution.width }}x${{ matrix.resolution.height }}
           path: "dvr-scan-screenshot-linux-${{ matrix.resolution.width }}x${{ matrix.resolution.height }}.png"
@@ -181,7 +181,7 @@ jobs:
           screencapture "dvr-scan-screenshot-macos.png"
 
       - name: Upload Screenshot
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.0
         with:
           name: dvr-scan-screenshot-macos
           path: "dvr-scan-screenshot-macos.png"

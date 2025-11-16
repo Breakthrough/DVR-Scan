@@ -116,7 +116,7 @@ jobs:
           mv dist/*.whl pkg/
 
       - name: Upload Package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.0
         with:
           name: dvr-scan-dist
           path: |
