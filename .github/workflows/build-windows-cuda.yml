@@ -24,32 +24,47 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: 🏗️ Install Build Dependencies
-        run: |
-          echo "Installing CMake and Ninja for building..."
-          choco install -y cmake ninja
+      #- name: 🏗️ Install Build Dependencies
+      #  run: |
+      #    echo "Installing CMake and Ninja for building..."
+      #    choco install -y cmake ninja
 
       - name: 🐍 Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: '3.12'
 
       - name: 📦 Install Python Build Requirements
         run: |
           python -m pip install --upgrade pip
           pip install numpy wheel
 
+      - name: Setup MSBuild.exe
+        uses: microsoft/setup-msbuild@v1.1
+
+      - name: Setup NASM
+        uses: ilammy/setup-nasm@v1
+
+      - name: Cache CUDA Toolkit Installer
+        id: cache-cuda-installer
+        uses: actions/cache@v3
+        with:
+          path: ./.cache/cuda_installer.exe
+          key: cuda-installer-12.1.1
+
       - name: 🔧 Install NVIDIA CUDA Toolkit
         run: |
-          echo "Downloading CUDA Toolkit..."
-          $cuda_installer_url = "https://developer.download.nvidia.com/compute/cuda/12.1.1/network_installers/cuda_12.1.1_windows_network.exe"
-          # Use the runner's temp directory, which is guaranteed to exist.
-          $installer_path = Join-Path $env:RUNNER_TEMP "cuda_installer.exe"
-          curl -L -o $installer_path $cuda_installer_url
+          $installer_path = "./.cache/cuda_installer.exe"
+          if (-not (Test-Path $installer_path)) {
+            echo "Downloading CUDA Toolkit..."
+            $cuda_installer_url = "https://developer.download.nvidia.com/compute/cuda/12.1.1/network_installers/cuda_12.1.1_windows_network.exe"
+            New-Item -Path (Split-Path $installer_path) -ItemType Directory -Force
+            curl -L -o $installer_path $cuda_installer_url
+          } else {
+            echo "CUDA Toolkit installer found in cache."
+          }
 
           echo "Installing CUDA Toolkit silently..."
-          # Use Start-Process for robust execution in PowerShell.
-          # The arguments must be passed as a single string.
           $arguments = "-s nvcc_12.1 cudart_12.1"
           Start-Process -FilePath $installer_path -ArgumentList $arguments -Wait -NoNewWindow
 
@@ -60,23 +75,76 @@ jobs:
           echo "$cuda_path\lib\x64" | Out-File -FilePath $env:GITHUB_PATH -Append
         shell: pwsh
 
+      - name: Cache opencv-python repository
+        id: cache-opencv-python
+        uses: actions/cache@v3
+      # TODO: Need to pin this to a version.
+        with:
+          path: opencv-python
+          key: opencv-python-master
+
       - name: Clone opencv-python repository
+        if: steps.cache-opencv-python.outputs.cache-hit != 'true'
         run: |
           git clone --depth 1 --recursive https://github.com/opencv/opencv-python.git
-          pip install numpy packaging scikit-build
+          git checkout 31b0eeea0b44b370fd0712312df4214d4ae1b158
+
+      - name: Install opencv-python dependencies
+        run: |
+          pip install numpy setuptools scikit-build cmake==3.24.2
 
         # - CUDA_ARCH_BIN: Specifies the CUDA architectures to build for.
         # - CUDA_ARCH_PTX: Specifies the virtual architecture for forward compatibility.
         # TODO: Set correct PTX versions below.
         # TODO: Validate the built wheel can be installed and run.
+        # TODO: Slim down the modules we build to only the ones that DVR-Scan needs to run:
+        # https://docs.opencv.org/4.x/db/d05/tutorial_config_reference.html#tutorial_config_reference_general_modules
       - name: 🛠️ Build opencv-python with CUDA
         run: |
-          cd opencv-python
-          $CMAKE_ARGS = '-D CMAKE_BUILD_TYPE=RELEASE -D WITH_CUDA=ON -D CUDA_ARCH_BIN="6.0;6.1;7.0;7.5" -D CUDA_ARCH_PTX=7.5 -D OPENCV_ENABLE_NONFREE=ON -D BUILD_TESTS=OFF -D BUILD_PERF_TESTS=OFF -D BUILD_EXAMPLES=OFF'
-          pip wheel . --verbose
+          cd opencv-python/opencv
+          $env:ENABLE_CONTRIB = 1
+          $env:CI_BUILD = 1
+          $PYTHON_EXECUTABLE = (Get-Command python).Source
+          $PYTHON_INCLUDE_DIR = $(python -c "import sysconfig; print(sysconfig.get_path('include'))")
+          $PYTHON_NUMPY_INCLUDE_DIR = $(python -c "import numpy; print(numpy.get_include())")
+          $PYTHON_PACKAGES_PATH = $(python -c "import sysconfig; print(sysconfig.get_path('platlib'))")
+
+          mkdir build
+          cd build
+
+          # Configure the project using CMake
+          cmake .. -G "Visual Studio 17 2022" -A x64 `
+            -DCMAKE_BUILD_TYPE=RELEASE `
+            -DBUILD_SHARED_LIBS=OFF `
+            -DWITH_CUDA=ON `
+            -DCUDA_ARCH_BIN="6.0;6.1;7.0;7.5" `
+            -DCUDA_ARCH_PTX=7.5 `
+            -DOPENCV_ENABLE_NONFREE=ON `
+            -DENABLE_LTO=ON `
+            -DCPU_DISPATCH="AVX,AVX2" `
+            -DBUILD_TESTS=OFF `
+            -DBUILD_PERF_TESTS=OFF `
+            -DBUILD_EXAMPLES=OFF `
+            -DOPENCV_EXTRA_MODULES_PATH="../../opencv_contrib/modules" `
+            -DBUILD_opencv_python_bindings=ON `
+            -DINSTALL_PYTHON_EXAMPLES=OFF `
+            -DPYTHON3_EXECUTABLE="$PYTHON_EXECUTABLE" `
+            -DPYTHON3_INCLUDE_DIR="$PYTHON_INCLUDE_DIR" `
+            -DPYTHON3_NUMPY_INCLUDE_DIRS="$PYTHON_NUMPY_INCLUDE_DIR" `
+            -DPYTHON3_PACKAGES_PATH="$PYTHON_PACKAGES_PATH"
+
+          # Build the project
+          cmake --build . --config Release -- /m
+
+          # Go back to the root of opencv-python to run setup.py
+          cd ../..
+
+          # Package the built files into a wheel
+          python setup.py bdist_wheel --build-dir build -v
+        shell: pwsh
 
       - name: 📤 Upload Artifact
         uses: actions/upload-artifact@v4.6.0
         with:
           name: opencv-python-cuda
-          path: opencv-python/opencv_python*.whl
+          path: opencv-python/dist/opencv_python*.whl
