@@ -50,14 +50,14 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ./.cache/cuda_installer.exe
-          key: cuda-installer-12.1.1
+          key: cuda-installer-12.0.0
 
       - name: 🔧 Install NVIDIA CUDA Toolkit
         run: |
           $installer_path = "./.cache/cuda_installer.exe"
           if (-not (Test-Path $installer_path)) {
             echo "Downloading CUDA Toolkit..."
-            $cuda_installer_url = "https://developer.download.nvidia.com/compute/cuda/12.1.1/network_installers/cuda_12.1.1_windows_network.exe"
+            $cuda_installer_url = "https://developer.download.nvidia.com/compute/cuda/12.0.0/network_installers/cuda_12.0.0_windows_network.exe"
             New-Item -Path (Split-Path $installer_path) -ItemType Directory -Force
             curl -L -o $installer_path $cuda_installer_url
           } else {
@@ -65,14 +65,43 @@ jobs:
           }
 
           echo "Installing CUDA Toolkit silently..."
-          $arguments = "-s nvcc_12.1 cudart_12.1"
+          $arguments = "-s nvcc_12.0 cudart_12.0"
           Start-Process -FilePath $installer_path -ArgumentList $arguments -Wait -NoNewWindow
 
           echo "Adding CUDA to PATH..."
-          $cuda_path = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1"
-          echo "CUDA_PATH=$cuda_path" | Out-File -FilePath $env:GITHUB_ENV -Append
-          echo "$cuda_path\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
-          echo "$cuda_path\lib\x64" | Out-File -FilePath $env:GITHUB_PATH -Append
+          $CUDA_PATH = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.0"
+          echo "CUDA_PATH=$CUDA_PATH" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "$CUDA_PATH\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+          echo "$CUDA_PATH\lib\x64" | Out-File -FilePath $env:GITHUB_PATH -Append
+          echo "$CUDA_PATH"
+        shell: pwsh
+
+      - name: Cache CuDNN Installer
+        id: cache-cudnn-installer
+        uses: actions/cache@v3
+        with:
+          path: ./.cache/cudnn_installer.exe
+          key: cudnn-installer-8.8.0.121-windows
+
+      - name: 🔧 Install NVIDIA CuDNN
+        run: |
+          $installer_path = "./.cache/cudnn_installer.exe"
+          if (-not (Test-Path $installer_path)) {
+            echo "Downloading CuDNN..."
+            $cudnn_installer_url = "https://developer.download.nvidia.com/compute/redist/cudnn/v8.8.0/local_installers/12.0/cudnn_8.8.0.121_windows.exe"
+            New-Item -Path (Split-Path $installer_path) -ItemType Directory -Force
+            curl -L -o $installer_path $cudnn_installer_url
+          } else {
+            echo "CuDNN installer found in cache."
+          }
+
+          echo "Installing CuDNN silently..."
+          # The CuDNN local installer for Windows is a self-extracting executable.
+          # We assume it installs to the correct CUDA Toolkit directory.
+          # We use -s for silent installation.
+          Start-Process -FilePath $installer_path -ArgumentList "-s" -Wait -NoNewWindow
+
+          # TODO: Set CUDNN_LIBRARY CUDNN_INCLUDE_DIR
         shell: pwsh
 
       - name: Cache opencv-python repository
@@ -118,7 +147,7 @@ jobs:
             -DBUILD_SHARED_LIBS=OFF `
             -DWITH_CUDA=ON `
             -DCUDA_ARCH_BIN="6.0;6.1;7.0;7.5" `
-            -DCUDA_ARCH_PTX=7.5 `
+            -DCUDA_ARCH_PTX="7.5" `
             -DOPENCV_ENABLE_NONFREE=ON `
             -DENABLE_LTO=ON `
             -DCPU_DISPATCH="AVX,AVX2" `

@@ -1,0 +1,88 @@
+# Build MacOS App Bundle for DVR-Scan
+name: MacOS Distribution
+
+# TODO: Enable schedule.
+on:
+#  schedule:
+#    - cron: '0 0 * * *'
+#  pull_request:
+#    paths:
+#      - dist/**
+#      - dvr_scan/**
+#      - tests/**
+#  push:
+#    paths:
+#      - dist/**
+#      - dvr_scan/**
+#      - tests/**
+#    tags:
+#      - v*-release
+  workflow_dispatch:
+
+env:
+  ffmpeg_version: "8.0"
+  UV_SYSTEM_PYTHON: 1
+  UV_LINK_MODE: "symlink"
+
+
+jobs:
+  build:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install uv and set the python version
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "0.5.11"
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Dependencies
+        run: |
+          uv pip install --upgrade pip build wheel virtualenv setuptools
+          uv pip install -r dist/requirements_windows.txt -r docs/requirements.txt
+
+      - name: Unit Test
+        run: |
+          python -m pytest tests/
+
+      - name: Build DVR-Scan
+        run: |
+          python dist/pre_release.py --use-local-images
+          pyinstaller dist/dvr-scan.spec
+          python dist/post_release.py
+
+      - name: Upload
+        uses: actions/upload-artifact@v4.6.0
+        with:
+          name: DVR-Scan-macos
+          path: dist/dvr-scan
+
+  test:
+    runs-on: macos-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4.1.8
+        with:
+          name: DVR-Scan-macos
+          path: build
+
+      - name: Test Artifact
+        run: |
+          chmod +x ./build/dvr-scan
+          ./build/dvr-scan --version
+          ./build/dvr-scan --license
+          ./build/dvr-scan -i tests/resources/simple_movement.mp4 -so -et 5s -df 3
+          ./build/dvr-scan -i tests/resources/simple_movement.mp4 -et 5s -df 3 -m copy
