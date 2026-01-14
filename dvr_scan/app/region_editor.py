@@ -187,6 +187,9 @@ class RegionEditor:
         self._frame: np.ndarray = frame.copy()  # Workspace
         self._frame_size: Size = Size(w=frame.shape[1], h=frame.shape[0])
         self._original_frame: np.ndarray = frame.copy()  # Copy to redraw on
+        self._video = cv2.VideoCapture(video_path)
+        self._video_pos = 0
+        self._num_frames = int(self._video.get(cv2.CAP_PROP_FRAME_COUNT))
         self._regions: ty.List[ty.List[Point]] = (
             initial_shapes if initial_shapes else [initial_point_list(self._frame_size)]
         )
@@ -610,7 +613,17 @@ class RegionEditor:
         # TODO: If Shift is held down, allow translating current shape
         # by left-click and drag.
 
+    def _seek(self, frame_num):
+        self._video_pos = int(float(frame_num))
+        self._video.set(cv2.CAP_PROP_POS_FRAMES, self._video_pos)
+        ret, frame = self._video.read()
+        if ret:
+            self._source_frame = frame
+            self._rescale()
+        self._video_pos_label.config(text=f"{self._video_pos} / {self._num_frames}")
+
     def _close(self, should_scan: bool):
+        self._video.release()
         if self._launched_from_app:
             self._root.destroy()
             self._on_close()
@@ -701,6 +714,23 @@ class RegionEditor:
         )
         self._scale_widget.grid(row=0, column=9, sticky="e", padx=8.0)
         tk.Label(frame, text="Zoom", anchor=tk.E).grid(row=0, column=8, sticky=tk.E, padx=(0, 8.0))
+
+        ttk.Separator(self._root).grid(row=4, column=0, columnspan=2, sticky="ew")
+        video_frame = tk.Frame(self._root)
+        video_frame.grid(row=5, column=0, sticky="ew", columnspan=2)
+        video_frame.columnconfigure(1, weight=1)
+        self._video_pos_label = tk.Label(video_frame, text=f"0 / {self._num_frames}", anchor=tk.W)
+        self._video_pos_label.grid(row=0, column=0, sticky=tk.W, padx=8.0)
+        self._video_seek_widget = ttk.Scale(
+            video_frame,
+            orient=tk.HORIZONTAL,
+            length=200,
+            from_=0,
+            to=self._num_frames - 1,
+            command=self._seek,
+            value=0,
+        )
+        self._video_seek_widget.grid(row=0, column=1, sticky="ew", padx=8.0)
 
         self._bind_mouse()
         self._bind_keyboard()
