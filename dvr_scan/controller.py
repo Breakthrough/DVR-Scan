@@ -98,7 +98,7 @@ def parse_settings() -> ty.Optional[ScanSettings]:
             init_log += config.consume_init_log()
         if hasattr(args, "config"):
             config_setting = ConfigRegistry()
-            config_setting.load(Path(args.config))
+            config_setting.load(args.config)
             init_logging(args, config_setting)
             config = config_setting
         init_log += config.consume_init_log()

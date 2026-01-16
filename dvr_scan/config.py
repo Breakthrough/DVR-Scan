@@ -434,6 +434,10 @@ class ConfigRegistry:
             ConfigLoadFailure: The config file being loaded is corrupt or invalid,
             or `path` was specified but does not exist.
         """
+        # Allow passing in str paths for convenience.
+        if path and not isinstance(path, Path):
+            path = Path(path)
+
         # Validate `path`, or if not provided, use USER_CONFIG_FILE_PATH if it exists.
         if path:
             self._log(logging.INFO, "Loading config from file: %s" % path)
