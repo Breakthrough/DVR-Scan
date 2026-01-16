@@ -102,7 +102,7 @@ class TextOverlay:
             x_offset = max(0, frame.shape[1] - (self._margin + self._border + max_width))
         y_offset = self._margin + self._border
 
-        for text, size in zip(lines, sizes):
+        for text, size in zip(lines, sizes, strict=True):
             text_pos = (x_offset, y_offset + size[0][1])
             cv2.putText(
                 frame,

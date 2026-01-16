@@ -36,7 +36,9 @@ class RegionValidator:
         if not len(values) >= 6:
             raise ValueError(f"Regions must have at least 3 points.\n  Input: {value}")
 
-        self._value = [Point(int(x), int(y)) for x, y in zip(values[0::2], values[1::2])]
+        self._value = [
+            Point(int(x), int(y)) for x, y in zip(values[0::2], values[1::2], strict=True)
+        ]
 
     @property
     def value(self) -> ty.List[Point]:

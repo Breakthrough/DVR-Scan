@@ -283,5 +283,5 @@ def logging_redirect_tqdm(
             ] + [tqdm_handler]
         yield
     finally:
-        for logger, original_handlers in zip(loggers, original_handlers_list):
+        for logger, original_handlers in zip(loggers, original_handlers_list, strict=True):
             logger.handlers = original_handlers

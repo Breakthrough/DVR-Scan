@@ -393,4 +393,4 @@ This version of DVR-Scan includes a new, faster background subtraction algorithm
 
  * [general] Minimum Python version is now 3.10 ([EOL](https://devguide.python.org/versions/))
  * [bugfix] Fix `quiet-mode` setting (`-q`/`--quiet` flag) still allowing extraneous output
- * [bugfix] Fix loading config from file in UI
+ * [bugfix] Fix loading config from file in UI ([#252](https://github.com/Breakthrough/DVR-Scan/issues/252))

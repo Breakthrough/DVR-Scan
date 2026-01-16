@@ -164,7 +164,7 @@ def test_pre_event_shift_with_frame_skip(traffic_camera_video):
         assert all(
             [
                 abs(x[0] - y[0]) <= frame_skip
-                for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS_TIME_PRE_5)
+                for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS_TIME_PRE_5, strict=True)
             ]
         ), "Comparison failure when frame_skip = %d" % (frame_skip)
 
@@ -195,13 +195,16 @@ def test_post_event_shift_with_frame_skip(traffic_camera_video):
         assert all(
             [
                 abs(x[1] - y[1]) <= frame_skip
-                for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS_TIME_POST_40)
+                for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS_TIME_POST_40, strict=True)
             ]
         ), "Comparison failure when frame_skip = %d" % (frame_skip)
         # The calculated end times must always be >= the ground truth's frame number, otherwise
         # we may be discarding frames containing motion due to skipping them.
         assert all(
-            [x[1] >= y[1] for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS_TIME_POST_40)]
+            [
+                x[1] >= y[1]
+                for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS_TIME_POST_40, strict=True)
+            ]
         ), "Comparison failure when frame_skip = %d" % (frame_skip)
 
 
