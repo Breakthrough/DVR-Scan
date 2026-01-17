@@ -49,7 +49,7 @@ class VideoJoiner:
     def __init__(self, paths: ty.List[Path], backend: str = "opencv"):
         if backend not in AVAILABLE_BACKENDS:
             raise BackendUnavailable(backend=backend)
-        self._backend: VideoStream = AVAILABLE_BACKENDS[backend]
+        self._backend: ty.Type[VideoStream] = AVAILABLE_BACKENDS[backend]
 
         assert paths
         self._paths = [Path(p) for p in paths]
@@ -58,11 +58,13 @@ class VideoJoiner:
         self._cap: ty.Optional[VideoStream] = None
         self._total_frames: int = 0
         self._decode_failures: int = 0
+        # TODO(#20): This needs to be fixed to handle varying framerates.
+        self._framerate: float = 0.0
         self._load_input_videos(backend)
+
         # Initialize position now that the framerate is valid.
-        self._position: FrameTimecode = FrameTimecode(0, self.framerate)
-        self._last_cap_pos: FrameTimecode = FrameTimecode(0, self.framerate)
-        self._total_scanned_time: float = 0.0
+        self._total_processed_frames: FrameTimecode = FrameTimecode(0, self.framerate)
+        self._total_processed_duration_ms: float = 0.0
 
     @property
     def paths(self) -> ty.List[Path]:
@@ -77,7 +79,7 @@ class VideoJoiner:
     @property
     def framerate(self) -> float:
         """Video framerate (frames/sec)."""
-        return self._cap.frame_rate
+        return self._framerate
 
     @property
     def total_frames(self) -> float:
@@ -94,11 +96,11 @@ class VideoJoiner:
     @property
     def position(self) -> FrameTimecode:
         """Current position of the video including presentation time of the current frame."""
-        return self._position + 1
+        return self._total_processed_frames + self._cap.position.frame_num + 1
 
     @property
     def position_ms(self) -> float:
-        return self._total_scanned_time + self._cap.position_ms
+        return self._total_processed_duration_ms + self._cap.position_ms
 
     def read(self, decode: bool = True) -> ty.Optional[numpy.ndarray]:
         """Read/decode the next frame."""
@@ -106,23 +108,20 @@ class VideoJoiner:
         if next is False:
             if (self._path_index + 1) < len(self._paths):
                 self._path_index += 1
-                self._total_scanned_time += self._cap.duration.get_seconds()
-                # Compensate for presentation time of last frame
-                self._position += 1
+                self._total_processed_duration_ms += self._cap.duration.get_seconds()
+                self._total_processed_frames += self._cap.position + 1
                 self._decode_failures += (
+                    # TODO: We shouldn't be relying on private members here...
                     self._cap._decode_failures if hasattr(self._cap, "_decode_failures") else 0
                 )
                 logger.info(
                     f"Processing complete, opening next video: {self._paths[self._path_index]}"
                 )
                 self._cap = self._backend(str(self._paths[self._path_index]))
-                self._last_cap_pos = self._cap.base_timecode
                 return self.read(decode=decode)
             logger.debug("No more input to process.")
             return None
 
-        self._position += self._cap.position.frame_num - self._last_cap_pos.frame_num
-        self._last_cap_pos = self._cap.position
         return next
 
     def seek(self, target: FrameTimecode):
@@ -145,6 +144,8 @@ class VideoJoiner:
             try:
                 assert backend in AVAILABLE_BACKENDS
                 cap = self._backend(str(path))
+                if not self._framerate:
+                    self._framerate = cap.frame_rate
             except VideoOpenFailure:
                 logger.error(f"Error: Couldn't load video {path} with {backend}")
                 raise
@@ -173,7 +174,7 @@ class VideoJoiner:
             if cap.frame_size != self._cap.frame_size:
                 logger.error("Error: Video resolution does not match the first input.")
                 raise VideoOpenFailure("Video resolutions must match to be concatenated!")
-            if abs(cap.frame_rate - self._cap.frame_rate) > FRAMERATE_DELTA_TOLERANCE:
+            if abs(cap.frame_rate - self.framerate) > FRAMERATE_DELTA_TOLERANCE:
                 logger.warning(
                     "Warning: framerate does not match first input. Timecodes may be incorrect."
                 )
