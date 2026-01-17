@@ -659,10 +659,10 @@ class MotionScanner:
         if self._start_time is not None:
             self._input.seek(self._start_time)
 
-        if not self._use_pts:
-            start_frame = self._input.position.frame_num
-        else:
+        if self._use_pts:
             start_frame_ms = self._input.position_ms
+        else:
+            start_frame = self._input.position.frame_num
 
         # Show ROI selection window if required.
         if not self._handle_regions():
@@ -718,22 +718,18 @@ class MotionScanner:
         # shifting the event start time. Instead of using `-l`/`--min-event-len` directly, we
         # need to compensate for rounding errors when we corrected it for frame skip. This is
         # important as this affects the number of frames we consider for the actual motion event.
-        if not self._use_pts:
-            start_event_shift: int = self._pre_event_len.frame_num + min_event_len * (
-                self._frame_skip + 1
-            )
-        else:
-            start_event_shift_ms: float = (
-                self._pre_event_len.get_seconds() + self._min_event_len.get_seconds()
-            ) * 1000
+        start_event_shift_ms: float = (
+            self._pre_event_len.get_seconds() + self._min_event_len.get_seconds()
+        ) * 1000
+        start_event_shift: int = self._pre_event_len.frame_num + min_event_len * (
+            self._frame_skip + 1
+        )
 
         # Length of buffer we require in memory to keep track of all frames required for -l and -tb.
         buff_len = pre_event_len + min_event_len
         event_end = self._input.position
-        if not self._use_pts:
-            last_frame_above_threshold = 0
-        else:
-            last_frame_above_threshold_ms = 0
+        last_frame_above_threshold_ms = 0
+        last_frame_above_threshold = 0
 
         if self._bounding_box:
             self._bounding_box.set_corrections(
@@ -862,10 +858,8 @@ class MotionScanner:
                 # If this frame still has motion, reset the post-event window.
                 if above_threshold:
                     num_frames_post_event = 0
-                    if not self._use_pts:
-                        last_frame_above_threshold = frame.timecode.frame_num
-                    else:
-                        last_frame_above_threshold_ms = pts
+                    last_frame_above_threshold = frame.timecode.frame_num
+                    last_frame_above_threshold_ms = pts
                 # Otherwise, we wait until the post-event window has passed before ending
                 # this motion event and start looking for a new one.
                 #

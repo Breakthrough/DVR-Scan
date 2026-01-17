@@ -115,8 +115,6 @@ def test_scan_context_use_pts(traffic_camera_video):
     compare_event_lists(event_list, TRAFFIC_CAMERA_EVENTS, PTS_EVENT_TOLERANCE)
 
 
-# TODO(#254): Enable once the underlying issues with VideoJoiner and PTS handling are resolved.
-@pytest.mark.skip(reason="Currently fails due to VideoJoiner PTS handling issues.")
 def test_scan_context_use_pts_with_video_joiner(traffic_camera_video):
     """Ensure that the Use PTS option does not cause any issues with VideoJoiner."""
     scanner = MotionScanner([traffic_camera_video, traffic_camera_video])

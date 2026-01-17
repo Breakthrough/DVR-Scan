@@ -389,8 +389,9 @@ This version of DVR-Scan includes a new, faster background subtraction algorithm
 ### In Development
 
 
-### 1.9
+### 1.8.2
 
  * [general] Minimum Python version is now 3.10 ([EOL](https://devguide.python.org/versions/))
  * [bugfix] Fix `quiet-mode` setting (`-q`/`--quiet` flag) still allowing extraneous output
- * [bugfix] Fix loading config from file in UI ([#252](https://github.com/Breakthrough/DVR-Scan/issues/252))
+ * [bugfix] Fix loading config from file in UI ([#253](https://github.com/Breakthrough/DVR-Scan/issues/253))
+ * [bugfix] Fix scan error when enabling "Use PTS" input option with multiple videos ([#254](https://github.com/Breakthrough/DVR-Scan/issues/254))
