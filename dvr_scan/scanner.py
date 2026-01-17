@@ -910,14 +910,23 @@ class MotionScanner:
                                 + self._frame_skip,
                                 self._input.framerate,
                             )
-                            assert event_end.frame_num >= event_start.frame_num
+                            assert event_end.frame_num >= event_start.frame_num, (
+                                f"event_end frame {event_end.frame_num} < "
+                                + f"event_start frame {event_start.frame_num}!"
+                            )
                         else:
+                            # TODO(#20): This is incorrect for VFR video, we need to work in seconds
+                            # and right now FrameTimecode exclusively uses frames.
                             event_end = FrameTimecode(
                                 (last_frame_above_threshold_ms / 1000)
                                 + self._post_event_len.get_seconds(),
                                 self._input.framerate,
                             )
-                            assert event_end.get_seconds() >= event_start.get_seconds()
+                            # TODO(#254): This assertion fires when using VideoJoiner.
+                            assert event_end.get_seconds() >= event_start.get_seconds(), (
+                                f"event_end {event_end.get_seconds()}s < "
+                                + f"event_start {event_start.get_seconds()}s!"
+                            )
                         event_list.append(MotionEvent(start=event_start, end=event_end))
                         if self._output_mode != OutputMode.SCAN_ONLY:
                             encode_queue.put(MotionEvent(start=event_start, end=event_end))

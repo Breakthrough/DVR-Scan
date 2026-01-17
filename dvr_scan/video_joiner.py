@@ -62,6 +62,7 @@ class VideoJoiner:
         # Initialize position now that the framerate is valid.
         self._position: FrameTimecode = FrameTimecode(0, self.framerate)
         self._last_cap_pos: FrameTimecode = FrameTimecode(0, self.framerate)
+        self._total_scanned_time: float = 0.0
 
     @property
     def paths(self) -> ty.List[Path]:
@@ -97,7 +98,7 @@ class VideoJoiner:
 
     @property
     def position_ms(self) -> float:
-        return self._cap.position_ms
+        return self._total_scanned_time + self._cap.position_ms
 
     def read(self, decode: bool = True) -> ty.Optional[numpy.ndarray]:
         """Read/decode the next frame."""
@@ -105,6 +106,7 @@ class VideoJoiner:
         if next is False:
             if (self._path_index + 1) < len(self._paths):
                 self._path_index += 1
+                self._total_scanned_time += self._cap.duration.get_seconds()
                 # Compensate for presentation time of last frame
                 self._position += 1
                 self._decode_failures += (
