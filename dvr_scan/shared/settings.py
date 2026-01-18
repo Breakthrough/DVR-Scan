@@ -66,5 +66,5 @@ class ScanSettings:
         for key in keys:
             value = self._app_settings[key]
             if isinstance(value, bool):
-                value = "yes" if True else "no"
+                value = "yes" if value else "no"
             file.write(f"{key} = {str(value)}\n")

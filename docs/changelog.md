@@ -395,3 +395,4 @@ This version of DVR-Scan includes a new, faster background subtraction algorithm
  * [bugfix] Fix `quiet-mode` setting (`-q`/`--quiet` flag) still allowing extraneous output
  * [bugfix] Fix loading config from file in UI ([#253](https://github.com/Breakthrough/DVR-Scan/issues/253))
  * [bugfix] Fix scan error when enabling "Use PTS" input option with multiple videos ([#254](https://github.com/Breakthrough/DVR-Scan/issues/254))
+ * [bugfix] Fix unchecked UI options being turned on in config files [#256](https://github.com/Breakthrough/DVR-Scan/issues/256)
