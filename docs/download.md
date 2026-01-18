@@ -11,7 +11,7 @@ hide:
 
 ## Python<span class="dvr-scan-download-icons">:fontawesome-brands-windows::fontawesome-brands-apple::fontawesome-brands-linux:</span>
 
-!!! python-download "**1.8.1**<span class="dvr-scan-release-date">August 27, 2025</span>"
+!!! python-download "**1.8.2**<span class="dvr-scan-release-date">January 18, 2026</span>"
 
     <h3>pipx (recommended):</h3>
 
@@ -29,9 +29,9 @@ Linux users may need to install the `python3-tk` package (e.g. `sudo apt install
 
 ## Windows<span class="dvr-scan-download-icons">:fontawesome-brands-windows:</span>
 
-!!! windows-download "**1.8.1**<span class="dvr-scan-release-date">August 27, 2025</span>"
+!!! windows-download "**1.8.2**<span class="dvr-scan-release-date">January 18, 2026</span>"
 
-    <div class="buttongrid buttongrid-download">[:fontawesome-solid-download: &nbsp; Installer `.msi`](https://github.com/Breakthrough/DVR-Scan/releases/download/v1.8.1-release/dvr-scan-1.8.1-win64.msi){ .md-button #download-button }[:fontawesome-solid-file-zipper: &nbsp; Portable `.zip`](https://github.com/Breakthrough/DVR-Scan/releases/download/v1.8.1-release/dvr-scan-1.8.1-win64.zip){ .md-button #changelog-button }</div>
+    <div class="buttongrid buttongrid-download">[:fontawesome-solid-download: &nbsp; Installer `.msi`](https://github.com/Breakthrough/DVR-Scan/releases/download/v1.8.2-release/dvr-scan-1.8.2-win64.msi){ .md-button #download-button }[:fontawesome-solid-file-zipper: &nbsp; Portable `.zip`](https://github.com/Breakthrough/DVR-Scan/releases/download/v1.8.2-release/dvr-scan-1.8.2-win64.zip){ .md-button #changelog-button }</div>
 
 
 The installer is recommended for most users.  Windows builds include all required dependencies to run DVR-Scan.  Only 64-bit builds are available.

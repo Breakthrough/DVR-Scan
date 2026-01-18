@@ -4,7 +4,7 @@
 
 ------------------------------------------------
 
-### Latest Release: v1.8.1 (August 27, 2025)
+### Latest Release: v1.8.2 (January 18, 2026)
 
 **Website**: [dvr-scan.com](https://www.dvr-scan.com)
 
@@ -62,5 +62,5 @@ See [the documentation](https://www.dvr-scan.com/docs) for a complete list of al
 
 ------------------------------------------------
 
-Copyright © 2016-2025 Brandon Castellano. All rights reserved.
+Copyright © 2016-2026 Brandon Castellano. All rights reserved.
 Licensed under BSD 2-Clause (see the LICENSE file for details).

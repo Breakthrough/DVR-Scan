@@ -5,6 +5,22 @@
 
 #### Changelog
 
+### 1.8.2 (2026-01-18)
+
+#### Release Notes
+
+Includes several critical bugfixes and improvements when processing multiple input videos.
+
+#### Changelog
+
+ * [general] Minimum supported Python version is now 3.10 (Python 3.9 is [EOL](https://devguide.python.org/versions/))
+ * [general] An error is now displayed when launching the app fails due to an invalid config file [#241](https://github.com/Breakthrough/DVR-Scan/issues/241)
+ * [bugfix] Fix `quiet-mode` setting (`-q`/`--quiet` flag) still allowing extraneous output [#243](https://github.com/Breakthrough/DVR-Scan/issues/243)
+ * [bugfix] Fix loading config from file in UI [#253](https://github.com/Breakthrough/DVR-Scan/issues/253)
+ * [bugfix] Fix scan error when enabling "Use PTS" input option with multiple videos [#254](https://github.com/Breakthrough/DVR-Scan/issues/254)
+ * [bugfix] Fix unchecked UI options being turned on in config files [#256](https://github.com/Breakthrough/DVR-Scan/issues/256)
+
+
 ### 1.8.1 (2025-08-27)
 
 #### Release Notes
@@ -382,18 +398,3 @@ This version of DVR-Scan includes a new, faster background subtraction algorithm
  * [feature] output events to individual video files, or as a single-file compilation
  * [feature] allows input seeking, frame skipping, and output suppression mode
  * [feature] configurable detection windows and pre/post-event inclusion length
-
-
-----------------------------------------------------------
-
-### In Development
-
-
-### 1.8.2
-
- * [general] Minimum supported Python version is now 3.10 (Python 3.9 is [EOL](https://devguide.python.org/versions/))
- * [general] An error is now displayed when launching the app fails due to an invalid config file [#241](https://github.com/Breakthrough/DVR-Scan/issues/241)
- * [bugfix] Fix `quiet-mode` setting (`-q`/`--quiet` flag) still allowing extraneous output [#243](https://github.com/Breakthrough/DVR-Scan/issues/243)
- * [bugfix] Fix loading config from file in UI [#253](https://github.com/Breakthrough/DVR-Scan/issues/253)
- * [bugfix] Fix scan error when enabling "Use PTS" input option with multiple videos [#254](https://github.com/Breakthrough/DVR-Scan/issues/254)
- * [bugfix] Fix unchecked UI options being turned on in config files [#256](https://github.com/Breakthrough/DVR-Scan/issues/256)
