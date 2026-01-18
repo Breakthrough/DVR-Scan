@@ -12,6 +12,8 @@
 import argparse
 import logging
 import sys
+import tkinter
+import tkinter.messagebox
 from subprocess import CalledProcessError
 
 from scenedetect import VideoOpenFailure
@@ -176,6 +178,11 @@ def main():
         logger.debug("Error loading config file:", exc_info=config_load_error)
         # Intentionally suppress the exception in release mode since we've already logged the
         # failure reason to the user above. We can now exit with an error code.
+        errors = [message for (severity, message) in init_log if severity >= logging.ERROR]
+        tkinter.messagebox.showerror(
+            title="DVR-Scan Startup Error",
+            message=f"Error loading config file. Reason:\n\n{'\n'.join(errors)}",
+        )
         raise SystemExit(1)
 
     show_traceback = getattr(logging, settings.get("verbosity").upper()) == logging.DEBUG
