@@ -2,8 +2,9 @@
 # DVR-Scan Python Requirements
 #
 numpy
-opencv-python
-opencv-contrib-python
+# TODO(#257): Unpin OpenCV versions once we figure out why frame numbers are mismatching in tests.
+opencv-python<4.13
+opencv-contrib-python<4.13
 pillow
 platformdirs
 pytest
