@@ -26,12 +26,9 @@ if os.name == "nt":
         CUDA_BIN_PATH = os.path.abspath(os.path.join(CUDA_PATH, "bin"))
         os.add_dll_directory(CUDA_BIN_PATH)
 
-# OpenCV is a required package, but we don't have it as an explicit dependency since we
-# need to support both opencv-python and opencv-python-headless. Include some additional
-# context with the exception if this is the case.
-
 if not importlib.util.find_spec("cv2"):
     raise ModuleNotFoundError(
-        "OpenCV could not be found, try installing opencv-python:\n\npip install opencv-python",
+        "OpenCV could not be found, try installing opencv-contrib-python:"
+        "\n\npip install opencv-contrib-python",
         name="cv2",
     )

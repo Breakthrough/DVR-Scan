@@ -188,5 +188,5 @@ class VideoJoiner:
             logger.error(
                 "Unsupported or invalid codec, output may be incorrect. Possible fixes:\n"
                 "  - Re-encode the input video with ffmpeg\n"
-                "  - Update OpenCV (pip install --upgrade opencv-python)"
+                "  - Update OpenCV (pip install --upgrade opencv-contrib-python)"
             )
