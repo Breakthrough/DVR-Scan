@@ -54,7 +54,7 @@ jobs:
       - name: Install Dependencies
         run: |
           uv pip install --upgrade build wheel virtualenv
-          uv pip install opencv-python-headless<4.13 opencv-contrib-python-headless<4.13 --only-binary :all:
+          uv pip install opencv-python-headless\<4.13 opencv-contrib-python-headless\<4.13 --only-binary :all:
           uv pip install -r requirements_headless.txt -r docs/requirements.txt
 
       - name: Setup FFmpeg
