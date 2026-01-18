@@ -50,10 +50,11 @@ jobs:
           version: "0.5.11"
           python-version: ${{ matrix.python-version }}
 
+      # TODO(#257): Unpin OpenCV versions once we figure out why frame numbers are mismatching in tests.
       - name: Install Dependencies
         run: |
           uv pip install --upgrade build wheel virtualenv
-          uv pip install opencv-python-headless opencv-contrib-python-headless --only-binary :all:
+          uv pip install opencv-python-headless\<4.13 opencv-contrib-python-headless\<4.13 --only-binary :all:
           uv pip install -r requirements_headless.txt -r docs/requirements.txt
 
       - name: Setup FFmpeg
