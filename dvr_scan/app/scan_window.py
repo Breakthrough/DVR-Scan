@@ -17,6 +17,7 @@ import tkinter.ttk as ttk
 import traceback
 import typing as ty
 from logging import getLogger
+from pathlib import Path
 
 from scenedetect import FrameTimecode
 from tqdm import tqdm
@@ -34,19 +35,33 @@ STATS_UPDATE_RATE_NS = 250 * (1000 * 1000)
 
 class ScanWindow:
     def __init__(
-        self, root: tk.Tk, settings: ScanSettings, on_destroyed: ty.Callable[[], None], padding: int
+        self,
+        root: tk.Tk,
+        settings: ty.List[ScanSettings],
+        on_destroyed: ty.Callable[[], None],
+        padding: int,
     ):
         self._root = tk.Toplevel(master=root)
         self._root.withdraw()
         self._root.title(TITLE)
         self._root.resizable(True, True)
-        self._scanner = init_scanner(settings)
+
+        self._settings_list = settings
+        self._current_video_index = 0
+        self._total_videos = len(settings)
+        self._multi_video_mode = self._total_videos > 1
+
+        # Initialize scanner for the first video
+        self._scanner = init_scanner(self._settings_list[0])
         self._scanner.set_callbacks(
             scan_started=self._on_scan_started,
             processed_frame=self._on_processed_frame,
         )
+
+        # Determine if we should open folder on completion
+        first_settings = self._settings_list[0]
         self._open_on_completion = (
-            settings.get("output-dir") if settings.get("open-output-dir") else None
+            first_settings.get("output-dir") if first_settings.get("open-output-dir") else None
         )
 
         self._root.bind("<<Shutdown>>", self.stop)
@@ -56,42 +71,86 @@ class ScanWindow:
         self._scan_thread = threading.Thread(target=self._do_scan)
         self._on_destroyed = on_destroyed
 
-        self._progress = tk.IntVar(self._root, value=0)
-        self._progress_bar = ttk.Progressbar(self._root, variable=self._progress, maximum=10)
-        self._elapsed_label = tk.Label(self._root)
-        self._remaining_label = tk.Label(self._root)
-        self._stop_button = tk.Button(self._root, text="Stop", command=self.prompt_stop)
-        self._close_button = tk.Button(
-            self._root, text="Close", command=self._destroy, state=tk.DISABLED
-        )
-        self._events_label = tk.Label(self._root)
-        self._processed_label = tk.Label(self._root)
-        self._speed_label = tk.Label(self._root)
-        self._total_label = tk.Label(self._root)
-
-        # Layout
+        # Layout setup
         width = self._root.winfo_reqwidth()
         self._root.columnconfigure(0, weight=1, minsize=width / 2)
         self._root.columnconfigure(1, weight=1, minsize=width / 2)
-        self._root.rowconfigure(0, weight=1)
-        self._root.rowconfigure(1, weight=1)
-        self._root.rowconfigure(2, weight=1)
-        self._root.rowconfigure(3, weight=32)
-        self._root.rowconfigure(4, weight=1)
-        self._root.rowconfigure(5, weight=1)
-        self._root.rowconfigure(6, weight=1)
-        self._root.rowconfigure(7, weight=2)
-        self._root.minsize(
-            width=2 * self._root.winfo_reqwidth(), height=self._root.winfo_reqheight()
-        )
 
-        self._events_label.grid(row=0, column=0, columnspan=2, sticky=tk.NSEW, pady=(padding, 0))
-        self._progress_bar.grid(sticky=tk.NSEW, row=1, columnspan=2, pady=padding, padx=padding)
-        self._elapsed_label.grid(row=5, column=1, sticky=tk.NE, padx=padding)
-        self._remaining_label.grid(row=2, column=0, columnspan=2, sticky=tk.NSEW)
-        self._processed_label.grid(row=4, column=0, sticky=tk.NW, padx=padding)
-        self._total_label.grid(row=5, column=0, sticky=tk.NW, padx=padding)
-        self._speed_label.grid(row=4, column=1, sticky=tk.NE, padx=padding)
+        current_row = 0
+
+        # Multi-video progress (only shown in multi-video mode)
+        if self._multi_video_mode:
+            self._video_progress_label = tk.Label(
+                self._root, text="Video 1 of " + str(self._total_videos)
+            )
+            self._video_progress_label.grid(
+                row=current_row, column=0, columnspan=2, sticky=tk.NSEW, pady=(padding, 0)
+            )
+            current_row += 1
+
+            self._video_progress = tk.IntVar(self._root, value=0)
+            self._video_progress_bar = ttk.Progressbar(
+                self._root, variable=self._video_progress, maximum=self._total_videos
+            )
+            self._video_progress_bar.grid(
+                sticky=tk.NSEW,
+                row=current_row,
+                columnspan=2,
+                pady=(padding // 2, padding),
+                padx=padding,
+            )
+            current_row += 1
+
+            # Current video name label
+            video_name = Path(self._settings_list[0].get("input")[0]).name
+            self._current_video_label = tk.Label(self._root, text=f"Current: {video_name}")
+            self._current_video_label.grid(row=current_row, column=0, columnspan=2, sticky=tk.NSEW)
+            current_row += 1
+        else:
+            self._video_progress_label = None
+            self._video_progress_bar = None
+            self._video_progress = None
+            self._current_video_label = None
+
+        # Events found label
+        self._events_label = tk.Label(self._root)
+        self._events_label.grid(
+            row=current_row, column=0, columnspan=2, sticky=tk.NSEW, pady=(padding, 0)
+        )
+        current_row += 1
+
+        # Frame progress bar
+        self._progress = tk.IntVar(self._root, value=0)
+        self._progress_bar = ttk.Progressbar(self._root, variable=self._progress, maximum=10)
+        self._progress_bar.grid(
+            sticky=tk.NSEW, row=current_row, columnspan=2, pady=padding, padx=padding
+        )
+        self._progress_bar_row = current_row
+        current_row += 1
+
+        # Time remaining label
+        self._remaining_label = tk.Label(self._root)
+        self._remaining_label.grid(row=current_row, column=0, columnspan=2, sticky=tk.NSEW)
+        current_row += 1
+
+        # Empty row for spacing
+        self._root.rowconfigure(current_row, weight=32)
+        current_row += 1
+
+        # Stats labels
+        self._processed_label = tk.Label(self._root)
+        self._processed_label.grid(row=current_row, column=0, sticky=tk.NW, padx=padding)
+        self._speed_label = tk.Label(self._root)
+        self._speed_label.grid(row=current_row, column=1, sticky=tk.NE, padx=padding)
+        current_row += 1
+
+        self._total_label = tk.Label(self._root)
+        self._total_label.grid(row=current_row, column=0, sticky=tk.NW, padx=padding)
+        self._elapsed_label = tk.Label(self._root)
+        self._elapsed_label.grid(row=current_row, column=1, sticky=tk.NE, padx=padding)
+        current_row += 1
+
+        # Buttons frame
         frame = tk.Frame(self._root)
         frame.rowconfigure(0, weight=1)
         frame.columnconfigure(0, weight=1)
@@ -102,20 +161,29 @@ class ScanWindow:
         )
         self._stop_button.grid(row=0, column=0, pady=padding, sticky=tk.NSEW, padx=padding)
         self._close_button.grid(row=0, column=1, pady=padding, sticky=tk.NSEW, padx=padding)
-        frame.grid(row=7, column=0, columnspan=2, sticky=tk.NSEW)
+        frame.grid(row=current_row, column=0, columnspan=2, sticky=tk.NSEW)
 
+        self._root.minsize(
+            width=2 * self._root.winfo_reqwidth(), height=self._root.winfo_reqheight()
+        )
+
+        # State variables
         self._scan_started = threading.Event()
         self._scan_finished = threading.Event()
+        self._video_finished = threading.Event()
         self._scan_exception = None
         self._start_time = 0.0
         self._last_stats_update_ns = 0
         self._expected_num_frames = 0
         self._num_events = 0
+        self._total_events = 0  # Aggregate across all videos
         self._frames_processed = 0
+        self._total_frames_processed = 0  # Aggregate across all videos
         self._elapsed = "00:00"
         self._remaining = "N/A"
         self._rate = "N/A"
         self._padding = padding
+        self._stopped = False
 
     def _update(self):
         if self._scan_finished.is_set():
@@ -132,12 +200,23 @@ class ScanWindow:
                 return
             else:
                 logger.debug("scan complete")
+
+            # Update final state
+            if self._multi_video_mode:
+                self._video_progress.set(self._total_videos)
+                self._video_progress_label["text"] = (
+                    f"Completed {self._total_videos} of {self._total_videos} videos"
+                )
+                self._events_label["text"] = f"Total Events Found: {self._total_events}"
+            else:
+                self._events_label["text"] = f"Events Found: {self._num_events}"
+
             self._progress.set(self._expected_num_frames)
             self._elapsed_label["text"] = f"Elapsed: {self._elapsed}"
             self._remaining_label["text"] = "\n"
             self._stop_button["state"] = tk.DISABLED
             self._close_button["state"] = tk.NORMAL
-            self._processed_label["text"] = f"Processed: {self._expected_num_frames} frames"
+            self._processed_label["text"] = f"Processed: {self._total_frames_processed} frames"
             self._speed_label["text"] = f"Rate: {self._rate} FPS"
             return False
 
@@ -149,7 +228,7 @@ class ScanWindow:
             )
             self._progress_bar.grid(
                 sticky=tk.NSEW,
-                row=1,
+                row=self._progress_bar_row,
                 columnspan=2,
                 padx=self._padding,
                 pady=self._padding,
@@ -158,7 +237,18 @@ class ScanWindow:
 
         # Frames processed is updated from the worker thread, but we don't care about stale values.
         self._progress.set(self._frames_processed)
-        self._events_label["text"] = f"Events Found: {self._num_events}"
+
+        if self._multi_video_mode:
+            self._video_progress.set(self._current_video_index)
+            self._video_progress_label["text"] = (
+                f"Video {self._current_video_index + 1} of {self._total_videos}"
+            )
+            self._events_label["text"] = (
+                f"Events Found: {self._num_events} (Total: {self._total_events})"
+            )
+        else:
+            self._events_label["text"] = f"Events Found: {self._num_events}"
+
         self._elapsed_label["text"] = f"Elapsed: {self._elapsed}"
         self._remaining_label["text"] = f"Time Remaining:\n{self._remaining}"
         self._processed_label["text"] = f"Processed: {self._frames_processed:4} frames"
@@ -181,7 +271,7 @@ class ScanWindow:
         logger.debug("root destroyed")
 
     def prompt_stop(self):
-        if self._scanner.is_stopped():
+        if self._scanner.is_stopped() and self._scan_finished.is_set():
             return
         if messagebox.askyesno(
             title="Stop scan?",
@@ -192,6 +282,7 @@ class ScanWindow:
             self._destroy()
 
     def stop(self):
+        self._stopped = True
         if not self._scanner.is_stopped():
             logger.debug("stopping scan thread")
             self._scanner.stop()
@@ -231,28 +322,64 @@ class ScanWindow:
                 (self._elapsed, self._remaining, self._rate, _unit) = values
 
     def _do_scan(self):
-        # We'll handle any errors below in the main Tkinter thread.
+        """Main scanning loop that handles both single and multi-video modes."""
+        overall_start_time = time.time()
+        total_frames = 0
+
         try:
-            result = self._scanner.scan()
-            self._frames_processed = result.num_frames
-        except Exception as ex:  # noqa: E722
+            for i, settings in enumerate(self._settings_list):
+                if self._stopped:
+                    break
+
+                self._current_video_index = i
+
+                # Update video label in multi-video mode
+                if self._multi_video_mode and self._current_video_label:
+                    video_name = Path(settings.get("input")[0]).name
+                    # Schedule UI update on main thread
+                    self._root.after(
+                        0,
+                        lambda n=video_name: self._current_video_label.config(text=f"Current: {n}"),
+                    )
+
+                # Create new scanner for each video (except the first which is already created)
+                if i > 0:
+                    self._scanner = init_scanner(settings)
+                    self._scanner.set_callbacks(
+                        scan_started=self._on_scan_started,
+                        processed_frame=self._on_processed_frame,
+                    )
+                    # Reset per-video state
+                    self._frames_processed = 0
+                    self._num_events = 0
+                    self._progress.set(0)
+
+                logger.info(
+                    f"Scanning video {i + 1} of {self._total_videos}: {settings.get('input')[0]}"
+                )
+
+                result = self._scanner.scan()
+                self._frames_processed = result.num_frames
+                total_frames += result.num_frames
+                self._total_events += len(result.event_list)
+                self._total_frames_processed = total_frames
+
+                logger.info(f"Video {i + 1} complete: {len(result.event_list)} events found")
+
+        except Exception as ex:
             self._scan_exception = ex
         finally:
             self._scan_finished.set()
-        elapsed = time.time() - self._start_time
+
+        elapsed = time.time() - overall_start_time
         self._elapsed = (
             FrameTimecode(elapsed, 1000.0)
             .get_timecode(precision=0, use_rounding=True)
             .removeprefix("00:")
         )
-        # TODO: This rate will always be a tiny bit slower than the one shown in stdout since we
-        # use different timers. This can be fixed if we add a callback to the MotionScanner that
-        # we can use to access the progress bar the scanner created.
-        self._rate = (
-            "%.2f" % (float(self._frames_processed) / elapsed) if self._frames_processed else "N/A"
-        )
+        self._rate = "%.2f" % (float(total_frames) / elapsed) if total_frames else "N/A"
         # Open the output folder on a successful scan. On error, or if the user stopped the scan,
         # we don't open the window.
-        if self._open_on_completion and not self._scanner.is_stopped() and not self._scan_exception:
+        if self._open_on_completion and not self._stopped and not self._scan_exception:
             logger.debug("scan complete, opening output folder")
             open_path(self._open_on_completion)
