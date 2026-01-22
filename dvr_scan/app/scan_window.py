@@ -51,12 +51,9 @@ class ScanWindow:
         self._total_videos = len(settings)
         self._multi_video_mode = self._total_videos > 1
 
-        # Initialize scanner for the first video
-        self._scanner = init_scanner(self._settings_list[0])
-        self._scanner.set_callbacks(
-            scan_started=self._on_scan_started,
-            processed_frame=self._on_processed_frame,
-        )
+        # Scanner is created in _do_scan for each video
+        self._scanner = None
+        self._scanner_lock = threading.Lock()
 
         # Determine if we should open folder on completion
         first_settings = self._settings_list[0]
@@ -102,8 +99,8 @@ class ScanWindow:
             current_row += 1
 
             # Current video name label
-            video_name = Path(self._settings_list[0].get("input")[0]).name
-            self._current_video_label = tk.Label(self._root, text=f"Current: {video_name}")
+            self._current_video_name = Path(self._settings_list[0].get("input")[0]).name
+            self._current_video_label = tk.Label(self._root, text=f"{self._current_video_name}")
             self._current_video_label.grid(row=current_row, column=0, columnspan=2, sticky=tk.NSEW)
             current_row += 1
         else:
@@ -192,8 +189,7 @@ class ScanWindow:
                 logger.critical(f"error during scan:\n{formatted_exception}")
                 messagebox.showerror(
                     "Scan Error",
-                    "Error during scanning. See log messages for more info."
-                    f"\nSummary: {self._scan_exception}",
+                    f"Error during scan: {self._scan_exception}\n\nSee log messages for more info.",
                     parent=self._root,
                 )
                 self._destroy()
@@ -204,12 +200,11 @@ class ScanWindow:
             # Update final state
             if self._multi_video_mode:
                 self._video_progress.set(self._total_videos)
-                self._video_progress_label["text"] = (
-                    f"Completed {self._total_videos} of {self._total_videos} videos"
-                )
-                self._events_label["text"] = f"Total Events Found: {self._total_events}"
+                self._video_progress_label["text"] = f"Scanned {self._total_videos} Videos"
+                self._events_label["text"] = f"Total Events: {self._total_events}"
+                self._current_video_label.config(text=f"{self._current_video_name}")
             else:
-                self._events_label["text"] = f"Events Found: {self._num_events}"
+                self._events_label["text"] = f"Total Events: {self._num_events}"
 
             self._progress.set(self._expected_num_frames)
             self._elapsed_label["text"] = f"Elapsed: {self._elapsed}"
@@ -243,11 +238,9 @@ class ScanWindow:
             self._video_progress_label["text"] = (
                 f"Video {self._current_video_index + 1} of {self._total_videos}"
             )
-            self._events_label["text"] = (
-                f"Events Found: {self._num_events} (Total: {self._total_events})"
-            )
+            self._events_label["text"] = f"Events: {self._num_events} (Total: {self._total_events})"
         else:
-            self._events_label["text"] = f"Events Found: {self._num_events}"
+            self._events_label["text"] = f"Events: {self._num_events}"
 
         self._elapsed_label["text"] = f"Elapsed: {self._elapsed}"
         self._remaining_label["text"] = f"Time Remaining:\n{self._remaining}"
@@ -271,8 +264,13 @@ class ScanWindow:
         logger.debug("root destroyed")
 
     def prompt_stop(self):
-        if self._scanner.is_stopped() and self._scan_finished.is_set():
-            return
+        with self._scanner_lock:
+            if (
+                self._scanner is not None
+                and self._scanner.is_stopped()
+                and self._scan_finished.is_set()
+            ):
+                return
         if messagebox.askyesno(
             title="Stop scan?",
             message="Are you sure you want to stop the current scan?",
@@ -282,10 +280,12 @@ class ScanWindow:
             self._destroy()
 
     def stop(self):
-        self._stopped = True
-        if not self._scanner.is_stopped():
-            logger.debug("stopping scan thread")
-            self._scanner.stop()
+        with self._scanner_lock:
+            self._stopped = True
+            if self._scanner is not None and not self._scanner.is_stopped():
+                logger.debug("stopping scan thread")
+                self._scanner.stop()
+        if self._scan_thread.is_alive():
             self._scan_thread.join()
 
     def show(self):
@@ -328,31 +328,25 @@ class ScanWindow:
 
         try:
             for i, settings in enumerate(self._settings_list):
-                if self._stopped:
-                    break
-
                 self._current_video_index = i
 
                 # Update video label in multi-video mode
                 if self._multi_video_mode and self._current_video_label:
-                    video_name = Path(settings.get("input")[0]).name
-                    # Schedule UI update on main thread
-                    self._root.after(
-                        0,
-                        lambda n=video_name: self._current_video_label.config(text=f"Current: {n}"),
-                    )
+                    self._current_video_name = Path(settings.get("input")[0]).name
 
-                # Create new scanner for each video (except the first which is already created)
-                if i > 0:
+                # Create scanner for this video
+                with self._scanner_lock:
+                    if self._stopped:
+                        break
                     self._scanner = init_scanner(settings)
                     self._scanner.set_callbacks(
                         scan_started=self._on_scan_started,
                         processed_frame=self._on_processed_frame,
                     )
-                    # Reset per-video state
-                    self._frames_processed = 0
-                    self._num_events = 0
-                    self._progress.set(0)
+                # Reset per-video state
+                self._frames_processed = 0
+                self._num_events = 0
+                self._progress.set(0)
 
                 logger.info(
                     f"Scanning video {i + 1} of {self._total_videos}: {settings.get('input')[0]}"
@@ -364,7 +358,7 @@ class ScanWindow:
                 self._total_events += len(result.event_list)
                 self._total_frames_processed = total_frames
 
-                logger.info(f"Video {i + 1} complete: {len(result.event_list)} events found")
+                logger.info(f"Finished scanning video: {len(result.event_list)} events found")
 
         except Exception as ex:
             self._scan_exception = ex
