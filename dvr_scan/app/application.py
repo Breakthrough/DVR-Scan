@@ -147,8 +147,7 @@ class InputArea:
             variable=self._concatenate,
             onvalue=True,
             offvalue=False,
-            command=self._on_set_time,
-            state=tk.DISABLED,  # TODO: Enable when implemented.
+            command=self._on_concatenate_changed,
         ).grid(row=2, column=4, padx=PADDING, sticky=EXPAND_HORIZONTAL)
 
         # TODO: Need to prevent start_time >= end_time.
@@ -304,15 +303,26 @@ class InputArea:
             else:
                 break
 
+    def _on_concatenate_changed(self):
+        """Handle change in concatenation mode."""
+        if not self.concatenate:
+            # When not concatenating, disable and uncheck "Set Time"
+            self._set_time.set(False)
+        self._on_set_time()
+
     def _on_set_time(self):
-        # TODO: When disabled, set start time 0 and end time duration of video.
-        state = tk.NORMAL if self._set_time.get() else tk.DISABLED
-        self._set_time_button["state"] = tk.NORMAL if self.concatenate else tk.DISABLED
+        # When not concatenating, set time is not available
+        can_set_time = self.concatenate
+        self._set_time_button["state"] = tk.NORMAL if can_set_time else tk.DISABLED
+        if not can_set_time:
+            self._set_time.set(False)
+
+        state = tk.NORMAL if self._set_time.get() and can_set_time else tk.DISABLED
         self._start_time_label["state"] = state
         self._start_time["state"] = state
         self._end_time_label["state"] = state
         self._end_time["state"] = state
-        if state == tk.NORMAL and self.concatenate:
+        if state == tk.NORMAL:
             self._start_time_label.grid(row=3, column=1, sticky=EXPAND_HORIZONTAL)
             self._start_time.grid(row=3, column=2, padx=PADDING, sticky=EXPAND_HORIZONTAL)
             self._end_time.grid(row=3, column=4, padx=PADDING, sticky=EXPAND_HORIZONTAL)
@@ -1529,7 +1539,12 @@ class Application:
         if not settings:
             return
 
-        logger.debug(f"ui settings:\n{settings.app_settings}")
+        if len(settings) > 1:
+            logger.debug(f"ui settings (multi-video mode, {len(settings)} videos)")
+            for i, s in enumerate(settings):
+                logger.debug(f"  video {i + 1}: {s.get('input')}")
+        else:
+            logger.debug(f"ui settings:\n{settings[0].app_settings}")
 
         def on_closed():
             logger.debug("scan window closed, restoring focus")
@@ -1659,8 +1674,14 @@ class Application:
         settings = self._scan_area.save(settings)
         return settings
 
-    def _get_settings(self) -> ty.Optional[ScanSettings]:
-        """Get current UI state with all options to run a scan."""
+    def _get_settings(self) -> ty.Optional[ty.List[ScanSettings]]:
+        """Get current UI state with all options to run a scan.
+
+        Returns:
+            A list of ScanSettings objects (one per video when not concatenating,
+            or a single-element list when concatenating).
+            None if there are no videos or the user cancelled.
+        """
         settings = copy.deepcopy(self._settings)
         settings = self._input_area.update(settings)
         if not settings:
@@ -1674,7 +1695,7 @@ class Application:
             OutputMode.SCAN_ONLY if settings.get("scan-only") else settings.get("output-mode")
         )
         # Check if we are going to create any output files. We will create files as long as we're
-        # not in scan-only mode, or if we
+        # not in scan-only mode, or if we need mask output
         if not settings.get("output-dir") and (
             output_mode != OutputMode.SCAN_ONLY or settings.get("mask-output")
         ):
@@ -1687,15 +1708,29 @@ class Application:
                 return None
             settings.set("output-dir", output_dir)
 
-        video_name = Path(settings.get("input")[0]).stem
-        if self._output_area.combine:
-            settings.set("output", f"{video_name}-events.avi")
+        videos = settings.get("input")
+        concatenate = self._input_area.concatenate
+        mask_output_enabled = settings.get("mask-output")
+        combine_events = self._output_area.combine
 
-        if settings.get("mask-output"):
-            settings.set("mask-output", f"{video_name}-mask.avi")
-
-        if not self._input_area.concatenate and len(settings.get_arg("input")) > 1:
-            logger.error("ERROR - TODO: Handle non-concatenated inputs.")
-            return None
-
-        return settings
+        if concatenate:
+            # Single scan with all videos concatenated
+            video_name = Path(videos[0]).stem
+            if combine_events:
+                settings.set("output", f"{video_name}-events.avi")
+            if mask_output_enabled:
+                settings.set("mask-output", f"{video_name}-mask.avi")
+            return [settings]
+        else:
+            # Separate scan for each video
+            settings_list = []
+            for video_path in videos:
+                video_settings = copy.deepcopy(settings)
+                video_settings.set("input", [video_path])
+                video_name = Path(video_path).stem
+                if combine_events:
+                    video_settings.set("output", f"{video_name}-events.avi")
+                if mask_output_enabled:
+                    video_settings.set("mask-output", f"{video_name}-mask.avi")
+                settings_list.append(video_settings)
+            return settings_list
