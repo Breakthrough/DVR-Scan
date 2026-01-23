@@ -399,3 +399,9 @@ This version of DVR-Scan includes a new, faster background subtraction algorithm
  * [feature] output events to individual video files, or as a single-file compilation
  * [feature] allows input seeking, frame skipping, and output suppression mode
  * [feature] configurable detection windows and pre/post-event inclusion length
+
+----------------------------------------------------------
+
+#### In Development
+
+## DVR-Scan 1.9
