@@ -2,8 +2,7 @@
 # DVR-Scan Python Requirements
 #
 numpy
-# TODO(#257): Unpin OpenCV versions once we figure out why frame numbers are mismatching in tests.
-opencv-contrib-python-headless<4.13
+opencv-contrib-python-headless
 pillow
 platformdirs
 pytest
