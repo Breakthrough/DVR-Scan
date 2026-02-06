@@ -1,0 +1,482 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 500 500"
+   version="1.1"
+   id="svg49"
+   sodipodi:docname="dvr-scan-logo.svg"
+   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview49"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="1.6503872"
+     inkscape:cx="332.34625"
+     inkscape:cy="170.56603"
+     inkscape:window-width="3440"
+     inkscape:window-height="1369"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="g44" />
+  <defs
+     id="defs1">
+    <!-- Clip path that cuts out the lens area from the filmstrip -->
+    <clipPath
+       id="filmstrip-clip">
+      <path
+         fill-rule="evenodd"
+         d="         M 0,0 L 500,0 L 500,500 L 0,500 Z         M 243,88         A 95,95 0 1,0 243,278         A 95,95 0 1,0 243,88         Z       "
+         id="path1" />
+    </clipPath>
+  </defs>
+  <!-- Background -->
+  <rect
+     width="500"
+     height="500"
+     fill="#59606d"
+     id="rect1"
+     x="0"
+     y="0"
+     style="display:inline"
+     inkscape:label="background" />
+  <!-- Film strip with clip-path applied -->
+  <g
+     clip-path="url(#filmstrip-clip)"
+     id="g44"
+     style="display:inline"
+     inkscape:label="filmstrip">
+    <!-- Film strip - solid teal block (y=92 to y=285) -->
+    <rect
+       x="0"
+       y="92"
+       width="500"
+       height="193"
+       fill="#87a0a0"
+       id="rect2"
+       style="display:inline"
+       inkscape:label="strip-background" />
+    <!-- Cut out top sprocket holes y=101 to y=124 (height=23) -->
+    <g
+       fill="#59606d"
+       id="g21"
+       style="display:inline"
+       inkscape:label="sprocket-holes-top">
+      <rect
+         x="7"
+         y="101"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect3" />
+      <rect
+         x="33"
+         y="101"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect4" />
+      <rect
+         x="59"
+         y="101"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect5" />
+      <rect
+         x="85"
+         y="101"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect6" />
+      <rect
+         x="111"
+         y="101"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect7" />
+      <rect
+         x="137"
+         y="101"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect8" />
+      <rect
+         x="163"
+         y="101"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect9" />
+      <rect
+         x="189"
+         y="101"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect10" />
+      <rect
+         x="215"
+         y="101"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect11" />
+      <rect
+         x="241"
+         y="101"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect12" />
+      <rect
+         x="267"
+         y="101"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect13" />
+      <rect
+         x="293"
+         y="101"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect14" />
+      <rect
+         x="319"
+         y="101"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect15" />
+      <rect
+         x="345"
+         y="101"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect16" />
+      <rect
+         x="371"
+         y="101"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect17" />
+      <rect
+         x="397"
+         y="101"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect18" />
+      <rect
+         x="423"
+         y="101"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect19" />
+      <rect
+         x="449"
+         y="101"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect20" />
+      <rect
+         x="475"
+         y="101"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect21" />
+    </g>
+    <!-- Cut out frame window: y=135 to y=239 -->
+    <rect
+       x="0"
+       y="135"
+       width="12"
+       height="104"
+       fill="#59606d"
+       id="rect22"
+       style="display:inline"
+       inkscape:label="pane-0" />
+    <rect
+       x="26"
+       y="135"
+       width="445"
+       height="104"
+       fill="#59606d"
+       id="rect23"
+       style="display:inline"
+       inkscape:label="pane-1" />
+    <rect
+       x="485"
+       y="135"
+       width="15"
+       height="104"
+       fill="#59606d"
+       id="rect24"
+       inkscape:label="pane-2" />
+    <!-- Cut out bottom sprocket holes y=252 to y=275 (height=23) -->
+    <g
+       fill="#59606d"
+       id="g43"
+       style="display:inline"
+       inkscape:label="sprocket-holes-bottom">
+      <rect
+         x="7"
+         y="252"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect25" />
+      <rect
+         x="33"
+         y="252"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect26" />
+      <rect
+         x="59"
+         y="252"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect27" />
+      <rect
+         x="85"
+         y="252"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect28" />
+      <rect
+         x="111"
+         y="252"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect29" />
+      <rect
+         x="137"
+         y="252"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect30" />
+      <rect
+         x="163"
+         y="252"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect31" />
+      <rect
+         x="189"
+         y="252"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect32" />
+      <rect
+         x="215"
+         y="252"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect33" />
+      <rect
+         x="241"
+         y="252"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect34" />
+      <rect
+         x="267"
+         y="252"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect35" />
+      <rect
+         x="293"
+         y="252"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect36" />
+      <rect
+         x="319"
+         y="252"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect37" />
+      <rect
+         x="345"
+         y="252"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect38" />
+      <rect
+         x="371"
+         y="252"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect39" />
+      <rect
+         x="397"
+         y="252"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect40" />
+      <rect
+         x="423"
+         y="252"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect41" />
+      <rect
+         x="449"
+         y="252"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect42" />
+      <rect
+         x="475"
+         y="252"
+         width="17"
+         height="23"
+         rx="3"
+         id="rect43" />
+    </g>
+  </g>
+  <!-- Ground plane (behind magnifying glass and figures) -->
+  <!-- Magnifying glass - truly unified path -->
+  <!-- Ring center: (243, 183), Outer radius: 128, Inner radius: 90 -->
+  <!-- Handle intersects ring at (350, 254) top and (315, 289) bottom -->
+  <g
+     id="magnifying-glass"
+     style="display:inline"
+     inkscape:label="magnifying-glass-viewpane">
+    <!-- Walking figure silhouette inside lens with motion blur -->
+    <!-- 5 copies spaced 12.5px apart, scale increased 10% from 3.0 to 3.3 -->
+    <!-- Traced from Inkscape by user, head adjusted up and right -->
+    <!-- Motion blur copy 4 (leftmost, most transparent) -->
+    <g
+       id="walking-figure-blur4"
+       transform="matrix(3.3,0,0,3.3,-101.35,-153.4)"
+       opacity="0.2">
+      <path
+         fill="#c6f1e7"
+         d="m 85.010552,109.45329 c 1.853922,-7.29243 3.335206,-13.294524 3.291743,-13.337987 -0.04346,-0.04346 -0.781197,0.134557 -1.639407,0.395602 l -1.560383,0.474626 -0.07415,3.224529 -0.07415,3.22454 h -1.714612 -1.714611 l 0.07226,-4.553862 0.07226,-4.553859 4.753394,-1.503038 c 7.035689,-2.224706 6.939446,-2.249667 9.788845,2.538783 l 1.808455,3.039129 3.179984,0.07371 3.17998,0.07371 v 1.584467 1.58446 l -4.22997,0.0723 -4.229972,0.0723 -0.954308,-1.61802 -0.954309,-1.618026 -0.601738,2.496046 -0.601739,2.49605 2.154954,3.9633 2.154954,3.9633 v 5.58349 5.58348 H 95.533565 93.9491 v -4.31632 -4.31632 l -1.975886,-2.68173 c -1.086736,-1.47495 -2.020798,-2.68173 -2.075691,-2.68173 -0.05489,0 -1.202555,3.14912 -2.550359,6.99805 l -2.450553,6.99805 h -1.628413 -1.628414 z"
+         id="path45" />
+      <circle
+         cx="96"
+         cy="88"
+         r="3.0999999"
+         fill="#c6f1e7"
+         id="circle45" />
+    </g>
+    <!-- Motion blur copy 3 -->
+    <g
+       id="walking-figure-blur3"
+       transform="matrix(3.3,0,0,3.3,-84.85,-153.4)"
+       opacity="0.35">
+      <path
+         fill="#c6f1e7"
+         d="m 85.010552,109.45329 c 1.853922,-7.29243 3.335206,-13.294524 3.291743,-13.337987 -0.04346,-0.04346 -0.781197,0.134557 -1.639407,0.395602 l -1.560383,0.474626 -0.07415,3.224529 -0.07415,3.22454 h -1.714612 -1.714611 l 0.07226,-4.553862 0.07226,-4.553859 4.753394,-1.503038 c 7.035689,-2.224706 6.939446,-2.249667 9.788845,2.538783 l 1.808455,3.039129 3.179984,0.07371 3.17998,0.07371 v 1.584467 1.58446 l -4.22997,0.0723 -4.229972,0.0723 -0.954308,-1.61802 -0.954309,-1.618026 -0.601738,2.496046 -0.601739,2.49605 2.154954,3.9633 2.154954,3.9633 v 5.58349 5.58348 H 95.533565 93.9491 v -4.31632 -4.31632 l -1.975886,-2.68173 c -1.086736,-1.47495 -2.020798,-2.68173 -2.075691,-2.68173 -0.05489,0 -1.202555,3.14912 -2.550359,6.99805 l -2.450553,6.99805 h -1.628413 -1.628414 z"
+         id="path46" />
+      <circle
+         cx="96"
+         cy="88"
+         r="3.0999999"
+         fill="#c6f1e7"
+         id="circle46" />
+    </g>
+    <!-- Motion blur copy 2 -->
+    <g
+       id="walking-figure-blur2"
+       transform="matrix(3.3,0,0,3.3,-68.35,-153.4)"
+       opacity="0.5">
+      <path
+         fill="#c6f1e7"
+         d="m 85.010552,109.45329 c 1.853922,-7.29243 3.335206,-13.294524 3.291743,-13.337987 -0.04346,-0.04346 -0.781197,0.134557 -1.639407,0.395602 l -1.560383,0.474626 -0.07415,3.224529 -0.07415,3.22454 h -1.714612 -1.714611 l 0.07226,-4.553862 0.07226,-4.553859 4.753394,-1.503038 c 7.035689,-2.224706 6.939446,-2.249667 9.788845,2.538783 l 1.808455,3.039129 3.179984,0.07371 3.17998,0.07371 v 1.584467 1.58446 l -4.22997,0.0723 -4.229972,0.0723 -0.954308,-1.61802 -0.954309,-1.618026 -0.601738,2.496046 -0.601739,2.49605 2.154954,3.9633 2.154954,3.9633 v 5.58349 5.58348 H 95.533565 93.9491 v -4.31632 -4.31632 l -1.975886,-2.68173 c -1.086736,-1.47495 -2.020798,-2.68173 -2.075691,-2.68173 -0.05489,0 -1.202555,3.14912 -2.550359,6.99805 l -2.450553,6.99805 h -1.628413 -1.628414 z"
+         id="path47" />
+      <circle
+         cx="96"
+         cy="88"
+         r="3.0999999"
+         fill="#c6f1e7"
+         id="circle47" />
+    </g>
+    <!-- Motion blur copy 1 -->
+    <g
+       id="walking-figure-blur1"
+       transform="matrix(3.3,0,0,3.3,-51.85,-153.4)"
+       opacity="0.7">
+      <path
+         fill="#c6f1e7"
+         d="m 85.010552,109.45329 c 1.853922,-7.29243 3.335206,-13.294524 3.291743,-13.337987 -0.04346,-0.04346 -0.781197,0.134557 -1.639407,0.395602 l -1.560383,0.474626 -0.07415,3.224529 -0.07415,3.22454 h -1.714612 -1.714611 l 0.07226,-4.553862 0.07226,-4.553859 4.753394,-1.503038 c 7.035689,-2.224706 6.939446,-2.249667 9.788845,2.538783 l 1.808455,3.039129 3.179984,0.07371 3.17998,0.07371 v 1.584467 1.58446 l -4.22997,0.0723 -4.229972,0.0723 -0.954308,-1.61802 -0.954309,-1.618026 -0.601738,2.496046 -0.601739,2.49605 2.154954,3.9633 2.154954,3.9633 v 5.58349 5.58348 H 95.533565 93.9491 v -4.31632 -4.31632 l -1.975886,-2.68173 c -1.086736,-1.47495 -2.020798,-2.68173 -2.075691,-2.68173 -0.05489,0 -1.202555,3.14912 -2.550359,6.99805 l -2.450553,6.99805 h -1.628413 -1.628414 z"
+         id="path48" />
+      <circle
+         cx="96"
+         cy="88"
+         r="3.0999999"
+         fill="#c6f1e7"
+         id="circle48" />
+    </g>
+    <!-- Main figure (rightmost, fully opaque) -->
+    <g
+       id="walking-figure"
+       transform="matrix(3.3,0,0,3.3,-35.35,-153.4)">
+      <path
+         fill="#c6f1e7"
+         d="m 85.010552,109.45329 c 1.853922,-7.29243 3.335206,-13.294524 3.291743,-13.337987 -0.04346,-0.04346 -0.781197,0.134557 -1.639407,0.395602 l -1.560383,0.474626 -0.07415,3.224529 -0.07415,3.22454 h -1.714612 -1.714611 l 0.07226,-4.553862 0.07226,-4.553859 4.753394,-1.503038 c 7.035689,-2.224706 6.939446,-2.249667 9.788845,2.538783 l 1.808455,3.039129 3.179984,0.07371 3.17998,0.07371 v 1.584467 1.58446 l -4.22997,0.0723 -4.229972,0.0723 -0.954308,-1.61802 -0.954309,-1.618026 -0.601738,2.496046 -0.601739,2.49605 2.154954,3.9633 2.154954,3.9633 v 5.58349 5.58348 H 95.533565 93.9491 v -4.31632 -4.31632 l -1.975886,-2.68173 c -1.086736,-1.47495 -2.020798,-2.68173 -2.075691,-2.68173 -0.05489,0 -1.202555,3.14912 -2.550359,6.99805 l -2.450553,6.99805 h -1.628413 -1.628414 z"
+         id="path49" />
+      <circle
+         cx="96"
+         cy="88"
+         r="3.0999999"
+         fill="#c6f1e7"
+         id="circle49" />
+    </g>
+    <ellipse
+       cx="242.89288"
+       cy="257.85349"
+       rx="84.0317"
+       ry="17.569838"
+       fill="#607372"
+       id="ellipse44"
+       style="stroke-width:1.32577" />
+  </g>
+  <path
+     fill-rule="nonzero"
+     fill="#474d57"
+     stroke="#c6f1e7"
+     stroke-width="4"
+     d="       M 243,55       A 128,128 0 0,1 350,254       L 472,376       A 25,25 0 0,1 437,411       L 315,289       A 128,128 0 1,1 243,55       Z       M 243,93       A 90,90 0 1,0 243,273       A 90,90 0 1,0 243,93       Z     "
+     id="path44"
+     inkscape:label="magnifying-glass" />
+</svg>
