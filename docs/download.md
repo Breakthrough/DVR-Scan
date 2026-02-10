@@ -59,7 +59,7 @@ DVR-Scan works with CUDA graphics cards *if* you are using the Python distributi
 
 It is recommended to build and install OpenCV with the CUDA module enabled (there are various tutorials online for how to do this).  There is also unofficial pre-built Python wheels:
 
- - [Breakthrough/opencv-python-cuda](https://github.com/Breakthrough/opencv-python-cuda/releases/tag/4.12.0-dev0)
+ - [Breakthrough/opencv-python-cuda](https://github.com/Breakthrough/opencv-python-cuda/releases/tag/4.12.0-dev1)
  - [cudawarped/opencv-python-cuda-wheels](https://github.com/cudawarped/opencv-python-cuda-wheels/releases/tag/4.11.0.20250124)
 
 These can be downloaded and installed with . When available, you should see `cv2.cuda: Installed` under the features list when running `dvr-scan --version`. Make sure to set `-b MOG2_CUDA` when running DVR-Scan (e.g. `dvr-scan -i video.mp4 -b MOG2_CUDA`).  In the UI, under this can be found under Settings -> Motion -> Subtractor.
