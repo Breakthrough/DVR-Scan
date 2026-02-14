@@ -1,0 +1,519 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 300 300"
+   version="1.1"
+   id="svg49"
+   sodipodi:docname="dvr-scan-icon-simple.svg"
+   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
+   width="300"
+   height="300"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview49"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="1.6503872"
+     inkscape:cx="-212.07145"
+     inkscape:cy="168.14236"
+     inkscape:window-width="3440"
+     inkscape:window-height="1369"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg49"
+     showgrid="false"
+     inkscape:antialias-rendering="true">
+    <inkscape:grid
+       id="grid1"
+       units="px"
+       originx="0"
+       originy="0"
+       spacingx="1"
+       spacingy="1"
+       empcolor="#0099e5"
+       empopacity="0.30196078"
+       color="#0099e5"
+       opacity="0.14901961"
+       empspacing="5"
+       enabled="true"
+       visible="false" />
+  </sodipodi:namedview>
+  <defs
+     id="defs1">
+    <!-- Clip path that cuts out the lens area from the filmstrip -->
+    <clipPath
+       id="filmstrip-clip">
+      <path
+         fill-rule="evenodd"
+         d="M 0,0 H 500 V 500 H 0 Z m 243,88 a 95,95 0 1 0 0,190 95,95 0 1 0 0,-190 z"
+         id="path1" />
+    </clipPath>
+  </defs>
+  <!-- Background -->
+  <rect
+     width="178.38171"
+     height="133.41838"
+     fill="#59606d"
+     id="rect1-1"
+     x="44.860367"
+     y="66.598312"
+     style="display:inline;stroke-width:0.308539"
+     inkscape:label="background" />
+  <g
+     id="magnifying-glass-1"
+     style="display:inline"
+     inkscape:label="magnifying-glass-viewpane"
+     transform="matrix(0.99394081,0,0,0.7614,-107.50814,-4.449009)">
+    <!-- Walking figure silhouette inside lens with motion blur -->
+    <!-- 5 copies spaced 12.5px apart, scale increased 10% from 3.0 to 3.3 -->
+    <!-- Traced from Inkscape by user, head adjusted up and right -->
+    <!-- Motion blur copy 4 (leftmost, most transparent) -->
+    <g
+       id="walking-figure-blur4"
+       transform="matrix(3.7006091,0,0,3.7006091,-149.28067,-197.10641)"
+       opacity="0.2">
+      <path
+         fill="#c6f1e7"
+         d="m 85.010552,109.45329 c 1.853922,-7.29243 3.335206,-13.294524 3.291743,-13.337987 -0.04346,-0.04346 -0.781197,0.134557 -1.639407,0.395602 l -1.560383,0.474626 -0.07415,3.224529 -0.07415,3.22454 h -1.714612 -1.714611 l 0.07226,-4.553862 0.07226,-4.553859 4.753394,-1.503038 c 7.035689,-2.224706 6.939446,-2.249667 9.788845,2.538783 l 1.808455,3.039129 3.179984,0.07371 3.17998,0.07371 v 1.584467 1.58446 l -4.22997,0.0723 -4.229972,0.0723 -0.954308,-1.61802 -0.954309,-1.618026 -0.601738,2.496046 -0.601739,2.49605 2.154954,3.9633 2.154954,3.9633 v 5.58349 5.58348 H 95.533565 93.9491 v -4.31632 -4.31632 l -1.975886,-2.68173 c -1.086736,-1.47495 -2.020798,-2.68173 -2.075691,-2.68173 -0.05489,0 -1.202555,3.14912 -2.550359,6.99805 l -2.450553,6.99805 h -1.628413 -1.628414 z"
+         id="path45" />
+      <circle
+         cx="96"
+         cy="88"
+         r="3.0999999"
+         fill="#c6f1e7"
+         id="circle45" />
+    </g>
+    <!-- Motion blur copy 3 -->
+    <g
+       id="walking-figure-blur3-5"
+       transform="matrix(3.7006091,0,0,3.7006091,-122.77763,-197.10641)"
+       opacity="0.35" />
+    <!-- Motion blur copy 2 -->
+    <g
+       id="walking-figure-blur2-2"
+       transform="matrix(3.7006091,0,0,3.7006091,-112.27458,-197.10641)"
+       opacity="0.5">
+      <path
+         fill="#c6f1e7"
+         d="m 85.010552,109.45329 c 1.853922,-7.29243 3.335206,-13.294524 3.291743,-13.337987 -0.04346,-0.04346 -0.781197,0.134557 -1.639407,0.395602 l -1.560383,0.474626 -0.07415,3.224529 -0.07415,3.22454 h -1.714612 -1.714611 l 0.07226,-4.553862 0.07226,-4.553859 4.753394,-1.503038 c 7.035689,-2.224706 6.939446,-2.249667 9.788845,2.538783 l 1.808455,3.039129 3.179984,0.07371 3.17998,0.07371 v 1.584467 1.58446 l -4.22997,0.0723 -4.229972,0.0723 -0.954308,-1.61802 -0.954309,-1.618026 -0.601738,2.496046 -0.601739,2.49605 2.154954,3.9633 2.154954,3.9633 v 5.58349 5.58348 H 95.533565 93.9491 v -4.31632 -4.31632 l -1.975886,-2.68173 c -1.086736,-1.47495 -2.020798,-2.68173 -2.075691,-2.68173 -0.05489,0 -1.202555,3.14912 -2.550359,6.99805 l -2.450553,6.99805 h -1.628413 -1.628414 z"
+         id="path47" />
+      <circle
+         cx="96"
+         cy="88"
+         r="3.0999999"
+         fill="#c6f1e7"
+         id="circle47" />
+    </g>
+    <!-- Motion blur copy 1 -->
+    <!-- Main figure (rightmost, fully opaque) -->
+    <g
+       id="walking-figure-7"
+       transform="matrix(3.7006091,0,0,3.7006091,-75.268489,-197.10641)">
+      <path
+         fill="#c6f1e7"
+         d="m 85.010552,109.45329 c 1.853922,-7.29243 3.335206,-13.294524 3.291743,-13.337987 -0.04346,-0.04346 -0.781197,0.134557 -1.639407,0.395602 l -1.560383,0.474626 -0.07415,3.224529 -0.07415,3.22454 h -1.714612 -1.714611 l 0.07226,-4.553862 0.07226,-4.553859 4.753394,-1.503038 c 7.035689,-2.224706 6.939446,-2.249667 9.788845,2.538783 l 1.808455,3.039129 3.179984,0.07371 3.17998,0.07371 v 1.584467 1.58446 l -4.22997,0.0723 -4.229972,0.0723 -0.954308,-1.61802 -0.954309,-1.618026 -0.601738,2.496046 -0.601739,2.49605 2.154954,3.9633 2.154954,3.9633 v 5.58349 5.58348 H 95.533565 93.9491 v -4.31632 -4.31632 l -1.975886,-2.68173 c -1.086736,-1.47495 -2.020798,-2.68173 -2.075691,-2.68173 -0.05489,0 -1.202555,3.14912 -2.550359,6.99805 l -2.450553,6.99805 h -1.628413 -1.628414 z"
+         id="path49-6" />
+      <circle
+         cx="96"
+         cy="88"
+         r="3.0999999"
+         fill="#c6f1e7"
+         id="circle49-1" />
+    </g>
+    <ellipse
+       cx="235.62187"
+       cy="263.30673"
+       rx="84.0317"
+       ry="17.569838"
+       fill="#607372"
+       id="ellipse44"
+       style="stroke-width:1.32577" />
+  </g>
+  <rect
+     x="-107.50811"
+     y="65.599785"
+     width="496.97043"
+     height="146.95018"
+     fill="#87a0a0"
+     id="rect2"
+     style="display:inline;stroke-width:0.869935"
+     inkscape:label="strip-background" />
+  <g
+     fill="#59606d"
+     id="g21"
+     style="display:inline"
+     inkscape:label="sprocket-holes-top"
+     transform="matrix(0.99394081,0,0,0.7614,-107.50814,-4.449011)">
+    <rect
+       x="7"
+       y="101"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect3" />
+    <rect
+       x="33"
+       y="101"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect4" />
+    <rect
+       x="59"
+       y="101"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect5" />
+    <rect
+       x="85"
+       y="101"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect6" />
+    <rect
+       x="111"
+       y="101"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect7" />
+    <rect
+       x="137"
+       y="101"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect8" />
+    <rect
+       x="163"
+       y="101"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect9" />
+    <rect
+       x="189"
+       y="101"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect10" />
+    <rect
+       x="215"
+       y="101"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect11" />
+    <rect
+       x="241"
+       y="101"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect12" />
+    <rect
+       x="267"
+       y="101"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect13" />
+    <rect
+       x="293"
+       y="101"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect14" />
+    <rect
+       x="319"
+       y="101"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect15" />
+    <rect
+       x="345"
+       y="101"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect16" />
+    <rect
+       x="371"
+       y="101"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect17" />
+    <rect
+       x="397"
+       y="101"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect18" />
+    <rect
+       x="423"
+       y="101"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect19" />
+    <rect
+       x="449"
+       y="101"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect20" />
+    <rect
+       x="475"
+       y="101"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect21" />
+  </g>
+  <rect
+     x="-107.50811"
+     y="98.339989"
+     width="11.92729"
+     height="79.1856"
+     fill="#59606d"
+     id="rect22"
+     style="display:inline;stroke-width:0.869935"
+     inkscape:label="pane-0" />
+  <rect
+     x="-81.665649"
+     y="98.339989"
+     width="442.30365"
+     height="79.1856"
+     fill="#59606d"
+     id="rect23"
+     style="display:inline;stroke-width:0.869935"
+     inkscape:label="pane-1" />
+  <rect
+     x="374.55322"
+     y="98.339989"
+     width="14.909112"
+     height="79.1856"
+     fill="#59606d"
+     id="rect24"
+     inkscape:label="pane-2"
+     style="display:inline;stroke-width:0.869935" />
+  <g
+     fill="#59606d"
+     id="g43"
+     style="display:inline"
+     inkscape:label="sprocket-holes-bottom"
+     transform="matrix(0.99394081,0,0,0.7614,-107.50814,-4.449011)">
+    <rect
+       x="7"
+       y="252"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect25" />
+    <rect
+       x="33"
+       y="252"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect26" />
+    <rect
+       x="59"
+       y="252"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect27" />
+    <rect
+       x="85"
+       y="252"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect28" />
+    <rect
+       x="111"
+       y="252"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect29" />
+    <rect
+       x="137"
+       y="252"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect30" />
+    <rect
+       x="163"
+       y="252"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect31" />
+    <rect
+       x="189"
+       y="252"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect32" />
+    <rect
+       x="215"
+       y="252"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect33" />
+    <rect
+       x="241"
+       y="252"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect34" />
+    <rect
+       x="267"
+       y="252"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect35" />
+    <rect
+       x="293"
+       y="252"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect36" />
+    <rect
+       x="319"
+       y="252"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect37" />
+    <rect
+       x="345"
+       y="252"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect38" />
+    <rect
+       x="371"
+       y="252"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect39" />
+    <rect
+       x="397"
+       y="252"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect40" />
+    <rect
+       x="423"
+       y="252"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect41" />
+    <rect
+       x="449"
+       y="252"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect42" />
+    <rect
+       x="475"
+       y="252"
+       width="17"
+       height="23"
+       rx="3"
+       id="rect43" />
+  </g>
+  <rect
+     width="179.46915"
+     height="182.08292"
+     fill="#59606d"
+     id="rect1"
+     x="45.178989"
+     y="46.655716"
+     style="display:inline;stroke-width:0.361542"
+     inkscape:label="background" />
+  <!-- Film strip with clip-path applied -->
+  <!-- Ground plane (behind magnifying glass and figures) -->
+  <!-- Magnifying glass - truly unified path -->
+  <!-- Ring center: (243, 183), Outer radius: 128, Inner radius: 90 -->
+  <!-- Handle intersects ring at (350, 254) top and (315, 289) bottom -->
+  <g
+     id="magnifying-glass"
+     style="display:inline"
+     inkscape:label="magnifying-glass-viewpane"
+     transform="matrix(1.5835752,0,0,1.5835752,-280.09668,-102.84555)">
+    <!-- Walking figure silhouette inside lens with motion blur -->
+    <!-- 5 copies spaced 12.5px apart, scale increased 10% from 3.0 to 3.3 -->
+    <!-- Traced from Inkscape by user, head adjusted up and right -->
+    <!-- Motion blur copy 4 (leftmost, most transparent) -->
+    <!-- Motion blur copy 3 -->
+    <g
+       id="walking-figure-blur3"
+       transform="matrix(3.7006091,0,0,3.7006091,-122.77763,-197.10641)"
+       opacity="0.35" />
+    <!-- Motion blur copy 2 -->
+    <g
+       id="walking-figure-blur2"
+       transform="matrix(3.7006091,0,0,3.7006091,-112.27458,-197.10641)"
+       opacity="0.5" />
+    <!-- Motion blur copy 1 -->
+    <!-- Main figure (rightmost, fully opaque) -->
+    <g
+       id="walking-figure"
+       transform="matrix(3.7006091,0,0,3.7006091,-81.484696,-201.25055)">
+      <path
+         fill="#c6f1e7"
+         d="m 85.010552,109.45329 c 1.853922,-7.29243 3.335206,-13.294524 3.291743,-13.337987 -0.04346,-0.04346 -0.781197,0.134557 -1.639407,0.395602 l -1.560383,0.474626 -0.07415,3.224529 -0.07415,3.22454 h -1.714612 -1.714611 l 0.07226,-4.553862 0.07226,-4.553859 4.753394,-1.503038 c 7.035689,-2.224706 6.939446,-2.249667 9.788845,2.538783 l 1.808455,3.039129 3.179984,0.07371 3.17998,0.07371 v 1.584467 1.58446 l -4.22997,0.0723 -4.229972,0.0723 -0.954308,-1.61802 -0.954309,-1.618026 -0.601738,2.496046 -0.601739,2.49605 2.154954,3.9633 2.154954,3.9633 c 0,0 -13.387835,2.4657 -12.10748,-2.09206 z"
+         id="path49"
+         sodipodi:nodetypes="csscccccccsscccccccccccccc" />
+      <circle
+         cx="95.897682"
+         cy="86.861572"
+         r="3.7214499"
+         fill="#c6f1e7"
+         id="circle49"
+         style="stroke-width:1.20047" />
+    </g>
+  </g>
+  <path
+     fill-rule="nonzero"
+     fill="#474d57"
+     stroke="#c6f1e7"
+     stroke-width="4"
+     d="m 161.95738,10.870611 c 46.27394,9.7738 83.38755,44.267397 96.5169,89.703339 13.12935,45.43593 0.1346,94.40904 -33.79386,127.35844 l 79.78344,123.55809 c 5.20292,11.30109 1.30421,24.70822 -9.14749,31.45706 -10.45171,6.74884 -24.27545,4.78538 -32.43456,-4.60686 L 181.56407,252.40647 C 143.92778,267.56988 102.86521,266.36648 68.287402,245.13469 33.709596,223.9029 11.246679,187.53381 7.742899,147.10927 0.3155063,61.416508 77.833928,-7.066798 161.95738,10.870611 Z m -7.99729,37.148935 C 105.35969,37.540076 57.468793,68.452753 47.005531,117.0566 c -10.463265,48.60385 20.46529,96.4845 69.072659,106.93157 48.60039,10.4795 96.49129,-20.4332 106.95456,-69.03706 10.46326,-48.60384 -20.46529,-96.484493 -69.07266,-106.931564 z"
+     id="path44"
+     inkscape:label="magnifying-glass"
+     sodipodi:nodetypes="csccsccssccscsc"
+     inkscape:transform-center-x="-20.453704"
+     inkscape:transform-center-y="60.650899" />
+</svg>
