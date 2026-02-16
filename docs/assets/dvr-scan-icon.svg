@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <svg
-   viewBox="0 0 300 300"
+   viewBox="0 0 320 320"
    version="1.1"
    id="svg49"
    sodipodi:docname="dvr-scan-icon.svg"
    inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
-   width="300"
-   height="300"
+   width="320"
+   height="320"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
@@ -21,8 +21,8 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:zoom="2.334"
-     inkscape:cx="194.9443"
-     inkscape:cy="222.57926"
+     inkscape:cx="7.2836332"
+     inkscape:cy="238.00343"
      inkscape:window-width="3440"
      inkscape:window-height="1369"
      inkscape:window-x="-8"
@@ -63,7 +63,7 @@
      height="175.22774"
      fill="#59606d"
      id="rect1"
-     x="41.178989"
+     x="63.178989"
      y="46.655716"
      style="display:inline;stroke-width:0.354671"
      inkscape:label="background" />
@@ -73,23 +73,24 @@
      id="g44"
      style="display:inline"
      inkscape:label="filmstrip"
-     transform="translate(-112.11837,-46.655718)">
+     transform="translate(-90.11837,-46.655718)">
     <!-- Film strip - solid teal block (y=92 to y=285) -->
     <rect
-       x="0"
-       y="92"
-       width="500"
-       height="193"
+       x="45.415596"
+       y="117.70695"
+       width="411.20227"
+       height="158.72408"
        fill="#87a0a0"
        id="rect2"
-       style="display:inline"
+       style="display:inline;stroke-width:0.822405"
        inkscape:label="strip-background" />
     <!-- Cut out top sprocket holes y=101 to y=124 (height=23) -->
     <g
        fill="#59606d"
        id="g21"
        style="display:inline"
-       inkscape:label="sprocket-holes-top">
+       inkscape:label="sprocket-holes-top"
+       transform="matrix(0.82240455,0,0,0.82240455,45.415596,42.045721)">
       <rect
          x="7"
          y="101"
@@ -226,37 +227,39 @@
     </g>
     <!-- Cut out frame window: y=135 to y=239 -->
     <rect
-       x="0"
-       y="135"
-       width="12"
-       height="104"
+       x="45.415596"
+       y="153.07033"
+       width="9.8688545"
+       height="85.530075"
        fill="#59606d"
        id="rect22"
-       style="display:inline"
+       style="display:inline;stroke-width:0.822405"
        inkscape:label="pane-0" />
     <rect
-       x="26"
-       y="135"
-       width="445"
-       height="104"
+       x="66.798111"
+       y="153.07033"
+       width="365.97003"
+       height="85.530075"
        fill="#59606d"
        id="rect23"
-       style="display:inline"
+       style="display:inline;stroke-width:0.822405"
        inkscape:label="pane-1" />
     <rect
-       x="485"
-       y="135"
-       width="15"
-       height="104"
+       x="444.2818"
+       y="153.07033"
+       width="12.336068"
+       height="85.530075"
        fill="#59606d"
        id="rect24"
-       inkscape:label="pane-2" />
+       inkscape:label="pane-2"
+       style="stroke-width:0.822405" />
     <!-- Cut out bottom sprocket holes y=252 to y=275 (height=23) -->
     <g
        fill="#59606d"
        id="g43"
        style="display:inline"
-       inkscape:label="sprocket-holes-bottom">
+       inkscape:label="sprocket-holes-bottom"
+       transform="matrix(0.82240455,0,0,0.82240455,45.415596,42.045721)">
       <rect
          x="7"
          y="252"
@@ -400,7 +403,7 @@
      id="magnifying-glass"
      style="display:inline"
      inkscape:label="magnifying-glass-viewpane"
-     transform="translate(-112.11837,-46.655718)">
+     transform="translate(-90.11837,-46.655718)">
     <!-- Walking figure silhouette inside lens with motion blur -->
     <!-- 5 copies spaced 12.5px apart, scale increased 10% from 3.0 to 3.3 -->
     <!-- Traced from Inkscape by user, head adjusted up and right -->
@@ -471,10 +474,10 @@
      fill="#474d57"
      stroke="#c6f1e7"
      stroke-width="4"
-     d="m 143.00679,8.9033512 c 47.08416,4.4594848 87.87237,34.5185998 106.07299,78.1711098 18.20062,43.652509 10.84729,93.783909 -19.1229,130.370679 l 93.28948,113.70609 c 6.45175,10.63766 4.09968,24.40061 -5.51866,32.29191 -9.61833,7.89131 -23.57559,7.50925 -32.74782,-0.89642 l -95.0835,-115.89274 c -35.67241,19.33643 -76.6063,22.80059 -113.370128,5.62986 C 39.762419,235.1131 13.317433,201.52804 5.2489001,161.76225 -11.854952,77.465898 57.391216,0.6281655 143.00679,8.9033512 Z M 139.27684,46.719848 C 89.801173,41.823259 45.727614,77.97092 40.847519,127.44817 c -4.880096,49.47726 31.282177,93.53883 80.761091,98.40244 49.47566,4.89662 93.54922,-31.25107 98.42932,-80.72833 4.88009,-49.477252 -31.28217,-93.538825 -80.76109,-98.402432 z"
+     d="m 173.15813,9.9501276 c 46.67246,7.6476354 85.32452,40.4080794 100.51776,85.1961324 15.19324,44.78805 4.45144,94.30413 -27.93487,128.7705 l 85.34987,119.78064 c 5.71422,11.05136 2.43266,24.62274 -7.69952,31.84243 -10.13217,7.2197 -24.03124,5.8904 -32.61128,-3.11893 L 203.78888,250.3368 C 166.88534,267.20532 125.81068,267.88082 90.298193,248.25236 54.7857,228.6239 30.683251,193.32 25.334667,153.09797 13.996618,67.83446 88.302458,-4.1218531 173.15813,9.9501276 Z M 166.8679,47.425893 C 117.83914,39.179707 71.411865,72.249929 63.182028,121.28138 c -8.229839,49.03146 24.855776,95.44778 73.890012,103.66128 49.02874,8.24622 95.45602,-24.82403 103.68587,-73.8555 8.22983,-49.03145 -24.85577,-95.447766 -73.89001,-103.661267 z"
      id="path44"
      inkscape:label="magnifying-glass"
      sodipodi:nodetypes="csccsccssccscsc"
-     inkscape:transform-center-x="-33.491462"
-     inkscape:transform-center-y="56.849132" />
+     inkscape:transform-center-x="-25.3454"
+     inkscape:transform-center-y="64.897653" />
 </svg>
