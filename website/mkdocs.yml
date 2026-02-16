@@ -27,7 +27,7 @@ theme:
         name: Switch to dark mode
 
 
-  logo: assets/dvr-scan-icon.svg
+  logo: assets/dvr-scan.svg
   icon:
     logo: material/magnify-scan
     repo: fontawesome/brands/github
