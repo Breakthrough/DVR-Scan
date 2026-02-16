@@ -5,6 +5,7 @@ recursive-include dvr_scan/docs *
 include dvr-scan.cfg
 include dvr_scan/dvr-scan.ico
 include dvr_scan/dvr-scan.png
+include dvr_scan/dvr-scan.svg
 include dvr_scan/dvr-scan-logo.png
 include LICENSE
 include pyproject.toml
