@@ -4,7 +4,10 @@ hide:
   - toc
 ---
 
-<img alt="DVR-Scan Logo" src="assets/dvr-scan.svg" width="200rem"/>
+<picture>
+  <source srcset="assets/dvr-scan.svg" type="image/svg+xml"/>
+  <img alt="DVR-Scan Logo" src="assets/dvr-scan.png" width="200rem"/>
+</picture>
 
 <h1 id="dvr-scan-title">DVR-Scan</h1>
 <h3 id="dvr-scan-subtitle">Find and extract motion events in videos.</h3>
