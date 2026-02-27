@@ -9,8 +9,84 @@
 # LICENSE file, or visit one of the above pages for details.
 #
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "dvr-scan"
+dynamic = ["version"]
+description = "Tool for finding and extracting motion events in video files (e.g. security camera footage)."
+readme = "README.md"
+license = { text = "BSD-2-Clause" }
+requires-python = ">=3.10"
+authors = [
+    { name = "Brandon Castellano", email = "brandon248@gmail.com" },
+]
+keywords = [
+    "analysis",
+    "computer-vision",
+    "video",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Environment :: Console :: Curses",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Video",
+    "Topic :: Multimedia :: Video :: Conversion",
+    "Topic :: Multimedia :: Video :: Non-Linear Editor",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "numpy",
+    "platformdirs",
+    "scenedetect>=0.6.2",
+    "tqdm",
+    "pillow",
+    # TODO(#257): Unpin OpenCV versions once we figure out why frame numbers are mismatching in tests.
+    "opencv-contrib-python-headless<4.13",
+]
+
+[project.optional-dependencies]
+gui = [
+    # TODO(#257): Unpin OpenCV versions once we figure out why frame numbers are mismatching in tests.
+    "opencv-contrib-python<4.13",
+    "screeninfo",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+]
+
+[project.scripts]
+dvr-scan = "dvr_scan.__main__:main"
+dvr-scan-app = "dvr_scan.app.__main__:main"
+
+[project.urls]
+"Bug Tracker" = "https://github.com/Breakthrough/DVR-Scan/issues"
+Documentation = "https://www.dvr-scan.com/docs"
+Homepage = "https://www.dvr-scan.com/"
+Repository = "https://github.com/Breakthrough/DVR-Scan"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["dvr_scan*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "dvr_scan.__version__"}
 
 [tool.ruff]
 exclude = [
@@ -43,3 +119,7 @@ select = [
 ]
 fixable = ["ALL"]
 unfixable = []
+
+[tool.pytest.ini_options]
+addopts = "--verbose"
+python_files = ["tests/*.py"]
