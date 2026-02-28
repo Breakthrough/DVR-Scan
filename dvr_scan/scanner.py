@@ -259,8 +259,8 @@ class MotionScanner:
 
         # Motion Event Parameters (set_event_params)
         self._min_event_len = None  # -l/--min-event-length
-        self._pre_event_len = None  # -tb/--time-before-event
-        self._post_event_len = None  # -tp/--time-post-event
+        self._time_before_event = None  # -tb/--time-before-event
+        self._time_post_event = None  # -tp/--time-post-event
         self._use_pts = None  # --use_pts
 
         # Region Parameters (set_region)
@@ -477,7 +477,7 @@ class MotionScanner:
         """Set motion event parameters."""
         assert self._input.framerate is not None
         self._min_event_len = FrameTimecode(min_event_len, self._input.framerate)
-        self._pre_event_len = FrameTimecode(time_pre_event, self._input.framerate)
+        self._time_before_event = FrameTimecode(time_pre_event, self._input.framerate)
         self._post_event_len = FrameTimecode(time_post_event, self._input.framerate)
         self._use_pts = use_pts
 
@@ -708,7 +708,7 @@ class MotionScanner:
 
         # Correct event length parameters to account frame skip.
         post_event_len: int = self._post_event_len.frame_num // (self._frame_skip + 1)
-        pre_event_len: int = self._pre_event_len.frame_num // (self._frame_skip + 1)
+        pre_event_len: int = self._time_before_event.frame_num // (self._frame_skip + 1)
         min_event_len: int = max(self._min_event_len.frame_num // (self._frame_skip + 1), 1)
 
         # Calculations below rely on min_event_len always being >= 1 (cannot be zero)
@@ -719,9 +719,9 @@ class MotionScanner:
         # need to compensate for rounding errors when we corrected it for frame skip. This is
         # important as this affects the number of frames we consider for the actual motion event.
         start_event_shift_ms: float = (
-            self._pre_event_len.get_seconds() + self._min_event_len.get_seconds()
+            self._time_before_event.get_seconds() + self._min_event_len.get_seconds()
         ) * 1000
-        start_event_shift: int = self._pre_event_len.frame_num + min_event_len * (
+        start_event_shift: int = self._time_before_event.frame_num + min_event_len * (
             self._frame_skip + 1
         )
 
