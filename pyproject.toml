@@ -53,17 +53,11 @@ dependencies = [
     "tqdm",
     "pillow",
     # TODO(#257): Unpin OpenCV versions once we figure out why frame numbers are mismatching in tests.
-    "opencv-contrib-python-headless<4.13",
-]
-
-[project.optional-dependencies]
-gui = [
-    # TODO(#257): Unpin OpenCV versions once we figure out why frame numbers are mismatching in tests.
     "opencv-contrib-python<4.13",
     "screeninfo",
 ]
 
-[dependency-groups]
+[project.optional-dependencies]
 dev = [
     "pytest",
     "ruff",

@@ -103,13 +103,13 @@ jobs:
         run: |
           uv pip install --upgrade build wheel virtualenv
           uv pip install opencv-python-headless opencv-contrib-python-headless --only-binary :all:
-          uv pip install -r requirements_headless.txt -r docs/requirements.txt
+          uv pip install -e . -r docs/requirements.txt
 
       - name: Build Package
         run: |
           python dist/pre_release.py
           python -m build
-          python dist/tweak_setup_cfg_for_headless.py
+          python dist/build_headless.py
           python -m build
           mkdir pkg
           mv dist/*.tar.gz pkg/

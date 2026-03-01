@@ -35,8 +35,7 @@ jobs:
       - name: Install Dependencies
         run: |
           uv pip install --upgrade pip
-          uv pip install --upgrade yapf toml
-          uv pip install -r requirements_headless.txt
+          uv pip install --upgrade yapf toml ruff
 
       - name: Check Code Format (yapf)
         if: ${{ hashFiles('.style.yapf') != '' }}

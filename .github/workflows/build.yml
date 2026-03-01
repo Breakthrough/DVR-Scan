@@ -50,12 +50,15 @@ jobs:
           version: "0.5.11"
           python-version: ${{ matrix.python-version }}
 
-      # TODO(#257): Unpin OpenCV versions once we figure out why frame numbers are mismatching in tests.
       - name: Install Dependencies
         run: |
           uv pip install --upgrade build wheel virtualenv
-          uv pip install opencv-python-headless\<4.13 opencv-contrib-python-headless\<4.13 --only-binary :all:
-          uv pip install -r requirements_headless.txt -r docs/requirements.txt
+          # TODO: Figure out how to avoid installing the original OpenCV package.
+          uv pip install -e ".[dev]" -r docs/requirements.txt
+          # TODO(#257): Unpin OpenCV versions once we figure out why frame numbers are mismatching in tests.
+          # Use headless OpenCV variant on CI to reduce download size.
+          uv pip uninstall opencv-python opencv-contrib-python
+          uv pip install "opencv-contrib-python-headless<4.13" --only-binary :all:
 
       - name: Setup FFmpeg
         # TODO: This action currently does not work for non-x64 builders (e.g. macos-14):
@@ -79,7 +82,7 @@ jobs:
       - name: Build Package (Headless)
         shell: bash
         run: |
-          python dist/tweak_setup_cfg_for_headless.py
+          python dist/build_headless.py
           python -m build
           git reset --hard HEAD
 
