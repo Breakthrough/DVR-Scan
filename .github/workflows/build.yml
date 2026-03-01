@@ -9,11 +9,19 @@ on:
       - dist/**
       - dvr_scan/**
       - tests/**
+      - pyproject.toml
+      - setup.py
+      - requirements*.txt
+      - uv.lock
   push:
     paths:
       - dist/**
       - dvr_scan/**
       - tests/**
+      - pyproject.toml
+      - setup.py
+      - requirements*.txt
+      - uv.lock
     branches:
       - main
       - release
