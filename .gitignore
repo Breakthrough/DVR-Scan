@@ -10,8 +10,6 @@ site/
 build/
 # Working directory for distribution assembly
 dist/dvr-scan/*
-dist/dvr-scan-*
-dist/dvr_scan-*
 
 # Editors/environment
 .DS_Store
