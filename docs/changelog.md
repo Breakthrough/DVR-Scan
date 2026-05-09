@@ -5,6 +5,10 @@
 
 #### Changelog
 
+### 1.8.2.1 (2026-05-09)
+
+Re-release of Python distribution that fixes dependency pinning.
+
 ### 1.8.2 (2026-01-18)
 
 #### Release Notes

@@ -11,7 +11,7 @@ hide:
 
 ## Python<span class="dvr-scan-download-icons">:fontawesome-brands-windows::fontawesome-brands-apple::fontawesome-brands-linux:</span>
 
-!!! python-download "**1.8.2**<span class="dvr-scan-release-date">January 18, 2026</span>"
+!!! python-download "**1.8.2.1**<span class="dvr-scan-release-date">May 9, 2026</span>"
 
     <h3>pipx (recommended):</h3>
 
