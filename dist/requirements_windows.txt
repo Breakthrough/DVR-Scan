@@ -3,10 +3,10 @@
 #
 numpy==2.2.0
 opencv-contrib-python==4.10.0.84
-pillow==11.0.0
+pillow==12.2.0
 platformdirs==4.3.6
 pyinstaller>=6.0
-pytest==8.3.4
+pytest==9.0.3
 scenedetect==0.6.5
 screeninfo==0.8.1
 tqdm==4.67.1
