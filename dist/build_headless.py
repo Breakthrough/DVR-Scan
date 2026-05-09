@@ -32,11 +32,13 @@ content = content.replace('name = "dvr-scan"', 'name = "dvr-scan-headless"', 1)
 
 # Remove dvr-scan-app entry point
 assert "dvr-scan-app" in content
-content = re.sub(r'^dvr-scan-app\s*=.*\n', "", content, flags=re.MULTILINE)
+content = re.sub(r"^dvr-scan-app\s*=.*\n", "", content, flags=re.MULTILINE)
 
 # Swap GUI opencv for headless opencv
 assert "opencv-contrib-python<4.13" in content
-content = content.replace('"opencv-contrib-python<4.13"', '"opencv-contrib-python-headless<4.13"', 1)
+content = content.replace(
+    '"opencv-contrib-python<4.13"', '"opencv-contrib-python-headless<4.13"', 1
+)
 
 # Remove screeninfo (GUI dependency)
 assert "screeninfo" in content
