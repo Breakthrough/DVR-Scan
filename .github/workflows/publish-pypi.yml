@@ -1,0 +1,115 @@
+name: Publish PyPI Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag To Publish'
+        required: true
+      environment:
+        description: 'PyPI Environment'
+        required: true
+        type: choice
+        options:
+          - testpypi
+          - pypi
+        default: 'testpypi'
+
+jobs:
+  # Production publishes require all three release workflows to be green for the tag.
+  # TestPyPI publishes are exploratory and skip this job; the Resolve step in `publish`
+  # still gates on a successful Python Distribution run so artifacts are guaranteed to exist.
+  verify:
+    name: Verify Build
+    if: github.event.inputs.environment == 'pypi'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    steps:
+      - name: Check required workflows succeeded for ${{ github.event.inputs.tag }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.event.inputs.tag }}
+        run: |
+          set -euo pipefail
+          required=("Python Distribution" "Windows Distribution")
+          failed=0
+          for workflow in "${required[@]}"; do
+            conclusion=$(gh run list \
+              --workflow "$workflow" \
+              --branch "$TAG" \
+              --event push \
+              --limit 1 \
+              --json conclusion \
+              -q '.[0].conclusion // ""')
+            if [[ "$conclusion" != "success" ]]; then
+              echo "::error::Workflow '$workflow' did not succeed for tag $TAG (got: '${conclusion:-no run found}')"
+              failed=1
+            else
+              echo "[OK] $workflow"
+            fi
+          done
+          [[ "$failed" -eq 0 ]]
+
+  publish:
+    name: Publish ${{ github.event.inputs.tag }} to ${{ github.event.inputs.environment }}
+    runs-on: ubuntu-latest
+    needs: verify
+    # Run when verify succeeded (pypi) or was skipped (testpypi).
+    if: |
+      always() &&
+      (needs.verify.result == 'success' || needs.verify.result == 'skipped')
+
+    environment:
+      name: ${{ github.event.inputs.environment }}
+      url: ${{ github.event.inputs.environment == 'testpypi' && 'https://test.pypi.org/p/dvr-scan' || 'https://pypi.org/p/dvr-scan' }}
+
+    permissions:
+      id-token: write  # mandatory for trusted publishing
+      actions: read    # for cross-workflow artifact download
+
+    steps:
+      - name: Resolve Python Distribution run for ${{ github.event.inputs.tag }}
+        id: resolve
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.event.inputs.tag }}
+        run: |
+          set -euo pipefail
+          run_id=$(gh run list \
+            --workflow "Python Distribution" \
+            --branch "$TAG" \
+            --event push \
+            --status success \
+            --limit 1 \
+            --json databaseId \
+            -q '.[0].databaseId // ""')
+          if [[ -z "$run_id" ]]; then
+            echo "::error::No successful 'Python Distribution' run found for tag $TAG. Push the tag and wait for build.yml to finish before publishing."
+            exit 1
+          fi
+          echo "run-id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "Using Python Distribution run $run_id"
+
+      - name: Download distribution artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: dvr-scan-dist
+          path: pkg/
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.resolve.outputs.run-id }}
+
+      - name: List artifact contents
+        run: ls -la pkg/
+
+      - name: Publish Package
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: ${{ github.event.inputs.environment == 'testpypi' && 'https://test.pypi.org/legacy/' || 'https://upload.pypi.org/legacy/' }}
+          packages-dir: pkg/
+          print-hash: true
+          # Tolerate retries: skip existing packages if for example only one variant was uploaded.
+          skip-existing: true
