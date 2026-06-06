@@ -27,7 +27,8 @@ from dvr_scan.platform import get_system_version_info
 
 TITLE = "About DVR-Scan"
 COPYRIGHT = (
-    f"DVR-Scan {dvr_scan.__version__}\n\nCopyright © Brandon Castellano.\nAll rights reserved."
+    f"DVR-Scan {dvr_scan.__version__}\n\n"
+    "Copyright \N{COPYRIGHT SIGN} Brandon Castellano.\nAll rights reserved."
 )
 
 

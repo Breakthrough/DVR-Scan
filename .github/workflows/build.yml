@@ -13,6 +13,8 @@ on:
       - setup.py
       - requirements*.txt
       - uv.lock
+      - .github/workflows/build.yml
+      - .github/actions/setup-ffmpeg/**
   push:
     paths:
       - dist/**
@@ -22,6 +24,8 @@ on:
       - setup.py
       - requirements*.txt
       - uv.lock
+      - .github/workflows/build.yml
+      - .github/actions/setup-ffmpeg/**
     branches:
       - main
       - release
@@ -69,12 +73,7 @@ jobs:
           uv pip install "opencv-contrib-python-headless<4.13" --only-binary :all:
 
       - name: Setup FFmpeg
-        # TODO: This action currently does not work for non-x64 builders (e.g. macos-14):
-        # https://github.com/federicocarboni/setup-ffmpeg/issues/21
-        if: ${{ runner.arch == 'X64' }}
         uses: ./.github/actions/setup-ffmpeg
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Unit Test
         run: |

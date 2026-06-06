@@ -44,7 +44,8 @@ LOAD_TITLE = "Load Region File"
 SAVE_REGIONS = "Save Regions"
 SAVE_REGIONS_PROMPT = "Save Regions..."
 ABOUT_WINDOW_COPYRIGHT = (
-    f"DVR-Scan {dvr_scan.__version__}\n\nCopyright © Brandon Castellano.\nAll rights reserved."
+    f"DVR-Scan {dvr_scan.__version__}\n\n"
+    "Copyright \N{COPYRIGHT SIGN} Brandon Castellano.\nAll rights reserved."
 )
 
 # TODO: Need to figure out DPI scaling for *everything*. Lots of magic numbers for sizes right now.
