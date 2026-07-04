@@ -1,5 +1,7 @@
 # -*- mode: python -*-
 
+from PyInstaller.utils.hooks import collect_data_files
+
 block_cipher = None
 
 cli = Analysis(['../dvr_scan/__main__.py'],
@@ -38,9 +40,10 @@ app = Analysis(['../dvr_scan/app/__main__.py'],
              datas=[
                 ('../dvr_scan/dvr-scan.ico', 'dvr_scan'),
                 ('../dvr_scan/dvr-scan-logo.png', 'dvr_scan'),
+                ('../dvr_scan/dvr-scan.png', 'dvr_scan'),
                 ('../dvr_scan/LICENSE*', 'dvr_scan'),
-            ],
-             hiddenimports=[],
+            ] + collect_data_files('tkinterdnd2'),
+             hiddenimports=['tkinterdnd2'],
              hookspath=[],
              runtime_hooks=[],
              excludes=["av"],

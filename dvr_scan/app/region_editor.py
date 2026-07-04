@@ -32,7 +32,7 @@ import PIL.ImageTk
 
 import dvr_scan
 from dvr_scan.app.about_window import AboutWindow
-from dvr_scan.app.common import register_icon
+from dvr_scan.app.common import MenuBar, register_icon
 from dvr_scan.region import Point, Size, bound_point, load_regions
 
 WINDOW_TITLE = "DVR-Scan Region Editor"
@@ -648,18 +648,19 @@ class RegionEditor:
             self._root,
         )
         self._root.columnconfigure(0, weight=1)
-        self._root.rowconfigure(0, weight=1)
-        self._editor_canvas.grid(row=0, column=0, sticky="nsew")
+        # Row 0 holds the custom menubar (on Windows); the canvas row gets the weight.
+        self._root.rowconfigure(1, weight=1)
+        self._editor_canvas.grid(row=1, column=0, sticky="nsew")
         self._editor_scroll = (
             AutoHideScrollbar(self._root, command=self._editor_canvas.xview, orient=tk.HORIZONTAL),
             AutoHideScrollbar(self._root, command=self._editor_canvas.yview, orient=tk.VERTICAL),
         )
         self._editor_canvas["xscrollcommand"] = self._editor_scroll[0].set
         self._editor_canvas["yscrollcommand"] = self._editor_scroll[1].set
-        self._editor_scroll[0].grid(row=1, column=0, sticky="ew")
-        self._editor_scroll[1].grid(row=0, column=1, sticky="ns")
+        self._editor_scroll[0].grid(row=2, column=0, sticky="ew")
+        self._editor_scroll[1].grid(row=1, column=1, sticky="ns")
 
-        ttk.Separator(self._root).grid(row=2, column=0, columnspan=2, sticky="ew")
+        ttk.Separator(self._root).grid(row=3, column=0, columnspan=2, sticky="ew")
 
         def set_scale(val: str):
             new_val = round(float(val))
@@ -669,7 +670,7 @@ class RegionEditor:
                 self._rescale(allow_resize=False)
 
         frame = tk.Frame(self._root)
-        frame.grid(row=3, column=0, sticky="ew", columnspan=2)
+        frame.grid(row=4, column=0, sticky="ew", columnspan=2)
         frame.columnconfigure(4, weight=1)
         frame.rowconfigure(0, weight=1)
         self._scale_widget = ttk.Scale(
@@ -720,9 +721,10 @@ class RegionEditor:
             return self._should_scan
 
     def _create_menubar(self):
-        root_menu = tk.Menu(self._root)
-        file_menu = tk.Menu(root_menu)
-        root_menu.add_cascade(menu=file_menu, label="File", underline=0)
+        self._menubar = MenuBar(self._root)
+        if self._menubar.frame is not None:
+            self._menubar.frame.grid(row=0, column=0, columnspan=2, sticky=tk.EW)
+        file_menu = self._menubar.add_menu("File", underline=0)
         if not self._launched_from_app:
             file_menu.add_command(
                 label="Start Scan",
@@ -750,8 +752,7 @@ class RegionEditor:
             accelerator=KEYBIND_QUIT,
         )
 
-        edit_menu = tk.Menu(root_menu)
-        root_menu.add_cascade(menu=edit_menu, label="Edit", underline=0)
+        edit_menu = self._menubar.add_menu("Edit", underline=0)
         edit_menu.add_command(
             label="Undo", command=self._undo, accelerator=KEYBIND_UNDO, underline=0
         )
@@ -759,8 +760,7 @@ class RegionEditor:
             label="Redo", command=self._redo, accelerator=KEYBIND_REDO, underline=0
         )
 
-        view_menu = tk.Menu(root_menu)
-        root_menu.add_cascade(menu=view_menu, label="View", underline=0)
+        view_menu = self._menubar.add_menu("View", underline=0)
         view_menu.add_command(
             label="Mask Mode", command=self._toggle_mask, accelerator=KEYBIND_MASK, underline=0
         )
@@ -784,8 +784,7 @@ class RegionEditor:
             underline=3,
         )
 
-        help_menu = tk.Menu(root_menu)
-        root_menu.add_cascade(menu=help_menu, label="Help", underline=0)
+        help_menu = self._menubar.add_menu("Help", underline=0)
 
         help_menu.add_command(
             label="Show Controls", command=self._show_help, accelerator=KEYBIND_HELP, underline=5
@@ -810,7 +809,6 @@ class RegionEditor:
         )
 
         self._edit_menu = edit_menu
-        self._root["menu"] = root_menu
         self._update_ui_state()
 
     def _show_help(self):

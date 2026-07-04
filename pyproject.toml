@@ -55,6 +55,7 @@ dependencies = [
     # TODO(#257): Unpin OpenCV versions once we figure out why frame numbers are mismatching in tests.
     "opencv-contrib-python<4.13",
     "screeninfo",
+    "tkinterdnd2",
 ]
 
 [project.optional-dependencies]

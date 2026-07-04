@@ -320,6 +320,8 @@ USER_CONFIG_FILE_PATH: Path = _CONFIG_FILE_DIR / _CONFIG_FILE_NAME
 CONFIG_MAP: ConfigDict = {
     # General Options
     "quiet-mode": False,
+    # Application (dvr-scan-app only)
+    "startup-mode": "wizard",
     # Input/Output
     "ffmpeg-input-args": DEFAULT_FFMPEG_INPUT_ARGS,
     "ffmpeg-output-args": DEFAULT_FFMPEG_OUTPUT_ARGS,
@@ -389,6 +391,7 @@ CHOICE_MAP: ty.Dict[str, ty.List[str]] = {
     "verbosity": ["debug", "info", "warning", "error"],
     "bg-subtractor": ["MOG2", "CNT", "MOG2_CUDA"],
     "thumbnails": ["highscore"],
+    "startup-mode": ["wizard", "classic"],
 }
 """Mapping of string options which can only be of a particular set of values. We use a list instead
 of a set to preserve order when generating error contexts. Values are case-insensitive, and must be
@@ -452,13 +455,27 @@ class ConfigRegistry:
             path = USER_CONFIG_FILE_PATH
             self._log(logging.INFO, "Loading user config file:\n  %s" % path)
         # Try to load and parse the config file at `path`.
+        try:
+            with open(path) as config_file:
+                config_file_contents = config_file.read()
+        except OSError as ex:
+            raise ConfigLoadFailure(self._init_log, reason=ex) from ex
+        self._load_string(config_file_contents, source=str(path))
+
+    def load_from_string(self, config_str: str, source: str = "<string>"):
+        """Loads configuration from a string in config file format (e.g. a built-in preset).
+
+        Raises:
+            ConfigLoadFailure: The config being loaded is corrupt or invalid.
+        """
+        self._log(logging.DEBUG, "Loading config from string: %s" % source)
+        self._load_string(config_str, source=source)
+
+    def _load_string(self, contents: str, source: str):
         config = ConfigParser()
         try:
-            config_file_contents = "[%s]\n%s" % (DEFAULTSECT, open(path).read())
-            config.read_string(config_file_contents, source=str(path))
+            config.read_string("[%s]\n%s" % (DEFAULTSECT, contents), source=source)
         except ParsingError as ex:
-            raise ConfigLoadFailure(self._init_log, reason=ex) from ex
-        except OSError as ex:
             raise ConfigLoadFailure(self._init_log, reason=ex) from ex
         self._parse_config(config)
         if any(level >= logging.ERROR for level, _ in self._init_log):

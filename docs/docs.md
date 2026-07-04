@@ -338,6 +338,18 @@ bounding-box-color = 0xFF0000
     ```
     </span>
 
+ * <b><pre>startup-mode</pre></b>
+    Which mode the DVR-Scan app (`dvr-scan-app`) starts in (`wizard` or `classic`). The Scan Wizard provides a simplified step-by-step workflow, while classic mode shows all settings at once. You can switch between modes at any time from the application. Has no effect on the `dvr-scan` command line.
+    <span class="dvr-scan-default">
+    ```
+    startup-mode = wizard
+    ```
+    </span>
+
+#### Presets
+
+The DVR-Scan app includes a preset dropdown for saving and restoring groups of settings. User presets are stored as regular config files in a `presets` folder next to the user config file (use `Settings -> Open Presets Folder` to view it); the filename is used as the preset name. The special `Default` preset is the user config file itself, and is loaded automatically on startup. Files which are not valid config files are ignored.
+
 #### Logging
 
  * <b><pre>save-log</pre></b>

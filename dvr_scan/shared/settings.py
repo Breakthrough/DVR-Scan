@@ -30,6 +30,11 @@ class ScanSettings:
         return self._app_settings
 
     @property
+    def args(self) -> argparse.Namespace:
+        """Command-line arguments this settings object was created with."""
+        return self._args
+
+    @property
     def config(self) -> ConfigRegistry:
         return self._config
 

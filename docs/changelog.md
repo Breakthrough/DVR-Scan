@@ -406,8 +406,20 @@ This version of DVR-Scan includes a new, faster background subtraction algorithm
 
 ----------------------------------------------------------
 
-#### In Development
+## In Development
 
-## DVR-Scan 1.9
+### DVR-Scan 1.9
+
+#### Release Notes
+
+Simplifies the application with a new Scan Wizard, settings presets, and drag-and-drop support.
+
+#### Changelog
 
  * [general] Modernize project branding and logos, improve legibility at smaller sizes
+ * [feature] New Scan Wizard provides a simplified step-by-step workflow (add videos, pick a preset, choose output, scan) and is now the default mode when launching `dvr-scan-app`
+    * Set the new `startup-mode` config option to `classic` to start in the full settings view instead; you can also switch between modes at any time
+ * [feature] Settings presets: a new preset dropdown in the app allows applying built-in presets or saving your own
+    * User presets are config files stored in a `presets` folder next to the user config file (`Settings -> Open Presets Folder`)
+    * The `Default` preset is the user config file itself, replacing the `Save As User Default` and `Reset To User Default` menu items
+ * [feature] Video files can now be dragged and dropped onto the app window to add them as inputs; dropping a `.cfg` file loads it as the active settings

@@ -44,6 +44,10 @@ content = content.replace(
 assert "screeninfo" in content
 content = re.sub(r'^\s*"screeninfo",?\n', "", content, flags=re.MULTILINE)
 
+# Remove tkinterdnd2 (GUI dependency)
+assert "tkinterdnd2" in content
+content = re.sub(r'^\s*"tkinterdnd2",?\n', "", content, flags=re.MULTILINE)
+
 with open(pyproject_path, "w") as f:
     f.write(content)
 
