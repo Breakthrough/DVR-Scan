@@ -172,8 +172,6 @@ dvr-scan -i video.mp4 --start-time 00:35:52 --duration 00:05:00
 
 #### Frame Processing
 
- * <b><pre>--use-pts</pre></b> Use presentation time instead of frame number for timestamps. May improve timestamp accuracy with videos and network streams that may skip frames.
-
  * <b><pre>-df factor, --downscale-factor factor</pre></b> Integer factor to shrink video before processing, to improve performance. For example, if input video resolution is 1024 x 400, and `-df=2`, each frame is reduced to 512 x 200 before processing. Uses subsampling for downscaling.
 <span class="dvr-scan-example">
 ```
@@ -377,14 +375,6 @@ The DVR-Scan app includes a preset dropdown for saving and restoring groups of s
     <span class="dvr-scan-default">
     ```
     input-mode = opencv
-    ```
-    </span>
-
- * <b><pre>use-pts</pre></b>
-    Use presentation time instead of frame number for timestamps. May improve timestamp accuracy with videos and network streams that may skip frames.
-    <span class="dvr-scan-example">
-    ```
-    use-pts = yes
     ```
     </span>
 

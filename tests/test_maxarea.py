@@ -54,8 +54,10 @@ BASE_COMMAND_EVENT_LIST_GOLDEN = """
 
 # On some ARM chips (e.g. Apple M1), results are slightly different, so we allow a 1 frame
 # delta on the events for those platforms.
+# NOTE: Event boundaries are exact PTS values (v2.0); some timecodes differ by 1ms from
+# earlier releases, which quantized event times to whole frames before formatting.
 BASE_COMMAND_TIMECODE_LIST_GOLDEN = """
-00:00:08.229,00:00:32.113,00:00:33.117,00:00:38.937
+00:00:08.229,00:00:32.114,00:00:33.117,00:00:38.938
 """[1:]
 
 

@@ -31,8 +31,6 @@ EVENT_FRAME_TOLERANCE = 1 if ("ARM" in MACHINE_ARCH or "AARCH" in MACHINE_ARCH) 
 # Similar to ARM, the CUDA version gives slightly different results.
 CUDA_EVENT_TOLERANCE = 1
 
-PTS_EVENT_TOLERANCE = 1
-
 # ROI within the frame used for the test case (see traffic_camera.txt for details).
 TRAFFIC_CAMERA_ROI = [
     Point(631, 532),
@@ -104,23 +102,51 @@ def test_scan_context(traffic_camera_video):
     compare_event_lists(event_list, TRAFFIC_CAMERA_EVENTS, EVENT_FRAME_TOLERANCE)
 
 
-def test_scan_context_use_pts(traffic_camera_video):
-    """Test scanner 'use_pts' option to change how timekeeping is done."""
+def test_scan_context_pts_backed_events(traffic_camera_video):
+    """Ensure emitted motion events carry exact PTS-backed timing information."""
     scanner = MotionScanner([traffic_camera_video])
     scanner.set_detection_params()
     scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
-    scanner.set_event_params(min_event_len=4, time_pre_event=0, use_pts=True)
+    scanner.set_event_params(min_event_len=4, time_pre_event=0)
     event_list = scanner.scan().event_list
-    event_list = [(event.start.frame_num, event.end.frame_num) for event in event_list]
-    compare_event_lists(event_list, TRAFFIC_CAMERA_EVENTS, PTS_EVENT_TOLERANCE)
+    assert event_list
+    for event in event_list:
+        assert event.start.pts is not None and event.start.time_base is not None
+        assert event.end.pts is not None and event.end.time_base is not None
+        assert event.end.seconds > event.start.seconds
 
 
-def test_scan_context_use_pts_with_video_joiner(traffic_camera_video):
-    """Ensure that the Use PTS option does not cause any issues with VideoJoiner."""
+def test_scan_context_vfr(vfr_video):
+    """Ensure event boundaries are correct in wall-clock time on variable framerate input.
+
+    The fixture plays the first 288 frames of traffic_camera.mp4 at 25 fps and the rest at
+    12.5 fps, so motion that occurs at source frame N >= 288 has a true presentation time of
+    11.52s + (N - 288) / 12.5. Timing derived from the container's average framerate (the
+    pre-v2.0 behavior) would misplace events in the slowed section by several seconds."""
+    scanner = MotionScanner([vfr_video])
+    scanner.set_detection_params()
+    scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
+    scanner.set_event_params(min_event_len=4, time_pre_event=0)
+    event_list = scanner.scan().event_list
+    assert len(event_list) == len(TRAFFIC_CAMERA_EVENTS)
+    # Expected wall-clock start times mapped from the CFR ground truth through the piecewise
+    # timing above. The tolerance covers detection window shifts, which are quantized by the
+    # average framerate; average-framerate timing would be off by over 4 seconds for the
+    # events in the slowed section.
+    expected_starts_seconds = [0.4, 17.2, 31.9]
+    for event, expected_start in zip(event_list, expected_starts_seconds, strict=True):
+        assert abs(event.start.seconds - expected_start) < 0.6, (
+            f"expected event start near {expected_start}s, got {event.start.seconds}s"
+        )
+        assert event.end.seconds > event.start.seconds
+
+
+def test_scan_context_with_video_joiner(traffic_camera_video):
+    """Ensure that concatenated inputs scan without errors (regression for #254)."""
     scanner = MotionScanner([traffic_camera_video, traffic_camera_video])
     scanner.set_detection_params()
     scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
-    scanner.set_event_params(min_event_len=4, time_pre_event=0, use_pts=True)
+    scanner.set_event_params(min_event_len=4, time_pre_event=0)
     scanner.scan()
 
 

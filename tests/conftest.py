@@ -52,3 +52,16 @@ def traffic_camera_video() -> str:
 def corrupt_video() -> str:
     """Returns path to issue62.mp4 video."""
     return get_absolute_path("resources/issue62.mp4")
+
+
+@pytest.fixture
+def vfr_video() -> str:
+    """Returns path to traffic_camera_vfr.mp4, a variable framerate re-encode of
+    traffic_camera.mp4 where the first 288 frames play at 25 fps and the remainder
+    at 12.5 fps. Generated with:
+
+    ffmpeg -i traffic_camera.mp4
+      -vf "setpts='if(lt(N,288),N/25/TB,(288/25+(N-288)/12.5)/TB)'"
+      -fps_mode vfr -c:v libx264 -preset veryfast -crf 23 -an traffic_camera_vfr.mp4
+    """
+    return get_absolute_path("resources/traffic_camera_vfr.mp4")

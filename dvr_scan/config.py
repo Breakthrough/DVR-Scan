@@ -41,7 +41,9 @@ MIGRATED_CONFIG_OPTION: ty.Dict[str, str] = {
 
 DEPRECATED_CONFIG_OPTION: ty.Dict[str, str] = {
     "region-of-interest": "The region-of-interest config option is deprecated and may be removed. "
-    "Use the load-region option instead, or specify -R/--load-region."
+    "Use the load-region option instead, or specify -R/--load-region.",
+    "use-pts": "The use-pts config option is deprecated and has no effect. Presentation "
+    "timestamps (PTS) are now always used for event timing.",
 }
 
 

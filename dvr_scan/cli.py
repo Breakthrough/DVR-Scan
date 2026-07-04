@@ -489,13 +489,6 @@ def get_cli_parser(user_config: ConfigRegistry):
     )
 
     parser.add_argument(
-        "--use-pts",
-        action="store_true",
-        default=False,
-        help=("Use OpenCV provided presentation timestamp instead of calculated version."),
-    )
-
-    parser.add_argument(
         "--ignore-user-config",
         action="store_true",
         default=False,

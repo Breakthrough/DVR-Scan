@@ -526,22 +526,6 @@ class InputSettingsWindow:
         frame.columnconfigure(4, pad=PADDING, weight=1)
         frame.columnconfigure(5, pad=PADDING, weight=12, minsize=0)
 
-        self._use_pts = tk.BooleanVar()
-        ttk.Checkbutton(
-            frame,
-            text="Use Presentation Time (PTS)\nfor Timestamps",
-            variable=self._use_pts,
-            onvalue=True,
-            offvalue=False,
-        ).grid(
-            row=2,
-            column=0,
-            columnspan=2,
-            padx=PADDING,
-            sticky=tk.N + EXPAND_HORIZONTAL,
-            pady=PADDING,
-        )
-
         tk.Button(self._window, text="Close", command=self._dismiss).grid(
             row=2, column=0, sticky=tk.E, padx=PADDING, pady=PADDING
         )
@@ -600,13 +584,11 @@ class InputSettingsWindow:
         self._root.focus()
 
     def set(self, settings: ScanSettings):
-        self._use_pts.set(settings.get("use-pts"))
         self._downscale_factor.set(settings.get("downscale-factor"))
         self._frame_skip.set(settings.get("frame-skip"))
         self._input_mode.set(settings.get("input-mode"))
 
     def update(self, settings: ScanSettings) -> ScanSettings:
-        settings.set("use-pts", self._use_pts.get())
         settings.set("downscale-factor", int(self._downscale_factor.get()))
         settings.set("frame-skip", int(self._frame_skip.get()))
         settings.set("input-mode", self._input_mode.get())
