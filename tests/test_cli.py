@@ -19,7 +19,7 @@ import subprocess
 import typing as ty
 
 import pytest
-from scenedetect.video_splitter import is_ffmpeg_available
+from scenedetect import is_ffmpeg_available
 
 # We need to import the OpenCV loader before PySceneDetect as the latter imports OpenCV.
 from dvr_scan.subtractor import SubtractorCNT, SubtractorCudaMOG2

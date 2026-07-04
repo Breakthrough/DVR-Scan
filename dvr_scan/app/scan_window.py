@@ -405,8 +405,8 @@ def _event_frame_providers(
             nonlocal joiner
             if joiner is None:
                 joiner = VideoJoiner([Path(path) for path in input_paths], backend="opencv")
-            start = event.start.get_frames()
-            span = max(0, event.end.get_frames() - start)
+            start = event.start.frame_num
+            span = max(0, event.end.frame_num - start)
             frames = []
             for index in range(FILMSTRIP_FRAMES):
                 target = start + int(span * (index + 0.5) / FILMSTRIP_FRAMES)

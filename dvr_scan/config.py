@@ -25,7 +25,7 @@ from configparser import DEFAULTSECT, ConfigParser, ParsingError
 from pathlib import Path
 
 from platformdirs import user_config_dir
-from scenedetect.frame_timecode import FrameTimecode
+from scenedetect import FrameTimecode
 
 from dvr_scan.scanner import DEFAULT_FFMPEG_INPUT_ARGS, DEFAULT_FFMPEG_OUTPUT_ARGS
 

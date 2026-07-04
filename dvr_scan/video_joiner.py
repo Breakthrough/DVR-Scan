@@ -108,7 +108,7 @@ class VideoJoiner:
         if next is False:
             if (self._path_index + 1) < len(self._paths):
                 self._path_index += 1
-                self._total_processed_duration_ms += 1000.0 * self._cap.duration.get_seconds()
+                self._total_processed_duration_ms += 1000.0 * self._cap.duration.seconds
                 # TODO(#20): This needs to be fixed to handle varying framerates.
                 self._total_processed_frames += self._cap.position.frame_num + 1
                 self._decode_failures += (

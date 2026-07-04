@@ -103,7 +103,7 @@ def sample_video_frames(path: str, count: int = FILMSTRIP_FRAMES) -> ty.Optional
         video = open_video(path, backend="opencv")
     except VideoOpenFailure:
         return None
-    total_frames = video.duration.get_frames()
+    total_frames = video.duration.frame_num
     frames = []
     for index in range(count):
         # Sample at evenly spaced midpoints; the last avoids the exact final frame, which
@@ -153,7 +153,7 @@ def probe_video(path: str) -> ty.Optional[VideoInfo]:
         path=str(Path(video.path).absolute()),
         name=Path(video.path).name,
         duration=video.duration.get_timecode(),
-        framerate=f"{video.frame_rate:g}",
+        framerate=f"{float(video.frame_rate):g}",
         resolution=f"{video.frame_size[0]} x {video.frame_size[1]}",
         date=create_time_str,
     )
@@ -325,8 +325,8 @@ class InputArea:
                 settings.set("start-time", start)
             if end != "00:00:00.000":
                 settings.set("end-time", end)
-            start_frame = FrameTimecode(start, 1000.0).get_frames()
-            end_frame = FrameTimecode(end, 1000.0).get_frames()
+            start_frame = FrameTimecode(start, 1000.0).frame_num
+            end_frame = FrameTimecode(end, 1000.0).frame_num
             if end_frame and end_frame <= start_frame:
                 logger.error("No frames to process (start time must be less than than end time)")
                 return None

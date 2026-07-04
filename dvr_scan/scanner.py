@@ -307,7 +307,7 @@ class MotionScanner:
         return self._output_mode
 
     @property
-    def framerate(self) -> float:
+    def frame_rate(self) -> float:
         """Get the framerate of the currently loaded video(s)."""
         return self._input.framerate
 
@@ -719,7 +719,7 @@ class MotionScanner:
         # need to compensate for rounding errors when we corrected it for frame skip. This is
         # important as this affects the number of frames we consider for the actual motion event.
         start_event_shift_ms: float = (
-            self._time_before_event.get_seconds() + self._min_event_len.get_seconds()
+            self._time_before_event.seconds + self._min_event_len.seconds
         ) * 1000
         start_event_shift: int = self._time_before_event.frame_num + min_event_len * (
             self._frame_skip + 1
@@ -788,7 +788,7 @@ class MotionScanner:
             if frame is None:
                 break
             assert frame.frame_bgr is not None
-            pts = frame.timecode.get_seconds() * 1000
+            pts = frame.timecode.seconds * 1000
             frame_size = (frame.frame_bgr.shape[1], frame.frame_bgr.shape[0])
             if frame_size != self._input.resolution:
                 time = frame.timecode
@@ -913,13 +913,13 @@ class MotionScanner:
                             # and right now FrameTimecode exclusively uses frames.
                             event_end = FrameTimecode(
                                 (last_frame_above_threshold_ms / 1000)
-                                + self._post_event_len.get_seconds(),
+                                + self._post_event_len.seconds,
                                 self._input.framerate,
                             )
                             # TODO(#254): This assertion fires when using VideoJoiner.
-                            assert event_end.get_seconds() >= event_start.get_seconds(), (
-                                f"event_end {event_end.get_seconds()}s < "
-                                + f"event_start {event_start.get_seconds()}s!"
+                            assert event_end.seconds >= event_start.seconds, (
+                                f"event_end {event_end.seconds}s < "
+                                + f"event_start {event_start.seconds}s!"
                             )
                         event_list.append(MotionEvent(start=event_start, end=event_end))
                         if self._output_mode != OutputMode.SCAN_ONLY:
@@ -968,7 +968,7 @@ class MotionScanner:
                         )
                         event_start = FrameTimecode(shifted_start, self._input.framerate)
                     else:
-                        ms_since_last_event = pts - (event_end.get_seconds() * 1000)
+                        ms_since_last_event = pts - (event_end.seconds * 1000)
                         last_frame_above_threshold_ms = pts
                         #  TODO:  not sure all of this is actually necessary?
                         shift_amount_ms = min(ms_since_last_event, start_event_shift_ms)
@@ -1099,7 +1099,7 @@ class MotionScanner:
             if self._frame_skip < 1
             else self._input.framerate / (1 + self._frame_skip)
         )
-        return cv2.VideoWriter(str(path), self._fourcc, effective_framerate, frame_size)
+        return cv2.VideoWriter(str(path), self._fourcc, float(effective_framerate), frame_size)
 
     def _on_encode_frame_event(self, event: EncodeFrameEvent):
         size = (event.frame_bgr.shape[1], event.frame_bgr.shape[0])
@@ -1144,7 +1144,7 @@ class MotionScanner:
             self._timecode_overlay.draw(frame, text=timecode.get_timecode())
         if self._metrics_overlay is not None:
             to_display = "Frame: %04d\nScore: %3.2f" % (
-                timecode.get_frames(),
+                timecode.frame_num,
                 frame_score,
             )
             self._metrics_overlay.draw(frame, text=to_display)

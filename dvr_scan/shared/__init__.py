@@ -177,7 +177,7 @@ def init_scanner(
             if bounding_box_option_is_smoothing
             else settings.get("bounding-box-smooth-time")
         )
-        smoothing = FrameTimecode(smoothing_time, scanner.framerate).frame_num
+        smoothing = FrameTimecode(smoothing_time, scanner.frame_rate).frame_num
         bounding_box = BoundingBoxOverlay(
             min_size_ratio=settings.get("bounding-box-min-size"),
             thickness_ratio=settings.get("bounding-box-thickness"),

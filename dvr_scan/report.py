@@ -35,7 +35,7 @@ def write_events_csv(file: ty.TextIO, event_list: ty.List["MotionEvent"]):
                 event.start.get_timecode(precision=TIMECODE_PRECISION),
                 event.end.get_timecode(precision=TIMECODE_PRECISION),
                 duration.get_timecode(precision=TIMECODE_PRECISION),
-                event.start.get_frames(),
-                event.end.get_frames(),
+                event.start.frame_num,
+                event.end.frame_num,
             ]
         )
