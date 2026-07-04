@@ -82,7 +82,7 @@ class VideoJoiner:
         return self._framerate
 
     @property
-    def total_frames(self) -> float:
+    def total_frames(self) -> int:
         """Total number of frames of all input videos combined. May be inaccurate."""
         return self._total_frames
 
