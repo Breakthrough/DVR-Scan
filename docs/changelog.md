@@ -48,6 +48,10 @@ correctly with default parameters.
    If ffmpeg is not installed and no output mode is set, DVR-Scan falls back to `opencv`
    with a warning. Set `output-mode = opencv` in a config file (or use `-m opencv`) to
    restore the previous behavior.
+ * [feature] New `--report` option writes detected events to a CSV or JSON file (format
+   set by extension), including in scan-only mode; the GUI's Save Report dialog can also
+   save JSON reports. CSV reports now include exact start/end times in seconds (frame
+   numbers are approximations on variable framerate inputs).
 
 ### 1.8.2.1 (2026-05-09)
 

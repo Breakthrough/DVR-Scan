@@ -163,6 +163,17 @@ def get_cli_parser(user_config: ConfigRegistry):
     )
 
     parser.add_argument(
+        "--report",
+        metavar="file",
+        type=str,
+        help=(
+            "Write a report of all detected motion events to the given file, including in"
+            " scan-only mode. The format is set by the file extension, and must be either"
+            " .csv or .json. Relative paths are joined with -d/--output-dir when set."
+        ),
+    )
+
+    parser.add_argument(
         "-m",
         "--output-mode",
         metavar="mode",

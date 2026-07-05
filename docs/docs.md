@@ -276,6 +276,13 @@ All time values can be given as a timecode (`HH:MM:SS` or `HH:MM:SS.nnn`), in se
 
  * <b><pre>-o video.avi, --output video.avi</pre></b> Save all motion events to a single file, instead of the default (one file per event). Only supported when `-m`/`--output-mode` is `opencv` (requires `.avi` extension) or `encode` (video-only output).
 
+ * <b><pre>--report file</pre></b> Write a report of all detected motion events to `file`, including in scan-only mode. The format is set by the file extension, and must be either `.csv` or `.json`. Relative paths are joined with `-d`/`--output-dir` when set.
+<span class="dvr-scan-example">
+```
+--report events.json
+```
+</span>
+
  * <b><pre>-mo mask.avi, --mask-output mask.avi</pre></b> Save a video containing the calculated motion mask on each frame. Useful for tuning motion detection. Requires `.avi` extension.
 
  * <b><pre>--thumbnails highscore</pre></b> Save a thumbnail of the frame with the highest motion score for each event.

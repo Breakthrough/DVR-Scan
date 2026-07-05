@@ -13,6 +13,8 @@
 Tests high level usage of the DVR-Scan command line interface.
 """
 
+import csv
+import json
 import os
 import platform
 import subprocess
@@ -157,6 +159,47 @@ def test_concatenate_opencv(tmp_path):
     assert "Detected %d motion events in input." % (BASE_COMMAND_NUM_EVENTS) in output
     generated_files = os.listdir(tmp_path)
     assert generated_files == ["motion_events.avi"]
+
+
+def test_report(tmp_path):
+    """Test --report with both output formats, in scan-only mode with a relative path
+    (which must be resolved against -d/--output-dir)."""
+    golden_timecodes = BASE_COMMAND_TIMECODE_LIST_GOLDEN.strip().split(",")
+    _run_dvr_scan(
+        BASE_COMMAND + ["--output-dir", tmp_path, "--scan-only", "--report", "report.csv"]
+    )
+    with open(tmp_path / "report.csv", newline="") as file:
+        rows = list(csv.reader(file))
+    assert len(rows) == 1 + BASE_COMMAND_NUM_EVENTS
+    assert [row[0] for row in rows[1:]] == [
+        str(number + 1) for number in range(BASE_COMMAND_NUM_EVENTS)
+    ]
+    # The CSV timecodes use 1 decimal place of precision (rounded), so only compare the
+    # exact-seconds column against the golden timecode of the first event.
+    golden_start_seconds = float(golden_timecodes[0][len("00:00:") :])
+    assert float(rows[1][6]) == pytest.approx(golden_start_seconds)
+
+    _run_dvr_scan(
+        BASE_COMMAND + ["--output-dir", tmp_path, "--scan-only", "--report", "report.json"]
+    )
+    with open(tmp_path / "report.json") as file:
+        report = json.load(file)
+    assert report["scan"]["num_events"] == BASE_COMMAND_NUM_EVENTS
+    assert len(report["events"]) == BASE_COMMAND_NUM_EVENTS
+    # Event boundaries must match the golden timecodes printed by the CLI.
+    reported = []
+    for event in report["events"]:
+        reported.append(event["start"]["timecode"])
+        reported.append(event["end"]["timecode"])
+    assert reported == golden_timecodes
+
+
+def test_report_rejects_unknown_format(tmp_path):
+    """--report with an unsupported extension must fail before scanning."""
+    with pytest.raises(subprocess.CalledProcessError):
+        _run_dvr_scan(
+            BASE_COMMAND + ["--output-dir", tmp_path, "--scan-only", "--report", "report.txt"]
+        )
 
 
 def test_scan_only(tmp_path):

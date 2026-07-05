@@ -34,7 +34,7 @@ from dvr_scan.app.thumbnails import (
     to_photo,
 )
 from dvr_scan.platform import open_path
-from dvr_scan.report import TIMECODE_PRECISION, write_events_csv
+from dvr_scan.report import TIMECODE_PRECISION, write_events_csv, write_events_json
 from dvr_scan.scanner import DetectionResult, MotionEvent
 from dvr_scan.shared import ScanSettings, init_scanner
 from dvr_scan.video_input import BackendUnavailable, VideoStreamConcat, open_input
@@ -480,10 +480,10 @@ def build_event_table(
 
 
 def save_report(parent: tk.Misc, event_list: ty.List[MotionEvent]):
-    """Prompt for a path and write `event_list` to a CSV report file."""
+    """Prompt for a path and write `event_list` to a CSV or JSON report file."""
     save_path = tkinter.filedialog.asksaveasfilename(
         title="Save Report...",
-        filetypes=[("CSV File", "*.csv")],
+        filetypes=[("CSV File", "*.csv"), ("JSON File", "*.json")],
         defaultextension=".csv",
         confirmoverwrite=True,
         parent=parent,
@@ -491,5 +491,9 @@ def save_report(parent: tk.Misc, event_list: ty.List[MotionEvent]):
     if not save_path:
         return
     logger.debug(f"saving report to {save_path}")
-    with open(save_path, "w", newline="") as file:
-        write_events_csv(file, event_list)
+    if save_path.lower().endswith(".json"):
+        with open(save_path, "w") as file:
+            write_events_json(file, event_list)
+    else:
+        with open(save_path, "w", newline="") as file:
+            write_events_csv(file, event_list)

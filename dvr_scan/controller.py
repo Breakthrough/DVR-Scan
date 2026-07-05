@@ -23,7 +23,8 @@ from scenedetect import FrameTimecode
 import dvr_scan
 from dvr_scan.cli import get_cli_parser
 from dvr_scan.config import ConfigLoadFailure, ConfigRegistry, RegionValueDeprecated
-from dvr_scan.scanner import DetectorType, OutputMode
+from dvr_scan.report import write_events_csv, write_events_json
+from dvr_scan.scanner import DetectionResult, DetectorType, MotionScanner, OutputMode
 from dvr_scan.shared import ScanSettings, init_logging, init_scanner, logfile_path, setup_logger
 
 logger = logging.getLogger("dvr_scan")
@@ -48,6 +49,13 @@ def _preprocess_args(args):
     args.input = input_files
     # NOTE: If -o/--output was given without an extension, one is appended for the
     # effective output mode in `init_scanner` (the mode may come from a config file).
+    # --report: validate the format up front so we don't fail after a long scan.
+    if hasattr(args, "report") and Path(args.report).suffix.lower() not in (".csv", ".json"):
+        logger.error(
+            "Error: Unknown report format for %s: file extension must be .csv or .json.",
+            args.report,
+        )
+        return False, None
     # -roi/--region-of-interest
     if hasattr(args, "region_of_interest") and args.region_of_interest:
         original_roi = args.region_of_interest
@@ -156,6 +164,35 @@ def parse_settings() -> ty.Optional[ScanSettings]:
     return settings
 
 
+def _write_report(settings: ScanSettings, scanner: MotionScanner, result: DetectionResult):
+    """Write the detected events to the file specified by --report, if set.
+
+    The format is chosen by file extension (.csv or .json, validated at startup).
+    Relative paths are joined with the output directory when one is set."""
+    report = settings.get_arg("report")
+    if not report:
+        return
+    path = Path(report)
+    if not path.is_absolute():
+        output_dir = settings.get("output-dir")
+        if output_dir:
+            path = Path(output_dir) / path
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.suffix.lower() == ".json":
+        with open(path, "w") as file:
+            write_events_json(
+                file,
+                result.event_list,
+                input_files=settings.get_arg("input"),
+                frame_rate=float(scanner.frame_rate),
+                frames_processed=result.num_frames,
+            )
+    else:
+        with open(path, "w", newline="") as file:
+            write_events_csv(file, result.event_list)
+    logger.info("Report written to %s", path)
+
+
 def run_dvr_scan(
     settings: ScanSettings,
 ) -> ty.List[ty.Tuple[FrameTimecode, FrameTimecode]]:
@@ -179,6 +216,7 @@ def run_dvr_scan(
         processing_time,
         processing_rate,
     )
+    _write_report(settings, scanner, result)
     if not result.event_list:
         logger.info("No motion events detected in input.")
         return
