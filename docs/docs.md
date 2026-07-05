@@ -258,6 +258,8 @@ All time values can be given as a timecode (`HH:MM:SS` or `HH:MM:SS.nnn`), in se
 
     * <b><pre style="display:inline;">opencv</pre></b> :&nbsp; Use OpenCV for saving motion events. Requires .AVI output format.
 
+    * <b><pre style="display:inline;">encode</pre></b> :&nbsp; Encode motion events as MP4 (H.264) using ffmpeg, with support for overlays, multiple inputs, and audio. Encoder args can be set using a [config file](#config-file) (see the `encode-args` option).
+
     * <b><pre style="display:inline;">ffmpeg</pre></b> :&nbsp; Use ffmpeg for saving motion events. Ffmpeg encoder args can be set using a [config file](#config-file) (see the `ffmpeg-input-args` and `ffmpeg-output-args` options).
 
     * <b><pre style="display:inline;">copy</pre></b> :&nbsp; Same as `ffmpeg`, but using stream copying mode (no reencoding). Can potentially create inaccurate events due to keyframe placement.
@@ -268,9 +270,9 @@ All time values can be given as a timecode (`HH:MM:SS` or `HH:MM:SS.nnn`), in se
     ```
     </span>
 
-!!! warning "Multiple input files are not supported when `-m`/`--output-mode` is set to `ffmpeg` or `copy`. You can use `ffmpeg` to [concatenate all input videos](https://trac.ffmpeg.org/wiki/Concatenate) *before* using DVR-Scan, or [run DVR-Scan in a for-loop](guide.md#multiple-videos)."
+!!! warning "Multiple input files are not supported when `-m`/`--output-mode` is set to `ffmpeg` or `copy` (they are supported with `opencv` and `encode`). You can use `ffmpeg` to [concatenate all input videos](https://trac.ffmpeg.org/wiki/Concatenate) *before* using DVR-Scan, or [run DVR-Scan in a for-loop](guide.md#multiple-videos)."
 
- * <b><pre>-o video.avi, --output video.avi</pre></b> Save all motion events to a single file, instead of the default (one file per event). Only supported with the default output mode (`opencv`). Requires `.avi` extension.
+ * <b><pre>-o video.avi, --output video.avi</pre></b> Save all motion events to a single file, instead of the default (one file per event). Only supported when `-m`/`--output-mode` is `opencv` (requires `.avi` extension) or `encode` (video-only output).
 
  * <b><pre>-mo mask.avi, --mask-output mask.avi</pre></b> Save a video containing the calculated motion mask on each frame. Useful for tuning motion detection. Requires `.avi` extension.
 
@@ -412,14 +414,22 @@ The DVR-Scan app includes a preset dropdown for saving and restoring groups of s
     </span>
 
  * <b><pre>output-mode</pre></b>
-    Method of generating output videos: (`scan_only`, `opencv`, `ffmpeg`, `copy`). Not all features are supported in all modes.
+    Method of generating output videos: (`scan_only`, `opencv`, `encode`, `ffmpeg`, `copy`). Not all features are supported in all modes.
     <span class="dvr-scan-default">
     ```
     output-mode = opencv
     ```
     </span>
 
-!!! warning "Multiple input files are not supported when `-m`/`--output-mode` is set to `ffmpeg` or `copy`. You can use `ffmpeg` to [concatenate all input videos](https://trac.ffmpeg.org/wiki/Concatenate) *before* using DVR-Scan, or [run DVR-Scan in a for-loop](guide.md#multiple-videos)."
+!!! warning "Multiple input files are not supported when `-m`/`--output-mode` is set to `ffmpeg` or `copy` (they are supported with `opencv` and `encode`). You can use `ffmpeg` to [concatenate all input videos](https://trac.ffmpeg.org/wiki/Concatenate) *before* using DVR-Scan, or [run DVR-Scan in a for-loop](guide.md#multiple-videos)."
+
+ * <b><pre>encode-args</pre></b>
+    Encoder parameters used when generating output files when *output-mode* is *encode*. Stream mappings (`-map`) are generated automatically based on the audio streams present in the input video(s) and must not be set here.
+    <span class="dvr-scan-default">
+    ```
+    encode-args = -c:v libx264 -preset veryfast -crf 22 -c:a aac
+    ```
+    </span>
 
  * <b><pre>ffmpeg-input-args</pre></b>
     Arguments added before the input to `ffmpeg` when *output-mode* is *ffmpeg* or *copy*. Note that *-y* and *-nostdin* are always added.

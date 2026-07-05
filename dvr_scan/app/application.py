@@ -51,6 +51,7 @@ from dvr_scan.config import (
     ConfigLoadFailure,
     ConfigRegistry,
 )
+from dvr_scan.encoder import get_encoder_type
 from dvr_scan.platform import open_path
 from dvr_scan.scanner import OutputMode, Point
 from dvr_scan.shared import ScanSettings, logfile_path
@@ -88,7 +89,12 @@ def finalize_output_names(settings: ScanSettings, combine: bool):
     Must be called after the `input` setting has been populated."""
     video_name = Path(settings.get("input")[0]).stem
     if combine:
-        settings.set("output", f"{video_name}-events.avi")
+        output_mode = settings.get("output-mode")
+        if not isinstance(output_mode, OutputMode):
+            output_mode = OutputMode[str(output_mode).upper().replace("-", "_")]
+        encoder_type = get_encoder_type(output_mode)
+        extension = encoder_type.EXTENSION if encoder_type is not None else "avi"
+        settings.set("output", f"{video_name}-events.{extension}")
     # NOTE: mask-output is CLI-only (not in CONFIG_MAP), so we must use get_arg here.
     if settings.get_arg("mask-output"):
         settings.set("mask-output", f"{video_name}-mask.avi")
@@ -946,6 +952,7 @@ class OutputArea:
             "OpenCV (.avi)",
             "ffmpeg",
             "ffmpeg (copy)",
+            "MP4 (H.264)",
         )
         self._output_mode_combo.current(0)
 
@@ -1247,7 +1254,7 @@ class OutputArea:
         return callback
 
     def _show_options(self):
-        if self._output_mode == OutputMode.OPENCV:
+        if self._output_mode in (OutputMode.OPENCV, OutputMode.ENCODE):
             self._opencv_options.grid(row=0, column=0, sticky=tk.NSEW, padx=PADDING, pady=PADDING)
             self._ffmpeg_options.grid_remove()
         else:
@@ -1302,12 +1309,12 @@ class OutputArea:
         self._options_button["state"] = (
             tk.DISABLED if self._output_mode == OutputMode.COPY else tk.NORMAL
         )
-        combine_allowed = self._output_mode is OutputMode.OPENCV
+        combine_allowed = self._output_mode in (OutputMode.OPENCV, OutputMode.ENCODE)
         self._combine_button["state"] = tk.NORMAL if combine_allowed else tk.DISABLED
 
     @property
     def combine(self) -> bool:
-        return self._output_mode == OutputMode.OPENCV and self._combine.get()
+        return self._output_mode in (OutputMode.OPENCV, OutputMode.ENCODE) and self._combine.get()
 
     @property
     def _output_mode(self) -> OutputMode:
@@ -1316,8 +1323,10 @@ class OutputArea:
             return OutputMode.OPENCV
         elif index == 1:
             return OutputMode.FFMPEG
-        else:
+        elif index == 2:
             return OutputMode.COPY
+        else:
+            return OutputMode.ENCODE
 
     @_output_mode.setter
     def _output_mode(self, newval: OutputMode):
@@ -1328,6 +1337,8 @@ class OutputArea:
             self._output_mode_combo.current(1)
         elif newval is OutputMode.COPY:
             self._output_mode_combo.current(2)
+        elif newval is OutputMode.ENCODE:
+            self._output_mode_combo.current(3)
 
     @property
     def _output_dir(self) -> str:
@@ -1378,8 +1389,9 @@ class OutputArea:
         if self._output_mode == OutputMode.FFMPEG:
             settings.set("ffmpeg-input-args", self._ffmpeg_input_args.get())
             settings.set("ffmpeg-output-args", self._ffmpeg_output_args.get())
-        elif self._output_mode == OutputMode.OPENCV:
-            settings.set("opencv-codec", self._opencv_codec.get())
+        elif self._output_mode in (OutputMode.OPENCV, OutputMode.ENCODE):
+            if self._output_mode == OutputMode.OPENCV:
+                settings.set("opencv-codec", self._opencv_codec.get())
             # Text Overlays
             settings.set("time-code", self._timecode.get())
             settings.set("frame-metrics", self._frame_metrics.get())

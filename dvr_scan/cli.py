@@ -157,7 +157,8 @@ def get_cli_parser(user_config: ConfigRegistry):
         help=(
             "If specified, all motion events will be written to a single file"
             " in order (if not specified, separate files are created for each event)."
-            " Filename MUST end with .avi. Only supported in output mode OPENCV."
+            " Only supported in output modes OPENCV (filename MUST end with .avi)"
+            " and ENCODE (video-only)."
         ),
     )
 

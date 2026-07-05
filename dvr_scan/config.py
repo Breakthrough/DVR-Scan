@@ -27,7 +27,11 @@ from pathlib import Path
 from platformdirs import user_config_dir
 from scenedetect import FrameTimecode
 
-from dvr_scan.encoder import DEFAULT_FFMPEG_INPUT_ARGS, DEFAULT_FFMPEG_OUTPUT_ARGS
+from dvr_scan.encoder import (
+    DEFAULT_ENCODE_ARGS,
+    DEFAULT_FFMPEG_INPUT_ARGS,
+    DEFAULT_FFMPEG_OUTPUT_ARGS,
+)
 
 # Backwards compatibility for config options that were renamed/replaced.
 MIGRATED_CONFIG_OPTION: ty.Dict[str, str] = {
@@ -325,6 +329,7 @@ CONFIG_MAP: ConfigDict = {
     # Application (dvr-scan-app only)
     "startup-mode": "wizard",
     # Input/Output
+    "encode-args": DEFAULT_ENCODE_ARGS,
     "ffmpeg-input-args": DEFAULT_FFMPEG_INPUT_ARGS,
     "ffmpeg-output-args": DEFAULT_FFMPEG_OUTPUT_ARGS,
     "input-mode": "pyav",
@@ -389,7 +394,7 @@ certain string options are stored in `CHOICE_MAP`."""
 CHOICE_MAP: ty.Dict[str, ty.List[str]] = {
     "input-mode": ["pyav", "opencv", "moviepy"],
     "opencv-codec": ["XVID", "MP4V", "MP42", "H264"],
-    "output-mode": ["scan_only", "opencv", "copy", "ffmpeg"],
+    "output-mode": ["scan_only", "opencv", "copy", "ffmpeg", "encode"],
     "verbosity": ["debug", "info", "warning", "error"],
     "bg-subtractor": ["MOG2", "CNT", "MOG2_CUDA"],
     "thumbnails": ["highscore"],

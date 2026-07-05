@@ -305,6 +305,7 @@ class _OutputStep:
 
     _MODES: ty.List[ty.Tuple[str, ty.Optional[OutputMode]]] = [
         ("Extract Events (OpenCV, .avi)", OutputMode.OPENCV),
+        ("Extract Events (MP4, H.264)", OutputMode.ENCODE),
         ("Extract Events (ffmpeg)", OutputMode.FFMPEG),
         ("Extract Events (ffmpeg copy)", OutputMode.COPY),
         ("Scan Only (report)", None),

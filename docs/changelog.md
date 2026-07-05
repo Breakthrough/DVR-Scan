@@ -35,6 +35,14 @@ correctly with default parameters.
    timecodes relative to the start of the file with all input modes
  * [general] Reported event boundaries may shift by a frame or two compared to previous
    releases, as PyAV and OpenCV decode frames with slightly different color conversion
+ * [feature] New output mode `encode` produces MP4 (H.264) files by piping decoded frames
+   to ffmpeg, combining the quality of `ffmpeg` mode with support for overlays
+   (`-bb`/`-tc`/`-fm`), multiple inputs, and combined output (`-o`, video-only); audio from
+   the source video(s) is included and synchronized, including events spanning multiple
+   inputs. Encoder settings can be customized with the new `encode-args` config option.
+ * [bugfix] Motion events extracted from multiple input videos are now named after the
+   source video containing the start of each event, instead of always using the first
+   input's filename [#258](https://github.com/Breakthrough/DVR-Scan/issues/258)
 
 ### 1.8.2.1 (2026-05-09)
 

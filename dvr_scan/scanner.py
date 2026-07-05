@@ -32,6 +32,7 @@ from tqdm import tqdm
 
 from dvr_scan.detector import MotionDetector
 from dvr_scan.encoder import (
+    DEFAULT_ENCODE_ARGS,
     DEFAULT_FFMPEG_INPUT_ARGS,
     DEFAULT_FFMPEG_OUTPUT_ARGS,
     DEFAULT_VIDEOWRITER_CODEC,
@@ -40,6 +41,7 @@ from dvr_scan.encoder import (
     EventEncoder,
     FFmpegCopyEncoder,
     FFmpegExtractEncoder,
+    FFmpegPipeEncoder,
     MaskWriter,
     OpenCVEncoder,
     OutputMode,
@@ -164,6 +166,7 @@ class MotionScanner:
         self._output_mode: OutputMode = None  # -m/--output-mode / -so/--scan-only
         self._ffmpeg_input_args: ty.Optional[str] = None  # input args for OutputMode.FFMPEG/COPY
         self._ffmpeg_output_args: ty.Optional[str] = None  # output args for OutputMode.FFMPEG
+        self._encode_args: ty.Optional[str] = None  # encode-args for OutputMode.ENCODE
         self._output_dir: ty.Optional[Path] = None  # -d/--directory
         # TODO: Replace uses of self._output_dir with
         # a helper function called "get_output_path".
@@ -246,6 +249,7 @@ class MotionScanner:
         opencv_fourcc: str = DEFAULT_VIDEOWRITER_CODEC,
         ffmpeg_input_args: str = DEFAULT_FFMPEG_INPUT_ARGS,
         ffmpeg_output_args: str = DEFAULT_FFMPEG_OUTPUT_ARGS,
+        encode_args: str = DEFAULT_ENCODE_ARGS,
     ):
         """Sets the path and encoder codec to use when exporting videos.
 
@@ -264,14 +268,16 @@ class MotionScanner:
                 when output_mode is OutputMode.FFMPEG or OutputMode.COPY.
             ffmpeg_output_args: Arguments to pass to ffmpeg for the output video. Only used when
                 output_mode is OutputMode.FFMPEG.
+            encode_args: Encoder arguments to pass to ffmpeg (no -map entries; stream
+                mapping is generated). Only used when output_mode is OutputMode.ENCODE.
 
         Raises:
             ValueError:
              - codec is not four characters
-             - comp_file is set but output_mode is not OutputMode.OPENCV
+             - comp_file is set but output_mode does not support combined output
              - output_dir is set but either comp_file or mask_file are absolute paths
-             - multiple input videos and output_mode is not OutputMode.OPENCV
-             - output_mode is OutputMode.FFMPEG or OutputMode.COPY but ffmpeg is not available
+             - multiple input videos and output_mode does not support multiple inputs
+             - output_mode requires ffmpeg but ffmpeg is not available
             KeyError:
              - output_mode does not exist in OutputMode
         """
@@ -288,19 +294,23 @@ class MotionScanner:
         multiple_inputs_ok = encoder_type is None or encoder_type.SUPPORTS_MULTIPLE_INPUTS
         if len(self._input.paths) > 1 and not multiple_inputs_ok:
             raise ValueError(
-                "input concatenation is only supported in `scan-only` or `opencv` mode."
+                "input concatenation is only supported in `scan-only`, `opencv`, or `encode` mode."
             )
         combined_output_ok = encoder_type is not None and encoder_type.SUPPORTS_COMBINED_OUTPUT
         if comp_file is not None and not combined_output_ok:
-            raise ValueError("output to single file is only supported with mode `opencv`")
-        if output_mode in (OutputMode.FFMPEG, OutputMode.COPY) and not is_ffmpeg_available():
-            raise ValueError("ffmpeg is required to use output mode FFMPEG/COPY")
+            raise ValueError("output to single file is only supported with mode `opencv`/`encode`")
+        if (
+            output_mode in (OutputMode.FFMPEG, OutputMode.COPY, OutputMode.ENCODE)
+            and not is_ffmpeg_available()
+        ):
+            raise ValueError("ffmpeg is required to use output mode FFMPEG/COPY/ENCODE")
         self._comp_file = comp_file
         self._mask_file = mask_file
         self._output_mode = output_mode
         self._fourcc = cv2.VideoWriter_fourcc(*opencv_fourcc.upper())
         self._ffmpeg_input_args = ffmpeg_input_args
         self._ffmpeg_output_args = ffmpeg_output_args
+        self._encode_args = encode_args
         # If an output directory is defined, ensure it exists, and if not, try to create it.
         if output_dir:
             output_dir.mkdir(parents=True, exist_ok=True)
@@ -1043,6 +1053,15 @@ class MotionScanner:
                 input_path=self._input.paths[0],
                 output_dir=self._output_dir,
                 ffmpeg_input_args=self._ffmpeg_input_args,
+            )
+        if self._output_mode == OutputMode.ENCODE:
+            return FFmpegPipeEncoder(
+                video_input=self._input,
+                frame_rate=self._effective_frame_rate,
+                output_dir=self._output_dir,
+                comp_file=self._comp_file,
+                encode_args=self._encode_args,
+                completed_events=self._num_events,
             )
         return None
 

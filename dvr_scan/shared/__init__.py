@@ -138,6 +138,7 @@ def init_scanner(
         opencv_fourcc=settings.get("opencv-codec"),
         ffmpeg_input_args=settings.get("ffmpeg-input-args"),
         ffmpeg_output_args=settings.get("ffmpeg-output-args"),
+        encode_args=settings.get("encode-args"),
         output_dir=Path(output_dir) if output_dir else None,
     )
 

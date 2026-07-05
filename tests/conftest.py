@@ -15,8 +15,20 @@ This file includes all pytest configuration for running DVR-Scan's tests.
 """
 
 import os
+import shutil
+from pathlib import Path
 
 import pytest
+
+
+def pytest_configure(config):
+    """Allow ffmpeg-gated tests to run on machines where ffmpeg is not on PATH but a
+    copy exists in the repository root (as shipped with the Windows build)."""
+    repo_root = Path(__file__).resolve().parent.parent
+    ffmpeg_name = "ffmpeg.exe" if os.name == "nt" else "ffmpeg"
+    if shutil.which("ffmpeg") is None and (repo_root / ffmpeg_name).exists():
+        os.environ["PATH"] = str(repo_root) + os.pathsep + os.environ.get("PATH", "")
+
 
 #
 # Helper Functions
