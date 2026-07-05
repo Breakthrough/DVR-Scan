@@ -230,6 +230,17 @@ def test_quiet_mode(tmp_path):
     assert BASE_COMMAND_TIMECODE_LIST_GOLDEN in output, "Output timecodes do not match test golden."
 
 
+def test_logfile_contains_timecodes(tmp_path):
+    """The comma-separated timecode values must be written to log files, including in
+    quiet mode where they are also printed to stdout (#265)."""
+    logfile = tmp_path / "log.txt"
+    output = _run_dvr_scan(BASE_COMMAND + ["--scan-only", "--quiet", "--logfile", str(logfile)])
+    assert BASE_COMMAND_TIMECODE_LIST_GOLDEN in output, "Timecodes missing from stdout."
+    assert BASE_COMMAND_TIMECODE_LIST_GOLDEN.strip() in logfile.read_text(), (
+        "Timecodes missing from log file."
+    )
+
+
 def test_mog2(tmp_path):
     """Test -b/--bg-subtractor MOG2 (the default)."""
     _run_dvr_scan(

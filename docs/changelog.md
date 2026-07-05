@@ -36,6 +36,7 @@ correctly with default parameters.
  * [bugfix] Fix syntax error due to f-string usage under Python 3.10 [#262](https://github.com/Breakthrough/DVR-Scan/issues/262)
  * [bugfix] Ensure motion high score is reset when thumbnails are disabled [#267](https://github.com/Breakthrough/DVR-Scan/issues/267)
  * [bugfix] Fix "stale" frame references being used as thumbnails [#268](https://github.com/Breakthrough/DVR-Scan/issues/268)
+ * [bugfix] Ensure comma-separated timecode list persists in logfiles [#265](https://github.com/Breakthrough/DVR-Scan/issues/265)
 
 ### 1.8.2.1 (2026-05-09)
 
