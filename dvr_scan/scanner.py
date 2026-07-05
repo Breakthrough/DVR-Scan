@@ -15,7 +15,6 @@ Contains the motion scanning engine (`MotionScanner`) for DVR-Scan.
 
 import logging
 import queue
-import subprocess
 import sys
 import threading
 import typing as ty
@@ -32,6 +31,20 @@ from scenedetect.platform import FakeTqdmObject
 from tqdm import tqdm
 
 from dvr_scan.detector import MotionDetector
+from dvr_scan.encoder import (
+    DEFAULT_FFMPEG_INPUT_ARGS,
+    DEFAULT_FFMPEG_OUTPUT_ARGS,
+    DEFAULT_VIDEOWRITER_CODEC,
+    OUTPUT_FILE_TEMPLATE,
+    EventContext,
+    EventEncoder,
+    FFmpegCopyEncoder,
+    FFmpegExtractEncoder,
+    MaskWriter,
+    OpenCVEncoder,
+    OutputMode,
+    get_encoder_type,
+)
 from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
 from dvr_scan.platform import (
     HAS_PILLOW,
@@ -48,29 +61,11 @@ if HAS_TKINTER and HAS_PILLOW:
 
 logger = logging.getLogger("dvr_scan")
 
-DEFAULT_VIDEOWRITER_CODEC = "XVID"
-"""Default codec to use with OpenCV VideoWriter."""
-
 MAX_DECODE_QUEUE_SIZE: int = 4
 """Maximum size of the queue of frames waiting to be processed after decoding."""
 
 MAX_ENCODE_QUEUE_SIZE: int = 4
 """Maximum size of the queue of encode events waiting to be processed."""
-
-DEFAULT_FFMPEG_INPUT_ARGS = "-v error"
-"""Default arguments to add before input when invoking ffmpeg."""
-
-DEFAULT_FFMPEG_OUTPUT_ARGS = (
-    "-map 0:v:0 -map 0:a? -map 0:s? -c:v libx264 -preset veryfast -crf 22 -c:a aac"
-)
-"""Default arguments passed to ffmpeg when using OutputMode.FFMPEG."""
-
-COPY_MODE_OUTPUT_ARGS = "-map 0:v:0 -map 0:a? -map 0:s? -c:v copy -c:a copy"
-"""Default arguments passed to ffmpeg when using OutputMode.COPY."""
-
-# TODO(#89): Add ability to set output name template.
-OUTPUT_FILE_TEMPLATE = "{VIDEO_NAME}.DSME_{EVENT_NUMBER}.{EXTENSION}"
-"""Template to use for generating output files."""
 
 PROGRESS_BAR_DESCRIPTION = "Detected: %d | Progress"
 """Template to use for progress bar."""
@@ -82,29 +77,6 @@ class DetectorType(Enum):
     MOG2 = SubtractorMOG2
     CNT = SubtractorCNT
     MOG2_CUDA = SubtractorCudaMOG2
-
-
-class OutputMode(Enum):
-    """Mode to export each motion event using."""
-
-    SCAN_ONLY = 1
-    """Don't generate any output files."""
-    OPENCV = 2
-    """Output using OpenCV VideoWriter."""
-    COPY = 3
-    """Output using ffmpeg in codec-copy mode."""
-    FFMPEG = 4
-    """Output using ffmpeg."""
-
-    def __str__(self):
-        if self == OutputMode.SCAN_ONLY:
-            return "SCAN_ONLY"
-        if self == OutputMode.OPENCV:
-            return "OPENCV"
-        if self == OutputMode.COPY:
-            return "COPY"
-        if self == OutputMode.FFMPEG:
-            return "FFMPEG"
 
 
 @dataclass
@@ -165,52 +137,6 @@ def _scale_kernel_size(kernel_size: int, downscale_factor: int):
 def _recommended_kernel_size(frame_width: int, downscale_factor: int) -> int:
     corrected_width = round(frame_width / float(downscale_factor))
     return 7 if corrected_width >= 1920 else 5 if corrected_width >= 1280 else 3
-
-
-def _extract_event_ffmpeg(
-    input_path: Path,
-    output_path: Path,
-    start_time: FrameTimecode,
-    end_time: FrameTimecode,
-    ffmpeg_input_args: str,
-    ffmpeg_out_args: str,
-    log_args: bool = False,
-) -> bool:
-    args: ty.List[str] = [
-        "ffmpeg",
-        "-y",
-        "-nostdin",
-        *ffmpeg_input_args.split(" "),
-        "-ss",
-        start_time.get_timecode(),
-        "-i",
-        str(input_path),
-        "-t",
-        (end_time - start_time).get_timecode(),
-        *ffmpeg_out_args.split(" "),
-        str(output_path),
-    ]
-    if log_args or logger.getEffectiveLevel() == logging.DEBUG:
-        logger.info("%s", " ".join(args))
-    # Invoke the command and capture the output (exception is raised on non-zero return code).
-    output: str = subprocess.check_output(
-        args=args,
-        text=True,
-        stderr=subprocess.STDOUT,
-    )
-    # Log any output we get from the ffmpeg process.
-    if output:
-        verbosity = logging.INFO
-        # Upgrade verbosity depending on specified ffmpeg verbosity (if any).
-        if any(["-v %s" % v in ffmpeg_input_args for v in ["panic", "fatal", "error"]]):
-            verbosity = logging.ERROR
-        elif "-v warning" in ffmpeg_input_args:
-            verbosity = logging.WARNING
-        logger.log(
-            verbosity,
-            "ffmpeg output:\n\n%s",
-            output,
-        )
 
 
 # TODO: Pogram options should be separated out from those variables required for a motion scan.
@@ -283,9 +209,8 @@ class MotionScanner:
         self._stop: threading.Event = threading.Event()
         self._decode_thread_exception = None
         self._encode_thread_exception = None
-        self._video_writer: ty.Optional[cv2.VideoWriter] = None
-        self._mask_size: ty.Tuple[int, int] = None
-        self._mask_writer: ty.Optional[cv2.VideoWriter] = None
+        self._encoder: ty.Optional[EventEncoder] = None
+        self._mask_writer: ty.Optional[MaskWriter] = None
         self._num_events: int = 0
 
         # Thumbnail production (set_thumbnail_params)
@@ -359,14 +284,14 @@ class MotionScanner:
             raise ValueError("codec must be exactly FOUR (4) characters")
         if not isinstance(output_mode, OutputMode):
             output_mode = OutputMode[output_mode.upper().replace("-", "_")]
-        if len(self._input.paths) > 1 and output_mode not in (
-            OutputMode.SCAN_ONLY,
-            OutputMode.OPENCV,
-        ):
+        encoder_type = get_encoder_type(output_mode)
+        multiple_inputs_ok = encoder_type is None or encoder_type.SUPPORTS_MULTIPLE_INPUTS
+        if len(self._input.paths) > 1 and not multiple_inputs_ok:
             raise ValueError(
                 "input concatenation is only supported in `scan-only` or `opencv` mode."
             )
-        if comp_file is not None and output_mode != OutputMode.OPENCV:
+        combined_output_ok = encoder_type is not None and encoder_type.SUPPORTS_COMBINED_OUTPUT
+        if comp_file is not None and not combined_output_ok:
             raise ValueError("output to single file is only supported with mode `opencv`")
         if output_mode in (OutputMode.FFMPEG, OutputMode.COPY) and not is_ffmpeg_available():
             raise ValueError("ffmpeg is required to use output mode FFMPEG/COPY")
@@ -762,6 +687,17 @@ class MotionScanner:
         )
         decode_thread.start()
 
+        self._encoder = self._create_encoder()
+        self._mask_writer = (
+            MaskWriter(
+                path=self._mask_file,
+                fourcc=self._fourcc,
+                frame_rate=self._effective_frame_rate,
+                output_dir=self._output_dir,
+            )
+            if self._mask_file is not None
+            else None
+        )
         encode_thread = None
         if self._output_mode != OutputMode.SCAN_ONLY or self._mask_file is not None:
             encode_queue = queue.Queue(MAX_ENCODE_QUEUE_SIZE)
@@ -906,7 +842,7 @@ class MotionScanner:
                             encode_queue.put(MotionEvent(start=event_start, end=event_end))
 
                 # Send frame to encode thread.
-                if in_motion_event and self._output_mode == OutputMode.OPENCV:
+                if in_motion_event and self._encoder is not None and self._encoder.STREAMS_FRAMES:
                     encode_queue.put(
                         EncodeFrameEvent(
                             frame_bgr=frame.frame_bgr,
@@ -918,7 +854,7 @@ class MotionScanner:
             # Not already in a motion event, look for a new one.
             else:
                 # Buffer the required amount of frames and overlay data until we find an event.
-                if self._output_mode == OutputMode.OPENCV:
+                if self._encoder is not None and self._encoder.STREAMS_FRAMES:
                     buffered_frames.append(
                         EncodeFrameEvent(
                             frame_bgr=frame.frame_bgr,
@@ -1069,16 +1005,46 @@ class MotionScanner:
             # Make sure main thread stops processing loop.
             decode_queue.put(None)
 
-    def _init_video_writer(self, path: Path, frame_size: ty.Tuple[int, int]) -> cv2.VideoWriter:
-        """Create a new cv2.VideoWriter using the correct framerate."""
-        if self._output_dir:
-            path = self._output_dir / path
+    @property
+    def _effective_frame_rate(self) -> float:
+        """Framerate of any generated output, corrected for skipped frames."""
         effective_framerate = (
             self._input.framerate
             if self._frame_skip < 1
             else self._input.framerate / (1 + self._frame_skip)
         )
-        return cv2.VideoWriter(str(path), self._fourcc, float(effective_framerate), frame_size)
+        return float(effective_framerate)
+
+    def _create_encoder(self) -> ty.Optional[EventEncoder]:
+        """Create the encoder used to write motion events based on the current output mode.
+
+        Returns None if the current output mode does not generate event videos."""
+        if self._output_mode == OutputMode.OPENCV:
+            return OpenCVEncoder(
+                fourcc=self._fourcc,
+                frame_rate=self._effective_frame_rate,
+                # Use the first input video name as a filename template.
+                video_name=self._input.paths[0].stem,
+                output_dir=self._output_dir,
+                comp_file=self._comp_file,
+                # Keep file numbering in lockstep with `self._num_events` if scan()
+                # is ever invoked more than once on the same scanner.
+                completed_events=self._num_events,
+            )
+        if self._output_mode == OutputMode.FFMPEG:
+            return FFmpegExtractEncoder(
+                input_path=self._input.paths[0],
+                output_dir=self._output_dir,
+                ffmpeg_input_args=self._ffmpeg_input_args,
+                ffmpeg_output_args=self._ffmpeg_output_args,
+            )
+        if self._output_mode == OutputMode.COPY:
+            return FFmpegCopyEncoder(
+                input_path=self._input.paths[0],
+                output_dir=self._output_dir,
+                ffmpeg_input_args=self._ffmpeg_input_args,
+            )
+        return None
 
     def _on_encode_frame_event(self, event: EncodeFrameEvent):
         size = (event.frame_bgr.shape[1], event.frame_bgr.shape[0])
@@ -1090,26 +1056,10 @@ class MotionScanner:
                 f"due to size mismatch: {size[0]}x{size[1]}, expected {video[0]}x{video[1]}"
             )
             return
-        if self._video_writer is None:
-            # Use the first input video name as a filename template.
-            video_name = self._input.paths[0].stem
-            output_path = (
-                self._comp_file
-                if self._comp_file
-                else Path(
-                    OUTPUT_FILE_TEMPLATE.format(
-                        VIDEO_NAME=video_name,
-                        EVENT_NUMBER="%04d" % (1 + self._num_events),
-                        EXTENSION="avi",
-                    )
-                )
-            )
-            self._video_writer = self._init_video_writer(output_path, size)
         # *NOTE*: Overlays are currently rendered in-place by modifying the event itself.
         self._draw_overlays(event.frame_bgr, event.timecode, event.score, event.bounding_box)
         # Encode and write frame to disk.
-
-        self._video_writer.write(event.frame_bgr)
+        self._encoder.write_frame(event.frame_bgr, event.timecode)
 
     def _draw_overlays(
         self,
@@ -1131,71 +1081,18 @@ class MotionScanner:
             self._bounding_box.draw(frame, bounding_box, use_shift)
 
     def _on_mask_event(self, event: MotionMaskEvent):
-        # Initialize the VideoWriter used for mask output.
-        if self._mask_writer is None:
-            self._mask_size = event.motion_mask.shape[1], event.motion_mask.shape[0]
-            self._mask_writer = self._init_video_writer(self._mask_file, self._mask_size)
-        # Write the motion mask to the output file.
-        size = (event.motion_mask.shape[1], event.motion_mask.shape[0])
-        if size != self._mask_size:
-            time = event.timecode
-            logger.warn(
-                f"WARNING: Failed to write mask at frame {time.frame_num} [{time.get_timecode()}] "
-                f"due to size mismatch: {size[0]}x{size[1]}, "
-                f" expected {self._mask_size[0]}x{self._mask_size[1]}"
-            )
-            return
         out_frame = cv2.cvtColor(event.motion_mask, cv2.COLOR_GRAY2BGR)
         self._draw_overlays(
             out_frame, event.timecode, event.score, event.bounding_box, use_shift=False
         )
-        self._mask_writer.write(out_frame)
+        self._mask_writer.write_frame(out_frame, event.timecode)
 
     def _on_motion_event(self, event: MotionEvent):
         self._num_events += 1
-        # Handle case where we're not using Ffmpeg.
-        if self._output_mode not in (OutputMode.FFMPEG, OutputMode.COPY):
-            # If we're at the end of the event, close the current VideoWriter to output the next
-            # event to a new file (unless we're concatenating all events in the same output file).
-            if not self._comp_file and self._video_writer is not None:
-                self._video_writer.release()
-                self._video_writer = None
-            return
-        # Output motion event using Ffmpeg.
-        output_args = (
-            self._ffmpeg_output_args
-            if self._output_mode == OutputMode.FFMPEG
-            else COPY_MODE_OUTPUT_ARGS
-        )
-        # Use the first input video name as a filename template.
-        video_name = self._input.paths[0].stem
-        output_path = (
-            self._comp_file
-            if self._comp_file
-            else Path(
-                OUTPUT_FILE_TEMPLATE.format(
-                    VIDEO_NAME=video_name,
-                    EVENT_NUMBER="%04d" % self._num_events,
-                    EXTENSION="mp4",
-                )
+        if self._encoder is not None:
+            self._encoder.finish_event(
+                EventContext(event_number=self._num_events, start=event.start, end=event.end)
             )
-        )
-        if self._output_dir:
-            output_path = self._output_dir / output_path
-        # Only log the args passed to ffmpeg on the first event, to reduce log spam.
-        log_args = False
-        if self._num_events == 1:
-            logger.info("Splitting events using ffmpeg, first event:")
-            log_args = True
-        _extract_event_ffmpeg(
-            input_path=self._input.paths[0],
-            output_path=output_path,
-            start_time=event.start,
-            end_time=event.end,
-            ffmpeg_input_args=self._ffmpeg_input_args,
-            ffmpeg_out_args=output_args,
-            log_args=log_args,
-        )
 
     def _encode_thread(self, encode_queue: queue.Queue):
         try:
@@ -1218,10 +1115,10 @@ class MotionScanner:
             logger.debug(sys.exc_info())
             self._encode_thread_exception = sys.exc_info()
         finally:
-            if self._video_writer is not None:
-                self._video_writer.release()
+            if self._encoder is not None:
+                self._encoder.close()
             if self._mask_writer is not None:
-                self._mask_writer.release()
+                self._mask_writer.close()
             # Unblock any waiting puts if we stopped early.
             while not encode_queue.empty():
                 _ = encode_queue.get_nowait()
