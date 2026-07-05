@@ -62,33 +62,45 @@ class Preset:
 
 # OrderedDict (rather than a plain dict) documents that iteration order is the intended
 # display order of the built-in presets in the UI.
-# TODO: Tune these values based on real-world footage and user feedback; the
-# current numbers are reasonable starting points relative to program defaults
-# (threshold 0.15, min-event-length 0.1s, MOG2, no frame skip or downscaling).
+# TODO: Revisit these values with user feedback. Baseline program defaults:
+# threshold 0.15, min-event-length 0.1s, variance-threshold 16, MOG2,
+# no frame skip or downscaling.
 BUILTIN_PRESETS: ty.OrderedDict[str, ty.Dict[str, str]] = OrderedDict(
     [
         (
+            # Catch faint/small motion: half the default threshold, a small fixed
+            # noise-filter kernel (auto can pick larger kernels at high resolutions,
+            # which suppresses small objects), and generous context around events.
             "High Sensitivity",
             {
-                "threshold": "0.08",
-                "min-event-length": "0.1s",
+                "threshold": "0.075",
+                "kernel-size": "3",
                 "time-before-event": "2.0s",
                 "time-post-event": "3.0s",
             },
         ),
         (
+            # Only sustained, significant motion: higher score threshold, longer
+            # minimum event length, and a stricter MOG2 variance threshold to
+            # reject noise/illumination flicker; shorter post-event padding.
             "Low Sensitivity",
             {
                 "threshold": "0.5",
-                "min-event-length": "0.5s",
+                "min-event-length": "0.6s",
+                "variance-threshold": "32",
+                "time-post-event": "1.5s",
             },
         ),
         (
+            # Throughput over precision: CNT subtractor (fastest), process every
+            # other frame, quarter-area downscale; threshold raised slightly to
+            # offset the extra noise those introduce.
             "Fast Scan",
             {
                 "bg-subtractor": "CNT",
                 "frame-skip": "1",
                 "downscale-factor": "2",
+                "threshold": "0.2",
             },
         ),
     ]
