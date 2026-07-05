@@ -33,6 +33,7 @@ correctly with default parameters.
  * [bugfix] Using `--thumbnails highscore` together with `-o`/`--output` no longer
    overwrites the combined output video with the thumbnail image; thumbnails are named after the combined output file instead
  * [general] On VFR inputs, clips produced by `encode` mode are written at the input's average framerate: all frames are preserved, but playback speed will deviate from real time in sections whose local framerate differs from the average (use `ffmpeg` or `copy` mode if exact playback timing is required)
+ * [bugfix] Fix syntax error due to f-string usage under Python 3.10 [#262](https://github.com/Breakthrough/DVR-Scan/issues/262)
 
 ### 1.8.2.1 (2026-05-09)
 
