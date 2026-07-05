@@ -371,10 +371,10 @@ The DVR-Scan app includes a preset dropdown for saving and restoring groups of s
 
 
  * <b><pre>input-mode</pre></b>
-    Which mode to use for decoding frames: (`opencv`, `pyav`, `moviepy`).
+    Which mode to use for decoding frames: (`pyav`, `opencv`, `moviepy`).
     <span class="dvr-scan-default">
     ```
-    input-mode = opencv
+    input-mode = pyav
     ```
     </span>
 

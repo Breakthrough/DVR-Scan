@@ -37,7 +37,7 @@ from dvr_scan.platform import open_path
 from dvr_scan.report import TIMECODE_PRECISION, write_events_csv
 from dvr_scan.scanner import DetectionResult, MotionEvent
 from dvr_scan.shared import ScanSettings, init_scanner
-from dvr_scan.video_joiner import BackendUnavailable, VideoJoiner
+from dvr_scan.video_input import BackendUnavailable, VideoStreamConcat, open_input
 
 TITLE = "Scanning..."
 
@@ -393,27 +393,25 @@ def _event_frame_providers(
     input_paths: ty.List[str], event_list: ty.List[MotionEvent]
 ) -> ty.List[FrameProvider]:
     """Build one frame provider per event, each sampling FILMSTRIP_FRAMES frames spread
-    across the event for a filmstrip preview. All providers share a single `VideoJoiner`
-    opened lazily on the worker thread; since `VideoJoiner.seek` is forward-only and the
-    `ThumbnailLoader` runs providers in submission (ascending event) order, and frames
-    within each event are sampled in ascending order, every seek moves forward - so this
-    works for single- and multi-video inputs alike."""
-    joiner: ty.Optional[VideoJoiner] = None
+    across the event for a filmstrip preview. All providers share a single input stream
+    opened lazily on the worker thread, sampling by presentation time so this works for
+    single- and multi-video inputs alike."""
+    video: ty.Optional[VideoStreamConcat] = None
 
     def make(event: MotionEvent) -> FrameProvider:
         def provide():
-            nonlocal joiner
-            if joiner is None:
-                joiner = VideoJoiner([Path(path) for path in input_paths], backend="opencv")
-            start = event.start.frame_num
-            span = max(0, event.end.frame_num - start)
+            nonlocal video
+            if video is None:
+                video = open_input([Path(path) for path in input_paths])
+            start = event.start.seconds
+            span = max(0.0, event.end.seconds - start)
             frames = []
             for index in range(FILMSTRIP_FRAMES):
-                target = start + int(span * (index + 0.5) / FILMSTRIP_FRAMES)
-                joiner.seek(FrameTimecode(target, joiner.framerate))
-                frame = joiner.read()
-                # VideoJoiner.read() yields the frame, or None once the stream is exhausted.
-                if frame is not None:
+                target = start + span * (index + 0.5) / FILMSTRIP_FRAMES
+                video.seek(target)
+                frame = video.read()
+                # read() yields the frame, or False once the stream is exhausted.
+                if frame is not False:
                     frames.append(frame)
             return frames or None
 

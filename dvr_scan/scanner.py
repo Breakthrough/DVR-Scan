@@ -41,7 +41,7 @@ from dvr_scan.platform import (
 )
 from dvr_scan.region import Point, Size, bound_point, load_regions
 from dvr_scan.subtractor import SubtractorCNT, SubtractorCudaMOG2, SubtractorMOG2
-from dvr_scan.video_joiner import VideoJoiner
+from dvr_scan.video_input import VideoStreamConcat, open_input
 
 if HAS_TKINTER and HAS_PILLOW:
     from dvr_scan.app.region_editor import RegionEditor
@@ -221,7 +221,7 @@ class MotionScanner:
     def __init__(
         self,
         input_videos: ty.List[Path],
-        input_mode: str = "opencv",
+        input_mode: str = "pyav",
         frame_skip: int = 0,
         show_progress: bool = False,
         debug_mode: bool = False,
@@ -274,7 +274,7 @@ class MotionScanner:
         self._roi_deprecated = None
 
         # Input Video Parameters (set_video_time)
-        self._input: VideoJoiner = VideoJoiner(input_videos, backend=input_mode)  # -i/--input
+        self._input: VideoStreamConcat = open_input(input_videos, input_mode)  # -i/--input
         self._frame_skip: int = frame_skip  # -fs/--frame-skip
         self._start_time: FrameTimecode = None  # -st/--start-time
         self._end_time: FrameTimecode = None  # -et/--end-time
@@ -481,7 +481,7 @@ class MotionScanner:
         self._post_event_len = FrameTimecode(time_post_event, self._input.framerate)
 
     def set_thumbnail_params(self, thumbnails: str = None):
-        self._thumbnails = thumbnails
+        self._thumbnails = thumbnails.lower() if thumbnails else thumbnails
 
     def set_video_time(
         self,
@@ -751,9 +751,7 @@ class MotionScanner:
             if len(self._input.paths) > 1
             else "input video",
         )
-        logger.debug(
-            f"input mode = {self._input._backend.BACKEND_NAME}, output mode = {self._output_mode}"
-        )
+        logger.debug(f"input mode = {self._input.child_backend}, output mode = {self._output_mode}")
 
         progress_bar = FakeTqdmObject() if not self._show_progress else self._create_progress_bar()
         num_frames_to_process = self.frames_remaining
@@ -898,7 +896,7 @@ class MotionScanner:
                         event_end = last_motion_time + (
                             post_event_duration + frame_duration * (1 + self._frame_skip)
                         )
-                        # TODO(#254): This assertion fires when using VideoJoiner.
+                        # Guaranteed by the monotonic PTS timeline of the input (#254).
                         assert event_end.seconds >= event_start.seconds, (
                             f"event_end {event_end.seconds}s < "
                             + f"event_start {event_start.seconds}s!"
@@ -1043,19 +1041,21 @@ class MotionScanner:
 
     def _decode_thread(self, decode_queue: queue.Queue):
         try:
+            # `position` is the presentation time of the last-read frame, so add one frame
+            # duration when testing against the end time to include that frame itself.
+            frame_duration = 1.0 / float(self._input.framerate)
             while not self._stop.is_set():
                 if (
                     self._end_time is not None
-                    and self._input.position.seconds >= self._end_time.seconds
+                    and (self._input.position.seconds + frame_duration) >= self._end_time.seconds
                 ):
                     break
                 for _ in range(self._frame_skip):
-                    if self._input.read(decode=False) is None:
+                    if self._input.read(decode=False) is False:
                         break
                 frame_bgr = self._input.read()
-                if frame_bgr is None:
+                if frame_bgr is False:
                     break
-                assert self._input.position.frame_num > 0
                 if not self._stop.is_set():
                     decode_queue.put(DecodeEvent(frame_bgr, self._presentation_time()))
 

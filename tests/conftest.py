@@ -55,6 +55,12 @@ def corrupt_video() -> str:
 
 
 @pytest.fixture
+def delayed_start_video() -> str:
+    """Returns path to haze.mp4, which has a nonzero video stream start time (1.075s)."""
+    return get_absolute_path("resources/haze.mp4")
+
+
+@pytest.fixture
 def vfr_video() -> str:
     """Returns path to traffic_camera_vfr.mp4, a variable framerate re-encode of
     traffic_camera.mp4 where the first 288 frames play at 25 fps and the remainder

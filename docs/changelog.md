@@ -26,6 +26,15 @@ correctly with default parameters.
  * [general] When using `--frame-skip`, the post-event window now covers the exact amount of
    time specified rather than rounding down to a multiple of the skip interval, and
    back-to-back events share their boundary timecode instead of leaving a one-frame gap.
+ * [feature] Frames are now decoded with PyAV by default (`input-mode = pyav`), which
+   provides more accurate timing and stream metadata; set `input-mode = opencv` to restore
+   the previous behavior
+ * [feature] Multiple input videos are concatenated on a continuous PTS-based timeline
+   with support for seeking across inputs; frame rates no longer need to match exactly
+ * [general] Videos with a delayed start (nonzero stream start time) now report event
+   timecodes relative to the start of the file with all input modes
+ * [general] Reported event boundaries may shift by a frame or two compared to previous
+   releases, as PyAV and OpenCV decode frames with slightly different color conversion
 
 ### 1.8.2.1 (2026-05-09)
 

@@ -49,7 +49,7 @@ from dvr_scan.app.widgets import Spinbox
 from dvr_scan.config import ConfigLoadFailure, ConfigRegistry
 from dvr_scan.scanner import OutputMode
 from dvr_scan.shared import ScanSettings
-from dvr_scan.video_joiner import BackendUnavailable
+from dvr_scan.video_input import BackendUnavailable
 
 WIZARD_TITLE = "DVR-Scan"
 MIN_WIZARD_WIDTH = 640

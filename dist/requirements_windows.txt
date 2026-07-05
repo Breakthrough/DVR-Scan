@@ -1,6 +1,7 @@
 #
 # DVR-Scan Requirements for Windows Build
 #
+av==18.0.0
 numpy==2.2.0
 opencv-contrib-python==4.10.0.84
 pillow==12.2.0

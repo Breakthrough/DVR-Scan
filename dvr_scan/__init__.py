@@ -24,7 +24,7 @@ main modules under `dvr_scan` are organized as follows:
 
 There are also a few helper modules:
 
-  ``video_joiner``: concatenates multiple input videos
+  ``video_input``: opens one or more input videos as a single contiguous stream
 
   ``opencv_loader``: helper for resolving dynamic libraries used by OpenCV
 

@@ -1532,7 +1532,7 @@ class ScanArea:
 class Application:
     def run(self):
         logger.debug("starting main loop")
-        if self._settings.get("startup-mode") == "wizard":
+        if str(self._settings.get("startup-mode")).lower() == "wizard":
             self._open_wizard()
         else:
             self._root.deiconify()

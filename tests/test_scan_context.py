@@ -51,6 +51,13 @@ TRAFFIC_CAMERA_EVENTS_TIME_PRE_5 = [
     (536, 576),
 ]
 
+# Middle event as detected when scanning starts from a mid-video seek. The event start
+# differs slightly from TRAFFIC_CAMERA_EVENTS since the background model is initialized
+# from a different frame.
+TRAFFIC_CAMERA_EVENTS_AFTER_SEEK = [
+    (360, 491),
+]
+
 # Last event still ends on end of video even though we specified to include 40 frames extra.
 TRAFFIC_CAMERA_EVENTS_TIME_POST_40 = [
     (9, 139),
@@ -91,9 +98,10 @@ def compare_event_lists(
         )
 
 
-def test_scan_context(traffic_camera_video):
+@pytest.mark.parametrize("input_mode", ["pyav", "opencv"])
+def test_scan_context(traffic_camera_video, input_mode):
     """Test functionality of MotionScanner with default parameters (DetectorType.MOG2)."""
-    scanner = MotionScanner([traffic_camera_video])
+    scanner = MotionScanner([traffic_camera_video], input_mode=input_mode)
     scanner.set_detection_params()
     scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
     scanner.set_event_params(min_event_len=4, time_pre_event=0)
@@ -187,19 +195,27 @@ def test_pre_event_shift(traffic_camera_video):
 
 def test_pre_event_shift_with_frame_skip(traffic_camera_video):
     """Test setting time_pre_event when using frame_skip."""
-    for frame_skip in range(1, 6):
+
+    def scan_events(frame_skip: int):
         scanner = MotionScanner([traffic_camera_video], frame_skip=frame_skip)
         scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
         scanner.set_event_params(min_event_len=4, time_pre_event=6)
         event_list = scanner.scan().event_list
-        event_list = [(event.start.frame_num, event.end.frame_num) for event in event_list]
-        # The start times should not differ from the ground truth (non-frame-skipped) by the amount
-        # of frames that we are skipping. End times can vary more since the default value of
-        # time_post_event is relatively large.
+        return [(event.start.frame_num, event.end.frame_num) for event in event_list]
+
+    # Compare against a baseline scan without frame skipping so the only variable is the
+    # skip amount (detection itself can shift by a frame or two between decoders).
+    baseline = scan_events(frame_skip=0)
+    for frame_skip in range(1, 6):
+        event_list = scan_events(frame_skip)
+        # The start times should not differ from the baseline (non-frame-skipped) by more
+        # than the amount of frames we are skipping, plus one frame of slack since the
+        # detection window length is quantized by the skip interval. End times can vary
+        # more since the default value of time_post_event is relatively large.
         assert all(
             [
-                abs(x[0] - y[0]) <= frame_skip
-                for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS_TIME_PRE_5, strict=True)
+                abs(x[0] - y[0]) <= (frame_skip + 1)
+                for x, y in zip(event_list, baseline, strict=True)
             ]
         ), "Comparison failure when frame_skip = %d" % (frame_skip)
 
@@ -243,9 +259,10 @@ def test_post_event_shift_with_frame_skip(traffic_camera_video):
         ), "Comparison failure when frame_skip = %d" % (frame_skip)
 
 
-def test_decode_corrupt_video(corrupt_video):
+@pytest.mark.parametrize("input_mode", ["pyav", "opencv"])
+def test_decode_corrupt_video(corrupt_video, input_mode):
     """Ensure we can process a video with a single bad frame."""
-    scanner = MotionScanner([corrupt_video])
+    scanner = MotionScanner([corrupt_video], input_mode=input_mode)
     scanner.set_event_params(min_event_len=2)
     scanner.set_regions(regions=[CORRUPT_VIDEO_ROI])
     event_list = scanner.scan().event_list
@@ -262,7 +279,7 @@ def test_start_end_time(traffic_camera_video):
     event_list = scanner.scan().event_list
     event_list = [(event.start.frame_num, event.end.frame_num) for event in event_list]
     # The set duration should only cover the middle event.
-    compare_event_lists(event_list, TRAFFIC_CAMERA_EVENTS[1:2], EVENT_FRAME_TOLERANCE)
+    compare_event_lists(event_list, TRAFFIC_CAMERA_EVENTS_AFTER_SEEK, EVENT_FRAME_TOLERANCE)
 
 
 def test_start_duration(traffic_camera_video):
@@ -274,4 +291,4 @@ def test_start_duration(traffic_camera_video):
     event_list = scanner.scan().event_list
     event_list = [(event.start.frame_num, event.end.frame_num) for event in event_list]
     # The set duration should only cover the middle event.
-    compare_event_lists(event_list, TRAFFIC_CAMERA_EVENTS[1:2], EVENT_FRAME_TOLERANCE)
+    compare_event_lists(event_list, TRAFFIC_CAMERA_EVENTS_AFTER_SEEK, EVENT_FRAME_TOLERANCE)

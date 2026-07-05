@@ -327,7 +327,7 @@ CONFIG_MAP: ConfigDict = {
     # Input/Output
     "ffmpeg-input-args": DEFAULT_FFMPEG_INPUT_ARGS,
     "ffmpeg-output-args": DEFAULT_FFMPEG_OUTPUT_ARGS,
-    "input-mode": "opencv",
+    "input-mode": "pyav",
     "opencv-codec": "XVID",
     "output-dir": "",
     "open-output-dir": True,
@@ -387,7 +387,7 @@ The types of these values are used when decoding the configuration file. Valid c
 certain string options are stored in `CHOICE_MAP`."""
 
 CHOICE_MAP: ty.Dict[str, ty.List[str]] = {
-    "input-mode": ["opencv", "pyav", "moviepy"],
+    "input-mode": ["pyav", "opencv", "moviepy"],
     "opencv-codec": ["XVID", "MP4V", "MP42", "H264"],
     "output-mode": ["scan_only", "opencv", "copy", "ffmpeg"],
     "verbosity": ["debug", "info", "warning", "error"],
