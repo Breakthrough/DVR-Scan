@@ -508,10 +508,6 @@ class InputSettingsWindow:
         self._window = tk.Toplevel(master=root)
         self._window.withdraw()
 
-        root.rowconfigure(0, pad=PADDING, weight=1)
-        root.columnconfigure(0, pad=PADDING, weight=1)
-        root.columnconfigure(1, pad=PADDING, weight=12, minsize=0)
-
         self._window.minsize(width=MIN_WINDOW_WIDTH, height=MIN_WINDOW_HEIGHT)
         self._window.title("Input Settings")
         self._window.resizable(True, True)
@@ -606,10 +602,6 @@ class MotionSettingsWindow:
         self._root = root
         self._window = tk.Toplevel(master=root)
         self._window.withdraw()
-
-        root.rowconfigure(0, pad=PADDING, weight=1)
-        root.columnconfigure(0, pad=PADDING, weight=1)
-        root.columnconfigure(1, pad=PADDING, weight=12, minsize=0)
 
         self._window.minsize(width=MIN_WINDOW_WIDTH, height=MIN_WINDOW_HEIGHT)
         self._window.title("Motion Settings")
@@ -995,9 +987,9 @@ class OutputArea:
             "OpenCV (.avi)",
             "ffmpeg",
             "ffmpeg (copy)",
-            "MP4 (H.264) - Recommended",
+            "Encode (MP4) - Recommended",
         )
-        # Default to MP4 output, unless ffmpeg is unavailable on this system.
+        # Default to encoded MP4 output, unless ffmpeg is unavailable on this system.
         self._output_mode_combo.current(3 if is_ffmpeg_available() else 0)
 
         self._output_dir_str = ""
@@ -1110,6 +1102,26 @@ class OutputArea:
         )
         self._opencv_codec_combo["values"] = CHOICE_MAP["opencv-codec"]
         self._opencv_codec_combo.grid(row=0, column=1, sticky=tk.W, padx=PADDING, pady=PADDING)
+
+        # Encoder args are shown in place of the codec row when the mode is ENCODE.
+        self._encode_args_label = tk.Label(self._opencv_options, text="Encoder\nArgs")
+        self._encode_args_label.grid(
+            row=0, column=0, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
+        )
+        self._encode_args = tk.StringVar(value=CONFIG_MAP["encode-args"])
+        self._encode_args_entry = ttk.Entry(
+            self._opencv_options,
+            textvariable=self._encode_args,
+            width=LONG_SETTING_INPUT_WIDTH,
+        )
+        self._encode_args_entry.grid(
+            row=0,
+            column=1,
+            columnspan=4,
+            sticky=EXPAND_HORIZONTAL,
+            padx=PADDING,
+            pady=PADDING,
+        )
 
         self._timecode = tk.BooleanVar(value=False)
         self._timecode_checkbutton = ttk.Checkbutton(
@@ -1299,6 +1311,20 @@ class OutputArea:
 
     def _show_options(self):
         if self._output_mode in (OutputMode.OPENCV, OutputMode.ENCODE):
+            # The overlay/bounding-box options are shared, but the codec selector only
+            # applies to OpenCV output and the encoder args only to Encode output.
+            if self._output_mode == OutputMode.ENCODE:
+                self._opencv_options.configure(text="Encode Options")
+                self._opencv_codec_label.grid_remove()
+                self._opencv_codec_combo.grid_remove()
+                self._encode_args_label.grid()
+                self._encode_args_entry.grid()
+            else:
+                self._opencv_options.configure(text="OpenCV Options")
+                self._opencv_codec_label.grid()
+                self._opencv_codec_combo.grid()
+                self._encode_args_label.grid_remove()
+                self._encode_args_entry.grid_remove()
             self._opencv_options.grid(row=0, column=0, sticky=tk.NSEW, padx=PADDING, pady=PADDING)
             self._ffmpeg_options.grid_remove()
         else:
@@ -1417,6 +1443,7 @@ class OutputArea:
         self._ffmpeg_input_args.set(settings.get("ffmpeg-input-args"))
         self._ffmpeg_output_args.set(settings.get("ffmpeg-output-args"))
         self._opencv_codec.set(settings.get("opencv-codec"))
+        self._encode_args.set(settings.get("encode-args"))
         # Text Overlays
         self._timecode.set(settings.get("time-code"))
         self._frame_metrics.set(settings.get("frame-metrics"))
@@ -1444,6 +1471,8 @@ class OutputArea:
         elif self._output_mode in (OutputMode.OPENCV, OutputMode.ENCODE):
             if self._output_mode == OutputMode.OPENCV:
                 settings.set("opencv-codec", self._opencv_codec.get())
+            else:
+                settings.set("encode-args", self._encode_args.get())
             # Text Overlays
             settings.set("time-code", self._timecode.get())
             settings.set("frame-metrics", self._frame_metrics.get())
