@@ -52,6 +52,16 @@ correctly with default parameters.
    set by extension), including in scan-only mode; the GUI's Save Report dialog can also
    save JSON reports. CSV reports now include exact start/end times in seconds (frame
    numbers are approximations on variable framerate inputs).
+ * [bugfix] Thumbnails (`--thumbnails highscore`) are now named after the source video
+   containing each event when scanning multiple inputs, and are numbered correctly in
+   scan-only mode (previously each event's thumbnail overwrote the last one)
+ * [bugfix] Using `--thumbnails highscore` together with `-o`/`--output` no longer
+   overwrites the combined output video with the thumbnail image; thumbnails are named
+   after the combined output file instead
+ * [general] On VFR inputs, clips produced by `encode` mode are written at the input's
+   average framerate: all frames are preserved, but playback speed will deviate from
+   real time in sections whose local framerate differs from the average (use `ffmpeg`
+   or `copy` mode if exact playback timing is required)
 
 ### 1.8.2.1 (2026-05-09)
 

@@ -58,6 +58,10 @@ TRAFFIC_CAMERA_EVENTS_AFTER_SEEK = [
     (360, 491),
 ]
 
+# Warming up the background model from a mid-video seek amplifies the ARM/x86 detection
+# difference: the macos-14 runner detects the event start 2 frames earlier than x86.
+AFTER_SEEK_FRAME_TOLERANCE = 2 if EVENT_FRAME_TOLERANCE else 0
+
 # Last event still ends on end of video even though we specified to include 40 frames extra.
 TRAFFIC_CAMERA_EVENTS_TIME_POST_40 = [
     (9, 139),
@@ -124,6 +128,25 @@ def test_scan_context_pts_backed_events(traffic_camera_video):
         assert event.end.seconds > event.start.seconds
 
 
+# Expected wall-clock event start times for the VFR fixture, mapped from the CFR ground
+# truth through the fixture's piecewise timing (see the vfr_video docstring in conftest).
+# The tolerance covers detection window shifts, which are quantized by the average
+# framerate; average-framerate timing would be off by over 4 seconds for the events in
+# the slowed section.
+VFR_EXPECTED_START_SECONDS = [0.4, 17.2, 31.9]
+VFR_START_TOLERANCE = 0.6
+# Total duration of the VFR fixture: 288 frames at 25 fps + 288 frames at 12.5 fps.
+VFR_DURATION = 34.56
+
+
+def check_vfr_event_starts(event_list, expected_starts_seconds):
+    for event, expected_start in zip(event_list, expected_starts_seconds, strict=True):
+        assert abs(event.start.seconds - expected_start) < VFR_START_TOLERANCE, (
+            f"expected event start near {expected_start}s, got {event.start.seconds}s"
+        )
+        assert event.end.seconds > event.start.seconds
+
+
 def test_scan_context_vfr(vfr_video):
     """Ensure event boundaries are correct in wall-clock time on variable framerate input.
 
@@ -136,17 +159,38 @@ def test_scan_context_vfr(vfr_video):
     scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
     scanner.set_event_params(min_event_len=4, time_pre_event=0)
     event_list = scanner.scan().event_list
-    assert len(event_list) == len(TRAFFIC_CAMERA_EVENTS)
-    # Expected wall-clock start times mapped from the CFR ground truth through the piecewise
-    # timing above. The tolerance covers detection window shifts, which are quantized by the
-    # average framerate; average-framerate timing would be off by over 4 seconds for the
-    # events in the slowed section.
-    expected_starts_seconds = [0.4, 17.2, 31.9]
-    for event, expected_start in zip(event_list, expected_starts_seconds, strict=True):
-        assert abs(event.start.seconds - expected_start) < 0.6, (
-            f"expected event start near {expected_start}s, got {event.start.seconds}s"
-        )
-        assert event.end.seconds > event.start.seconds
+    assert len(event_list) == len(VFR_EXPECTED_START_SECONDS)
+    check_vfr_event_starts(event_list, VFR_EXPECTED_START_SECONDS)
+
+
+def test_scan_context_vfr_concat(vfr_video):
+    """Two concatenated VFR inputs must yield the same events in each copy, with the
+    second copy offset by the first file's true duration, on a monotonic timeline."""
+    scanner = MotionScanner([vfr_video, vfr_video])
+    scanner.set_detection_params()
+    scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
+    scanner.set_event_params(min_event_len=4, time_pre_event=0)
+    event_list = scanner.scan().event_list
+    expected_starts = VFR_EXPECTED_START_SECONDS + [
+        start + VFR_DURATION for start in VFR_EXPECTED_START_SECONDS
+    ]
+    assert len(event_list) == len(expected_starts)
+    check_vfr_event_starts(event_list, expected_starts)
+    for previous, current in zip(event_list[:-1], event_list[1:], strict=True):
+        assert current.start.seconds >= previous.end.seconds
+
+
+@pytest.mark.parametrize("frame_skip", [1, 2])
+def test_scan_context_vfr_frame_skip(vfr_video, frame_skip):
+    """Frame skipping on VFR input must not shift event boundaries in wall-clock time
+    (boundaries derive from each processed frame's exact PTS, not a frame counter)."""
+    scanner = MotionScanner([vfr_video], frame_skip=frame_skip)
+    scanner.set_detection_params()
+    scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
+    scanner.set_event_params(min_event_len=4, time_pre_event=0)
+    event_list = scanner.scan().event_list
+    assert len(event_list) == len(VFR_EXPECTED_START_SECONDS)
+    check_vfr_event_starts(event_list, VFR_EXPECTED_START_SECONDS)
 
 
 def test_scan_context_with_video_joiner(traffic_camera_video):
@@ -279,7 +323,7 @@ def test_start_end_time(traffic_camera_video):
     event_list = scanner.scan().event_list
     event_list = [(event.start.frame_num, event.end.frame_num) for event in event_list]
     # The set duration should only cover the middle event.
-    compare_event_lists(event_list, TRAFFIC_CAMERA_EVENTS_AFTER_SEEK, EVENT_FRAME_TOLERANCE)
+    compare_event_lists(event_list, TRAFFIC_CAMERA_EVENTS_AFTER_SEEK, AFTER_SEEK_FRAME_TOLERANCE)
 
 
 def test_start_duration(traffic_camera_video):
@@ -291,4 +335,4 @@ def test_start_duration(traffic_camera_video):
     event_list = scanner.scan().event_list
     event_list = [(event.start.frame_num, event.end.frame_num) for event in event_list]
     # The set duration should only cover the middle event.
-    compare_event_lists(event_list, TRAFFIC_CAMERA_EVENTS_AFTER_SEEK, EVENT_FRAME_TOLERANCE)
+    compare_event_lists(event_list, TRAFFIC_CAMERA_EVENTS_AFTER_SEEK, AFTER_SEEK_FRAME_TOLERANCE)

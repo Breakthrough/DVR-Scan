@@ -619,7 +619,7 @@ class MaskWriter:
                 self._path, self._output_dir, self._fourcc, self._frame_rate, size
             )
         if size != self._mask_size:
-            logger.warn(
+            logger.warning(
                 f"WARNING: Failed to write mask at frame {timecode.frame_num} "
                 f"[{timecode.get_timecode()}] due to size mismatch: {size[0]}x{size[1]}, "
                 f" expected {self._mask_size[0]}x{self._mask_size[1]}"

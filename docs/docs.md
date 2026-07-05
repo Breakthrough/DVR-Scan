@@ -64,17 +64,17 @@ You can customize the options passed to `ffmpeg` using a [config file](#config-f
 
 Setting output mode to `ffmpeg` or `copy` has the following caveats:
 
- - inputs that have a variable framerate (VFR) may not be  extracted reliably
  - input concatenation is not supported
  - overlays are not supported
 
 ### VFR (Variable Framerate)
 
-!!! warning "Variable framerate (VFR) video support is still under development and may produce incorrect results."
+Variable framerate (VFR) videos are supported. DVR-Scan uses each frame's presentation timestamp (PTS) for all event timing, so detected event start/end times are accurate in wall-clock time regardless of framerate changes, and events are extracted at the correct positions in all output modes.
 
-Variable framerate (VFR) videos are *not well supported*, but basic functionality does work. Motion detection and event extraction should work correctly with default settings. Note however that calculated timestamps may be incorrect, and extracted footage may playback at the wrong speed.
+Caveats when scanning VFR inputs:
 
-Frame numbers will be accurate, but timestamps will not.  This can yield incorrect results when setting output mode to `ffmpeg` or `copy`, as well as inaccurate timestamps when using overlays. This issue is [tracked on Github](https://github.com/Breakthrough/PySceneDetect/issues/168).  If this workflow is required, you can re-encode the source material into fixed framerate before processing.
+ - Frame *numbers* (e.g. in reports, or shown by overlays) are approximations derived from the average framerate; timestamps are exact.
+ - Clips produced by the default `encode` output mode are written at the input's average framerate: every frame is preserved, but sections of the video whose local framerate deviates from the average will play back faster or slower than real time. If exact playback timing is required, use `-m ffmpeg` or `-m copy` to extract events directly from the source instead.
 
 ## :fontawesome-solid-terminal:`dvr-scan` Options
 
@@ -285,7 +285,7 @@ All time values can be given as a timecode (`HH:MM:SS` or `HH:MM:SS.nnn`), in se
 
  * <b><pre>-mo mask.avi, --mask-output mask.avi</pre></b> Save a video containing the calculated motion mask on each frame. Useful for tuning motion detection. Requires `.avi` extension.
 
- * <b><pre>--thumbnails highscore</pre></b> Save a thumbnail of the frame with the highest motion score for each event.
+ * <b><pre>--thumbnails highscore</pre></b> Save a thumbnail of the frame with the highest motion score for each event. Thumbnails are named after the source video containing the event (e.g. `video.DSME_0001.jpg`), or after the combined output file when `-o`/`--output` is used.
 
 #### Overlays
 

@@ -168,6 +168,37 @@ def test_encode_mode_frame_skip(tmp_path):
         assert _has_audio(path), f"{path.name} is missing its audio stream"
 
 
+def test_encode_mode_vfr(tmp_path, vfr_video):
+    """ENCODE mode on a variable framerate source must produce a decodable clip per
+    event with every processed frame preserved.
+
+    KNOWN LIMITATION: the pipe encoder stamps frames at the input's *average* framerate,
+    so clip playback duration differs from the event's wall-clock span wherever the
+    local framerate deviates from the average (frames are never dropped; the clip just
+    plays faster or slower). Exact-PTS output would require an in-process encoder
+    (the PyAVEncoder slot in the design)."""
+    args = [
+        "--input",
+        vfr_video,
+        "--add-region",
+        "631 532 841 532 841 659 631 659",
+        "--min-event-length",
+        "4",
+        "--time-before-event",
+        "0",
+        "--ignore-user-config",
+        "--output-mode",
+        "encode",
+        "--output-dir",
+        str(tmp_path),
+    ]
+    _run_dvr_scan(args)
+    events = sorted(tmp_path.iterdir())
+    assert len(events) == 3
+    for path in events:
+        assert _count_frames(path) > 0, f"{path.name} did not decode any frames"
+
+
 def test_encode_mode_with_mask_output(tmp_path):
     """Mask output (-mo) must work alongside ENCODE mode (both share the encode thread)."""
     _run_dvr_scan(BASE_COMMAND + ["--mask-output", "mask.avi", "--output-dir", tmp_path])

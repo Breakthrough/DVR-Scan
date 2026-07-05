@@ -739,7 +739,7 @@ class MotionScanner:
             if frame_size != self._input.resolution:
                 time = frame.timecode
                 video_res = self._input.resolution
-                logger.warn(
+                logger.warning(
                     f"WARNING: Frame {time.frame_num} [{time.get_timecode()}] has unexpected size: "
                     f"{frame_size[0]}x{frame_size[1]}, expected {video_res[0]}x{video_res[1]}"
                 )
@@ -817,23 +817,8 @@ class MotionScanner:
                             "event %d high score %f" % (1 + self._num_events, self._highscore)
                         )
                         if self._thumbnails == "highscore":
-                            video_name = self._input.paths[0].stem
-                            output_path: Path = (
-                                self._comp_file
-                                if self._comp_file
-                                else Path(
-                                    OUTPUT_FILE_TEMPLATE.format(
-                                        VIDEO_NAME=video_name,
-                                        EVENT_NUMBER="%04d" % (1 + self._num_events),
-                                        EXTENSION="jpg",
-                                    )
-                                )
-                            )
-                            if self._output_dir:
-                                output_path = self._output_dir / output_path
-                            cv2.imwrite(str(output_path), self._highframe)
-                            self._highscore = 0
-                            self._highframe = None
+                            # This event has not been appended to event_list yet.
+                            self._write_highscore_thumbnail(event_start, 1 + len(event_list))
 
                         # Calculate event end based on the last frame we had with motion plus
                         # the post event length time. We also need to compensate for the number
@@ -930,23 +915,8 @@ class MotionScanner:
 
             logger.debug("event %d high score %f" % (1 + self._num_events, self._highscore))
             if self._thumbnails == "highscore":
-                video_name = self._input.paths[0].stem
-                output_path = (
-                    self._comp_file
-                    if self._comp_file
-                    else Path(
-                        OUTPUT_FILE_TEMPLATE.format(
-                            VIDEO_NAME=video_name,
-                            EVENT_NUMBER="%04d" % (1 + self._num_events),
-                            EXTENSION="jpg",
-                        )
-                    )
-                )
-                if self._output_dir:
-                    output_path = self._output_dir / output_path
-                cv2.imwrite(str(output_path), self._highframe)
-                self._highscore = 0
-                self._highframe = None
+                # The final event was just appended to event_list above.
+                self._write_highscore_thumbnail(event_start, len(event_list))
 
             if self._output_mode != OutputMode.SCAN_ONLY:
                 encode_queue.put(MotionEvent(start=event_start, end=event_end))
@@ -1025,6 +995,35 @@ class MotionScanner:
         )
         return float(effective_framerate)
 
+    def _write_highscore_thumbnail(self, event_start: FrameTimecode, event_number: int):
+        """Save the highest-score frame of event `event_number` (starting at
+        `event_start`) as a JPEG, named after the source video containing the event (or
+        the combined output file's stem when -o is used, since per-event video files
+        don't exist in that case). `event_number` comes from the scan loop rather than
+        `self._num_events`, which is only advanced by the encode thread (and not at all
+        in scan-only mode)."""
+        if self._comp_file is not None:
+            video_name = Path(self._comp_file).stem
+        else:
+            # Probe with a one-frame-wide span: a zero-width span at a source boundary
+            # would map to nothing.
+            spans = self._input.map_span(
+                event_start, event_start + (1.0 / float(self._input.framerate))
+            )
+            video_name = spans[0].path.stem if spans else self._input.paths[0].stem
+        output_path = Path(
+            OUTPUT_FILE_TEMPLATE.format(
+                VIDEO_NAME=video_name,
+                EVENT_NUMBER="%04d" % event_number,
+                EXTENSION="jpg",
+            )
+        )
+        if self._output_dir:
+            output_path = self._output_dir / output_path
+        cv2.imwrite(str(output_path), self._highframe)
+        self._highscore = 0
+        self._highframe = None
+
     def _create_encoder(self) -> ty.Optional[EventEncoder]:
         """Create the encoder used to write motion events based on the current output mode.
 
@@ -1070,7 +1069,7 @@ class MotionScanner:
         if size != self._input.resolution:
             time = event.timecode
             video = self._input.resolution
-            logger.warn(
+            logger.warning(
                 f"WARNING: Failed to write event at frame {time.frame_num} [{time.get_timecode()}] "
                 f"due to size mismatch: {size[0]}x{size[1]}, expected {video[0]}x{video[1]}"
             )

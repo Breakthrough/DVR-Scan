@@ -78,6 +78,17 @@ def test_seek(traffic_camera_video, backend):
     assert abs(video.position.seconds - 5.0) < 0.25
 
 
+def test_seam_monotonicity_vfr(vfr_video):
+    """Position must also be strictly increasing across the seam between variable
+    framerate inputs, whose declared duration is less exact than CFR."""
+    video = open_input([vfr_video] * 2)
+    last_seconds = -1.0
+    while video.read(decode=False) is not False:
+        seconds = video.position.seconds
+        assert seconds > last_seconds, f"position went backwards: {seconds} <= {last_seconds}"
+        last_seconds = seconds
+
+
 def test_corrupt_video_pyav(corrupt_video):
     """The PyAV input path must tolerate corrupt frames and decode the full stream."""
     video = open_input([corrupt_video], input_mode="pyav")

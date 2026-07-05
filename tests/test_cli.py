@@ -65,8 +65,9 @@ BASE_COMMAND_EVENT_LIST_GOLDEN = """
 -------------------------------------------------------------
 """[1:]
 
-# On some ARM chips (e.g. Apple M1), results are slightly different, so we allow a 1 frame
-# delta on the events for those platforms.
+# On ARM chips (e.g. Apple M1), detection near the threshold differs by one frame from
+# x86, so the first event's boundaries use a separate golden (values taken from the
+# macos-14 CI runner).
 # NOTE: The first event starts one frame earlier than in earlier releases (v2.0 decodes
 # via PyAV by default, whose colorspace conversion differs slightly from OpenCV's, which
 # can shift detection near the threshold by a frame).
@@ -76,7 +77,7 @@ BASE_COMMAND_TIMECODE_LIST_GOLDEN = (
 """[1:]
     if not ("ARM" in MACHINE_ARCH or "AARCH" in MACHINE_ARCH)
     else """
-00:00:00.360,00:00:06.000,00:00:14.320,00:00:19.640,00:00:21.680,00:00:23.040
+00:00:00.400,00:00:05.960,00:00:14.320,00:00:19.640,00:00:21.680,00:00:23.040
 """[1:]
 )
 
