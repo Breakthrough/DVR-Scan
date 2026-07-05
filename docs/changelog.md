@@ -38,6 +38,7 @@ correctly with default parameters.
  * [bugfix] Fix "stale" frame references being used as thumbnails [#268](https://github.com/Breakthrough/DVR-Scan/issues/268)
  * [bugfix] Ensure comma-separated timecode list persists in logfiles [#265](https://github.com/Breakthrough/DVR-Scan/issues/265)
  * [bugfix] Allow unknown keys in config file with a warning [#242](https://github.com/Breakthrough/DVR-Scan/issues/242)
+ * [feature] Add a `--max-events N` flag to allow stopping after detecting `N` motion events [#261](https://github.com/Breakthrough/DVR-Scan/issues/261)
 
 ### 1.8.2.1 (2026-05-09)
 
