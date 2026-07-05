@@ -16,52 +16,23 @@ correctly with default parameters.
 #### Changelog
 
  * [general] DVR-Scan now requires PySceneDetect 0.7 or higher
- * [feature] Variable framerate (VFR) videos are now handled correctly: event start/end times
-   are always derived from presentation timestamps [#20](https://github.com/Breakthrough/DVR-Scan/issues/20)
- * [breaking] Remove `--use-pts` option; presentation timestamps are now always used for
-   event timing (the `use-pts` config option is deprecated and has no effect)
- * [general] Reported event timecodes are now exact rather than quantized to whole frames;
-   formatted timecodes may differ by up to 1ms from previous versions. Frame numbers shown
-   in reports and overlays are approximations on VFR inputs.
- * [general] When using `--frame-skip`, the post-event window now covers the exact amount of
-   time specified rather than rounding down to a multiple of the skip interval, and
-   back-to-back events share their boundary timecode instead of leaving a one-frame gap.
- * [feature] Frames are now decoded with PyAV by default (`input-mode = pyav`), which
-   provides more accurate timing and stream metadata; set `input-mode = opencv` to restore
-   the previous behavior
- * [feature] Multiple input videos are concatenated on a continuous PTS-based timeline
-   with support for seeking across inputs; frame rates no longer need to match exactly
- * [general] Videos with a delayed start (nonzero stream start time) now report event
-   timecodes relative to the start of the file with all input modes
- * [general] Reported event boundaries may shift by a frame or two compared to previous
-   releases, as PyAV and OpenCV decode frames with slightly different color conversion
- * [feature] New output mode `encode` produces MP4 (H.264) files by piping decoded frames
-   to ffmpeg, combining the quality of `ffmpeg` mode with support for overlays
-   (`-bb`/`-tc`/`-fm`), multiple inputs, and combined output (`-o`, video-only); audio from
-   the source video(s) is included and synchronized, including events spanning multiple
-   inputs. Encoder settings can be customized with the new `encode-args` config option.
- * [bugfix] Motion events extracted from multiple input videos are now named after the
-   source video containing the start of each event, instead of always using the first
-   input's filename [#258](https://github.com/Breakthrough/DVR-Scan/issues/258)
- * [breaking] The default output mode is now `encode` (MP4/H.264 via ffmpeg) instead of
-   `opencv` (.avi), so motion events now include audio and are saved as .mp4 by default.
-   If ffmpeg is not installed and no output mode is set, DVR-Scan falls back to `opencv`
-   with a warning. Set `output-mode = opencv` in a config file (or use `-m opencv`) to
-   restore the previous behavior.
- * [feature] New `--report` option writes detected events to a CSV or JSON file (format
-   set by extension), including in scan-only mode; the GUI's Save Report dialog can also
-   save JSON reports. CSV reports now include exact start/end times in seconds (frame
-   numbers are approximations on variable framerate inputs).
- * [bugfix] Thumbnails (`--thumbnails highscore`) are now named after the source video
-   containing each event when scanning multiple inputs, and are numbered correctly in
-   scan-only mode (previously each event's thumbnail overwrote the last one)
+ * [feature] Variable framerate (VFR) videos are now handled correctly: event start/end times are always derived from presentation timestamps [#20](https://github.com/Breakthrough/DVR-Scan/issues/20)
+ * [breaking] Remove `--use-pts` option; presentation timestamps are now always used for event timing (the `use-pts` config option is deprecated and has no effect)
+ * [general] Reported event timecodes are now exact rather than quantized to whole frames; formatted timecodes may differ by up to 1ms from previous versions. Frame numbers shown in reports and overlays are approximations on VFR inputs.
+ * [general] When using `--frame-skip`, the post-event window now covers the exact amount of time specified rather than rounding down to a multiple of the skip interval, and back-to-back events share their boundary timecode instead of leaving a one-frame gap.
+ * [feature] Frames are now decoded with PyAV by default (`input-mode = pyav`), which provides more accurate timing and stream metadata; set `input-mode = opencv` to restore the previous behavior
+ * [feature] Multiple input videos are concatenated on a continuous PTS-based timeline with support for seeking across inputs; frame rates no longer need to match exactly
+ * [general] Videos with a delayed start (nonzero stream start time) now report event timecodes relative to the start of the file with all input modes
+ * [general] Reported event boundaries may shift by a frame or two compared to previous releases, as PyAV and OpenCV decode frames with slightly different color conversion
+ * [feature] New output mode `encode` produces MP4 (H.264) files by piping decoded frames to ffmpeg, combining the quality of `ffmpeg` mode with support for overlays (`-bb`/`-tc`/`-fm`), multiple inputs, and combined output (`-o`, video-only); audio from the source video(s) is included and synchronized, including events spanning multiple inputs. Encoder settings can be customized with the new `encode-args` config option. [#197](https://github.com/Breakthrough/DVR-Scan/issues/197)
+ * [bugfix] Motion events extracted from multiple input videos are now named after the source video containing the start of each event, instead of always using the first input's filename [#258](https://github.com/Breakthrough/DVR-Scan/issues/258)
+ * [breaking] The default output mode is now `encode` (MP4/H.264 via ffmpeg) instead of `opencv` (.avi), so motion events now include audio and are saved as .mp4 by default. If ffmpeg is not installed and no output mode is set, DVR-Scan falls back to `opencv` with a warning. Set `output-mode = opencv` in a config file (or use `-m opencv`) to restore the previous behavior.
+ * [feature] New `--report` option writes detected events to a CSV or JSON file (format set by extension), including in scan-only mode; the GUI's Save Report dialog can also
+   save JSON reports. CSV reports now include exact start/end times in seconds (frame numbers are approximations on variable framerate inputs). [#221](https://github.com/Breakthrough/DVR-Scan/issues/221)
+ * [bugfix] Thumbnails (`--thumbnails highscore`) are now named after the source video containing each event when scanning multiple inputs, and are numbered correctly in scan-only mode (previously each event's thumbnail overwrote the last one)
  * [bugfix] Using `--thumbnails highscore` together with `-o`/`--output` no longer
-   overwrites the combined output video with the thumbnail image; thumbnails are named
-   after the combined output file instead
- * [general] On VFR inputs, clips produced by `encode` mode are written at the input's
-   average framerate: all frames are preserved, but playback speed will deviate from
-   real time in sections whose local framerate differs from the average (use `ffmpeg`
-   or `copy` mode if exact playback timing is required)
+   overwrites the combined output video with the thumbnail image; thumbnails are named after the combined output file instead
+ * [general] On VFR inputs, clips produced by `encode` mode are written at the input's average framerate: all frames are preserved, but playback speed will deviate from real time in sections whose local framerate differs from the average (use `ffmpeg` or `copy` mode if exact playback timing is required)
 
 ### 1.8.2.1 (2026-05-09)
 
