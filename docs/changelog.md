@@ -39,6 +39,7 @@ correctly with default parameters.
  * [bugfix] Ensure comma-separated timecode list persists in logfiles [#265](https://github.com/Breakthrough/DVR-Scan/issues/265)
  * [bugfix] Allow unknown keys in config file with a warning [#242](https://github.com/Breakthrough/DVR-Scan/issues/242)
  * [feature] Add a `--max-events N` flag to allow stopping after detecting `N` motion events [#261](https://github.com/Breakthrough/DVR-Scan/issues/261)
+ * [feature] New `--merge-window`/`merge-window` option controls how close two groups of motion must be for them to be merged into the same event; `-tb`/`-tp` are now pure padding added around each event and no longer affect merging. The default (`auto`) uses the same value as `time-post-event`, which matches the merging behavior of previous versions. Setting `time-post-event` larger than `merge-window` caps the post-event padding to the merge window with a warning. [#195](https://github.com/Breakthrough/DVR-Scan/issues/195) [#72](https://github.com/Breakthrough/DVR-Scan/issues/72)
 
 ### 1.8.2.1 (2026-05-09)
 

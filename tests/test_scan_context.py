@@ -71,6 +71,25 @@ TRAFFIC_CAMERA_EVENTS_TIME_POST_40 = [
     (542, 576),
 ]
 
+# Ground truth with time_post_event=10 and merge_window=120: the last two baseline
+# events are separated by ~102 frames without motion so they merge, while the first
+# stays separate (~260 frame gap). Each event ends 10 frames after its last motion.
+TRAFFIC_CAMERA_EVENTS_MERGE_120_POST_10 = [
+    (9, 109),
+    (358, 563),
+]
+
+# Ground truth with time_post_event=10 and merging following it (merge_window auto):
+# gaps in motion longer than 10 frames split the baseline events further apart.
+TRAFFIC_CAMERA_EVENTS_POST_10 = [
+    (9, 30),
+    (50, 109),
+    (358, 387),
+    (394, 417),
+    (428, 451),
+    (542, 563),
+]
+
 TRAFFIC_CAMERA_EVENTS_CNT = [
     (15, 149),
     (364, 491),
@@ -303,6 +322,127 @@ def test_post_event_shift_with_frame_skip(traffic_camera_video):
                 for x, y in zip(event_list, TRAFFIC_CAMERA_EVENTS_TIME_POST_40, strict=True)
             ]
         ), "Comparison failure when frame_skip = %d" % (frame_skip)
+
+
+def test_merge_window(traffic_camera_video):
+    """Groups of motion closer together than merge_window must merge into the same
+    event, with time_post_event only padding the end of each event (#195)."""
+    scanner = MotionScanner([traffic_camera_video])
+    scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
+    scanner.set_event_params(
+        min_event_len=4, time_pre_event=0, time_post_event=10, merge_window=120
+    )
+    event_list = scanner.scan().event_list
+    event_list = [(event.start.frame_num, event.end.frame_num) for event in event_list]
+    compare_event_lists(event_list, TRAFFIC_CAMERA_EVENTS_MERGE_120_POST_10, EVENT_FRAME_TOLERANCE)
+
+
+def test_merge_window_auto_matches_post_event(traffic_camera_video):
+    """The default merge window (auto) must merge based on time_post_event, matching
+    the behavior of previous versions (#195)."""
+
+    def scan_events(merge_window):
+        scanner = MotionScanner([traffic_camera_video])
+        scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
+        scanner.set_event_params(
+            min_event_len=4, time_pre_event=0, time_post_event=10, merge_window=merge_window
+        )
+        event_list = scanner.scan().event_list
+        return [(event.start.frame_num, event.end.frame_num) for event in event_list]
+
+    auto = scan_events("auto")
+    assert auto == scan_events(10)
+    compare_event_lists(auto, TRAFFIC_CAMERA_EVENTS_POST_10, EVENT_FRAME_TOLERANCE)
+
+
+def test_post_event_padding_with_merge_window(traffic_camera_video):
+    """time_post_event must pad each event's end without affecting merging, clamped
+    to the end of the video (#72)."""
+
+    def scan_events(time_post_event):
+        scanner = MotionScanner([traffic_camera_video])
+        scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
+        scanner.set_event_params(
+            min_event_len=4,
+            time_pre_event=0,
+            time_post_event=time_post_event,
+            merge_window=120,
+        )
+        event_list = scanner.scan().event_list
+        return [(event.start.frame_num, event.end.frame_num) for event in event_list]
+
+    short, long = scan_events(5), scan_events(25)
+    # Padding must not change how events merge, nor their start times.
+    assert len(short) == len(TRAFFIC_CAMERA_EVENTS_MERGE_120_POST_10)
+    assert [event[0] for event in short] == [event[0] for event in long]
+    # The first event ends exactly 20 frames later with 20 extra frames of padding,
+    # while the final event's padding is clamped to the end of the video.
+    assert long[0][1] - short[0][1] == 20
+    assert short[-1][1] <= long[-1][1] <= 576
+
+
+def test_post_event_capped_to_merge_window(traffic_camera_video, caplog):
+    """A time_post_event larger than the merge window must be capped to it, with a
+    warning, so padded events can never overlap the next event's motion."""
+    scanner = MotionScanner([traffic_camera_video])
+    scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
+    scanner.set_event_params(min_event_len=4, time_pre_event=0, time_post_event=40, merge_window=10)
+    with caplog.at_level(logging.WARNING, logger="dvr_scan"):
+        event_list = scanner.scan().event_list
+    assert "merge-window" in caplog.text
+    event_list = [(event.start.frame_num, event.end.frame_num) for event in event_list]
+    compare_event_lists(event_list, TRAFFIC_CAMERA_EVENTS_POST_10, EVENT_FRAME_TOLERANCE)
+
+
+def test_merge_window_end_of_video(traffic_camera_video):
+    """When the video ends while still within the merge window, the final event's end
+    must be clamped to the post-event padding, not the end of the video."""
+    scanner = MotionScanner([traffic_camera_video])
+    scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
+    scanner.set_event_params(
+        min_event_len=4, time_pre_event=0, time_post_event=5, merge_window=100000
+    )
+    event_list = scanner.scan().event_list
+    event_list = [(event.start.frame_num, event.end.frame_num) for event in event_list]
+    compare_event_lists(event_list, [(9, 558)], EVENT_FRAME_TOLERANCE)
+
+
+def test_merge_window_with_frame_skip(traffic_camera_video):
+    """Merging behavior must be stable when frame skipping is used."""
+    for frame_skip in range(1, 6):
+        scanner = MotionScanner([traffic_camera_video], frame_skip=frame_skip)
+        scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
+        scanner.set_event_params(
+            min_event_len=4, time_pre_event=0, time_post_event=10, merge_window=120
+        )
+        event_list = scanner.scan().event_list
+        event_list = [(event.start.frame_num, event.end.frame_num) for event in event_list]
+        compare_event_lists(event_list, TRAFFIC_CAMERA_EVENTS_MERGE_120_POST_10, frame_skip + 1)
+
+
+def test_scan_context_vfr_merge_window(vfr_video):
+    """Merge window gaps must be measured in wall-clock (PTS) time on VFR input: the
+    motion gap between the last two events is ~8.2s of wall-clock time in the slowed
+    section, but only ~6.1s when derived from the container's average framerate."""
+
+    def scan_events(merge_window):
+        scanner = MotionScanner([vfr_video])
+        scanner.set_detection_params()
+        scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
+        scanner.set_event_params(
+            min_event_len=4, time_pre_event=0, time_post_event="0.4s", merge_window=merge_window
+        )
+        return scanner.scan().event_list
+
+    # A 7 second window must NOT merge the last two events (their gap only appears
+    # shorter than that when measured with the average framerate).
+    event_list = scan_events("7s")
+    assert len(event_list) == 3
+    check_vfr_event_starts(event_list, VFR_EXPECTED_START_SECONDS)
+    # A 10 second window must merge them.
+    event_list = scan_events("10s")
+    assert len(event_list) == 2
+    check_vfr_event_starts(event_list, VFR_EXPECTED_START_SECONDS[:2])
 
 
 @pytest.mark.parametrize("input_mode", ["pyav", "opencv"])

@@ -75,7 +75,7 @@ class LicenseAction(argparse.Action):
         parser.exit(message=version)
 
 
-def timecode_type_check(metavar: ty.Optional[str] = None):
+def timecode_type_check(metavar: ty.Optional[str] = None, allow_auto: bool = False):
     """Creates an argparse type for a user-inputted timecode.
 
     The passed argument is declared valid if it meets one of three valid forms:
@@ -85,6 +85,8 @@ def timecode_type_check(metavar: ty.Optional[str] = None):
      valid integer which
     is greater than or equal to min_val, and if max_val is specified,
     less than or equal to max_val.
+
+    If `allow_auto` is True, the string "auto" is also accepted and passed through.
 
     Returns:
         A function which can be passed as an argument type, when calling
@@ -98,6 +100,8 @@ def timecode_type_check(metavar: ty.Optional[str] = None):
     def _type_checker(value):
         valid = False
         value = str(value).lower().strip()
+        if allow_auto and value == "auto":
+            return value
         # Integer number of frames.
         if value.isdigit():
             # All characters in string are digits, just parse as integer.
@@ -131,6 +135,7 @@ def timecode_type_check(metavar: ty.Optional[str] = None):
                 f"invalid timecode: {value}\n"
                 "Timecode must be specified as number of frames (12345), seconds (number followed "
                 "by s, e.g. 123s or 123.45s), or timecode (HH:MM:SS[.nnn]."
+                + (" The value auto is also allowed." if allow_auto else "")
             )
         return value
 

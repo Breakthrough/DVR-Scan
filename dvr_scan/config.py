@@ -109,6 +109,43 @@ class TimecodeValue(ValidatedValue):
             ) from ex
 
 
+class MergeWindowValue(ValidatedValue):
+    """Validator for the merge-window option: a timecode value in frames (1234),
+    seconds (123.4s), or HH:MM:SS, or the string "auto" to use time-post-event.
+
+    Stores value in original representation ("auto" is stored lowercase)."""
+
+    AUTO = "auto"
+
+    def __init__(self, value: ty.Union[int, float, str] = AUTO):
+        if isinstance(value, str) and value.lower() == MergeWindowValue.AUTO:
+            self._value = MergeWindowValue.AUTO
+        else:
+            # Ensure value is a valid timecode.
+            FrameTimecode(timecode=value, fps=100.0)
+            self._value = value
+
+    @property
+    def value(self) -> ty.Union[int, float, str]:
+        return self._value
+
+    def __repr__(self) -> str:
+        return str(self.value)
+
+    def __str__(self) -> str:
+        return str(self.value)
+
+    @staticmethod
+    def from_config(config_value: str, default: "MergeWindowValue") -> "MergeWindowValue":
+        try:
+            return MergeWindowValue(config_value)
+        except ValueError as ex:
+            raise OptionParseFailure(
+                "Value must be auto, or a timecode in frames (1234), seconds (123.4s), "
+                "or HH:MM:SS (00:02:03.400)."
+            ) from ex
+
+
 class RangeValue(ValidatedValue):
     """Validator for int/float ranges. `min_val` and `max_val` are inclusive."""
 
@@ -341,6 +378,7 @@ CONFIG_MAP: ConfigDict = {
     "scan-only": False,
     # Motion Events
     "max-events": 0,
+    "merge-window": MergeWindowValue(),
     "min-event-length": TimecodeValue("0.1s"),
     "time-before-event": TimecodeValue("1.5s"),
     "time-post-event": TimecodeValue("2.0s"),

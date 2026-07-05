@@ -345,6 +345,66 @@ def test_config_file(tmp_path):
     assert BASE_COMMAND_TIMECODE_LIST_GOLDEN in output, "Output timecodes do not match test golden."
 
 
+def test_merge_window(tmp_path):
+    """--merge-window must combine groups of motion which occur close together (#195)."""
+    output = _run_dvr_scan(
+        BASE_COMMAND
+        + [
+            "--output-dir",
+            tmp_path,
+            "--scan-only",
+            "--time-post-event",
+            "10",
+            "--merge-window",
+            "120",
+        ]
+    )
+    assert "Detected 2 motion events in input." in output
+
+
+def test_merge_window_auto(tmp_path):
+    """--merge-window auto must be accepted, matching the default merge behavior."""
+    output = _run_dvr_scan(
+        BASE_COMMAND
+        + [
+            "--output-dir",
+            tmp_path,
+            "--scan-only",
+            "--max-events",
+            "1",
+            "--merge-window",
+            "auto",
+        ]
+    )
+    assert "Detected 1 motion events in input." in output
+
+
+def test_merge_window_config_file(tmp_path):
+    """merge-window must also be settable from a config file."""
+    cfg_path = os.path.join(tmp_path, "config.cfg")
+    with open(cfg_path, "w") as file:
+        file.write(TEST_CONFIG_FILE + "time-post-event = 10\nmerge-window = 120\n")
+    output = _run_dvr_scan(
+        BASE_COMMAND[0:4]
+        + [  # Only use the input from BASE_COMMAND.
+            "--output-dir",
+            tmp_path,
+            "--scan-only",
+            "--config",
+            cfg_path,
+        ]
+    )
+    assert "Detected 2 motion events in input." in output
+
+
+def test_merge_window_rejects_invalid_value(tmp_path):
+    """Values other than auto or a valid timecode must be rejected."""
+    with pytest.raises(subprocess.CalledProcessError):
+        _run_dvr_scan(
+            BASE_COMMAND + ["--output-dir", tmp_path, "--scan-only", "--merge-window", "invalid"]
+        )
+
+
 @pytest.mark.skipif(not is_ffmpeg_available(), reason="ffmpeg not available")
 def test_ffmpeg_mode(tmp_path):
     """Test -m/--mode ffmpeg."""

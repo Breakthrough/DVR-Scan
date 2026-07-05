@@ -208,10 +208,17 @@ All time values can be given as a timecode (`HH:MM:SS` or `HH:MM:SS.nnn`), in se
 ```
 </span>
 
- * <b><pre>-tp time, --time-post-event time</pre></b> Maximum amount of time to include after each event. The event will end once no motion has been detected for this period of time.
+ * <b><pre>-tp time, --time-post-event time</pre></b> Maximum amount of time to include after each event. Cannot be larger than `--merge-window`.
 <span class="dvr-scan-default">
 ```
---time-post-event time 2.0s
+--time-post-event 2.0s
+```
+</span>
+
+ * <b><pre>--merge-window time</pre></b> Merge groups of motion which occur less than this amount of time apart into the same event. The default (`auto`) uses the same value as `-tp`/`--time-post-event`, which matches the behavior of previous versions. Set this higher than `-tp` to combine nearby events without padding each clip with extra time.
+<span class="dvr-scan-default">
+```
+--merge-window auto
 ```
 </span>
 
@@ -517,10 +524,18 @@ All time values can be given as a timecode: (`HH:MM:SS` or `HH:MM:SS.nnn`), in s
     </span>
 
  * <b><pre>time-post-event</pre></b>
-    Amount of time to include after an event.
+    Amount of time to include after an event. Cannot be larger than `merge-window`.
     <span class="dvr-scan-default">
     ```
     time-post-event = 2.0s
+    ```
+    </span>
+
+ * <b><pre>merge-window</pre></b>
+    Merge groups of motion which occur less than this amount of time apart into the same event. The default (`auto`) uses the same value as `time-post-event`, which matches the behavior of previous versions.
+    <span class="dvr-scan-default">
+    ```
+    merge-window = auto
     ```
     </span>
 

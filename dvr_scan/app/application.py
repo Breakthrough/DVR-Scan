@@ -624,6 +624,7 @@ class MotionSettingsWindow:
         frame.rowconfigure(0, pad=2 * PADDING, weight=1)
         frame.rowconfigure(1, pad=2 * PADDING, weight=1)
         frame.rowconfigure(2, pad=2 * PADDING, weight=1)
+        frame.rowconfigure(3, pad=2 * PADDING, weight=1)
         frame.columnconfigure(0, pad=PADDING, weight=1)
         frame.columnconfigure(1, pad=PADDING, weight=1)
         frame.columnconfigure(2, pad=PADDING, weight=2)
@@ -707,6 +708,27 @@ class MotionSettingsWindow:
             suffix="s",
         )
         self._time_post_event.grid(row=2, column=4, sticky=EXPAND_HORIZONTAL)
+
+        tk.Label(frame, text="Merge Window").grid(row=3, column=3, sticky=EXPAND_HORIZONTAL)
+        self._merge_window_auto = tk.BooleanVar(value=True)
+        self._merge_window_value = Spinbox(
+            frame,
+            value=str(CONFIG_MAP["time-post-event"]),
+            from_=0.0,
+            to=MAX_DURATION,
+            increment=DURATION_INCREMENT,
+            suffix="s",
+            state=tk.DISABLED,
+        )
+        self._merge_window_value.grid(row=3, column=4, sticky=EXPAND_HORIZONTAL)
+        ttk.Checkbutton(
+            frame,
+            text="Auto",
+            variable=self._merge_window_auto,
+            onvalue=True,
+            offvalue=False,
+            command=self._on_auto_merge_window,
+        ).grid(row=3, column=5, sticky=EXPAND_HORIZONTAL)
 
         frame = ttk.LabelFrame(self._window, text="Advanced", padding=PADDING)
         frame.grid(row=1, sticky=tk.NSEW, padx=PADDING, pady=PADDING)
@@ -826,6 +848,11 @@ class MotionSettingsWindow:
             tk.DISABLED if self._learning_rate_auto.get() else tk.NORMAL
         )
 
+    def _on_auto_merge_window(self):
+        self._merge_window_value["state"] = (
+            tk.DISABLED if self._merge_window_auto.get() else tk.NORMAL
+        )
+
     def show(self):
         logger.debug("showing motion settings window")
         self._window.transient(self._root)
@@ -877,6 +904,20 @@ class MotionSettingsWindow:
             self._learning_rate_value.set(newval)
         self._on_auto_learning_rate()
 
+    @property
+    def _merge_window(self) -> str:
+        if self._merge_window_auto.get():
+            return "auto"
+        return self._merge_window_value.get()
+
+    @_merge_window.setter
+    def _merge_window(self, newval):
+        is_auto = isinstance(newval, str) and newval.lower() == "auto"
+        self._merge_window_auto.set(is_auto)
+        if not is_auto:
+            self._merge_window_value.set(newval)
+        self._on_auto_merge_window()
+
     def set(self, settings: ScanSettings):
         self._kernel_size = settings.get("kernel-size")
         self._learning_rate = settings.get("learning-rate")
@@ -885,6 +926,7 @@ class MotionSettingsWindow:
         self._min_event_length.set(settings.get("min-event-length"))
         self._time_before_event.set(settings.get("time-before-event"))
         self._time_post_event.set(settings.get("time-post-event"))
+        self._merge_window = settings.get("merge-window")
         self._max_threshold.set(settings.get("max-threshold"))
         self._max_area.set(settings.get("max-area"))
         self._max_width.set(settings.get("max-width"))
@@ -898,6 +940,7 @@ class MotionSettingsWindow:
         settings.set("min-event-length", self._min_event_length.get())
         settings.set("time-before-event", self._time_before_event.get())
         settings.set("time-post-event", self._time_post_event.get())
+        settings.set("merge-window", self._merge_window)
         settings.set("learning-rate", float(self._learning_rate))
         settings.set("max-threshold", float(self._max_threshold.get()))
         settings.set("max-area", float(self._max_area.get()))

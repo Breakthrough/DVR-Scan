@@ -328,10 +328,21 @@ def get_cli_parser(user_config: ConfigRegistry):
         metavar="time",
         type=timecode_type_check("time"),
         help=(
-            "Maximum amount of time to include after each event. The event will end once no"
-            " motion has been detected for this period of time. Can be specified as frames (123),"
-            " seconds (12.3s), or timecode (00:00:01).%s"
+            "Maximum amount of time to include after each event. Can be specified as frames (123),"
+            " seconds (12.3s), or timecode (00:00:01). Cannot be larger than --merge-window.%s"
             % user_config.get_help_string("time-post-event")
+        ),
+    )
+
+    parser.add_argument(
+        "--merge-window",
+        metavar="time",
+        type=timecode_type_check("time", allow_auto=True),
+        help=(
+            "Merge groups of motion which occur less than this amount of time apart into the same"
+            " event. Can be specified as frames (123), seconds (12.3s), or timecode (00:00:01)."
+            " The default (auto) uses the same value as -tp/--time-post-event, which matches the"
+            " behavior of previous versions.%s" % user_config.get_help_string("merge-window")
         ),
     )
 

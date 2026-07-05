@@ -87,6 +87,25 @@ def test_encode_mode(tmp_path):
         assert _has_audio(path), f"{path.name} is missing its audio stream"
 
 
+def test_encode_mode_merge_window(tmp_path):
+    """--merge-window must combine nearby events into one clip, and frames decoded
+    past --time-post-event while waiting out the merge window must not leak into a
+    clip when the event ends instead of merging (#195)."""
+    _run_dvr_scan(
+        BASE_COMMAND
+        + ["--output-dir", tmp_path, "--time-post-event", "10", "--merge-window", "120"]
+    )
+    clips = sorted(tmp_path.glob("*.mp4"))
+    assert len(clips) == 2
+    # The first event covers ~100 frames (motion from ~9-98 plus 10 frames of padding).
+    # If held frames leaked into the clip, it would instead extend ~120 frames past the
+    # last motion, to where the event closed.
+    assert 80 <= _count_frames(clips[0]) <= 130
+    # The merged event covers ~205 frames (~358-563), including the no-motion gaps
+    # between the merged groups of motion.
+    assert 175 <= _count_frames(clips[1]) <= 235
+
+
 def test_encode_mode_overlays(tmp_path):
     """Overlays (-bb/-tc/-fm) must be supported in ENCODE mode."""
     _run_dvr_scan(
