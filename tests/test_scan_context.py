@@ -13,7 +13,9 @@
 Validates functionality of the motion scanning context using various parameters.
 """
 
+import logging
 import platform
+import re
 import typing as ty
 
 import pytest
@@ -336,3 +338,57 @@ def test_start_duration(traffic_camera_video):
     event_list = [(event.start.frame_num, event.end.frame_num) for event in event_list]
     # The set duration should only cover the middle event.
     compare_event_lists(event_list, TRAFFIC_CAMERA_EVENTS_AFTER_SEEK, AFTER_SEEK_FRAME_TOLERANCE)
+
+
+def test_highscore_resets_between_events(traffic_camera_video, tmp_path, caplog):
+    """The per-event high score must be reset after every event even when thumbnails
+    are disabled, so debug output and thumbnails reflect each event (#267)."""
+
+    def scan_high_scores(thumbnails: bool) -> ty.List[float]:
+        scanner = MotionScanner([traffic_camera_video])
+        scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
+        scanner.set_event_params(min_event_len=4, time_pre_event=0)
+        if thumbnails:
+            scanner.set_output(output_dir=tmp_path)
+            scanner.set_thumbnail_params(thumbnails="highscore")
+        caplog.clear()
+        with caplog.at_level(logging.DEBUG, logger="dvr_scan"):
+            result = scanner.scan()
+        assert len(result.event_list) == len(TRAFFIC_CAMERA_EVENTS)
+        # The candidate state must not persist once the scan completes.
+        assert scanner._highscore == 0
+        assert scanner._highframe is None
+        scores = [
+            float(match.group(1))
+            for match in (
+                re.search(r"high score (\d+(?:\.\d+)?)", record.getMessage())
+                for record in caplog.records
+            )
+            if match is not None
+        ]
+        assert len(scores) == len(result.event_list)
+        return scores
+
+    scores_without_thumbnails = scan_high_scores(thumbnails=False)
+    scores_with_thumbnails = scan_high_scores(thumbnails=True)
+    # Scores must be tracked per-event, not as a running maximum across the scan,
+    # regardless of whether thumbnails are enabled.
+    assert scores_without_thumbnails == pytest.approx(scores_with_thumbnails)
+    # One thumbnail must be written per detected event.
+    assert len(list(tmp_path.glob("*.jpg"))) == len(TRAFFIC_CAMERA_EVENTS)
+
+
+def test_highscore_discarded_for_rejected_events(traffic_camera_video):
+    """Motion spikes that never become events must not leave a stale thumbnail
+    candidate behind for the next event (#268)."""
+    scanner = MotionScanner([traffic_camera_video])
+    scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
+    # Use a min_event_len longer than the scanned duration so motion is detected but
+    # no event can ever be confirmed, then stop scanning inside the motion-free gap
+    # after the first motion spike (see TRAFFIC_CAMERA_EVENTS).
+    scanner.set_event_params(min_event_len=500, time_pre_event=0)
+    scanner.set_video_time(end_time=200)
+    result = scanner.scan()
+    assert not result.event_list
+    assert scanner._highscore == 0
+    assert scanner._highframe is None

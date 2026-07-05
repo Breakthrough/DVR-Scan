@@ -580,6 +580,8 @@ class MotionScanner:
     def scan(self) -> ty.Optional[DetectionResult]:
         """Performs motion analysis on the MotionScanner's input video(s)."""
         self._stop.clear()
+        self._highscore = 0
+        self._highframe = None
         buffered_frames: ty.List[np.ndarray] = []
         event_window: ty.List[float] = []
         event_list: ty.List[MotionEvent] = []
@@ -766,10 +768,6 @@ class MotionScanner:
                 frame_score = 0
             above_threshold = frame_score >= self._threshold
 
-            if above_threshold and frame_score > self._highscore:
-                self._highscore = frame_score
-                self._highframe = frame.frame_bgr
-
             event_window.append(frame_score)
             # The first frame fed to the detector can sometimes produce unreliable results due
             # to it not having any previous information to compare against.
@@ -777,6 +775,19 @@ class MotionScanner:
                 above_threshold = False
                 processed_first_frame = True
             event_window = event_window[-min_event_len:]
+
+            if above_threshold:
+                if frame_score > self._highscore:
+                    self._highscore = frame_score
+                    # Copy the frame since the encode thread draws overlays in-place on
+                    # the original when writing events.
+                    self._highframe = frame.frame_bgr.copy()
+            elif not in_motion_event:
+                # Outside of a motion event, a frame below the threshold means the current
+                # streak of frames can no longer start an event, so any thumbnail candidate
+                # captured from it must be discarded (#268).
+                self._highscore = 0
+                self._highframe = None
 
             bounding_box = None
             # TODO: Only call clear() when we exit the current motion event.
@@ -814,11 +825,15 @@ class MotionScanner:
                         in_motion_event = False
 
                         logger.debug(
-                            "event %d high score %f" % (1 + self._num_events, self._highscore)
+                            "event %d high score %f" % (1 + len(event_list), self._highscore)
                         )
                         if self._thumbnails == "highscore":
                             # This event has not been appended to event_list yet.
                             self._write_highscore_thumbnail(event_start, 1 + len(event_list))
+                        # Reset even when thumbnails are off so the score/frame don't
+                        # carry over into the next event (#267).
+                        self._highscore = 0
+                        self._highframe = None
 
                         # Calculate event end based on the last frame we had with motion plus
                         # the post event length time. We also need to compensate for the number
@@ -913,10 +928,12 @@ class MotionScanner:
             event_end = last_frame_time + frame_duration * (1 + self._frame_skip)
             event_list.append(MotionEvent(start=event_start, end=event_end))
 
-            logger.debug("event %d high score %f" % (1 + self._num_events, self._highscore))
+            logger.debug("event %d high score %f" % (len(event_list), self._highscore))
             if self._thumbnails == "highscore":
                 # The final event was just appended to event_list above.
                 self._write_highscore_thumbnail(event_start, len(event_list))
+            self._highscore = 0
+            self._highframe = None
 
             if self._output_mode != OutputMode.SCAN_ONLY:
                 encode_queue.put(MotionEvent(start=event_start, end=event_end))
@@ -1002,6 +1019,11 @@ class MotionScanner:
         don't exist in that case). `event_number` comes from the scan loop rather than
         `self._num_events`, which is only advanced by the encode thread (and not at all
         in scan-only mode)."""
+        if self._highframe is None:
+            # Possible if the event was triggered before the detector stabilized
+            # (e.g. an event starting on the first processed frame).
+            logger.debug("no candidate frame for event %d, skipping thumbnail", event_number)
+            return
         if self._comp_file is not None:
             video_name = Path(self._comp_file).stem
         else:
@@ -1021,8 +1043,6 @@ class MotionScanner:
         if self._output_dir:
             output_path = self._output_dir / output_path
         cv2.imwrite(str(output_path), self._highframe)
-        self._highscore = 0
-        self._highframe = None
 
     def _create_encoder(self) -> ty.Optional[EventEncoder]:
         """Create the encoder used to write motion events based on the current output mode.
