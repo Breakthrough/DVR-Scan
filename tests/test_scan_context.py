@@ -340,6 +340,21 @@ def test_start_duration(traffic_camera_video):
     compare_event_lists(event_list, TRAFFIC_CAMERA_EVENTS_AFTER_SEEK, AFTER_SEEK_FRAME_TOLERANCE)
 
 
+def test_max_events(traffic_camera_video):
+    """Setting max_events must end the scan as soon as that many events are found (#261)."""
+    scanner = MotionScanner([traffic_camera_video])
+    scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
+    scanner.set_event_params(min_event_len=4, time_pre_event=0, max_events=1)
+    result = scanner.scan()
+    assert len(result.event_list) == 1
+    # Reaching max_events counts as a completed scan, not an interrupted one, so the
+    # GUI still presents results (is_stopped() gates result presentation).
+    assert not scanner.is_stopped()
+    # The scan must have ended early: the first event ends less than halfway through
+    # the video (see TRAFFIC_CAMERA_EVENTS), so most frames should remain unprocessed.
+    assert result.num_frames < 576
+
+
 def test_highscore_resets_between_events(traffic_camera_video, tmp_path, caplog):
     """The per-event high score must be reset after every event even when thumbnails
     are disabled, so debug output and thumbnails reflect each event (#267)."""

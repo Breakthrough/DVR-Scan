@@ -192,6 +192,7 @@ class MotionScanner:
         self._min_event_len = None  # -l/--min-event-length
         self._time_before_event = None  # -tb/--time-before-event
         self._time_post_event = None  # -tp/--time-post-event
+        self._max_events = 0  # --max-events
 
         # Region Parameters (set_region)
         self._region_editor = False  # -w/--region-window
@@ -210,6 +211,7 @@ class MotionScanner:
 
         # Internal Variables
         self._stop: threading.Event = threading.Event()
+        self._max_events_reached: bool = False
         self._decode_thread_exception = None
         self._encode_thread_exception = None
         self._encoder: ty.Optional[EventEncoder] = None
@@ -408,12 +410,14 @@ class MotionScanner:
         min_event_len: ty.Union[int, float, str] = "0.1s",
         time_pre_event: ty.Union[int, float, str] = "1.5s",
         time_post_event: ty.Union[int, float, str] = "2s",
+        max_events: int = 0,
     ):
-        """Set motion event parameters."""
+        """Set motion event parameters. A `max_events` of 0 means no limit."""
         assert self._input.framerate is not None
         self._min_event_len = FrameTimecode(min_event_len, self._input.framerate)
         self._time_before_event = FrameTimecode(time_pre_event, self._input.framerate)
         self._post_event_len = FrameTimecode(time_post_event, self._input.framerate)
+        self._max_events = max_events
 
     def set_thumbnail_params(self, thumbnails: str = None):
         self._thumbnails = thumbnails.lower() if thumbnails else thumbnails
@@ -568,8 +572,10 @@ class MotionScanner:
         logger.debug("Stop event set.")
 
     def is_stopped(self):
-        """Check if the current scan call was stopped, or `False` if one wasn't run. Thread-safe."""
-        return self._stop.is_set()
+        """Check if the current scan call was interrupted before completing (e.g. by `stop()`),
+        or `False` if one wasn't run. Ending a scan early due to reaching `max_events` counts
+        as a completed scan, not a stopped one. Thread-safe."""
+        return self._stop.is_set() and not self._max_events_reached
 
     def set_callbacks(
         self, scan_started: ty.Callable[[int], None], processed_frame: ty.Callable[[int], None]
@@ -580,6 +586,7 @@ class MotionScanner:
     def scan(self) -> ty.Optional[DetectionResult]:
         """Performs motion analysis on the MotionScanner's input video(s)."""
         self._stop.clear()
+        self._max_events_reached = False
         self._highscore = 0
         self._highframe = None
         buffered_frames: ty.List[np.ndarray] = []
@@ -850,6 +857,15 @@ class MotionScanner:
                         event_list.append(MotionEvent(start=event_start, end=event_end))
                         if self._output_mode != OutputMode.SCAN_ONLY:
                             encode_queue.put(MotionEvent(start=event_start, end=event_end))
+                        if self._max_events > 0 and len(event_list) >= self._max_events:
+                            logger.info(
+                                "Stopping scan, reached maximum number of events (%d).",
+                                self._max_events,
+                            )
+                            # Set before `_stop` so `is_stopped()` never reports this
+                            # completion as an interruption.
+                            self._max_events_reached = True
+                            self._stop.set()
 
                 # Send frame to encode thread.
                 if in_motion_event and self._encoder is not None and self._encoder.STREAMS_FRAMES:

@@ -336,6 +336,17 @@ def get_cli_parser(user_config: ConfigRegistry):
     )
 
     parser.add_argument(
+        "--max-events",
+        metavar="count",
+        type=int_type_check(0, None, "count"),
+        help=(
+            "Maximum number of motion events to detect before stopping the scan early,"
+            " or 0 for no limit. Useful to quickly check if an input has any motion at all.%s"
+            % user_config.get_help_string("max-events")
+        ),
+    )
+
+    parser.add_argument(
         "-st",
         "--start-time",
         metavar="time",

@@ -340,6 +340,7 @@ CONFIG_MAP: ConfigDict = {
     "region-editor": False,
     "scan-only": False,
     # Motion Events
+    "max-events": 0,
     "min-event-length": TimecodeValue("0.1s"),
     "time-before-event": TimecodeValue("1.5s"),
     "time-post-event": TimecodeValue("2.0s"),

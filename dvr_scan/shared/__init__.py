@@ -228,6 +228,7 @@ def init_scanner(
         min_event_len=settings.get("min-event-length"),
         time_pre_event=settings.get("time-before-event"),
         time_post_event=settings.get("time-post-event"),
+        max_events=settings.get("max-events"),
     )
 
     scanner.set_thumbnail_params(

@@ -215,6 +215,13 @@ All time values can be given as a timecode (`HH:MM:SS` or `HH:MM:SS.nnn`), in se
 ```
 </span>
 
+ * <b><pre>--max-events count</pre></b> Maximum number of motion events to detect before stopping the scan early, or 0 for no limit. Useful to quickly check if an input has any motion at all.
+<span class="dvr-scan-default">
+```
+--max-events 0
+```
+</span>
+
  * <b><pre>-t value, --threshold value</pre></b> Minimum amount of motion a frame must have to trigger an event. Lower values are more sensitive to motion, and require less movement to trigger an event. If too high, some movement may not be detected. Setting too low of a threshold can result in false detections. May require adjustment if other motion settings are changed.
 <span class="dvr-scan-default">
 ```
@@ -484,6 +491,14 @@ The DVR-Scan app includes a preset dropdown for saving and restoring groups of s
 ### Motion
 
 All time values can be given as a timecode: (`HH:MM:SS` or `HH:MM:SS.nnn`), in seconds as a number followed by `s` (`123s` or `123.45s`), or as number of frames: (`1234`).
+
+ * <b><pre>max-events</pre></b>
+    Maximum number of motion events to detect before stopping the scan early (0 for no limit).
+    <span class="dvr-scan-default">
+    ```
+    max-events = 0
+    ```
+    </span>
 
  * <b><pre>min-event-length</pre></b>
     Amount of time which must have motion in each frame to trigger an event.

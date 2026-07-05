@@ -230,6 +230,14 @@ def test_quiet_mode(tmp_path):
     assert BASE_COMMAND_TIMECODE_LIST_GOLDEN in output, "Output timecodes do not match test golden."
 
 
+def test_max_events(tmp_path):
+    """Test --max-events stops the scan after the given number of events (#261)."""
+    output = _run_dvr_scan(
+        BASE_COMMAND + ["--output-dir", tmp_path, "--scan-only", "--max-events", "1"]
+    )
+    assert "Detected 1 motion events in input." in output
+
+
 def test_logfile_contains_timecodes(tmp_path):
     """The comma-separated timecode values must be written to log files, including in
     quiet mode where they are also printed to stdout (#265)."""
