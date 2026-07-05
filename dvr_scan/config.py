@@ -528,7 +528,9 @@ class ConfigRegistry:
 
         for option in config[DEFAULTSECT]:
             if option not in CONFIG_MAP:
-                self._log(logging.ERROR, "Unsupported config option: %s" % (option))
+                # Tolerate unknown options so config files from newer versions of
+                # DVR-Scan can still be loaded by older ones (#242).
+                self._log(logging.WARNING, "WARNING: Ignoring unknown config option: %s" % (option))
                 continue
             try:
                 value_type = None

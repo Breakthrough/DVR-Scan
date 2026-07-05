@@ -10,6 +10,8 @@
 #
 """DVR-Scan Preset Tests"""
 
+import logging
+
 import pytest
 
 from dvr_scan.config import USER_CONFIG_FILE_PATH, ConfigLoadFailure, ConfigRegistry
@@ -53,11 +55,13 @@ def test_save_overwrites_existing(tmp_path):
     assert load_preset(preset).get("threshold") == 0.5
 
 
-def test_unknown_option_preset_is_skipped(tmp_path):
+def test_invalid_preset_is_skipped(tmp_path):
     save_user_preset("Valid", make_settings(threshold=0.25), base_dir=tmp_path)
-    (tmp_path / "Broken.cfg").write_text("not-a-real-option = 5\n")
+    (tmp_path / "Broken.cfg").write_text("threshold = not-a-number\n")
+    # Unknown options do not fail the load (#242), e.g. presets from newer versions.
+    (tmp_path / "Newer.cfg").write_text("not-a-real-option = 5\n")
     presets = scan_user_presets(tmp_path)
-    assert [preset.name for preset in presets] == ["Valid"]
+    assert [preset.name for preset in presets] == ["Newer", "Valid"]
 
 
 def test_builtin_name_collision_file_is_skipped(tmp_path):
@@ -129,9 +133,17 @@ def test_builtin_presets_validate_against_config_schema():
             assert not config.is_default(option), f"{name}: {option} not applied"
 
 
-def test_load_from_string_rejects_unknown_option():
-    with pytest.raises(ConfigLoadFailure):
-        ConfigRegistry().load_from_string("not-a-real-option = 5\n")
+def test_load_from_string_ignores_unknown_option():
+    """Unknown options must not fail the load, so config files written by newer
+    versions of DVR-Scan keep working with older ones (#242)."""
+    config = ConfigRegistry()
+    config.load_from_string("not-a-real-option = 5\nthreshold = 0.5\n")
+    # Known options in the same file must still be applied.
+    assert config.get("threshold") == 0.5
+    assert any(
+        level == logging.WARNING and "not-a-real-option" in message
+        for (level, message) in config.consume_init_log()
+    )
 
 
 def test_startup_mode_choices():
