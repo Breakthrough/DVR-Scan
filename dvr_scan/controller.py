@@ -23,7 +23,6 @@ from scenedetect import FrameTimecode
 import dvr_scan
 from dvr_scan.cli import get_cli_parser
 from dvr_scan.config import ConfigLoadFailure, ConfigRegistry, RegionValueDeprecated
-from dvr_scan.encoder import get_encoder_type
 from dvr_scan.scanner import DetectorType, OutputMode
 from dvr_scan.shared import ScanSettings, init_logging, init_scanner, logfile_path, setup_logger
 
@@ -47,15 +46,8 @@ def _preprocess_args(args):
                 return False, None
             input_files += expanded
     args.input = input_files
-    # -o/--output: append an extension based on the encoder for the given output mode
-    # (config-file-only output modes are handled when the scanner validates settings).
-    if hasattr(args, "output") and "." not in args.output:
-        extension = "avi"
-        if hasattr(args, "output_mode"):
-            encoder_type = get_encoder_type(OutputMode[args.output_mode.upper().replace("-", "_")])
-            if encoder_type is not None:
-                extension = encoder_type.EXTENSION
-        args.output += "." + extension
+    # NOTE: If -o/--output was given without an extension, one is appended for the
+    # effective output mode in `init_scanner` (the mode may come from a config file).
     # -roi/--region-of-interest
     if hasattr(args, "region_of_interest") and args.region_of_interest:
         original_roi = args.region_of_interest

@@ -305,6 +305,28 @@ def test_output_mode_reexported_from_scanner():
     assert ScannerOutputMode is OutputMode
 
 
+def test_init_scanner_default_output_mode(traffic_camera_video, monkeypatch):
+    """The default output mode is ENCODE when ffmpeg is available, falling back to
+    OPENCV with a warning when it is not (explicitly-set modes still raise instead)."""
+    import argparse
+
+    import dvr_scan.shared as shared
+    from dvr_scan.config import ConfigRegistry
+    from dvr_scan.shared.settings import ScanSettings
+
+    def make_settings() -> ScanSettings:
+        return ScanSettings(
+            args=argparse.Namespace(input=[Path(traffic_camera_video)]),
+            config=ConfigRegistry(),
+        )
+
+    monkeypatch.setattr(shared, "is_ffmpeg_available", lambda: True)
+    assert shared.init_scanner(make_settings()).output_mode == OutputMode.ENCODE
+
+    monkeypatch.setattr(shared, "is_ffmpeg_available", lambda: False)
+    assert shared.init_scanner(make_settings()).output_mode == OutputMode.OPENCV
+
+
 def test_set_output_encode_validation(traffic_camera_video, monkeypatch):
     """ENCODE mode must accept multiple inputs and combined output, but still
     requires ffmpeg to be present."""

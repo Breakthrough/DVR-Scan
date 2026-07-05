@@ -109,19 +109,25 @@ def test_default(tmp_path):
     assert BASE_COMMAND_EVENT_LIST_GOLDEN in output, "Output event list does not match test golden."
     assert BASE_COMMAND_TIMECODE_LIST_GOLDEN in output, "Output timecodes do not match test golden."
     # TODO: Check filenames.
-    assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS
+    generated_files = os.listdir(tmp_path)
+    assert len(generated_files) == BASE_COMMAND_NUM_EVENTS
+    # The default output mode produces mp4 when ffmpeg is present, .avi otherwise.
+    expected_extension = ".mp4" if is_ffmpeg_available() else ".avi"
+    assert all(name.endswith(expected_extension) for name in generated_files)
 
 
 def test_concatenate(tmp_path):
-    """Test with setting -o/--output to concatenate all events to a single file."""
-    ouptut_file_name = "motion_events.avi"
+    """Test with setting -o/--output to concatenate all events to a single file.
+
+    The output name is given without an extension; one must be appended based on the
+    effective output mode (.mp4 for the default mode when ffmpeg is present)."""
     output = _run_dvr_scan(
         BASE_COMMAND
         + [
             "--output-dir",
             tmp_path,
             "--output",
-            ouptut_file_name,
+            "motion_events",
         ]
     )
 
@@ -131,7 +137,26 @@ def test_concatenate(tmp_path):
     assert BASE_COMMAND_TIMECODE_LIST_GOLDEN in output, "Output timecodes do not match test golden."
     generated_files = os.listdir(tmp_path)
     assert len(generated_files) == 1
-    assert ouptut_file_name in generated_files
+    expected_extension = "mp4" if is_ffmpeg_available() else "avi"
+    assert "motion_events." + expected_extension in generated_files
+
+
+def test_concatenate_opencv(tmp_path):
+    """Test -o/--output with the legacy OpenCV output mode."""
+    output = _run_dvr_scan(
+        BASE_COMMAND
+        + [
+            "--output-dir",
+            tmp_path,
+            "--output-mode",
+            "opencv",
+            "--output",
+            "motion_events.avi",
+        ]
+    )
+    assert "Detected %d motion events in input." % (BASE_COMMAND_NUM_EVENTS) in output
+    generated_files = os.listdir(tmp_path)
+    assert generated_files == ["motion_events.avi"]
 
 
 def test_scan_only(tmp_path):

@@ -47,6 +47,7 @@ from dvr_scan.app.scan_window import (
 from dvr_scan.app.video_list import VideoList
 from dvr_scan.app.widgets import Spinbox
 from dvr_scan.config import ConfigLoadFailure, ConfigRegistry
+from dvr_scan.platform import is_ffmpeg_available
 from dvr_scan.scanner import OutputMode
 from dvr_scan.shared import ScanSettings
 from dvr_scan.video_input import BackendUnavailable
@@ -304,8 +305,8 @@ class _OutputStep:
     title = "Choose Output"
 
     _MODES: ty.List[ty.Tuple[str, ty.Optional[OutputMode]]] = [
+        ("Extract Events (MP4, H.264) - Recommended", OutputMode.ENCODE),
         ("Extract Events (OpenCV, .avi)", OutputMode.OPENCV),
-        ("Extract Events (MP4, H.264)", OutputMode.ENCODE),
         ("Extract Events (ffmpeg)", OutputMode.FFMPEG),
         ("Extract Events (ffmpeg copy)", OutputMode.COPY),
         ("Scan Only (report)", None),
@@ -320,7 +321,8 @@ class _OutputStep:
         )
         self._mode_combo = ttk.Combobox(self.frame, state="readonly")
         self._mode_combo["values"] = [label for label, _ in self._MODES]
-        self._mode_combo.current(0)
+        # Default to MP4 output, unless ffmpeg is unavailable on this system.
+        self._mode_combo.current(0 if is_ffmpeg_available() else 1)
         self._mode_combo.grid(row=0, column=1, columnspan=2, sticky=tk.EW, padx=PADDING)
 
         self._directory = ""

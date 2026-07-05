@@ -336,7 +336,7 @@ CONFIG_MAP: ConfigDict = {
     "opencv-codec": "XVID",
     "output-dir": "",
     "open-output-dir": True,
-    "output-mode": "opencv",
+    "output-mode": "encode",
     "region-editor": False,
     "scan-only": False,
     # Motion Events

@@ -54,13 +54,13 @@ Note that multiple inputs also do not support other output modes. You can use `f
 
 ### Output Format
 
-By default, DVR-Scan uses the OpenCV VideoWriter for video output. This usually requires the output files be in .AVI format of some kind.
+By default, DVR-Scan encodes motion events as MP4 (H.264) files using `ffmpeg` (output mode `encode`), with support for overlays, multiple inputs, and audio. If `ffmpeg` is not available on your system, DVR-Scan falls back to the OpenCV VideoWriter (output mode `opencv`), which usually requires the output files be in .AVI format of some kind. You can set `-m opencv` explicitly to restore the pre-2.0 default behavior.
 
-DVR-Scan also supports using `ffmpeg` to extract motion events. This is done by setting `-m`/`--output-mode` to `ffmpeg` (reencode) or `copy` (codec copy mode, may not be frame accurate). For example:
+DVR-Scan also supports using `ffmpeg` to extract motion events directly from the source video. This is done by setting `-m`/`--output-mode` to `ffmpeg` (reencode) or `copy` (codec copy mode, may not be frame accurate). For example:
 
     dvr-scan -i video.mp4 -m ffmpeg
 
-You can customize the options passed to `ffmpeg` using a [config file](#config-file) (see [the `ffmpeg-input-args` and `ffmpeg-output-args`](#output_1)) settings).
+You can customize the options passed to `ffmpeg` using a [config file](#config-file) (see [the `encode-args`, `ffmpeg-input-args`, and `ffmpeg-output-args`](#output_1)) settings).
 
 Setting output mode to `ffmpeg` or `copy` has the following caveats:
 
@@ -180,7 +180,7 @@ dvr-scan -i video.mp4 --start-time 00:35:52 --duration 00:05:00
 </span>
 
  * <b><pre>-fs num_frames, --frame-skip num_frames</pre></b> Number of frames to skip after processing a given frame. Improves performance, at expense of frame and time accuracy, and may increase probability of missing motion events. If set, `-l`/`--min-event-length`, `-tb`/`--time-before-event`, and `-tp`/`--time-post-event` will all be scaled relative to the source framerate. Values above 1 or 2 are not recommended.
-<br/><br/>When using the default output mode (`opencv`), skipped frames are not included. Set `-m`/`--output-mode` to `ffmpeg` or `copy` to include all frames from the input video when writing motion events to disk.
+<br/><br/>When using output modes which re-encode processed frames (`encode`, `opencv`), skipped frames are not included. Set `-m`/`--output-mode` to `ffmpeg` or `copy` to include all frames from the input video when writing motion events to disk.
 <br/><br/>Although adjusted for frame skipping, bounding box smoothing may be inconsistent when using frame skipping. Set `-bb 0` to disable smoothing.
 <span class="dvr-scan-example">
 ```
@@ -266,9 +266,11 @@ All time values can be given as a timecode (`HH:MM:SS` or `HH:MM:SS.nnn`), in se
 
     <span class="dvr-scan-default">
     ```
-    -m opencv
+    -m encode
     ```
     </span>
+
+!!! info "The default output mode (`encode`) requires ffmpeg. If ffmpeg is not available and no output mode is set, DVR-Scan falls back to `opencv` with a warning."
 
 !!! warning "Multiple input files are not supported when `-m`/`--output-mode` is set to `ffmpeg` or `copy` (they are supported with `opencv` and `encode`). You can use `ffmpeg` to [concatenate all input videos](https://trac.ffmpeg.org/wiki/Concatenate) *before* using DVR-Scan, or [run DVR-Scan in a for-loop](guide.md#multiple-videos)."
 
@@ -414,10 +416,10 @@ The DVR-Scan app includes a preset dropdown for saving and restoring groups of s
     </span>
 
  * <b><pre>output-mode</pre></b>
-    Method of generating output videos: (`scan_only`, `opencv`, `encode`, `ffmpeg`, `copy`). Not all features are supported in all modes.
+    Method of generating output videos: (`scan_only`, `opencv`, `encode`, `ffmpeg`, `copy`). Not all features are supported in all modes. The default (`encode`) requires ffmpeg; if ffmpeg is unavailable and no mode is set, `opencv` is used as a fallback.
     <span class="dvr-scan-default">
     ```
-    output-mode = opencv
+    output-mode = encode
     ```
     </span>
 

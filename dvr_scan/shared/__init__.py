@@ -34,8 +34,9 @@ from tqdm.contrib.logging import (
     _TqdmLoggingHandler,
 )
 
+from dvr_scan.encoder import get_encoder_type
 from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
-from dvr_scan.platform import LOG_FORMAT_ROLLING_LOGS, attach_log_handler
+from dvr_scan.platform import LOG_FORMAT_ROLLING_LOGS, attach_log_handler, is_ffmpeg_available
 from dvr_scan.platform import init_logger as _init_logger
 from dvr_scan.scanner import DetectorType, MotionScanner, OutputMode
 from dvr_scan.shared.settings import ScanSettings
@@ -130,6 +131,24 @@ def init_scanner(
     )
     mask_file = settings.get_arg("mask-output")
     output_mode = OutputMode.SCAN_ONLY if settings.get("scan-only") else settings.get("output-mode")
+    if not isinstance(output_mode, OutputMode):
+        output_mode = OutputMode[str(output_mode).upper().replace("-", "_")]
+    # The default output mode (ENCODE) requires ffmpeg. If the user did not set an output
+    # mode explicitly and ffmpeg is unavailable, fall back to OpenCV output rather than
+    # failing (explicitly-set modes which require ffmpeg still raise an error).
+    output_mode_is_default = settings.get_arg("output-mode") is None and settings.config.is_default(
+        "output-mode"
+    )
+    if output_mode == OutputMode.ENCODE and output_mode_is_default and not is_ffmpeg_available():
+        logger.warning(
+            "ffmpeg was not found - falling back to OpenCV (.avi) for output. Install ffmpeg"
+            " to write MP4 files, or set output-mode explicitly to remove this warning."
+        )
+        output_mode = OutputMode.OPENCV
+    # If an output file was given without an extension, use the output mode's extension.
+    if comp_file and not Path(comp_file).suffix:
+        encoder_type = get_encoder_type(output_mode)
+        comp_file = "%s.%s" % (comp_file, encoder_type.EXTENSION if encoder_type else "avi")
 
     scanner.set_output(
         comp_file=Path(comp_file) if comp_file else None,

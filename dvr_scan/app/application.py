@@ -52,7 +52,7 @@ from dvr_scan.config import (
     ConfigRegistry,
 )
 from dvr_scan.encoder import get_encoder_type
-from dvr_scan.platform import open_path
+from dvr_scan.platform import is_ffmpeg_available, open_path
 from dvr_scan.scanner import OutputMode, Point
 from dvr_scan.shared import ScanSettings, logfile_path
 from dvr_scan.subtractor import SubtractorCudaMOG2
@@ -952,9 +952,10 @@ class OutputArea:
             "OpenCV (.avi)",
             "ffmpeg",
             "ffmpeg (copy)",
-            "MP4 (H.264)",
+            "MP4 (H.264) - Recommended",
         )
-        self._output_mode_combo.current(0)
+        # Default to MP4 output, unless ffmpeg is unavailable on this system.
+        self._output_mode_combo.current(3 if is_ffmpeg_available() else 0)
 
         self._output_dir_str = ""
         self._output_dir_label = tk.StringVar(root, value="Ask Me")
@@ -1357,6 +1358,14 @@ class OutputArea:
 
     def load(self, settings: ScanSettings):
         output_mode = OutputMode[settings.get("output-mode").upper()]
+        # If the default output mode requires ffmpeg but it is unavailable, fall back to
+        # OpenCV output (modes explicitly set by the user are kept, and error on scan).
+        if (
+            output_mode in (OutputMode.ENCODE, OutputMode.FFMPEG, OutputMode.COPY)
+            and settings.config.is_default("output-mode")
+            and not is_ffmpeg_available()
+        ):
+            output_mode = OutputMode.OPENCV
         if output_mode is not OutputMode.SCAN_ONLY:
             self._output_mode = output_mode
         output_dir = settings.get("output-dir")

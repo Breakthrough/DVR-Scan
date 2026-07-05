@@ -43,6 +43,11 @@ correctly with default parameters.
  * [bugfix] Motion events extracted from multiple input videos are now named after the
    source video containing the start of each event, instead of always using the first
    input's filename [#258](https://github.com/Breakthrough/DVR-Scan/issues/258)
+ * [breaking] The default output mode is now `encode` (MP4/H.264 via ffmpeg) instead of
+   `opencv` (.avi), so motion events now include audio and are saved as .mp4 by default.
+   If ffmpeg is not installed and no output mode is set, DVR-Scan falls back to `opencv`
+   with a warning. Set `output-mode = opencv` in a config file (or use `-m opencv`) to
+   restore the previous behavior.
 
 ### 1.8.2.1 (2026-05-09)
 
