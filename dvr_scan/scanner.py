@@ -878,8 +878,9 @@ class MotionScanner:
                 # Otherwise, we wait until the merge window has passed before ending
                 # this motion event and start looking for a new one.
                 # If the event is longer than max_event_len, we end it immediately.
-                elif (frame.timecode.seconds - last_motion_time.seconds) >= merge_window_duration \
-                        or max_event_len_reached:
+                elif (
+                    frame.timecode.seconds - last_motion_time.seconds
+                ) >= merge_window_duration or max_event_len_reached:
                     in_motion_event = False
 
                     logger.debug("event %d high score %f" % (1 + len(event_list), self._highscore))
