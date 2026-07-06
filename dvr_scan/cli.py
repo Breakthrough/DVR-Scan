@@ -311,6 +311,18 @@ def get_cli_parser(user_config: ConfigRegistry):
     )
 
     parser.add_argument(
+        "-Y",
+        "--max-event-length",
+        metavar="time",
+        type=timecode_type_check("time"),
+        help=(
+            "Length of time that must contain motion before triggering a new event. Can be"
+            " specified as frames (123), seconds (12.3s), or timecode (00:00:01).%s"
+            % user_config.get_help_string("max-event-length")
+        ),
+    )
+
+    parser.add_argument(
         "-tb",
         "--time-before-event",
         metavar="time",

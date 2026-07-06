@@ -226,6 +226,7 @@ def init_scanner(
 
     scanner.set_event_params(
         min_event_len=settings.get("min-event-length"),
+        max_event_len=settings.get("max-event-length"),
         time_pre_event=settings.get("time-before-event"),
         time_post_event=settings.get("time-post-event"),
         merge_window=settings.get("merge-window"),

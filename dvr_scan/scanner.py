@@ -190,6 +190,7 @@ class MotionScanner:
 
         # Motion Event Parameters (set_event_params)
         self._min_event_len = None  # -l/--min-event-length
+        self._max_event_len = None  # -Y/--max-event-length
         self._time_before_event = None  # -tb/--time-before-event
         self._time_post_event = None  # -tp/--time-post-event
         self._merge_window = None  # --merge-window (None means auto: use -tp)
@@ -409,6 +410,7 @@ class MotionScanner:
     def set_event_params(
         self,
         min_event_len: ty.Union[int, float, str] = "0.1s",
+        max_event_len: ty.Union[int, float, str] = "999999s",
         time_pre_event: ty.Union[int, float, str] = "1.5s",
         time_post_event: ty.Union[int, float, str] = "2s",
         merge_window: ty.Optional[ty.Union[int, float, str]] = None,
@@ -419,6 +421,7 @@ class MotionScanner:
         A `merge_window` of None or "auto" uses the value of `time_post_event`."""
         assert self._input.framerate is not None
         self._min_event_len = FrameTimecode(min_event_len, self._input.framerate)
+        self._max_event_len = FrameTimecode(max_event_len, self._input.framerate)
         self._time_before_event = FrameTimecode(time_pre_event, self._input.framerate)
         self._post_event_len = FrameTimecode(time_post_event, self._input.framerate)
         if merge_window is None or (
@@ -667,9 +670,11 @@ class MotionScanner:
         # from the average framerate, but emitted event boundaries are always exact (PTS-based).
         pre_event_len: int = self._time_before_event.frame_num // (self._frame_skip + 1)
         min_event_len: int = max(self._min_event_len.frame_num // (self._frame_skip + 1), 1)
+        max_event_len: int = max(self._max_event_len.frame_num // (self._frame_skip + 1), 1)
 
         # Calculations below rely on min_event_len always being >= 1 (cannot be zero)
         assert min_event_len >= 1, "min_event_len must be at least 1 frame"
+        assert max_event_len >= 1, "max_event_len must be at least 1 frame"
 
         # Presentation duration of one source frame at the average framerate.
         frame_duration: float = 1.0 / float(self._input.framerate)
@@ -804,6 +809,11 @@ class MotionScanner:
                 or height_fraction > self._max_height
             ):
                 frame_score = 0
+            max_event_len_reached = False
+            if in_motion_event and event_start is not None:
+                if (frame.timecode.frame_num - event_start.frame_num) > max_event_len:
+                    max_event_len_reached = True
+                    frame_score = 0
             above_threshold = frame_score >= self._threshold
 
             event_window.append(frame_score)
@@ -867,7 +877,9 @@ class MotionScanner:
                     post_motion_frames = []
                 # Otherwise, we wait until the merge window has passed before ending
                 # this motion event and start looking for a new one.
-                elif (frame.timecode.seconds - last_motion_time.seconds) >= merge_window_duration:
+                # If the event is longer than max_event_len, we end it immediately.
+                elif (frame.timecode.seconds - last_motion_time.seconds) >= merge_window_duration or \
+                        max_event_len_reached:
                     in_motion_event = False
 
                     logger.debug("event %d high score %f" % (1 + len(event_list), self._highscore))
