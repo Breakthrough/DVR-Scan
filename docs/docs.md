@@ -201,7 +201,7 @@ All time values can be given as a timecode (`HH:MM:SS` or `HH:MM:SS.nnn`), in se
 ```
 </span>
 
- * <b><pre>-l time, --max-event-length time</pre></b> Maximum amount of time/frames allowed into a single event.
+ * <b><pre>-l time, --max-event-length time</pre></b> Maximum amount of time/frames allowed into a single event. Footage beyond this limit goes to a new event.
 <span class="dvr-scan-default">
 ```
 --max-event-length 1000
@@ -523,7 +523,7 @@ All time values can be given as a timecode: (`HH:MM:SS` or `HH:MM:SS.nnn`), in s
     </span>
 
  * <b><pre>max-event-length</pre></b>
-    Maximum mount of time of a single event.
+    Maximum mount of time of a single event. Footage beyond this limit goes to a new event.
     <span class="dvr-scan-default">
     ```
     max-event-length = 1000
