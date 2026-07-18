@@ -179,7 +179,7 @@ dvr-scan -i video.mp4 --start-time 00:35:52 --duration 00:05:00
 ```
 </span>
 
- * <b><pre>-fs num_frames, --frame-skip num_frames</pre></b> Number of frames to skip after processing a given frame. Improves performance, at expense of frame and time accuracy, and may increase probability of missing motion events. If set, `-l`/`--min-event-length`, `-tb`/`--time-before-event`, and `-tp`/`--time-post-event` will all be scaled relative to the source framerate. Values above 1 or 2 are not recommended.
+ * <b><pre>-fs num_frames, --frame-skip num_frames</pre></b> Number of frames to skip after processing a given frame. Improves performance, at expense of frame and time accuracy, and may increase probability of missing motion events. If set, `-l`/`--min-event-length`, `-Y`/`--max-event-length`, `-tb`/`--time-before-event`, and `-tp`/`--time-post-event` will all be scaled relative to the source framerate. Values above 1 or 2 are not recommended.
 <br/><br/>When using output modes which re-encode processed frames (`encode`, `opencv`), skipped frames are not included. Set `-m`/`--output-mode` to `ffmpeg` or `copy` to include all frames from the input video when writing motion events to disk.
 <br/><br/>Although adjusted for frame skipping, bounding box smoothing may be inconsistent when using frame skipping. Set `-bb 0` to disable smoothing.
 <span class="dvr-scan-example">
@@ -198,6 +198,13 @@ All time values can be given as a timecode (`HH:MM:SS` or `HH:MM:SS.nnn`), in se
 <span class="dvr-scan-default">
 ```
 --min-event-length 2
+```
+</span>
+
+ * <b><pre>-l time, --max-event-length time</pre></b> Maximum amount of time/frames allowed into a single event. Footage beyond this limit goes to a new event.
+<span class="dvr-scan-default">
+```
+--max-event-length 1000
 ```
 </span>
 
@@ -512,6 +519,14 @@ All time values can be given as a timecode: (`HH:MM:SS` or `HH:MM:SS.nnn`), in s
     <span class="dvr-scan-default">
     ```
     min-event-length = 2
+    ```
+    </span>
+
+ * <b><pre>max-event-length</pre></b>
+    Maximum mount of time of a single event. Footage beyond this limit goes to a new event.
+    <span class="dvr-scan-default">
+    ```
+    max-event-length = 1000
     ```
     </span>
 

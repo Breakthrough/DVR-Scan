@@ -380,6 +380,7 @@ CONFIG_MAP: ConfigDict = {
     "max-events": 0,
     "merge-window": MergeWindowValue(),
     "min-event-length": TimecodeValue("0.1s"),
+    "max-event-length": TimecodeValue("999999s"),
     "time-before-event": TimecodeValue("1.5s"),
     "time-post-event": TimecodeValue("2.0s"),
     "use-pts": False,
