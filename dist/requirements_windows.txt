@@ -7,7 +7,7 @@ opencv-contrib-python==4.10.0.84
 # scenedetect pulls in opencv-python, which shares the cv2 install directory with
 # opencv-contrib-python; the versions must match exactly or cv2 is corrupted.
 opencv-python==4.10.0.84
-pillow==12.2.0
+pillow==12.3.0
 platformdirs==4.3.6
 pyinstaller>=6.0
 pytest==9.0.3
