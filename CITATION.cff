@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+title: DVR-Scan
+message: www.dvr-scan.com
+type: software
+authors:
+  - given-names: Brandon
+    family-names: Castellano
+    affiliation: www.bcastell.com
+repository-code: 'https://github.com/Breakthrough/DVR-Scan'
+url: 'https://www.dvr-scan.com'
+abstract: Video Motion Event Detection and Extraction Tool
+license: BSD-2-Clause
