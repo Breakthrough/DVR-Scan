@@ -626,3 +626,18 @@ def test_explicit_kernel_size_not_scaled_by_downscale_factor(
 
     # Traffic camera video is 1280x720; downscale=2 gives width 640 -> auto kernel 3.
     assert "kernel_size = 3 (auto)," in caplog.text
+
+
+def test_scan_logs_detection_parameters(traffic_camera_video, caplog: pytest.LogCaptureFixture):
+    """MotionScanner.scan() should log threshold and event parameters at INFO level (#186)."""
+    import logging
+
+    caplog.set_level(logging.INFO)
+    scanner = MotionScanner([traffic_camera_video], frame_skip=1)
+    scanner.set_detection_params(threshold=0.25, downscale_factor=2)
+    scanner.set_event_params(min_event_len="0.5s", time_pre_event="1.0s", time_post_event="2.0s")
+    scanner.set_video_time(end_time="00:00:01")
+    scanner.scan()
+
+    assert "Detection parameters: threshold = 0.25," in caplog.text
+    assert "downscale_factor = 2, frame_skip = 1" in caplog.text

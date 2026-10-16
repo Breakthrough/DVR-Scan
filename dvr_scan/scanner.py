@@ -660,6 +660,21 @@ class MotionScanner:
             str(self._variance_threshold) if self._variance_threshold != 16.0 else "auto",
             str(self._learning_rate) if self._learning_rate != -1 else "auto",
         )
+        merge_window_str = (
+            "auto" if self._merge_window is None else self._merge_window.get_timecode()
+        )
+        logger.info(
+            "Detection parameters: threshold = %.2f, min_event_len = %s, "
+            "time_pre_event = %s, time_post_event = %s, merge_window = %s, "
+            "downscale_factor = %d, frame_skip = %d",
+            self._threshold,
+            self._min_event_len.get_timecode(),
+            self._time_before_event.get_timecode(),
+            self._post_event_len.get_timecode(),
+            merge_window_str,
+            self._downscale_factor,
+            self._frame_skip,
+        )
 
         # Correct event length parameters to account frame skip. The window and buffer sizes
         # below are counts of *processed* frames; on VFR input they are approximations derived
