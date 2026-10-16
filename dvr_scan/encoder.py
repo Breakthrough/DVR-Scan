@@ -33,6 +33,7 @@ import cv2
 import numpy as np
 from scenedetect import FrameTimecode
 
+from dvr_scan.platform import is_ffmpeg_available
 from dvr_scan.video_input import EventSpan, SourceInfo, VideoStreamConcat
 
 logger = logging.getLogger("dvr_scan")
@@ -591,7 +592,7 @@ def get_encoder_type(mode: OutputMode) -> ty.Optional[ty.Type[EventEncoder]]:
 
 
 class MaskWriter:
-    """Writes motion masks to a video file using an OpenCV VideoWriter.
+    """Writes motion masks to a video file using an ffmpeg pipe or OpenCV VideoWriter.
 
     Not an `EventEncoder`: masks are written for every processed frame, regardless
     of whether it is part of a motion event."""
@@ -602,22 +603,31 @@ class MaskWriter:
         fourcc: ty.Any,
         frame_rate: float,
         output_dir: ty.Optional[Path],
+        encode_args: str = DEFAULT_ENCODE_ARGS,
     ):
         self._path = path
         self._fourcc = fourcc
         self._frame_rate = frame_rate
         self._output_dir = output_dir
+        self._encode_args = encode_args
+        self._use_ffmpeg = path.suffix.lower() != ".avi" and is_ffmpeg_available()
         self._writer: ty.Optional[cv2.VideoWriter] = None
+        self._process: ty.Optional[subprocess.Popen] = None
+        self._stderr_thread: ty.Optional[threading.Thread] = None
+        self._stderr_lines: ty.List[str] = []
         self._mask_size: ty.Optional[ty.Tuple[int, int]] = None
 
     def write_frame(self, frame_bgr: np.ndarray, timecode: FrameTimecode):
         size = (frame_bgr.shape[1], frame_bgr.shape[0])
-        # Initialize the VideoWriter used for mask output using the first frame's size.
-        if self._writer is None:
+        # Initialize the writer or ffmpeg pipe used for mask output using the first frame's size.
+        if self._mask_size is None:
             self._mask_size = size
-            self._writer = _create_video_writer(
-                self._path, self._output_dir, self._fourcc, self._frame_rate, size
-            )
+            if self._use_ffmpeg:
+                self._start_process(size)
+            else:
+                self._writer = _create_video_writer(
+                    self._path, self._output_dir, self._fourcc, self._frame_rate, size
+                )
         if size != self._mask_size:
             logger.warning(
                 f"WARNING: Failed to write mask at frame {timecode.frame_num} "
@@ -625,9 +635,64 @@ class MaskWriter:
                 f" expected {self._mask_size[0]}x{self._mask_size[1]}"
             )
             return
-        self._writer.write(frame_bgr)
+        if self._process is not None:
+            assert self._process.stdin is not None
+            try:
+                self._process.stdin.write(frame_bgr.tobytes())
+            except OSError as ex:
+                self._finalize_process()
+                raise RuntimeError("ffmpeg exited unexpectedly while writing mask frames") from ex
+        elif self._writer is not None:
+            self._writer.write(frame_bgr)
+
+    def _start_process(self, frame_size: ty.Tuple[int, int]):
+        output_path = (self._output_dir / self._path) if self._output_dir else self._path
+        args = build_pipe_command(
+            output_path=output_path,
+            frame_size=frame_size,
+            frame_rate=self._frame_rate,
+            encode_args=self._encode_args,
+        )
+        logger.info("Encoding mask video using ffmpeg:\n%s", " ".join(args))
+        creationflags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+        self._stderr_lines = []
+        self._process = subprocess.Popen(
+            args,
+            stdin=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            creationflags=creationflags,
+        )
+        self._stderr_thread = threading.Thread(
+            target=_drain_stream,
+            args=(self._process.stderr, self._stderr_lines),
+            daemon=True,
+        )
+        self._stderr_thread.start()
+
+    def _finalize_process(self):
+        process = self._process
+        if process is None:
+            return
+        self._process = None
+        try:
+            if process.stdin is not None:
+                process.stdin.close()
+        except OSError:
+            pass
+        return_code = process.wait()
+        if self._stderr_thread is not None:
+            self._stderr_thread.join()
+            self._stderr_thread = None
+        output = "".join(self._stderr_lines)
+        self._stderr_lines = []
+        if return_code != 0:
+            raise RuntimeError("ffmpeg exited with code %d, output:\n\n%s" % (return_code, output))
+        if output:
+            logger.error("ffmpeg output:\n\n%s", output)
 
     def close(self):
+        if self._process is not None:
+            self._finalize_process()
         if self._writer is not None:
             self._writer.release()
             self._writer = None

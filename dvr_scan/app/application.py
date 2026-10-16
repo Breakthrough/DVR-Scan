@@ -89,16 +89,17 @@ def finalize_output_names(settings: ScanSettings, combine: bool):
     """Set output filenames based on the first input video, where applicable.
     Must be called after the `input` setting has been populated."""
     video_name = Path(settings.get("input")[0]).stem
+    output_mode = settings.get("output-mode")
+    if not isinstance(output_mode, OutputMode):
+        output_mode = OutputMode[str(output_mode).upper().replace("-", "_")]
     if combine:
-        output_mode = settings.get("output-mode")
-        if not isinstance(output_mode, OutputMode):
-            output_mode = OutputMode[str(output_mode).upper().replace("-", "_")]
         encoder_type = get_encoder_type(output_mode)
         extension = encoder_type.EXTENSION if encoder_type is not None else "avi"
         settings.set("output", f"{video_name}-events.{extension}")
     # NOTE: mask-output is CLI-only (not in CONFIG_MAP), so we must use get_arg here.
     if settings.get_arg("mask-output"):
-        settings.set("mask-output", f"{video_name}-mask.avi")
+        mask_ext = "mp4" if output_mode != OutputMode.OPENCV and is_ffmpeg_available() else "avi"
+        settings.set("mask-output", f"{video_name}-mask.{mask_ext}")
 
 
 def sample_video_frames(path: str, count: int = FILMSTRIP_FRAMES) -> ty.Optional[list]:

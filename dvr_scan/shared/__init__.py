@@ -149,6 +149,9 @@ def init_scanner(
     if comp_file and not Path(comp_file).suffix:
         encoder_type = get_encoder_type(output_mode)
         comp_file = "%s.%s" % (comp_file, encoder_type.EXTENSION if encoder_type else "avi")
+    if mask_file and not Path(mask_file).suffix:
+        mask_ext = "mp4" if output_mode != OutputMode.OPENCV and is_ffmpeg_available() else "avi"
+        mask_file = "%s.%s" % (mask_file, mask_ext)
 
     scanner.set_output(
         comp_file=Path(comp_file) if comp_file else None,

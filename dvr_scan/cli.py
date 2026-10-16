@@ -450,7 +450,7 @@ def get_cli_parser(user_config: ConfigRegistry):
     parser.add_argument(
         "-mo",
         "--mask-output",
-        metavar="motion_mask.avi",
+        metavar="motion_mask.mp4",
         type=str,
         help=(
             "Write a video containing the motion mask of each frame. Useful when tuning "

@@ -754,6 +754,7 @@ class MotionScanner:
                 fourcc=self._fourcc,
                 frame_rate=self._effective_frame_rate,
                 output_dir=self._output_dir,
+                encode_args=self._encode_args or DEFAULT_ENCODE_ARGS,
             )
             if self._mask_file is not None
             else None

@@ -142,6 +142,27 @@ def test_mask_writer(tmp_path):
     assert _count_frames(mask_file) == 3
 
 
+def test_mask_writer_ffmpeg(tmp_path):
+    """Non-AVI mask output pipes frames through ffmpeg using encode_args (#275)."""
+    from dvr_scan.platform import is_ffmpeg_available
+
+    if not is_ffmpeg_available():
+        pytest.skip("ffmpeg not available")
+    writer = MaskWriter(
+        path=Path("mask.mp4"),
+        fourcc=FOURCC,
+        frame_rate=FRAME_RATE,
+        output_dir=tmp_path,
+    )
+    for i in range(3):
+        writer.write_frame(_make_frame(), _tc(i / FRAME_RATE))
+    writer.write_frame(_make_frame(size=(32, 24)), _tc(0.3))
+    writer.close()
+    mask_file = tmp_path / "mask.mp4"
+    assert mask_file.exists()
+    assert _count_frames(mask_file) == 3
+
+
 def test_get_encoder_type():
     assert get_encoder_type(OutputMode.SCAN_ONLY) is None
     assert get_encoder_type(OutputMode.OPENCV) is OpenCVEncoder
@@ -340,3 +361,24 @@ def test_set_output_encode_validation(traffic_camera_video, monkeypatch):
     monkeypatch.setattr(scanner_module, "is_ffmpeg_available", lambda: False)
     with pytest.raises(ValueError):
         scanner.set_output(output_mode="encode")
+
+
+def test_init_scanner_mask_output_extension(traffic_camera_video, monkeypatch):
+    """Extensionless --mask-output defaults to .mp4 when ffmpeg is available and .avi otherwise."""
+    import argparse
+
+    import dvr_scan.shared as shared
+    from dvr_scan.config import ConfigRegistry
+    from dvr_scan.shared.settings import ScanSettings
+
+    def make_settings() -> ScanSettings:
+        return ScanSettings(
+            args=argparse.Namespace(input=[Path(traffic_camera_video)], mask_output="mask"),
+            config=ConfigRegistry(),
+        )
+
+    monkeypatch.setattr(shared, "is_ffmpeg_available", lambda: True)
+    assert shared.init_scanner(make_settings())._mask_file == Path("mask.mp4")
+
+    monkeypatch.setattr(shared, "is_ffmpeg_available", lambda: False)
+    assert shared.init_scanner(make_settings())._mask_file == Path("mask.avi")
