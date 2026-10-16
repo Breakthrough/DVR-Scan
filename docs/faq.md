@@ -115,13 +115,19 @@ DVR-Scan comes with a Dockerfile so you can easily get things working without wo
 $ docker build -t dvr-scan .
 ```
 
-This will build the container, and then to run it on a file in the local directory, you'd run the command like this:
+This will build an image containing the latest release of DVR-Scan (from PyPI) along with ffmpeg. To run it on a file in the current directory, you'd run the command like this:
 
 ```
-$ docker run --rm -it -v $(pwd):/videos/ dvr-scan -i your_video_file.mkv
+$ docker run --rm -it -v "$(pwd):/videos/" dvr-scan -i your_video_file.mkv -d motion_events
 ```
 
-The most important thing to keep in mind is the `-v` flag, which specifies the local folders to share. Inside the docker container `/videos/` is the working directory, so map that to wherever you want to process your files.
+The most important thing to keep in mind is the `-v` flag, which specifies the local folder to share with the container (use `${PWD}` instead of `$(pwd)` in PowerShell, or `%cd%` in the Windows command prompt). Inside the container `/videos/` is the working directory, so map that to wherever your files are: relative paths passed to `dvr-scan` (e.g. the input file above and the `-d`/`--output-dir` folder) are then resolved inside that folder. Extracted events are written to the shared folder (here `motion_events/` in the current directory), which is also where DVR-Scan looks for files when you run it with a wildcard:
+
+```
+$ docker run --rm -it -v "$(pwd):/videos/" dvr-scan -i "*.mp4" -d motion_events
+```
+
+The wildcard should be quoted so that it is expanded by DVR-Scan inside the container rather than by your shell, which only sees paths on the host.
 
 
 ----------------------------------------------------------
