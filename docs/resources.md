@@ -28,6 +28,12 @@ Note that DVR-Scan is released under [the BSD 2-Clause license], and submitted c
 
 ------------------------------------------------
 
+## :fontawesome-solid-graduation-cap:Research & Literature
+
+DVR-Scan is used as a pre-processing step in published research, from camera-trap ecology to microscopy. See [the Research & Literature page](literature.md) for a list of publications and for how to cite DVR-Scan in your own work.
+
+------------------------------------------------
+
 ## :fontawesome-solid-plus-minus:Similar Software
 
 The following is a list of alternative software that shares some of the functionality of DVR-Scan.  Feel free to provide suggestions for software you think should appear on this list by opening a topic in the [issue tracker](https://github.com/Breakthrough/DVR-Scan/issues) (see <a href="../../contributing/">the Contributing page</a> for details).
