@@ -602,3 +602,27 @@ def test_region_editor_processes_first_frame(traffic_camera_video, monkeypatch, 
     assert decoded_editor[1:] == decoded_plain
     assert frames_editor == frames_plain
     assert events_editor == events_plain
+
+
+def test_explicit_kernel_size_not_scaled_by_downscale_factor(
+    traffic_camera_video, caplog: pytest.LogCaptureFixture
+):
+    """Explicit `kernel_size` should not be scaled down by `downscale_factor` (#194)."""
+    import logging
+
+    caplog.set_level(logging.INFO)
+    scanner = MotionScanner([traffic_camera_video])
+    scanner.set_detection_params(kernel_size=7, downscale_factor=2)
+    scanner.set_video_time(end_time="00:00:01")
+    scanner.scan()
+
+    assert "kernel_size = 7," in caplog.text
+
+    caplog.clear()
+    scanner_auto = MotionScanner([traffic_camera_video])
+    scanner_auto.set_detection_params(kernel_size=-1, downscale_factor=2)
+    scanner_auto.set_video_time(end_time="00:00:01")
+    scanner_auto.scan()
+
+    # Traffic camera video is 1280x720; downscale=2 gives width 640 -> auto kernel 3.
+    assert "kernel_size = 3 (auto)," in caplog.text

@@ -126,15 +126,6 @@ class DetectionResult:
     num_frames: int
 
 
-def _scale_kernel_size(kernel_size: int, downscale_factor: int):
-    if kernel_size in (0, 1):
-        return kernel_size
-    corrected_size = round(kernel_size / float(downscale_factor))
-    if corrected_size % 2 == 0:
-        corrected_size -= 1
-    return max(corrected_size, 3)
-
-
 # TODO(#75): See if this needs to be tweaked for the CNT algorithm.
 def _recommended_kernel_size(frame_width: int, downscale_factor: int) -> int:
     corrected_width = round(frame_width / float(downscale_factor))
@@ -640,7 +631,7 @@ class MotionScanner:
                 self._input.resolution[0], self._downscale_factor
             )
         else:
-            kernel_size = _scale_kernel_size(self._kernel_size, self._downscale_factor)
+            kernel_size = self._kernel_size
 
         test_width_height_area = (
             self._max_area < 1.0 or self._max_width < 1.0 or self._max_height < 1.0
