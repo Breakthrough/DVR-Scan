@@ -148,7 +148,14 @@ def _create_video_writer(
     """Create a new cv2.VideoWriter, resolving `path` against `output_dir` if set."""
     if output_dir:
         path = output_dir / path
-    return cv2.VideoWriter(str(path), fourcc, float(frame_rate), frame_size)
+    writer = cv2.VideoWriter(str(path), fourcc, float(frame_rate), frame_size)
+    if not writer.isOpened():
+        logger.error(
+            "Failed to open VideoWriter for %s (codec may not be supported). "
+            "Try using -m/--output-mode encode or installing ffmpeg.",
+            path,
+        )
+    return writer
 
 
 @dataclass

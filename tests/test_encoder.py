@@ -382,3 +382,24 @@ def test_init_scanner_mask_output_extension(traffic_camera_video, monkeypatch):
 
     monkeypatch.setattr(shared, "is_ffmpeg_available", lambda: False)
     assert shared.init_scanner(make_settings())._mask_file == Path("mask.avi")
+
+
+def test_create_video_writer_logs_error_when_not_opened(
+    tmp_path: Path, monkeypatch, caplog: pytest.LogCaptureFixture
+):
+    """If cv2.VideoWriter fails to open, an actionable ERROR should be logged (#214)."""
+    import logging
+
+    import dvr_scan.encoder as encoder_module
+    from dvr_scan.encoder import _create_video_writer
+
+    class DummyClosedWriter:
+        def isOpened(self) -> bool:
+            return False
+
+    monkeypatch.setattr(
+        encoder_module.cv2, "VideoWriter", lambda *args, **kwargs: DummyClosedWriter()
+    )
+    caplog.set_level(logging.ERROR)
+    _create_video_writer(Path("bad.avi"), tmp_path, 0, 30.0, (320, 240))
+    assert "Failed to open VideoWriter" in caplog.text
