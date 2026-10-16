@@ -180,6 +180,7 @@ class InputArea:
         # regions that no longer match the first input's resolution (#274).
         self._region_editor_video: ty.Optional[str] = None
         self._region_editor_size: ty.Optional[ty.Tuple[int, int]] = None
+        self._region_editor_start_time: ty.Optional[str] = None
         root.rowconfigure(0, pad=PADDING, weight=1)
         root.rowconfigure(1, pad=PADDING)
         root.rowconfigure(2, pad=PADDING)
@@ -521,11 +522,24 @@ class InputArea:
             return
         video_path = videos[0]
         normalized_path = self._normalize_path(video_path)
-        # Reuse the existing editor (and its regions) as long as the first input is unchanged.
-        # If it changed, rebuild the editor so it shows a frame from the new video (#274).
-        if self._region_editor is None or self._region_editor_video != normalized_path:
+        start_time = self.start_end_time[0] if self.start_end_time else None
+        if start_time == "00:00:00.000":
+            start_time = None
+        # Reuse the existing editor (and its regions) as long as the first input and start time
+        # are unchanged. Otherwise rebuild the editor so it shows a matching frame (#248, #274).
+        if (
+            self._region_editor is None
+            or self._region_editor_video != normalized_path
+            or getattr(self, "_region_editor_start_time", None) != start_time
+        ):
             try:
-                frame = open_video(video_path, backend="opencv").read()
+                video = open_video(video_path, backend="opencv")
+                if start_time is not None:
+                    try:
+                        video.seek(FrameTimecode(start_time, video.frame_rate))
+                    except ValueError:
+                        pass
+                frame = video.read()
             except (VideoOpenFailure, OSError):
                 frame = False
             if frame is False:
@@ -571,6 +585,7 @@ class InputArea:
                 self._region_editor.set_persisted(*persisted_state)
             self._region_editor_video = normalized_path
             self._region_editor_size = frame_size
+            self._region_editor_start_time = start_time
         self._region_editor.run(
             root=self._root,
         )

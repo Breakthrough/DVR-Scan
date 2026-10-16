@@ -29,6 +29,7 @@ import numpy as np
 import PIL
 import PIL.Image
 import PIL.ImageTk
+from scenedetect import FrameTimecode, VideoOpenFailure, open_video
 
 import dvr_scan
 from dvr_scan.app.about_window import AboutWindow
@@ -219,6 +220,11 @@ class RegionEditor:
         self._editor_scroll: ty.Tuple[tk.Scrollbar, tk.Scrollbar] = None
         self._should_scan: bool = False
         self._scale_widget: ttk.Scale = None
+        self._seek_widget: ty.Optional[ttk.Scale] = None
+        self._updating_seek_widget: bool = False
+        self._video = None
+        self._total_frames: int = 0
+        self._current_frame_num: int = 0
         self._pan_enabled: bool = False
         self._panning: bool = False
         self._controls_window: tk.Toplevel = None
@@ -262,6 +268,54 @@ class RegionEditor:
         carrying regions over from a previous editor so unsaved changes still prompt to save."""
         self._persisted = persisted
         self._persisted_path = path
+
+    def _ensure_video_open(self) -> bool:
+        if self._video is not None:
+            return True
+        if not self._settings.video_path:
+            return False
+        try:
+            self._video = open_video(str(self._settings.video_path), backend="opencv")
+            self._total_frames = int(self._video.duration.frame_num)
+            return True
+        except (VideoOpenFailure, OSError):
+            self._video = None
+            self._total_frames = 0
+            return False
+
+    def seek_to_frame(self, frame_num: int) -> bool:
+        """Seek the underlying video to `frame_num` and update the displayed background frame."""
+        if not self._ensure_video_open():
+            return False
+        max_frame = max(0, self._total_frames - 1) if self._total_frames > 0 else max(0, frame_num)
+        target = max(0, min(int(frame_num), max_frame))
+        try:
+            self._video.seek(FrameTimecode(target, self._video.frame_rate))
+            frame = self._video.read()
+        except (OSError, ValueError):
+            return False
+        if frame is False or frame is None:
+            return False
+        if (frame.shape[1], frame.shape[0]) != (self._source_size.w, self._source_size.h):
+            return False
+        self._current_frame_num = target
+        self._source_frame = frame.copy()
+        if self._seek_widget is not None and not self._updating_seek_widget:
+            self._updating_seek_widget = True
+            try:
+                self._seek_widget.set(target)
+            finally:
+                self._updating_seek_widget = False
+        self._original_frame = self._source_frame[:: self._scale, :: self._scale, :].copy()
+        self._frame = self._original_frame.copy()
+        self._redraw = True
+        if self._editor_canvas is not None:
+            self._draw()
+        return True
+
+    def step_frame(self, delta: int) -> bool:
+        """Advance or rewind the displayed video frame by `delta` frames."""
+        return self.seek_to_frame(self._current_frame_num + delta)
 
     def _rescale(self, draw=True, allow_resize=True):
         assert self._scale > 0
@@ -566,6 +620,10 @@ class RegionEditor:
         self._root.bind("<Right>", lambda _: self._next_region())
         self._root.bind("<Tab>", lambda _: self._next_region())
         self._root.bind("<Shift-Tab>", lambda _: self._prev_region())
+        self._root.bind("<comma>", lambda _: self.step_frame(-1))
+        self._root.bind("<period>", lambda _: self.step_frame(1))
+        self._root.bind("<less>", lambda _: self.step_frame(-10))
+        self._root.bind("<greater>", lambda _: self.step_frame(10))
 
         self._root.bind("<Control-s>", lambda _: self._prompt_save())
         self._root.bind("<Control-o>", lambda _: self._prompt_load())
@@ -618,6 +676,7 @@ class RegionEditor:
         # by left-click and drag.
 
     def _close(self, should_scan: bool):
+        self._video = None
         if self._launched_from_app:
             self._root.destroy()
             self._on_close()
@@ -704,6 +763,32 @@ class RegionEditor:
         # Looks weird when the widget takes focus, but still seems to work when we redirect focus to
         # the root.
         self._region_selector.bind("<FocusIn>", lambda _: self._root.focus())
+        if self._ensure_video_open() and self._total_frames > 1:
+
+            def set_frame(val: str):
+                if self._updating_seek_widget:
+                    return
+                new_frame = round(float(val))
+                if new_frame != self._current_frame_num:
+                    self._updating_seek_widget = True
+                    try:
+                        self.seek_to_frame(new_frame)
+                    finally:
+                        self._updating_seek_widget = False
+
+            tk.Label(frame, text="Frame", anchor=tk.W).grid(
+                row=0, column=2, sticky=tk.W, padx=(16.0, 8.0)
+            )
+            self._seek_widget = ttk.Scale(
+                frame,
+                orient=tk.HORIZONTAL,
+                length=160,
+                from_=0,
+                to=max(1, self._total_frames - 1),
+                command=set_frame,
+                value=self._current_frame_num,
+            )
+            self._seek_widget.grid(row=0, column=3, sticky="w", padx=(0, 8.0))
         ttk.Button(frame, text="Toggle Mask", command=self._toggle_mask).grid(
             row=0, column=10, padx=8.0
         )
@@ -892,7 +977,8 @@ class RegionEditor:
                 row=3, column=1, sticky="e"
             )
 
-            ttk.Label(viewport, text="").grid(row=4, column=0, sticky="w")
+            ttk.Label(viewport, text="Seek Frame").grid(row=4, column=0, sticky="w")
+            ttk.Label(viewport, text="Keyboard: , / .").grid(row=4, column=1, sticky="e")
 
             ttk.Label(viewport, text="Toggle Mask Mode").grid(row=5, column=0, sticky="w")
             ttk.Label(viewport, text=f"Keyboard: {KEYBIND_MASK}").grid(row=5, column=1, sticky="e")

@@ -112,10 +112,18 @@ class _FakeRegionEditor:
 
 
 class _FakeVideo:
-    def __init__(self, frame):
+    def __init__(self, frame, frame_rate: float = 30.0, total_frames: int = 100):
         self._frame = frame
+        self.frame_rate = frame_rate
+        self.duration = type("_Dur", (), {"frame_num": total_frames})()
+        self.seek_targets: ty.List[ty.Any] = []
+
+    def seek(self, target):
+        self.seek_targets.append(target)
 
     def read(self):
+        if callable(self._frame):
+            return self._frame(self.seek_targets[-1] if self.seek_targets else None)
         return self._frame
 
 
@@ -141,10 +149,13 @@ def area(monkeypatch) -> InputArea:
     area._region_editor = None
     area._region_editor_video = None
     area._region_editor_size = None
+    area._region_editor_start_time = None
     area._regions = []
     area._current_region = _FakeVar(NO_REGIONS_SPECIFIED_TEXT)
     area._set_region = _FakeVar(True)
     area._set_time = _FakeVar(False)
+    area._start_time = _FakeVar("00:00:00.000")
+    area._end_time = _FakeVar("00:00:00.000")
     area._videos = _FakeTree([])
     return area
 
@@ -349,3 +360,63 @@ def test_update_ignores_regions_when_checkbox_unset(area, monkeypatch):
     area.update(settings)
 
     assert "regions" not in settings.values
+
+
+def test_region_editor_seeks_to_start_time_and_rebuilds_on_change(area, monkeypatch):
+    """When a start time is set, the region editor opens on the frame at start time and
+    rebuilds while keeping regions if start time changes (#248)."""
+    frame_0 = _frame(64, 48, 1)
+    frame_60 = _frame(64, 48, 99)
+    _set_frames(
+        monkeypatch,
+        {"a.mp4": lambda target: frame_60 if (target and target.frame_num == 60) else frame_0},
+    )
+    area._videos = _FakeTree(["a.mp4"])
+    area._on_edit_regions()
+    first = area._region_editor
+    assert np.array_equal(first.frame, frame_0)
+    first._regions = list(SHAPES)
+    area._on_region_editor_close()
+
+    area._set_time.set(True)
+    area._start_time.set("00:00:02.000")
+    area._on_edit_regions()
+
+    second = area._region_editor
+    assert second is not first
+    assert np.array_equal(second.frame, frame_60)
+    assert second.shapes == SHAPES
+
+
+def test_region_editor_seek_and_step_frame(monkeypatch):
+    """RegionEditor.seek_to_frame and step_frame update the frame and clamp to bounds (#248)."""
+    import dvr_scan.app.region_editor as region_editor_mod
+    from dvr_scan.app.region_editor import RegionEditor
+
+    frames_by_num = {i: _frame(64, 48, i + 10) for i in range(5)}
+    fake_video = _FakeVideo(
+        lambda target: frames_by_num[target.frame_num if target else 0],
+        frame_rate=10.0,
+        total_frames=5,
+    )
+    monkeypatch.setattr(region_editor_mod, "open_video", lambda path, backend=None: fake_video)
+
+    editor = RegionEditor(
+        frame=frames_by_num[0],
+        initial_shapes=SHAPES,
+        initial_scale=1,
+        debug_mode=False,
+        video_path="a.mp4",
+        save_path=None,
+    )
+    assert editor.seek_to_frame(3)
+    assert editor._current_frame_num == 3
+    assert np.array_equal(editor._source_frame, frames_by_num[3])
+
+    assert editor.step_frame(10)
+    assert editor._current_frame_num == 4
+    assert np.array_equal(editor._source_frame, frames_by_num[4])
+
+    assert editor.step_frame(-2)
+    assert editor._current_frame_num == 2
+    assert np.array_equal(editor._source_frame, frames_by_num[2])
