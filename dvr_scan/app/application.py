@@ -11,6 +11,7 @@
 
 import copy
 import dataclasses
+import os
 import tkinter as tk
 import tkinter.filedialog
 import tkinter.messagebox
@@ -173,6 +174,11 @@ class InputArea:
         shown (no time, region, or concatenation controls). Used by the Scan Wizard."""
         self._root = root
         self._region_editor: ty.Optional[RegionEditor] = None
+        # Normalized path and frame size (w, h) of the video the region editor was built for,
+        # so we can rebuild it with a fresh frame when the first input changes, and detect
+        # regions that no longer match the first input's resolution (#274).
+        self._region_editor_video: ty.Optional[str] = None
+        self._region_editor_size: ty.Optional[ty.Tuple[int, int]] = None
         root.rowconfigure(0, pad=PADDING, weight=1)
         root.rowconfigure(1, pad=PADDING)
         root.rowconfigure(2, pad=PADDING)
@@ -336,8 +342,10 @@ class InputArea:
             if end_frame and end_frame <= start_frame:
                 logger.error("No frames to process (start time must be less than than end time)")
                 return None
-        if self._set_region.get() and self._region_editor and self._region_editor.shapes:
-            settings.set("regions", self._region_editor.shapes)
+        if self._set_region.get():
+            regions = self._regions_for_scan(videos[0])
+            if regions:
+                settings.set("regions", regions)
         return settings
 
     def sort_by(self, col: str, descending: bool):
@@ -465,24 +473,107 @@ class InputArea:
             self._region_editor_button["state"] = tk.DISABLED
             self._current_region_label.grid_remove()
 
+    @staticmethod
+    def _normalize_path(path: str) -> str:
+        return os.path.normcase(os.path.abspath(path))
+
+    def _first_video_resolution(self) -> ty.Optional[ty.Tuple[int, int]]:
+        """Resolution (w, h) of the first video in the list from its "W x H" column, or None."""
+        children = self._videos.get_children()
+        if not children:
+            return None
+        try:
+            width, height = str(self._videos.item(children[0])["values"][2]).split("x")
+            return (int(width), int(height))
+        except (IndexError, ValueError):
+            return None
+
+    def _reset_regions(self):
+        self._regions = []
+        self._current_region.set(NO_REGIONS_SPECIFIED_TEXT)
+
+    def _regions_for_scan(self, first_video: str) -> ty.List[ty.List[Point]]:
+        """Regions to scan with. If the first input changed since the regions were drawn and
+        its resolution differs, the regions no longer apply and are discarded (#274)."""
+        if not self._regions:
+            return []
+        if self._region_editor_video != self._normalize_path(first_video):
+            resolution = self._first_video_resolution()
+            if (
+                resolution is not None
+                and self._region_editor_size is not None
+                and resolution != self._region_editor_size
+            ):
+                logger.warning(
+                    "Regions were drawn on a %dx%d video but the first input is now %dx%d, "
+                    "ignoring regions.",
+                    *self._region_editor_size,
+                    *resolution,
+                )
+                self._reset_regions()
+                return []
+        return self._regions
+
     def _on_edit_regions(self):
         videos = self.videos
-        if videos:
-            frame = open_video(videos[0], backend="opencv").read()
-            if self._region_editor is None:
-                self._region_editor = RegionEditor(
-                    frame=frame,
-                    initial_shapes=[],
-                    initial_scale=None,
-                    video_path=videos[0],
-                    debug_mode=False,  # TODO: Wire up debug mode.
-                    save_path=None,
-                    on_close=self._on_region_editor_close,
+        if not videos:
+            return
+        video_path = videos[0]
+        normalized_path = self._normalize_path(video_path)
+        # Reuse the existing editor (and its regions) as long as the first input is unchanged.
+        # If it changed, rebuild the editor so it shows a frame from the new video (#274).
+        if self._region_editor is None or self._region_editor_video != normalized_path:
+            try:
+                frame = open_video(video_path, backend="opencv").read()
+            except (VideoOpenFailure, OSError):
+                frame = False
+            if frame is False:
+                logger.error(f"Failed to read first frame of video: {video_path}")
+                tkinter.messagebox.showerror(
+                    "Video Open Failure",
+                    f"Failed to read the first frame of:\n{video_path}",
+                    parent=self._root,
                 )
-            self._region_editor.run(
-                root=self._root,
+                return
+            frame_size = (frame.shape[1], frame.shape[0])
+            # Regions are in pixel coordinates, so only carry them over to the new video if
+            # it has the same resolution as the one they were drawn on.
+            initial_shapes = []
+            persisted_state = None
+            if self._region_editor is not None:
+                if frame_size == self._region_editor_size:
+                    initial_shapes = [list(shape) for shape in self._region_editor.shapes]
+                    persisted_state = (
+                        self._region_editor.persisted,
+                        self._region_editor.persisted_path,
+                    )
+                else:
+                    # Let the user save unsaved regions first; keep the old editor if cancelled.
+                    if not self._region_editor.prompt_save_on_scan(self._root):
+                        return
+                    logger.warning(
+                        "First input resolution changed from %dx%d to %dx%d, discarding regions.",
+                        *self._region_editor_size,
+                        *frame_size,
+                    )
+                    self._reset_regions()
+            self._region_editor = RegionEditor(
+                frame=frame,
+                initial_shapes=initial_shapes,
+                initial_scale=None,
+                video_path=video_path,
+                debug_mode=False,  # TODO: Wire up debug mode.
+                save_path=None,
+                on_close=self._on_region_editor_close,
             )
-            self._region_editor._root.grab_set()
+            if persisted_state is not None:
+                self._region_editor.set_persisted(*persisted_state)
+            self._region_editor_video = normalized_path
+            self._region_editor_size = frame_size
+        self._region_editor.run(
+            root=self._root,
+        )
+        self._region_editor._root.grab_set()
 
     def _on_region_editor_close(self):
         assert self._region_editor is not None

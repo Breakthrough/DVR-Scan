@@ -257,6 +257,12 @@ class RegionEditor:
     def persisted_path(self) -> str:
         return self._persisted_path
 
+    def set_persisted(self, persisted: bool, path: str = ""):
+        """Override the saved-to-disk state (and the path it was saved to, if any). Used when
+        carrying regions over from a previous editor so unsaved changes still prompt to save."""
+        self._persisted = persisted
+        self._persisted_path = path
+
     def _rescale(self, draw=True, allow_resize=True):
         assert self._scale > 0
         logger.info(f"Downscale factor: {self._scale}")
