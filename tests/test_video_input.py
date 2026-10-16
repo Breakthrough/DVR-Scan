@@ -116,6 +116,37 @@ def test_map_span(traffic_camera_video):
     assert len(spans) == 1 and spans[0].source_index == 0
 
 
+def test_map_span_vfr(vfr_video, traffic_camera_video):
+    """The global timeline must use the real (time-based) duration of each input, not
+    the frame count over the nominal rate, which underestimates VFR inputs. Spans near
+    the end of a VFR input must map to that input before it has been fully decoded."""
+    video = open_input([vfr_video, traffic_camera_video])
+    vfr_duration = float(probe_source(vfr_video).duration)
+    assert vfr_duration > 30.0
+    spans = video.map_span(video.base_timecode + 30.0, video.base_timecode + 31.0)
+    assert len(spans) == 1
+    assert spans[0].source_index == 0
+    assert abs(spans[0].local_start.seconds - 30.0) < 0.1
+    # The seam must be located at the real duration of the first input.
+    spans = video.map_span(
+        video.base_timecode + (vfr_duration - 1.0), video.base_timecode + (vfr_duration + 1.0)
+    )
+    assert [span.source_index for span in spans] == [0, 1]
+    # Seeking near the end of the VFR input must land in that input, not the next one.
+    video.seek(30.0)
+    assert video.read(decode=False) is not False
+    assert video.position.seconds < vfr_duration
+    assert abs(video.position.seconds - 30.0) < 0.25
+
+
+def test_map_span_vfr_single_input(vfr_video):
+    """A span past the frame-count-based duration estimate of a single VFR input must
+    still map to that input (otherwise events there would not get audio)."""
+    video = open_input([vfr_video])
+    spans = video.map_span(video.base_timecode + 30.0, video.base_timecode + 31.0)
+    assert len(spans) == 1 and spans[0].source_index == 0
+
+
 def test_probe_source(traffic_camera_video):
     """Validate stream metadata extraction."""
     info = probe_source(traffic_camera_video)

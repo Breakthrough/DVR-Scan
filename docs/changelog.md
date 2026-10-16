@@ -15,7 +15,7 @@ correctly with default parameters.
 
 #### Changelog
 
- * [general] DVR-Scan now requires PySceneDetect 0.7 or higher
+ * [general] DVR-Scan now requires PySceneDetect 0.7.2 or higher
  * [feature] Variable framerate (VFR) videos are now handled correctly: event start/end times are always derived from presentation timestamps [#20](https://github.com/Breakthrough/DVR-Scan/issues/20)
  * [breaking] Remove `--use-pts` option; presentation timestamps are now always used for event timing (the `use-pts` config option is deprecated and has no effect)
  * [general] Reported event timecodes are now exact rather than quantized to whole frames; formatted timecodes may differ by up to 1ms from previous versions. Frame numbers shown in reports and overlays are approximations on VFR inputs.
