@@ -547,3 +547,58 @@ def test_highscore_discarded_for_rejected_events(traffic_camera_video):
     assert not result.event_list
     assert scanner._highscore == 0
     assert scanner._highframe is None
+
+
+@pytest.mark.parametrize("start_time", [None, "00:00:03"])
+def test_region_editor_processes_first_frame(traffic_camera_video, monkeypatch, start_time):
+    """The frame shown in the region editor must also be processed by the scan, so
+    enabling the editor yields the same events as scanning without it (#239)."""
+    import dvr_scan.scanner as scanner_module
+
+    editor_frames: ty.List[float] = []
+
+    class FakeRegionEditor:
+        def __init__(self, frame, initial_shapes, **kwargs):
+            editor_frames.append(frame)
+            self.shapes = list(initial_shapes)
+
+        def run(self) -> bool:
+            return True
+
+    monkeypatch.setattr(scanner_module, "HAS_TKINTER", True)
+    monkeypatch.setattr(scanner_module, "HAS_PILLOW", True)
+    monkeypatch.setattr(scanner_module, "RegionEditor", FakeRegionEditor, raising=False)
+    monkeypatch.setattr(scanner_module, "get_min_screen_bounds", lambda: None)
+
+    def run_scan(region_editor: bool):
+        scanner = MotionScanner([traffic_camera_video])
+        scanner.set_detection_params()
+        scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI], region_editor=region_editor)
+        scanner.set_event_params(min_event_len=4, time_pre_event=0)
+        if start_time is not None:
+            scanner.set_video_time(start_time=start_time)
+        # Record the presentation time of every frame decoded from the input.
+        decoded: ty.List[float] = []
+        original_read = scanner._input.read
+
+        def read(decode: bool = True):
+            frame = original_read(decode=decode)
+            if frame is not False:
+                decoded.append(scanner._input.position_ms)
+            return frame
+
+        monkeypatch.setattr(scanner._input, "read", read)
+        result = scanner.scan()
+        events = [(event.start.seconds, event.end.seconds) for event in result.event_list]
+        return result.num_frames, events, decoded
+
+    frames_plain, events_plain, decoded_plain = run_scan(region_editor=False)
+    frames_editor, events_editor, decoded_editor = run_scan(region_editor=True)
+
+    assert len(editor_frames) == 1
+    assert events_plain
+    # The editor consumes one frame, which must then be decoded again by the scan loop.
+    assert decoded_editor[0] == decoded_editor[1]
+    assert decoded_editor[1:] == decoded_plain
+    assert frames_editor == frames_plain
+    assert events_editor == events_plain

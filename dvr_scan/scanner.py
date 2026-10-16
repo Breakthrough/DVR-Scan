@@ -506,8 +506,13 @@ class MotionScanner:
                 raise SystemExit(1)
 
             logger.info("Selecting area of interest:")
-            # TODO(#239): We should process this frame (right now it gets skipped).
+            # Rewind the input after grabbing the frame so the main scan loop re-decodes
+            # it; otherwise the first frame would be skipped by motion detection (#239).
             frame_for_crop = self._input.read()
+            if self._start_time is not None:
+                self._input.seek(self._start_time)
+            else:
+                self._input.reset()
             scale_factor = 1
             screen_bounds = get_min_screen_bounds()
             if screen_bounds is not None:
