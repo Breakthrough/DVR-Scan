@@ -9,13 +9,18 @@
 
 #### Release Notes
 
-DVR-Scan v2.0 overhauls how timestamps are handled. Motion events are now tracked using
-presentation timestamps (PTS), which means variable framerate (VFR) videos are handled
-correctly with default parameters.
+DVR-Scan v2.0 overhauls how timestamps are handled and simplifies the desktop application with a new Scan Wizard, settings presets, and drag-and-drop support. Motion events are now tracked using presentation timestamps (PTS), which means variable framerate (VFR) videos are handled correctly with default parameters.
 
 #### Changelog
 
  * [general] DVR-Scan now requires PySceneDetect 0.7.2 or higher
+ * [general] Modernize project branding and logos, improve legibility at smaller sizes
+ * [feature] New Scan Wizard provides a simplified step-by-step workflow (add videos, pick a preset, choose output, scan) and is now the default mode when launching `dvr-scan-app` [#263](https://github.com/Breakthrough/DVR-Scan/issues/263)
+    * Set the new `startup-mode` config option to `classic` to start in the full settings view instead; you can also switch between modes at any time
+ * [feature] Settings presets: a new preset dropdown in the app allows applying built-in presets or saving your own [#263](https://github.com/Breakthrough/DVR-Scan/issues/263)
+    * User presets are config files stored in a `presets` folder next to the user config file (`Settings -> Open Presets Folder`)
+    * The `Default` preset is the user config file itself, replacing the `Save As User Default` and `Reset To User Default` menu items
+ * [feature] Video files can now be dragged and dropped onto the app window to add them as inputs; dropping a `.cfg` file loads it as the active settings [#263](https://github.com/Breakthrough/DVR-Scan/issues/263)
  * [feature] Variable framerate (VFR) videos are now handled correctly: event start/end times are always derived from presentation timestamps [#20](https://github.com/Breakthrough/DVR-Scan/issues/20)
  * [breaking] Remove `--use-pts` option; presentation timestamps are now always used for event timing (the `use-pts` config option is deprecated and has no effect)
  * [general] Reported event timecodes are now exact rather than quantized to whole frames; formatted timecodes may differ by up to 1ms from previous versions. Frame numbers shown in reports and overlays are approximations on VFR inputs.
@@ -44,6 +49,11 @@ correctly with default parameters.
  * [bugfix] Fix region editor in the GUI showing the first frame of a previously removed video after changing the input list. Existing regions are kept when the new first video has the same resolution; otherwise they are reset (with a prompt to save any unsaved changes). [#274](https://github.com/Breakthrough/DVR-Scan/issues/274)
  * [feature] Add a `--max-events N` flag to allow stopping after detecting `N` motion events [#261](https://github.com/Breakthrough/DVR-Scan/issues/261)
  * [feature] New `--merge-window`/`merge-window` option controls how close two groups of motion must be for them to be merged into the same event; `-tb`/`-tp` are now pure padding added around each event and no longer affect merging. The default (`auto`) uses the same value as `time-post-event`, which matches the merging behavior of previous versions. Setting `time-post-event` larger than `merge-window` caps the post-event padding to the merge window with a warning. [#195](https://github.com/Breakthrough/DVR-Scan/issues/195) [#72](https://github.com/Breakthrough/DVR-Scan/issues/72)
+ * [feature] Motion mask output (`-mo`/`--mask-output`) now encodes high-quality MP4 (H.264) videos via ffmpeg by default when ffmpeg is available, respecting `encode-args` [#275](https://github.com/Breakthrough/DVR-Scan/issues/275)
+ * [feature] The Region Editor now supports seeking across the input video timeline via a frame slider and `,`/`.` frame-stepping shortcuts, and starts from the configured `start-time` in the GUI [#248](https://github.com/Breakthrough/DVR-Scan/issues/248)
+ * [bugfix] Explicitly specified `-k`/`--kernel-size` values are no longer scaled down when `-df`/`--downscale-factor` is set (`auto` kernel size continues to scale with the downscaled resolution) [#194](https://github.com/Breakthrough/DVR-Scan/issues/194)
+ * [bugfix] Log an explicit error message if OpenCV `VideoWriter` fails to open an output video file [#214](https://github.com/Breakthrough/DVR-Scan/issues/214)
+ * [general] Log active motion detection and event parameters (`threshold`, `min_event_len`, `time_pre_event`, `time_post_event`, `merge_window`, `downscale_factor`, `frame_skip`) at the start of a scan [#186](https://github.com/Breakthrough/DVR-Scan/issues/186)
 
 ### 1.8.2.1 (2026-05-09)
 
@@ -444,22 +454,3 @@ This version of DVR-Scan includes a new, faster background subtraction algorithm
  * [feature] allows input seeking, frame skipping, and output suppression mode
  * [feature] configurable detection windows and pre/post-event inclusion length
 
-----------------------------------------------------------
-
-## In Development
-
-### DVR-Scan 1.9
-
-#### Release Notes
-
-Simplifies the application with a new Scan Wizard, settings presets, and drag-and-drop support.
-
-#### Changelog
-
- * [general] Modernize project branding and logos, improve legibility at smaller sizes
- * [feature] New Scan Wizard provides a simplified step-by-step workflow (add videos, pick a preset, choose output, scan) and is now the default mode when launching `dvr-scan-app`
-    * Set the new `startup-mode` config option to `classic` to start in the full settings view instead; you can also switch between modes at any time
- * [feature] Settings presets: a new preset dropdown in the app allows applying built-in presets or saving your own
-    * User presets are config files stored in a `presets` folder next to the user config file (`Settings -> Open Presets Folder`)
-    * The `Default` preset is the user config file itself, replacing the `Save As User Default` and `Reset To User Default` menu items
- * [feature] Video files can now be dragged and dropped onto the app window to add them as inputs; dropping a `.cfg` file loads it as the active settings
