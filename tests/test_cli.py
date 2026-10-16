@@ -17,6 +17,8 @@ import csv
 import json
 import os
 import platform
+import re
+import shutil
 import subprocess
 import typing as ty
 
@@ -84,10 +86,12 @@ BASE_COMMAND_TIMECODE_LIST_GOLDEN = (
 
 def _run_dvr_scan(args: ty.List[str]) -> str:
     """Helper to run dvr-scan with a list of arguments and return the output."""
-    # Add quotes around arguments with spaces.
+    # Add quotes around arguments with spaces or glob metacharacters so the shell does not
+    # split or expand them.
     processed_args = []
     for arg in args:
-        processed_args.append(f'"{arg}"' if " " in str(arg) else str(arg))
+        needs_quotes = any(char in str(arg) for char in " []*?")
+        processed_args.append(f'"{arg}"' if needs_quotes else str(arg))
     command = " ".join([DVR_SCAN_COMMAND] + processed_args)
     return subprocess.check_output(
         command,
@@ -214,6 +218,45 @@ def test_scan_only(tmp_path):
     assert len(os.listdir(tmp_path)) == 0, "Scan-only mode should not create any files."
     assert BASE_COMMAND_EVENT_LIST_GOLDEN in output, "Output event list does not match test golden."
     assert BASE_COMMAND_TIMECODE_LIST_GOLDEN in output, "Output timecodes do not match test golden."
+
+
+def test_input_path_with_glob_characters(tmp_path):
+    """Input filenames containing glob metacharacters must be used as-is (#171)."""
+    video = tmp_path / "00.08.00-00.16.00[R][0@0][0].mp4"
+    shutil.copy("tests/resources/traffic_camera.mp4", video)
+    output = _run_dvr_scan(["--input", video] + BASE_COMMAND[2:] + ["--scan-only"])
+    assert "Detected %d motion events in input." % (BASE_COMMAND_NUM_EVENTS) in output
+    assert BASE_COMMAND_TIMECODE_LIST_GOLDEN in output, "Output timecodes do not match test golden."
+
+
+def test_input_glob_expansion(tmp_path):
+    """Wildcards in input paths (including absolute paths and `**`) are expanded, sorted
+    by filename regardless of case, and directories matched by a wildcard are ignored."""
+    (tmp_path / "sub").mkdir()
+    for name in ("b.mp4", "A.mp4", "sub/c.mp4"):
+        shutil.copy("tests/resources/traffic_camera.mp4", tmp_path / name)
+    (tmp_path / "ignored.mp4").mkdir()
+    output = _run_dvr_scan(
+        ["--input", tmp_path / "**" / "*.mp4"]
+        + BASE_COMMAND[2:]
+        + ["--scan-only", "--verbosity", "debug"]
+    )
+    # All three inputs must be opened in order. (The exact number of events is not asserted
+    # since the events at the seams between the inputs are merged.)
+    assert "Opened video A.mp4" in output
+    assert output.index("Appending video b.mp4") < output.index("Appending video c.mp4")
+    assert output.index("Opened video A.mp4") < output.index("Appending video b.mp4")
+    assert "ignored.mp4" not in output
+    match = re.search(r"Detected (\d+) motion events in input.", output)
+    assert match is not None and int(match.group(1)) > BASE_COMMAND_NUM_EVENTS
+
+
+def test_input_does_not_exist(tmp_path):
+    """A missing input path (with or without wildcards) must fail with an error."""
+    for missing in (tmp_path / "missing.mp4", tmp_path / "*.mp4"):
+        with pytest.raises(subprocess.CalledProcessError) as excinfo:
+            _run_dvr_scan(["--input", missing] + BASE_COMMAND[2:] + ["--scan-only"])
+        assert "Input file does not exist" in excinfo.value.output
 
 
 def test_quiet_mode(tmp_path):

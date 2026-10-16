@@ -13,7 +13,9 @@
 This module manages the DVR-Scan program control flow, starting with `run_dvr_scan()`.
 """
 
+import glob
 import logging
+import os
 import time
 import typing as ty
 from pathlib import Path
@@ -41,7 +43,19 @@ def _preprocess_args(args):
     for files in args.input:
         for file in files:
             path = Path(file)
-            expanded = list(Path.cwd().glob(file)) if not path.is_absolute() else [path]
+            if path.is_file():
+                # Use existing files as-is so that filenames containing glob metacharacters
+                # (e.g. `[R]`, common in camera recordings) are not treated as patterns (#171).
+                expanded = [path]
+            else:
+                # Expand wildcards, sorted by filename (case-insensitive) so that multiple
+                # inputs are concatenated in a predictable order regardless of filesystem.
+                matches = (
+                    match for match in glob.glob(file, recursive=True) if os.path.isfile(match)
+                )
+                expanded = [
+                    Path(match) for match in sorted(matches, key=lambda m: (os.path.normcase(m), m))
+                ]
             if not expanded:
                 logger.error("Error: Input file does not exist:\n  %s", file)
                 return False, None
