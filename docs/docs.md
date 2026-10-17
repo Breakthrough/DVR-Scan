@@ -353,7 +353,7 @@ bounding-box-color = 0xFF0000
     </span>
 
  * <b><pre>quiet-mode</pre></b>
-    Suppress all console output.
+    Suppress all console output except for the final event list (see `-q`/`--quiet` and `timecode-list-format`).
     <span class="dvr-scan-default">
     ```
     quiet-mode = no
@@ -485,19 +485,16 @@ The DVR-Scan app includes a preset dropdown for saving and restoring groups of s
     ```
     </span>
 
- * <b><pre>verbosity</pre></b>
-    Verbosity of console output: (`debug`, `info`, `warning`, `error`).
+ * <b><pre>timecode-list-format</pre></b>
+    Format of event list printed at the end of a scan (this is exactly what is output in `quiet-mode`). Must be one of:
+    <ul>
+    <li>`parts`: `start-end,start-end,...` (syntax of `mkvmerge --split parts:`)</li>
+    <li>`timecodes`: `start,end,start,end,...` (syntax of `mkvmerge --split timecodes:`)</li>
+    <li>`lines`: one `start-end` pair per line (accepted as file input)</li>
+    </ul>
     <span class="dvr-scan-default">
     ```
-    verbosity = info
-    ```
-    </span>
-
- * <b><pre>quiet-mode</pre></b>
-    Suppress all console output: (`yes` or `no`). Only a final comma-separated list of timecodes will be printed if set to `yes`.
-    <span class="dvr-scan-default">
-    ```
-    quiet-mode = no
+    timecode-list-format = timecodes
     ```
     </span>
 

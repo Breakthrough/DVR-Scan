@@ -376,6 +376,7 @@ CONFIG_MAP: ConfigDict = {
     "output-mode": "encode",
     "region-editor": False,
     "scan-only": False,
+    "timecode-list-format": "timecodes",
     # Motion Events
     "max-events": 0,
     "merge-window": MergeWindowValue(),
@@ -439,6 +440,7 @@ CHOICE_MAP: ty.Dict[str, ty.List[str]] = {
     "bg-subtractor": ["MOG2", "CNT", "MOG2_CUDA"],
     "thumbnails": ["highscore"],
     "startup-mode": ["wizard", "classic"],
+    "timecode-list-format": ["parts", "timecodes", "lines"],
 }
 """Mapping of string options which can only be of a particular set of values. We use a list instead
 of a set to preserve order when generating error contexts. Values are case-insensitive, and must be

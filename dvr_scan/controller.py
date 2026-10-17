@@ -26,7 +26,7 @@ import dvr_scan
 from dvr_scan.cli import get_cli_parser
 from dvr_scan.config import ConfigLoadFailure, ConfigRegistry, RegionValueDeprecated
 from dvr_scan.report import write_events_csv, write_events_json
-from dvr_scan.scanner import DetectionResult, DetectorType, MotionScanner, OutputMode
+from dvr_scan.scanner import DetectionResult, DetectorType, MotionEvent, MotionScanner, OutputMode
 from dvr_scan.shared import ScanSettings, init_logging, init_scanner, logfile_path, setup_logger
 
 logger = logging.getLogger("dvr_scan")
@@ -207,6 +207,40 @@ def _write_report(settings: ScanSettings, scanner: MotionScanner, result: Detect
     logger.info("Report written to %s", path)
 
 
+_TIMECODE_LIST_LABELS = {
+    "parts": "Comma-separated timecode values (start-end):",
+    "timecodes": "Comma-separated timecode values:",
+    "lines": "Timecode values (one event per line, start-end):",
+}
+"""Log message printed before the timecode list for each `timecode-list-format`."""
+
+
+def format_timecode_list(event_list: ty.List[MotionEvent], list_format: str = "timecodes") -> str:
+    """Format detected motion events as a list of timecodes (#78).
+
+    Arguments:
+        event_list: Detected motion events.
+        list_format: One of the `timecode-list-format` config values:
+            `parts`: `start-end,start-end,...` (syntax of `mkvmerge --split parts:`)
+            `timecodes`: `start,end,start,end,...` (syntax of `mkvmerge --split timecodes:`)
+            `lines`: one `start-end` pair per line (accepted as file input)
+    """
+    list_format = list_format.lower()
+    if list_format == "timecodes":
+        return ",".join(
+            timecode
+            for event in event_list
+            for timecode in (event.start.get_timecode(), event.end.get_timecode())
+        )
+    parts = [
+        "%s-%s" % (event.start.get_timecode(), event.end.get_timecode()) for event in event_list
+    ]
+    if list_format == "lines":
+        return "\n".join(parts)
+    assert list_format == "parts", list_format
+    return ",".join(parts)
+
+
 def run_dvr_scan(
     settings: ScanSettings,
 ) -> ty.List[ty.Tuple[FrameTimecode, FrameTimecode]]:
@@ -253,14 +287,9 @@ def run_dvr_scan(
         ]
         output_strs += ["-------------------------------------------------------------"]
         logger.info("List of motion events:\n%s", "\n".join(output_strs))
-        timecode_list = []
-        for event in result.event_list:
-            timecode_list.append(event.start.get_timecode())
-            timecode_list.append(event.end.get_timecode())
-        logger.info("Comma-separated timecode values:")
-        # TODO(#78): Fix this output format to be more usable, in the form:
-        # start1-end1[,[+]start2-end2[,[+]start3-end3...]]
-        timecodes = ",".join(timecode_list)
+        list_format = str(settings.get("timecode-list-format")).lower()
+        logger.info(_TIMECODE_LIST_LABELS[list_format])
+        timecodes = format_timecode_list(result.event_list, list_format)
         logger.info(timecodes)
         if settings.get("quiet-mode"):
             # The logger's stdout handler is disabled in quiet mode, but the timecode

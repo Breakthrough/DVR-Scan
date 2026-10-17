@@ -169,7 +169,7 @@ def test_concatenate_opencv(tmp_path):
 def test_report(tmp_path):
     """Test --report with both output formats, in scan-only mode with a relative path
     (which must be resolved against -d/--output-dir)."""
-    golden_timecodes = BASE_COMMAND_TIMECODE_LIST_GOLDEN.strip().split(",")
+    golden_timecodes = _golden_event_pairs()
     _run_dvr_scan(
         BASE_COMMAND + ["--output-dir", tmp_path, "--scan-only", "--report", "report.csv"]
     )
@@ -181,7 +181,7 @@ def test_report(tmp_path):
     ]
     # The CSV timecodes use 1 decimal place of precision (rounded), so only compare the
     # exact-seconds column against the golden timecode of the first event.
-    golden_start_seconds = float(golden_timecodes[0][len("00:00:") :])
+    golden_start_seconds = float(golden_timecodes[0][0][len("00:00:") :])
     assert float(rows[1][6]) == pytest.approx(golden_start_seconds)
 
     _run_dvr_scan(
@@ -192,10 +192,9 @@ def test_report(tmp_path):
     assert report["scan"]["num_events"] == BASE_COMMAND_NUM_EVENTS
     assert len(report["events"]) == BASE_COMMAND_NUM_EVENTS
     # Event boundaries must match the golden timecodes printed by the CLI.
-    reported = []
-    for event in report["events"]:
-        reported.append(event["start"]["timecode"])
-        reported.append(event["end"]["timecode"])
+    reported = [
+        (event["start"]["timecode"], event["end"]["timecode"]) for event in report["events"]
+    ]
     assert reported == golden_timecodes
 
 
@@ -273,6 +272,28 @@ def test_quiet_mode(tmp_path):
     assert BASE_COMMAND_TIMECODE_LIST_GOLDEN in output, "Output timecodes do not match test golden."
 
 
+def _golden_event_pairs() -> ty.List[ty.Tuple[str, str]]:
+    """Split the golden timecode list (`start,end,start,end,...`) into (start, end) pairs."""
+    timecodes = BASE_COMMAND_TIMECODE_LIST_GOLDEN.strip().split(",")
+    return list(zip(timecodes[0::2], timecodes[1::2], strict=True))
+
+
+@pytest.mark.parametrize(
+    "list_format,expected",
+    [
+        ("parts", lambda pairs: ",".join("%s-%s" % pair for pair in pairs)),
+        ("timecodes", lambda pairs: ",".join(timecode for pair in pairs for timecode in pair)),
+        ("lines", lambda pairs: "\n".join("%s-%s" % pair for pair in pairs)),
+    ],
+)
+def test_timecode_list_format(tmp_path, list_format, expected):
+    """Test the `timecode-list-format` config option in quiet mode (#78)."""
+    cfg_path = tmp_path / "config.cfg"
+    cfg_path.write_text("timecode-list-format = %s\n" % list_format)
+    output = _run_dvr_scan(BASE_COMMAND + ["--scan-only", "--quiet", "--config", str(cfg_path)])
+    assert output.strip().splitlines() == expected(_golden_event_pairs()).splitlines()
+
+
 def test_max_events(tmp_path):
     """Test --max-events stops the scan after the given number of events (#261)."""
     output = _run_dvr_scan(
@@ -282,7 +303,7 @@ def test_max_events(tmp_path):
 
 
 def test_logfile_contains_timecodes(tmp_path):
-    """The comma-separated timecode values must be written to log files, including in
+    """The comma-separated timecode list must be written to log files, including in
     quiet mode where they are also printed to stdout (#265)."""
     logfile = tmp_path / "log.txt"
     output = _run_dvr_scan(BASE_COMMAND + ["--scan-only", "--quiet", "--logfile", str(logfile)])
@@ -499,3 +520,78 @@ def test_deprecated_roi(tmp_path):
     with open(roi_path) as roi_file:
         last_line_of_file = list(filter(None, roi_file.readlines()))[-1].strip()
     assert last_line_of_file == "10 20 20 20 20 35 10 35"
+
+
+HAZE_BASE_COMMAND = [
+    "--input",
+    "tests/resources/haze.mp4",
+    "-t",
+    "0.225",
+    "-l",
+    "3",
+    "-df",
+    "4",
+    "-bb",
+    "-fm",
+    "--add-region",
+    "0 99 1920 99 1920 1080 0 1080",
+    "--add-region",
+    "0 0 1440 0 1440 99 0 99",
+    "--ignore-user-config",
+]
+HAZE_NUM_EVENTS = 2
+
+HAZE_MAXAREA_CONFIG = """
+max-area = 0.16
+max-height = 0.4
+"""
+
+HAZE_EVENT_LIST_GOLDEN = """
+-------------------------------------------------------------
+|   Event #    |  Start Time  |   Duration   |   End Time   |
+-------------------------------------------------------------
+|  Event    1  |  00:00:08.2  |  00:00:23.9  |  00:00:32.1  |
+|  Event    2  |  00:00:33.1  |  00:00:05.8  |  00:00:38.9  |
+-------------------------------------------------------------
+"""[1:]
+
+# NOTE: Event boundaries are exact PTS values (v2.0); some timecodes differ by 1ms from
+# earlier releases, which quantized event times to whole frames before formatting.
+HAZE_TIMECODE_LIST_GOLDEN = """
+00:00:08.229-00:00:32.114,00:00:33.117-00:00:38.938
+"""[1:]
+
+
+def test_scan_haze(tmp_path):
+    """Test haze video without max-area filter (#224)."""
+    output = _run_dvr_scan(
+        HAZE_BASE_COMMAND
+        + [
+            "--output-dir",
+            tmp_path,
+            "--scan-only",
+        ]
+    )
+
+    assert "Detected %d motion events in input." % (HAZE_NUM_EVENTS) in output
+    assert HAZE_EVENT_LIST_GOLDEN in output, "Output event list does not match test golden."
+    assert HAZE_TIMECODE_LIST_GOLDEN in output, "Output timecodes do not match test golden."
+
+
+def test_scan_haze_maxarea(tmp_path):
+    """Test haze video with max-area/max-height filter (#224)."""
+    cfg_path = os.path.join(tmp_path, "config.cfg")
+    with open(cfg_path, "w") as file:
+        file.write(HAZE_MAXAREA_CONFIG)
+    output = _run_dvr_scan(
+        HAZE_BASE_COMMAND
+        + [
+            "--output-dir",
+            tmp_path,
+            "--scan-only",
+            "--config",
+            cfg_path,
+        ]
+    )
+
+    assert "No motion events detected in input." in output

@@ -146,6 +146,15 @@ def test_load_from_string_ignores_unknown_option():
     )
 
 
+def test_timecode_list_format_choices():
+    config = ConfigRegistry()
+    config.load_from_string("timecode-list-format = parts\n")
+    assert config.get("timecode-list-format") == "parts"
+    assert ConfigRegistry().get("timecode-list-format") == "timecodes"
+    with pytest.raises(ConfigLoadFailure):
+        ConfigRegistry().load_from_string("timecode-list-format = invalid\n")
+
+
 def test_startup_mode_choices():
     config = ConfigRegistry()
     config.load_from_string("startup-mode = classic\n")
