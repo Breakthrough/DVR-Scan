@@ -558,7 +558,7 @@ HAZE_EVENT_LIST_GOLDEN = """
 # NOTE: Event boundaries are exact PTS values (v2.0); some timecodes differ by 1ms from
 # earlier releases, which quantized event times to whole frames before formatting.
 HAZE_TIMECODE_LIST_GOLDEN = """
-00:00:08.229-00:00:32.114,00:00:33.117-00:00:38.938
+00:00:08.229,00:00:32.114,00:00:33.117,00:00:38.938
 """[1:]
 
 
