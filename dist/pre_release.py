@@ -163,19 +163,24 @@ def build_docs(use_local_images=True):
             "assets/images",
             "assets/javascripts/lunr",
             "assets/javascripts/workers",
-            "assets/javascripts/bundle.88dd0f4e.min.js.map",
-            "assets/stylesheets/main.6f8fc17f.min.css.map",
-            "assets/stylesheets/palette.06af60db.min.css.map",
         ):
             to_remove = docs_build_path.joinpath(to_remove)
             shutil.rmtree(
                 to_remove, ignore_errors=False
             ) if to_remove.is_dir() else to_remove.unlink()
 
+        # Asset names include a content hash that changes with each mkdocs-material release.
+        source_maps = list(docs_build_path.glob("assets/**/*.min.*.map"))
+        assert source_maps, "No source maps found, check mkdocs-material output."
+        for source_map in source_maps:
+            source_map.unlink()
+
         def remove_mapping():
-            path = docs_build_path.joinpath("assets/javascripts/bundle.88dd0f4e.min.js")
+            bundles = list(docs_build_path.glob("assets/javascripts/bundle.*.min.js"))
+            assert len(bundles) == 1, f"Expected one JS bundle, found: {bundles}"
+            path = bundles[0]
             contents = path.read_text()
-            TO_REMOVE = "//# sourceMappingURL=bundle.88dd0f4e.min.js.map\n"
+            TO_REMOVE = f"//# sourceMappingURL={path.name}.map\n"
             assert TO_REMOVE in contents
             contents = contents.replace(TO_REMOVE, "")
             path.unlink()
