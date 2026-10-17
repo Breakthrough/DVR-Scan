@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       #- name: 🏗️ Install Build Dependencies
       #  run: |
@@ -30,7 +30,7 @@ jobs:
       #    choco install -y cmake ninja
 
       - name: 🐍 Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
@@ -40,14 +40,14 @@ jobs:
           pip install numpy wheel
 
       - name: Setup MSBuild.exe
-        uses: microsoft/setup-msbuild@v1.1
+        uses: microsoft/setup-msbuild@v3
 
       - name: Setup NASM
         uses: ilammy/setup-nasm@v1
 
       - name: Cache CUDA Toolkit Installer
         id: cache-cuda-installer
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: ./.cache/cuda_installer.exe
           key: cuda-installer-12.0.0
@@ -78,7 +78,7 @@ jobs:
 
       - name: Cache CuDNN Installer
         id: cache-cudnn-installer
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: ./.cache/cudnn_installer.exe
           key: cudnn-installer-8.8.0.121-windows
@@ -106,7 +106,7 @@ jobs:
 
       - name: Cache opencv-python repository
         id: cache-opencv-python
-        uses: actions/cache@v3
+        uses: actions/cache@v6
       # TODO: Need to pin this to a version.
         with:
           path: opencv-python
@@ -173,7 +173,7 @@ jobs:
         shell: pwsh
 
       - name: 📤 Upload Artifact
-        uses: actions/upload-artifact@v4.6.0
+        uses: actions/upload-artifact@v7
         with:
           name: opencv-python-cuda
           path: opencv-python/dist/opencv_python*.whl

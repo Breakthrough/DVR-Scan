@@ -36,6 +36,9 @@ on:
 
 jobs:
   build:
+    # Skip scheduled runs in forks: GitHub attributes cron runs to the upstream
+    # workflow author, who then gets emailed when a fork's nightly build fails.
+    if: github.repository_owner == 'Breakthrough' || github.event_name != 'schedule'
     env:
         # Set below after building the final package.
         dvr_scan_version: ""
@@ -48,16 +51,16 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
 
       - name: Install uv and set the python version
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v10.3.0
         with:
           version: "0.5.11"
           python-version: ${{ matrix.python-version }}
@@ -117,7 +120,7 @@ jobs:
 
       - name: Upload Package
         if: ${{ matrix.python-version == '3.13' && matrix.os == 'ubuntu-latest' }}
-        uses: actions/upload-artifact@v4.6.0
+        uses: actions/upload-artifact@v7
         with:
           name: dvr-scan-dist
           path: |

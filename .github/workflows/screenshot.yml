@@ -17,16 +17,16 @@ jobs:
         python-version: ["3.12"]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
 
       - name: Install uv and set the python version
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v10.3.0
         with:
           version: "0.5.11"
           python-version: ${{ matrix.python-version }}
@@ -36,12 +36,10 @@ jobs:
           uv pip install --upgrade pip build wheel virtualenv setuptools
           uv pip install -r requirements.txt
 
-      - name: Download FFMPEG
-        uses: dsaltares/fetch-gh-release-asset@1.1.2
-        with:
-          repo: 'GyanD/codexffmpeg'
-          version: 'tags/${{ env.ffmpeg_version }}'
-          file: 'ffmpeg-${{ env.ffmpeg_version }}-full_build.7z'
+      - name: Download FFMPEG ${{ env.ffmpeg_version }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download ${{ env.ffmpeg_version }} --repo GyanD/codexffmpeg --pattern "ffmpeg-${{ env.ffmpeg_version }}-full_build.7z"
 
       - name: Extract FFMPEG
         run: |
@@ -75,7 +73,7 @@ jobs:
         shell: powershell
 
       - name: Upload Screenshot
-        uses: actions/upload-artifact@v4.6.0
+        uses: actions/upload-artifact@v7
         with:
           name: dvr-scan-screenshot-windows
           path: dvr-scan-screenshot-windows.png
@@ -93,16 +91,16 @@ jobs:
           - {width: 3840, height: 2160}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
 
       - name: Install uv and set the python version
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v10.3.0
         with:
           version: "0.5.11"
           python-version: ${{ matrix.python-version }}
@@ -135,7 +133,7 @@ jobs:
           scrot -d 0 "dvr-scan-screenshot-linux-${{ matrix.resolution.width }}x${{ matrix.resolution.height }}.png"
 
       - name: Upload Screenshot
-        uses: actions/upload-artifact@v4.6.0
+        uses: actions/upload-artifact@v7
         with:
           name: dvr-scan-screenshot-linux-${{ matrix.resolution.width }}x${{ matrix.resolution.height }}
           path: "dvr-scan-screenshot-linux-${{ matrix.resolution.width }}x${{ matrix.resolution.height }}.png"
@@ -150,16 +148,16 @@ jobs:
         python-version: ["3.12"]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
 
       - name: Install uv and set the python version
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v10.3.0
         with:
           version: "0.5.11"
           python-version: ${{ matrix.python-version }}
@@ -181,7 +179,7 @@ jobs:
           screencapture "dvr-scan-screenshot-macos.png"
 
       - name: Upload Screenshot
-        uses: actions/upload-artifact@v4.6.0
+        uses: actions/upload-artifact@v7
         with:
           name: dvr-scan-screenshot-macos
           path: "dvr-scan-screenshot-macos.png"
