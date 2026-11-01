@@ -152,13 +152,12 @@ def get_cli_parser(user_config: ConfigRegistry):
     parser.add_argument(
         "-o",
         "--output",
-        metavar="video.avi",
+        metavar="video.mp4",
         type=str,
         help=(
-            "If specified, all motion events will be written to a single file"
-            " in order (if not specified, separate files are created for each event)."
-            " Only supported in output modes OPENCV (filename MUST end with .avi)"
-            " and ENCODE (video-only)."
+            "If specified, all motion events will be written to a single file as they are detected."
+            " When this is not set, separate files are created for each event."
+            " Requires output mode to be either ENCODE or OPENCV."
         ),
     )
 
