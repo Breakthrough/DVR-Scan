@@ -499,29 +499,6 @@ def test_copy_mode(tmp_path):
     assert len(os.listdir(tmp_path)) == BASE_COMMAND_NUM_EVENTS, "Incorrect number of events found."
 
 
-def test_deprecated_roi(tmp_path):
-    """Test deprecated ROI translation."""
-    _run_dvr_scan(
-        BASE_COMMAND
-        + [
-            "--output-dir",
-            tmp_path,
-            "--scan-only",
-            "-dt",
-            "2",
-            "-roi",
-            "10 20 10 15",
-            "-s",
-            "roi.txt",
-        ]
-    )
-    roi_path = os.path.join(tmp_path, "roi.txt")
-    assert os.path.exists(roi_path)
-    with open(roi_path) as roi_file:
-        last_line_of_file = list(filter(None, roi_file.readlines()))[-1].strip()
-    assert last_line_of_file == "10 20 20 20 20 35 10 35"
-
-
 HAZE_BASE_COMMAND = [
     "--input",
     "tests/resources/haze.mp4",

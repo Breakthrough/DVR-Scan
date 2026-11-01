@@ -44,8 +44,9 @@ MIGRATED_CONFIG_OPTION: ty.Dict[str, str] = {
 }
 
 DEPRECATED_CONFIG_OPTION: ty.Dict[str, str] = {
-    "region-of-interest": "The region-of-interest config option is deprecated and may be removed. "
-    "Use the load-region option instead, or specify -R/--load-region.",
+    "region-of-interest": "The `region-of-interest` config option has no effect and is ignored. "
+    "Please update your config file to use the `load-region` option instead, "
+    "or specify -R/--load-region.",
     "use-pts": "The use-pts config option is deprecated and has no effect. Presentation "
     "timestamps (PTS) are now always used for event timing.",
 }
@@ -229,57 +230,6 @@ class KernelSizeValue(ValidatedValue):
             ) from ex
 
 
-class RegionValueDeprecated(ValidatedValue):
-    """Validator for deprecated region-of-interest values."""
-
-    _IGNORE_CHARS = [",", "/", "(", ")"]
-    """Characters to ignore."""
-
-    def __init__(self, value: ty.Optional[str] = None, allow_size: bool = False):
-        if value is not None:
-            translation_table = str.maketrans(
-                {char: " " for char in RegionValueDeprecated._IGNORE_CHARS}
-            )
-            values = value.translate(translation_table).split()
-            valid_lengths = (2, 4) if allow_size else (4,)
-            if not (
-                len(values) in valid_lengths
-                and all([val.isdigit() for val in values])
-                and all([int(val) >= 0 for val in values])
-            ):
-                raise ValueError()
-            self._value = [int(val) for val in values]
-        else:
-            self._value = None
-
-    @property
-    def value(self) -> ty.Optional[ty.List[int]]:
-        return self._value
-
-    def __repr__(self) -> str:
-        return str(self.value)
-
-    def __str__(self) -> str:
-        if self.value is not None:
-            return "(%d,%d)/(%d,%d)" % (
-                self.value[0],
-                self.value[1],
-                self.value[2],
-                self.value[3],
-            )
-        return str(self.value)
-
-    @staticmethod
-    def from_config(config_value: str, default: "RegionValueDeprecated") -> "RegionValueDeprecated":
-        try:
-            return RegionValueDeprecated(config_value)
-        except ValueError as ex:
-            raise OptionParseFailure(
-                "ROI must be four positive integers of the form (x,y)/(w,h)."
-                " Brackets, commas, slashes, and spaces are optional."
-            ) from ex
-
-
 class RGBValue(ValidatedValue):
     """Validator for RGB values of the form (255, 255, 255) or 0xFFFFFF."""
 
@@ -396,8 +346,9 @@ CONFIG_MAP: ConfigDict = {
     "kernel-size": KernelSizeValue(),
     "downscale-factor": 0,
     "learning-rate": float(-1),
-    # TODO(1.9): Remove, has been replaced with region files.
-    "region-of-interest": RegionValueDeprecated(),
+    # region-of-interest was removed in v2.0. We keep it here so we can gracefully warn users that
+    # may still have this option set (see `DEPRECATED_CONFIG_OPTION`).
+    "region-of-interest": "",
     "load-region": "",
     "frame-skip": 0,
     # Overlays

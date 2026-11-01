@@ -24,7 +24,7 @@ from scenedetect import FrameTimecode
 
 import dvr_scan
 from dvr_scan.cli import get_cli_parser
-from dvr_scan.config import ConfigLoadFailure, ConfigRegistry, RegionValueDeprecated
+from dvr_scan.config import ConfigLoadFailure, ConfigRegistry
 from dvr_scan.report import write_events_csv, write_events_json
 from dvr_scan.scanner import DetectionResult, DetectorType, MotionEvent, MotionScanner, OutputMode
 from dvr_scan.shared import ScanSettings, init_logging, init_scanner, logfile_path, setup_logger
@@ -70,21 +70,6 @@ def _preprocess_args(args):
             args.report,
         )
         return False, None
-    # -roi/--region-of-interest
-    if hasattr(args, "region_of_interest") and args.region_of_interest:
-        original_roi = args.region_of_interest
-        try:
-            args.region_of_interest = RegionValueDeprecated(
-                value=" ".join(original_roi), allow_size=True
-            ).value
-        except ValueError:
-            logger.error(
-                "Error: Invalid value for ROI: %s. ROI must be specified as a rectangle of"
-                " the form `x,y,w,h` or the max window size `w,h` (commas/spaces are ignored)."
-                " For example: -roi 200,250 50,100",
-                " ".join(original_roi),
-            )
-            return False, None
     return True, args
 
 

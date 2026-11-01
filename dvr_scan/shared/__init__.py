@@ -252,7 +252,6 @@ def init_scanner(
         regions=settings.get_arg("regions"),
         load_region=Path(load_region) if load_region else None,
         save_region=Path(save_region) if save_region else None,
-        roi_deprecated=settings.get("region-of-interest"),
     )
 
     return scanner
