@@ -27,7 +27,7 @@ jobs:
           python-version: "3.13"
 
       - name: Install uv and set the python version
-        uses: astral-sh/setup-uv@v10.3.0
+        uses: astral-sh/setup-uv@v10.3.3
         with:
           version: "0.5.11"
           python-version: "3.13"
