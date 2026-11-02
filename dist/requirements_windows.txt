@@ -1,17 +1,17 @@
 #
 # DVR-Scan Requirements for Windows Build
 #
-av==18.0.0
-numpy==2.2.0
-opencv-contrib-python==4.10.0.84
+av==19.0.2
+numpy==2.5.4
+opencv-contrib-python==5.0.0.93
 # scenedetect pulls in opencv-python, which shares the cv2 install directory with
 # opencv-contrib-python; the versions must match exactly or cv2 is corrupted.
-opencv-python==4.10.0.84
-pillow==12.3.0
-platformdirs==4.3.6
+opencv-python==5.0.0.93
+pillow==13.0.0
+platformdirs==4.14.3
 pyinstaller>=6.0
-pytest==9.0.3
+pytest==9.2.0
 scenedetect==0.7.2
 screeninfo==0.8.1
-tkinterdnd2==0.6.2
-tqdm==4.67.1
+tkinterdnd2==0.7.0
+tqdm==4.70.1

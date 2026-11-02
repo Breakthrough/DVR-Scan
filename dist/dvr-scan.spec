@@ -18,6 +18,12 @@ if not os.path.isdir(_av_libs_dir):
     raise SystemExit('av.libs not found: PyAV FFmpeg DLLs would be missing from the build')
 av_datas += [(os.path.join(_av_libs_dir, f), 'av.libs') for f in os.listdir(_av_libs_dir)]
 
+# Ensure that opencv-contrib-python was not overwritten by opencv-python. This can happen if the
+# latter is installed after the former.
+import cv2
+if not (hasattr(cv2, 'bgsegm') and hasattr(cv2.bgsegm, 'createBackgroundSubtractorCNT')):
+    raise SystemExit('cv2.bgsegm.createBackgroundSubtractorCNT missing')
+
 cli = Analysis(['../dvr_scan/__main__.py'],
              pathex=['.'],
              binaries=av_binaries,

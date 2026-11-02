@@ -13,13 +13,13 @@ skip_non_tags: true
 
 environment:
   matrix:
-    - PYTHON: "C:\\Python312-x64"
+    - PYTHON: "C:\\Python313-x64"
   # Encrypted AdvancedInstaller License
   ai_license_secret:
     secure: QRCPoNYF1nqgXDn7pHgBzg==
   ai_license_salt:
     secure: +Gy+SRk8JUsaM+5pMEKITiJxdLilrxHpkKlrZzR3C9DPwdgYLGxt5sJn6uXuAJg7e6JsKHcT7tRks/HcSKkHPw==
-  ffmpeg_version: "8.0"
+  ffmpeg_version: "9.0.2"
 
 # SignPath Config for Code Signing
 deploy:
@@ -39,6 +39,7 @@ install:
   - python -m pip install --upgrade pip
   - python -m pip install --upgrade build wheel virtualenv
   - python -m pip install -r dist/requirements_windows.txt -r docs/requirements.txt
+  - python -m pip install --force-reinstall --no-deps opencv-contrib-python==5.0.0.93
 
 
   - echo * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *

@@ -20,7 +20,7 @@ on:
   workflow_dispatch:
 
 env:
-  ffmpeg_version: "8.0"
+  ffmpeg_version: "9.0.2"
   UV_SYSTEM_PYTHON: 1
   UV_LINK_MODE: "symlink"
 
@@ -30,7 +30,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        python-version: ["3.12"]
+        python-version: ["3.13"]
 
     steps:
       - uses: actions/checkout@v7
@@ -51,6 +51,7 @@ jobs:
         run: |
           uv pip install --upgrade pip build wheel virtualenv setuptools
           uv pip install -r dist/requirements_windows.txt -r docs/requirements.txt
+          uv pip install --reinstall-package opencv-contrib-python -r dist/requirements_windows.txt
 
       - name: Unit Test
         run: |

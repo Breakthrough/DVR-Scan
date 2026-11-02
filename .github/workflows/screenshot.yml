@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 
 env:
-  ffmpeg_version: "8.0"
+  ffmpeg_version: "9.0.2"
 
 jobs:
   screenshot-windows:
@@ -14,7 +14,7 @@ jobs:
       UV_SYSTEM_PYTHON: 1
     strategy:
       matrix:
-        python-version: ["3.12"]
+        python-version: ["3.13"]
 
     steps:
       - uses: actions/checkout@v7
@@ -84,7 +84,7 @@ jobs:
       UV_SYSTEM_PYTHON: 1
     strategy:
       matrix:
-        python-version: ["3.12"]
+        python-version: ["3.13"]
         resolution:
           - {width: 1920, height: 1080}
           - {width: 2560, height: 1440}
@@ -145,7 +145,7 @@ jobs:
       UV_SYSTEM_PYTHON: 1
     strategy:
       matrix:
-        python-version: ["3.12"]
+        python-version: ["3.13"]
 
     steps:
       - uses: actions/checkout@v7
