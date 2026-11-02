@@ -110,3 +110,43 @@ def test_add_video_forwards_parent_to_dialog(monkeypatch):
 
     assert seen["parent"] == "wizard-parent"
     assert seen["multiple"] is True
+
+
+def test_add_video_missing_path_warns_and_continues_loading_remaining(monkeypatch, tmp_path):
+    valid_file = tmp_path / "valid.mp4"
+    valid_file.write_bytes(b"fake")
+    missing_file = tmp_path / "missing.mp4"
+
+    area = _list_with({}, [])
+    added_infos = []
+    area._add_row = lambda info: added_infos.append(info)
+    area._refresh_button_state = lambda: None
+
+    monkeypatch.setattr(
+        "dvr_scan.app.video_list.tkinter.filedialog.askopenfilename",
+        lambda **_kwargs: (str(missing_file), str(valid_file)),
+    )
+    monkeypatch.setattr(
+        "dvr_scan.app.video_list.probe_video",
+        lambda p: VideoInfo(
+            path=str(p),
+            name="valid.mp4",
+            duration="00:00:01.000",
+            framerate="30",
+            resolution="640 x 480",
+            date="2026-01-01 00:00:00",
+        ),
+    )
+
+    warnings = []
+    monkeypatch.setattr(
+        "dvr_scan.app.video_list.tkinter.messagebox.showwarning",
+        lambda *_args, **kwargs: warnings.append(kwargs),
+    )
+
+    area.add_video(parent="wizard-win")
+
+    assert len(added_infos) == 1
+    assert added_infos[0].name == "valid.mp4"
+    assert len(warnings) == 1
+    assert warnings[0]["parent"] == "wizard-win"

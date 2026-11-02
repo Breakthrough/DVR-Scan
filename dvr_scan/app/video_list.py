@@ -222,15 +222,17 @@ class VideoList:
         for path in paths:
             if not Path(path).exists():
                 logger.error(f"File does not exist: {path}")
-                return
+                failed_to_load = True
+                continue
             info = probe_video(path)
             if info is None:
                 failed_to_load = True
                 continue
             self._add_row(info)
         if failed_to_load:
+            warning_options = {"parent": parent} if parent is not None else {}
             tkinter.messagebox.showwarning(
-                "Video Open Failure", "Failed to open one or more videos."
+                "Video Open Failure", "Failed to open one or more videos.", **warning_options
             )
         self._refresh_button_state()
 

@@ -126,3 +126,166 @@ def test_wizard_next_is_disabled_until_videos_exist():
     wizard._refresh_form_nav_state()
 
     assert wizard._next_button["state"] == "normal"
+
+
+def test_wizard_refresh_form_nav_state_noop_during_scan_or_on_scan_step():
+    wizard = ScanWizard.__new__(ScanWizard)
+    wizard._classic_button = _FakeButton()
+    wizard._back_button = _FakeButton()
+    wizard._next_button = _FakeButton()
+    wizard._classic_button["state"] = "disabled"
+    wizard._back_button["state"] = "disabled"
+    wizard._next_button["state"] = "disabled"
+    wizard._summary_index = 3
+    wizard._scan_index = 4
+    wizard._videos_step = SimpleNamespace(input_area=SimpleNamespace(videos=["sample.mp4"]))
+
+    # Should not re-enable buttons while _scanning is True
+    wizard._step_index = 4
+    wizard._browse_in_progress = False
+    wizard._scanning = True
+    wizard._browse_in_progress = False
+    wizard._refresh_form_nav_state()
+    assert wizard._classic_button["state"] == "disabled"
+    assert wizard._back_button["state"] == "disabled"
+    assert wizard._next_button["state"] == "disabled"
+
+    # Should not re-enable buttons on _scan_index even after scan finishes
+    wizard._scanning = False
+    wizard._refresh_form_nav_state()
+    assert wizard._classic_button["state"] == "disabled"
+    assert wizard._back_button["state"] == "disabled"
+    assert wizard._next_button["state"] == "disabled"
+
+
+def test_wizard_on_switch_ignored_while_scanning():
+    wizard = ScanWizard.__new__(ScanWizard)
+    wizard._browse_in_progress = False
+    wizard._scanning = True
+    switched = []
+    wizard._on_switch_to_classic = lambda videos: switched.append(videos)
+
+    wizard._on_switch()
+
+    assert switched == []
+
+
+def test_wizard_set_videos_replaces_when_changed():
+    wizard = ScanWizard.__new__(ScanWizard)
+    current = ["a.mp4", "b.mp4"]
+    calls = []
+
+    class FakeInputArea:
+        @property
+        def videos(self):
+            return list(current)
+
+        def clear(self):
+            calls.append(("clear",))
+            current.clear()
+
+        def add_video(self, path):
+            calls.append(("add", path))
+            current.append(path)
+
+    wizard._videos_step = SimpleNamespace(input_area=FakeInputArea())
+    wizard._step_index = 0
+    wizard._summary_index = 3
+    wizard._scan_index = 4
+    wizard._scanning = False
+    wizard._browse_in_progress = False
+    wizard._classic_button = _FakeButton()
+    wizard._back_button = _FakeButton()
+    wizard._next_button = _FakeButton()
+
+    # Identical list does not clear/reload
+    wizard.set_videos(["a.mp4", "b.mp4"])
+    assert calls == []
+
+    # Removed/reordered list replaces existing videos
+    wizard.set_videos(["b.mp4"])
+    assert calls == [("clear",), ("add", "b.mp4")]
+    assert current == ["b.mp4"]
+
+
+def test_wizard_can_modify_videos_blocks_during_scan_and_on_scan_step():
+    wizard = ScanWizard.__new__(ScanWizard)
+    wizard._scan_index = 4
+    wizard._step_index = 0
+    wizard._scanning = False
+    wizard._browse_in_progress = False
+
+    assert wizard._can_modify_videos() is True
+
+    wizard._browse_in_progress = False
+    wizard._scanning = True
+    assert wizard._can_modify_videos() is False
+
+    wizard._scanning = False
+    wizard._step_index = 4
+    assert wizard._can_modify_videos() is False
+
+
+def test_spinbox_and_timecode_entry_get_refreshes_before_returning():
+    from dvr_scan.app.widgets import Spinbox, TimecodeEntry
+
+    for cls in (Spinbox, TimecodeEntry):
+        widget = cls.__new__(cls)
+        refreshed = []
+        widget._refresh = lambda r=refreshed: r.append(True)
+        widget._value = SimpleNamespace(get=lambda: "42")
+        assert widget.get() == "42"
+        assert refreshed == [True]
+
+
+def test_preset_step_ignores_noop_selection(monkeypatch):
+    import dvr_scan.presets as presets
+    from dvr_scan.app.wizard import _PresetStep
+    from dvr_scan.config import ConfigRegistry
+
+    step = _PresetStep.__new__(_PresetStep)
+    step.config = ConfigRegistry()
+    step._presets = {p.name: p for p in presets.list_presets()}
+    step._active_preset = presets.DEFAULT_PRESET_NAME
+    selected_name = [presets.DEFAULT_PRESET_NAME]
+    step._combo = SimpleNamespace(
+        selection_clear=lambda: None,
+        get=lambda: selected_name[0],
+        set=lambda val: selected_name.__setitem__(0, val),
+    )
+    threshold_val = [str(step.config.get("threshold"))]
+    step._threshold = SimpleNamespace(
+        get=lambda: threshold_val[0],
+        set=lambda val: threshold_val.__setitem__(0, val),
+    )
+    step._preset_desc = {}
+    applied = []
+    step._on_preset_applied = lambda preset, cfg: applied.append(preset.name)
+
+    loads = []
+    orig_load = presets.load_preset
+
+    def tracked_load(preset):
+        loads.append(preset.name)
+        return orig_load(preset)
+
+    monkeypatch.setattr(presets, "load_preset", tracked_load)
+
+    # Re-selecting the already active preset with unchanged threshold is a no-op.
+    step._on_selected()
+    assert loads == []
+    assert applied == []
+
+    # Switching to a different preset loads and applies it.
+    selected_name[0] = "Fast Scan"
+    step._on_selected()
+    assert loads == ["Fast Scan"]
+    assert applied == ["Fast Scan"]
+    assert step._active_preset == "Fast Scan"
+
+    # Modifying threshold makes re-selecting the same preset reload it.
+    threshold_val[0] = "0.99"
+    step._on_selected()
+    assert loads == ["Fast Scan", "Fast Scan"]
+    assert applied == ["Fast Scan", "Fast Scan"]
+    assert float(threshold_val[0]) == float(step.config.get("threshold"))

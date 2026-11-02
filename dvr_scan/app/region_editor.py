@@ -319,7 +319,7 @@ class RegionEditor:
 
     def _rescale(self, draw=True, allow_resize=True):
         assert self._scale > 0
-        logger.info(f"Downscale factor: {self._scale}")
+        logger.debug(f"Downscale factor: {self._scale}")
         self._original_frame = self._source_frame[:: self._scale, :: self._scale, :].copy()
         self._frame = self._original_frame.copy()
         self._frame_size = Size(w=self._frame.shape[1], h=self._frame.shape[0])
@@ -1023,8 +1023,10 @@ class RegionEditor:
 
     def _adjust_downscale(self, amount: int, allow_resize=True):
         # scale is clamped to MIN_DOWNSCALE_FACTOR/MAX_DOWNSCALE_FACTOR.
-        scale = self._scale + amount
-        self._scale = min(MAX_DOWNSCALE_FACTOR, max(MIN_DOWNSCALE_FACTOR, scale))
+        scale = min(MAX_DOWNSCALE_FACTOR, max(MIN_DOWNSCALE_FACTOR, self._scale + amount))
+        if scale == self._scale:
+            return
+        self._scale = scale
         self._scale_widget.set(self._scale)
         self._rescale(allow_resize=allow_resize)
 
@@ -1475,11 +1477,12 @@ class RegionEditor:
             self._draw()
 
     def _select_region(self, index: int):
-        logger.debug(f"selecting region {index}")
+
         if self._dragging:
             return
         assert index >= 0
-        if self._regions and index < len(self._regions):
+        if self._regions and index < len(self._regions) and index != self._active_shape:
+            logger.debug(f"selecting region {index}")
             self._active_shape = index
             self._region_selector.current(self._active_shape)
             self._recalculate = True

@@ -420,3 +420,36 @@ def test_region_editor_seek_and_step_frame(monkeypatch):
     assert editor.step_frame(-2)
     assert editor._current_frame_num == 2
     assert np.array_equal(editor._source_frame, frames_by_num[2])
+
+
+def test_application_on_preset_selected_ignores_noop(monkeypatch):
+    import dvr_scan.presets as presets
+    from dvr_scan.app.application import Application
+
+    app = Application.__new__(Application)
+    app._active_preset = presets.DEFAULT_PRESET_NAME
+    app._preset_snapshot = {"threshold": "0.15"}
+    ui_state = [{"threshold": "0.15"}]
+    app._serialize_ui_state = lambda: ui_state[0]
+    applied = []
+    app._on_preset_applied = lambda preset, config: applied.append(preset.name)
+
+    loads = []
+    orig_load = presets.load_preset
+
+    def tracked_load(preset):
+        loads.append(preset.name)
+        return orig_load(preset)
+
+    monkeypatch.setattr(presets, "load_preset", tracked_load)
+
+    default_preset = presets.default_preset()
+    app._on_preset_selected(default_preset)
+    assert loads == []
+    assert applied == []
+
+    # Once UI state diverges from snapshot, selecting the same preset reloads it.
+    ui_state[0] = {"threshold": "0.50"}
+    app._on_preset_selected(default_preset)
+    assert loads == [presets.DEFAULT_PRESET_NAME]
+    assert applied == [presets.DEFAULT_PRESET_NAME]

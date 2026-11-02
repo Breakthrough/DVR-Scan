@@ -429,7 +429,7 @@ class ConfigRegistry:
     def _log(self, level: int, message: str):
         self._init_log.append((level, message))
 
-    def load(self, path: ty.Optional[Path] = None):
+    def load(self, path: ty.Optional[Path] = None, log_level: int = logging.INFO):
         """Loads configuration file from given `path`. If `path` is not specified, tries
         to load from the default location (USER_CONFIG_FILE_PATH).
 
@@ -443,7 +443,7 @@ class ConfigRegistry:
 
         # Validate `path`, or if not provided, use USER_CONFIG_FILE_PATH if it exists.
         if path:
-            self._log(logging.INFO, "Loading config from file: %s" % path)
+            self._log(log_level, "Loading config from file: %s" % path)
             if not path.exists():
                 self._log(logging.ERROR, "File not found: %s" % path)
                 raise ConfigLoadFailure(self._init_log)
@@ -453,7 +453,7 @@ class ConfigRegistry:
                 self._log(logging.DEBUG, "User config file not found.")
                 return
             path = USER_CONFIG_FILE_PATH
-            self._log(logging.INFO, "Loading user config file:\n  %s" % path)
+            self._log(log_level, "Loading user config file:\n  %s" % path)
         # Try to load and parse the config file at `path`.
         try:
             with open(path) as config_file:

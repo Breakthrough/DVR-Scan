@@ -1067,7 +1067,7 @@ class OutputArea:
         tk.Label(root, text="Mode").grid(
             row=0, column=0, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(0, PADDING)
         )
-        self._output_mode_combo = ttk.Combobox(root, width=SETTING_INPUT_WIDTH, state="readonly")
+        self._output_mode_combo = ttk.Combobox(root, width=26, state="readonly")
         self._output_mode_combo.grid(
             row=0, column=1, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(0, PADDING)
         )
@@ -1733,7 +1733,7 @@ class Application:
     def run(self):
         logger.debug("starting main loop")
         if str(self._settings.get("startup-mode")).lower() == "wizard":
-            self._open_wizard()
+            self._open_wizard(initial=True)
         else:
             self._root.deiconify()
             self._root.focus()
@@ -1882,7 +1882,7 @@ class Application:
             underline=0,
         )
 
-    def _open_wizard(self):
+    def _open_wizard(self, initial: bool = False):
         # Imported here to avoid a circular import (the wizard reuses InputArea).
         from dvr_scan.app.wizard import ScanWizard
 
@@ -1894,16 +1894,27 @@ class Application:
                 on_switch_to_classic=self._on_switch_to_classic,
                 on_preset_applied=self._on_preset_applied,
             )
+        if not initial:
+            self._wizard.sync_from_settings(
+                self._get_config_settings(), active_preset=self._active_preset
+            )
         self._wizard.set_videos(self._input_area.videos)
         self._root.withdraw()
         self._wizard.show()
 
     def _on_switch_to_classic(self, videos: ty.List[str]):
-        """Show the classic main window, adding any videos from the wizard."""
-        existing = set(self._input_area.videos)
-        for path in videos:
-            if path not in existing:
+        """Show the classic main window, syncing videos and settings from the wizard."""
+        if self._input_area.videos != videos:
+            self._input_area.clear()
+            for path in videos:
                 self._input_area.add_video(path)
+
+        if self._wizard is not None:
+            self._wizard.apply_to_classic(
+                self._motion_settings_window, self._output_area, self._scan_area
+            )
+            self._on_preset_dropdown_opened()
+
         self._root.deiconify()
         self._root.focus()
 
@@ -2059,6 +2070,7 @@ class Application:
     def _on_preset_applied(self, preset: presets.Preset, config: ConfigRegistry):
         """Apply an already-loaded preset config to the UI. Shared by the preset
         dropdown and the Scan Wizard (which loads the config itself)."""
+        logger.debug(f"Applying preset: {preset.name}")
         for log_level, log_str in config.consume_init_log():
             logger.log(log_level, log_str)
         self._reload_config(config)
@@ -2076,6 +2088,11 @@ class Application:
             self._preset_area.set_active(None)
 
     def _on_preset_selected(self, preset: presets.Preset):
+        if (
+            self._active_preset == preset.name
+            and self._preset_snapshot == self._serialize_ui_state()
+        ):
+            return
         try:
             config = presets.load_preset(preset)
         except ConfigLoadFailure as ex:

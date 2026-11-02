@@ -140,6 +140,12 @@ def preset_path(name: str, base_dir: ty.Optional[Path] = None) -> Path:
     return base_dir / (name + PRESET_SUFFIX)
 
 
+# Cache of validated preset files keyed by path -> (mtime_ns, size, is_valid) so
+# repeated dropdown opens / step transitions do not re-parse unchanged files or
+# spam warnings for invalid or conflicting files.
+_PRESET_VALIDATION_CACHE: ty.Dict[Path, ty.Tuple[int, int, bool]] = {}
+
+
 def scan_user_presets(base_dir: ty.Optional[Path] = None) -> ty.List[Preset]:
     """Find valid user presets in `base_dir` (the user presets folder by default),
     sorted by name. Files that fail to load, or whose name conflicts with a built-in
@@ -150,17 +156,30 @@ def scan_user_presets(base_dir: ty.Optional[Path] = None) -> ty.List[Preset]:
     if not base_dir.is_dir():
         return found
     for path in base_dir.glob("*" + PRESET_SUFFIX):
+        try:
+            stat = path.stat()
+        except OSError:
+            continue
+        cache_key = (stat.st_mtime_ns, stat.st_size)
+        cached = _PRESET_VALIDATION_CACHE.get(path)
+        if cached is not None and cached[:2] == cache_key:
+            if cached[2]:
+                found.append(Preset(name=path.stem, builtin=False, path=path))
+            continue
         name = path.stem
         if name == DEFAULT_PRESET_NAME or name in BUILTIN_PRESETS:
             logger.warning("Skipping preset %s: name conflicts with a built-in preset.", path.name)
+            _PRESET_VALIDATION_CACHE[path] = (*cache_key, False)
             continue
         try:
-            # Fully load the file: this enforces the CONFIG_MAP schema (rejecting unknown
-            # options), which a bare ConfigParser parse would not catch.
+            # Fully load the file: this enforces the CONFIG_MAP schema, which a bare
+            # ConfigParser parse would not catch.
             ConfigRegistry().load(path)
         except ConfigLoadFailure:
             logger.warning("Skipping invalid preset file: %s", path)
+            _PRESET_VALIDATION_CACHE[path] = (*cache_key, False)
             continue
+        _PRESET_VALIDATION_CACHE[path] = (*cache_key, True)
         found.append(Preset(name=name, builtin=False, path=path))
     found.sort(key=lambda preset: preset.name.lower())
     return found
@@ -189,9 +208,9 @@ def load_preset(preset: Preset) -> ConfigRegistry:
         config.load_from_string(config_str, source=f"<preset: {preset.name}>")
     elif preset.name == DEFAULT_PRESET_NAME:
         # Gracefully handles a missing user config file (loads program defaults).
-        config.load()
+        config.load(log_level=logging.DEBUG)
     else:
-        config.load(preset.path)
+        config.load(preset.path, log_level=logging.DEBUG)
     return config
 
 

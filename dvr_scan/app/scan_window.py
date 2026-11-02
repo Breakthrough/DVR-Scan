@@ -51,10 +51,10 @@ EVENT_TABLE_PRECISION = TIMECODE_PRECISION
 # Event table data columns: (column id, heading, width). The thumbnail occupies the
 # tree (#0) column shown alongside these.
 EVENT_TABLE_COLUMNS = (
-    ("event", "Event", 80),
-    ("start", "Start Time", 120),
-    ("end", "End Time", 120),
-    ("duration", "Duration", 120),
+    ("event", "Event", 50),
+    ("start", "Start Time", 95),
+    ("end", "End Time", 95),
+    ("duration", "Duration", 95),
 )
 # Preview (#0) column wide enough for the filmstrip plus a little padding.
 PREVIEW_COLUMN_WIDTH = FILMSTRIP_WIDTH + 12
@@ -343,7 +343,7 @@ class ScanWindow:
         table = build_event_table(self._root, self._view.input_paths, event_list)
         table.grid(row=0, column=0, sticky=tk.NSEW, padx=self._padding, pady=(self._padding, 0))
         self._results_table = table
-        self._root.minsize(width=520, height=360)
+        self._root.minsize(width=780, height=360)
 
     def _on_save_report(self):
         if self._view.result is None:
@@ -447,7 +447,7 @@ def build_event_table(
     )
     for col, heading, width in EVENT_TABLE_COLUMNS:
         table.heading(col, text=heading)
-        table.column(col, width=width, anchor=tk.CENTER, stretch=True)
+        table.column(col, width=width, minwidth=width, anchor=tk.CENTER, stretch=True)
 
     placeholder = to_photo(filmstrip_placeholder())
     loader = ThumbnailLoader(table)

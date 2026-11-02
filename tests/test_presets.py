@@ -162,3 +162,26 @@ def test_startup_mode_choices():
     assert ConfigRegistry().get("startup-mode") == "wizard"
     with pytest.raises(ConfigLoadFailure):
         ConfigRegistry().load_from_string("startup-mode = invalid\n")
+
+
+def test_load_preset_logs_at_debug_level(tmp_path):
+    """Preset loads should record file/string load messages at DEBUG, not INFO."""
+    save_user_preset("Custom", make_settings(threshold=0.25), base_dir=tmp_path)
+    for preset in list_presets(tmp_path):
+        config = load_preset(preset)
+        assert all(level < logging.INFO for level, _ in config.consume_init_log())
+
+
+def test_scan_user_presets_warns_only_once_per_unchanged_file(tmp_path, caplog):
+    broken = tmp_path / "Broken.cfg"
+    broken.write_text("threshold = not-a-number\n")
+    collision = tmp_path / "Default.cfg"
+    collision.write_text("threshold = 0.3\n")
+
+    with caplog.at_level(logging.WARNING, logger="dvr-scan"):
+        assert scan_user_presets(tmp_path) == []
+        assert len(caplog.records) == 2
+
+        caplog.clear()
+        assert scan_user_presets(tmp_path) == []
+        assert len(caplog.records) == 0

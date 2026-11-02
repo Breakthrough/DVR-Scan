@@ -89,6 +89,7 @@ class TimecodeEntry:
         return self._entry[key]
 
     def get(self) -> str:
+        self._refresh()
         return self._value.get()
 
     def set(self, newval: str):
@@ -177,6 +178,7 @@ class Spinbox:
         return self._spinbox[key]
 
     def get(self) -> str:
+        self._refresh()
         return self._value.get()
 
     def set(self, newval: str):
