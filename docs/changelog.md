@@ -14,6 +14,7 @@ DVR-Scan v2.0 overhauls how timestamps are handled and simplifies the desktop ap
 #### Changelog
 
  * [general] DVR-Scan now requires PySceneDetect 0.7.2 or higher
+ * [general] Minimum supported Python version is now 3.11 (Python 3.10 is [EOL](https://devguide.python.org/versions/))
  * [general] Modernize project branding and logos, improve legibility at smaller sizes
  * [feature] New Scan Wizard provides a simplified step-by-step workflow (add videos, pick a preset, choose output, scan) and is now the default mode when launching `dvr-scan-app` [#263](https://github.com/Breakthrough/DVR-Scan/issues/263)
     * Set the new `startup-mode` config option to `classic` to start in the full settings view instead; you can also switch between modes at any time

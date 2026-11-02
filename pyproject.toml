@@ -18,7 +18,7 @@ dynamic = ["version"]
 description = "Tool for finding and extracting motion events in video files (e.g. security camera footage)."
 readme = "README.md"
 license = { text = "BSD-2-Clause" }
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [
     { name = "Brandon Castellano", email = "brandon248@gmail.com" },
 ]
@@ -37,7 +37,6 @@ classifiers = [
     "License :: OSI Approved :: BSD License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
