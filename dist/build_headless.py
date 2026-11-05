@@ -35,10 +35,8 @@ assert "dvr-scan-app" in content
 content = re.sub(r"^dvr-scan-app\s*=.*\n", "", content, flags=re.MULTILINE)
 
 # Swap GUI opencv for headless opencv
-assert "opencv-contrib-python<4.13" in content
-content = content.replace(
-    '"opencv-contrib-python<4.13"', '"opencv-contrib-python-headless<4.13"', 1
-)
+assert '"opencv-contrib-python"' in content
+content = content.replace('"opencv-contrib-python"', '"opencv-contrib-python-headless"', 1)
 
 # Remove screeninfo (GUI dependency)
 assert "screeninfo" in content

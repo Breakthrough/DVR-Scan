@@ -57,6 +57,7 @@ DVR-Scan v2.0 overhauls how timestamps are handled and simplifies the desktop ap
  * [bugfix] Log an explicit error message if OpenCV `VideoWriter` fails to open an output video file [#214](https://github.com/Breakthrough/DVR-Scan/issues/214)
  * [general] Log active motion detection and event parameters (`threshold`, `min_event_len`, `time_pre_event`, `time_post_event`, `merge_window`, `downscale_factor`, `frame_skip`) at the start of a scan [#186](https://github.com/Breakthrough/DVR-Scan/issues/186)
  * [feature] Add `timecode-list-format` config option to control the format of the event list printed at the end of a scan (and output in `-q`/`--quiet` mode): `parts` (`start-end,start-end,...`, syntax of `mkvmerge --split parts:`), `timecodes` (default, `start,end,start,end,...`, syntax of `mkvmerge --split timecodes:`), or `lines` (one `start-end` pair per line) [#78](https://github.com/Breakthrough/DVR-Scan/issues/78)
+ * [general] Remove the OpenCV version cap (`<4.13`); DVR-Scan now installs with the latest OpenCV 4.x/5.x releases [#257](https://github.com/Breakthrough/DVR-Scan/issues/257)
  * [general] Updates to Windows distributions:
      - Python 3.12 -> Python 3.13
      - OpenCV 4.10.0.84 -> 5.0.0.93

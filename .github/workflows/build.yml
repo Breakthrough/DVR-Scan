@@ -46,6 +46,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [macos-15, macos-latest, ubuntu-22.04, ubuntu-latest, windows-latest]
         python-version: ["3.11", "3.12", "3.13"]
@@ -70,10 +71,9 @@ jobs:
           uv pip install --upgrade build wheel virtualenv
           # TODO: Figure out how to avoid installing the original OpenCV package.
           uv pip install -e ".[dev]" -r docs/requirements.txt
-          # TODO(#257): Unpin OpenCV versions once we figure out why frame numbers are mismatching in tests.
           # Use headless OpenCV variant on CI to reduce download size.
           uv pip uninstall opencv-python opencv-contrib-python
-          uv pip install "opencv-contrib-python-headless<4.13" --only-binary :all:
+          uv pip install opencv-contrib-python-headless --only-binary :all:
 
       - name: Setup FFmpeg
         uses: ./.github/actions/setup-ffmpeg

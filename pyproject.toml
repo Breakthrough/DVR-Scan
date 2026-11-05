@@ -51,14 +51,13 @@ dependencies = [
     "scenedetect[pyav]~=0.7.2",
     "tqdm",
     "pillow",
-    # TODO(#257): Unpin OpenCV versions once we figure out why frame numbers are mismatching in tests.
-    "opencv-contrib-python<4.13",
+    "opencv-contrib-python",
     # scenedetect has a hard dependency on opencv-python, which installs into the same
     # cv2 directory as opencv-contrib-python above. Both packages must resolve to the
     # same version or the cv2 install is corrupted (e.g. opencv-python 5.x files mixed
     # with contrib 4.x broke imports). TODO: Remove once scenedetect makes OpenCV an
     # optional extra so we can depend on the contrib variant alone.
-    "opencv-python<4.13",
+    "opencv-python",
     "screeninfo",
     "tkinterdnd2",
 ]
