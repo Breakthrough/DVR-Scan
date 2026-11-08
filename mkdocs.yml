@@ -72,6 +72,7 @@ nav:
  - 'FAQ': 'faq.md'
  - 'Changelog': 'changelog.md'
  - 'Resources': 'resources.md'
+ - 'Research & Literature': 'literature.md'
 
 extra_css:
   - style.css
