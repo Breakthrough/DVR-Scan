@@ -289,3 +289,121 @@ def test_preset_step_ignores_noop_selection(monkeypatch):
     assert loads == ["Fast Scan", "Fast Scan"]
     assert applied == ["Fast Scan", "Fast Scan"]
     assert float(threshold_val[0]) == float(step.config.get("threshold"))
+
+
+# --- Video list shortcuts (Select All / Remove Selected) ----------------------------------
+
+
+class _FocusWidget:
+    def __init__(self, widget_class: str):
+        self._widget_class = widget_class
+
+    def winfo_class(self):
+        return self._widget_class
+
+
+def _shortcut_wizard(focus=None, focus_error=None):
+    """A Tk-free wizard on the videos step with recording list-shortcut stubs. `calls`
+    records the order of select_all / remove_selected / state-changed callbacks."""
+    wizard = ScanWizard.__new__(ScanWizard)
+    wizard._step_index = 0
+    wizard._scan_index = 4
+    wizard._summary_index = 3
+    wizard._scanning = False
+    wizard._browse_in_progress = False
+
+    def focus_get():
+        if focus_error is not None:
+            raise focus_error
+        return focus
+
+    wizard._window = SimpleNamespace(focus_get=focus_get)
+    calls = []
+    wizard._videos_step = SimpleNamespace(
+        input_area=SimpleNamespace(
+            select_all=lambda: calls.append("select_all"),
+            remove_selected=lambda: calls.append("remove_selected"),
+            videos=["a.mp4"],
+        )
+    )
+    wizard._on_videos_state_changed = lambda: calls.append("state_changed")
+    wizard.calls = calls
+    return wizard
+
+
+def _assert_shortcuts_inactive(wizard):
+    assert wizard._on_select_all() is None
+    assert wizard._on_remove_selected(object()) is None
+    assert wizard.calls == []
+
+
+def test_wizard_list_shortcuts_ignored_off_videos_step():
+    wizard = _shortcut_wizard()
+    wizard._step_index = 1
+
+    _assert_shortcuts_inactive(wizard)
+
+
+def test_wizard_list_shortcuts_ignored_while_scanning():
+    wizard = _shortcut_wizard()
+    wizard._scanning = True
+
+    _assert_shortcuts_inactive(wizard)
+
+
+def test_wizard_list_shortcuts_ignored_on_scan_step():
+    wizard = _shortcut_wizard()
+    # Degenerate layout where the scan step is index 0, so only _can_modify_videos() blocks.
+    wizard._scan_index = 0
+
+    _assert_shortcuts_inactive(wizard)
+
+
+def test_wizard_list_shortcuts_ignored_while_browse_dialog_open():
+    wizard = _shortcut_wizard()
+    wizard._browse_in_progress = True
+
+    _assert_shortcuts_inactive(wizard)
+
+
+def test_wizard_list_shortcuts_ignored_when_text_entry_focused():
+    wizard = _shortcut_wizard(focus=_FocusWidget("TEntry"))
+
+    _assert_shortcuts_inactive(wizard)
+
+
+def test_wizard_list_shortcuts_ignored_for_every_text_entry_class():
+    from dvr_scan.app.wizard import TEXT_ENTRY_CLASSES
+
+    for widget_class in TEXT_ENTRY_CLASSES:
+        wizard = _shortcut_wizard(focus=_FocusWidget(widget_class))
+        _assert_shortcuts_inactive(wizard)
+
+
+def test_wizard_list_shortcuts_active_when_non_entry_widget_focused():
+    wizard = _shortcut_wizard(focus=_FocusWidget("TButton"))
+
+    assert wizard._on_select_all() == "break"
+    assert wizard.calls == ["select_all"]
+
+
+def test_wizard_list_shortcuts_active_when_focus_get_raises_key_error():
+    wizard = _shortcut_wizard(focus_error=KeyError("popdown"))
+
+    assert wizard._on_select_all() == "break"
+    assert wizard._on_remove_selected() == "break"
+    assert wizard.calls == ["select_all", "remove_selected", "state_changed"]
+
+
+def test_wizard_select_all_calls_input_area_and_breaks():
+    wizard = _shortcut_wizard()
+
+    assert wizard._on_select_all(object()) == "break"
+    assert wizard.calls == ["select_all"]
+
+
+def test_wizard_remove_selected_removes_then_refreshes_state_and_breaks():
+    wizard = _shortcut_wizard()
+
+    assert wizard._on_remove_selected(object()) == "break"
+    assert wizard.calls == ["remove_selected", "state_changed"]

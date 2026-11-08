@@ -39,6 +39,7 @@ from dvr_scan.app.application import (
     finalize_output_names,
 )
 from dvr_scan.app.common import MenuBar, register_icon
+from dvr_scan.app.region_editor import ACCELERATOR_KEY
 from dvr_scan.app.scan_window import (
     ScanProgressView,
     build_event_table,
@@ -68,6 +69,9 @@ DROP_ZONE_TEXT_COLOR = "#474d57"
 DROP_ZONE_REFRESH_MS = 250
 MAX_THRESHOLD = 255.0
 MAX_SUMMARY_VIDEOS = 5
+# Classes of focused widgets that handle Ctrl+A / Delete / BackSpace themselves; the video list
+# shortcuts are suppressed while one of these has keyboard focus.
+TEXT_ENTRY_CLASSES = frozenset({"Entry", "TEntry", "Spinbox", "TSpinbox", "TCombobox", "Text"})
 
 logger = getLogger("dvr_scan")
 
@@ -710,6 +714,40 @@ class ScanWizard:
             self, "_scan_index", -1
         )
 
+    def _list_shortcuts_active(self) -> bool:
+        """True if the Select All, Remove Selected keyboard shortcuts are active and should
+        act: on the videos step, while videos can be modified, and not while a text entry
+        has focus (so Ctrl+A / Delete keep their usual text-editing meaning there)."""
+        if self._step_index != 0 or not self._can_modify_videos():
+            return False
+        if getattr(self, "_browse_in_progress", False):
+            return False
+        try:
+            widget = self._window.focus_get()
+        except (KeyError, tk.TclError):
+            # focus_get() can fail when focus is on a menu or a window Tkinter doesn't know.
+            widget = None
+        if widget is not None:
+            try:
+                if widget.winfo_class() in TEXT_ENTRY_CLASSES:
+                    return False
+            except tk.TclError:
+                pass
+        return True
+
+    def _on_select_all(self, _event=None) -> ty.Optional[str]:
+        if not self._list_shortcuts_active():
+            return None
+        self._videos_step.input_area.select_all()
+        return "break"
+
+    def _on_remove_selected(self, _event=None) -> ty.Optional[str]:
+        if not self._list_shortcuts_active():
+            return None
+        self._videos_step.input_area.remove_selected()
+        self._on_videos_state_changed()
+        return "break"
+
     def _on_videos_state_changed(self):
         self._refresh_form_nav_state()
         if hasattr(self, "_header") and self._step_index == 0:
@@ -932,6 +970,13 @@ class ScanWizard:
             self._menubar.frame.grid(row=0, column=0, sticky=tk.EW)
         self._window.bind("<Control-o>", lambda _: self._browse_videos())
         self._window.bind("<Control-O>", lambda _: self._browse_videos())
+        # Video list shortcuts. On Windows, Tk's <<SelectAll>> virtual event also maps to
+        # Ctrl+A; when both match, Tk runs only the physical binding, so the handler fires
+        # once per key press.
+        for sequence in ("<<SelectAll>>", "<Control-a>", "<Control-A>"):
+            self._window.bind(sequence, self._on_select_all)
+        for sequence in ("<Delete>", "<BackSpace>"):
+            self._window.bind(sequence, self._on_remove_selected)
 
         file_menu = self._menubar.add_menu("File", underline=0)
         file_menu.add_command(
@@ -943,6 +988,20 @@ class ScanWizard:
         file_menu.add_cascade(label="Sort", underline=0, menu=self._build_sort_menu(file_menu))
         file_menu.add_command(label="Advanced Mode", underline=0, command=self._on_switch)
         file_menu.add_command(label="Quit", underline=0, command=self._on_quit)
+
+        edit_menu = self._menubar.add_menu("Edit", underline=0)
+        edit_menu.add_command(
+            label="Select All",
+            underline=0,
+            command=self._on_select_all,
+            accelerator=f"{ACCELERATOR_KEY}+A",
+        )
+        edit_menu.add_command(
+            label="Remove Selected",
+            underline=0,
+            command=self._on_remove_selected,
+            accelerator="Del",
+        )
 
         help_menu = self._menubar.add_menu("Help", underline=0)
         help_menu.add_command(

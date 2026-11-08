@@ -22,6 +22,7 @@ DVR-Scan v2.0 overhauls how timestamps are handled and simplifies the desktop ap
     * User presets are config files stored in a `presets` folder next to the user config file (`Settings -> Open Presets Folder`)
     * The `Default` preset is the user config file itself, replacing the `Save As User Default` and `Reset To User Default` menu items
  * [feature] Video files can now be dragged and dropped onto the app window to add them as inputs; dropping a `.cfg` file loads it as the active settings [#263](https://github.com/Breakthrough/DVR-Scan/issues/263)
+ * [feature] Add select all with Ctrl+A (Command+A on Mac), multiple selection with Shift/Ctrl+click, and remove selection [#269](https://github.com/Breakthrough/DVR-Scan/issues/269)
  * [feature] Variable framerate (VFR) videos are now handled correctly: event start/end times are always derived from presentation timestamps [#20](https://github.com/Breakthrough/DVR-Scan/issues/20)
  * [breaking] Remove the `-roi`/`--region-of-interest` option and the `region-of-interest` config option (deprecated since v1.6). Use the region editor (`-r`/`--region-editor`), `-a`/`--add-region`, or `-R`/`--load-region` instead.
  * [breaking] Remove `--use-pts` option; presentation timestamps are now always used for event timing (the `use-pts` config option is deprecated and has no effect)

@@ -453,3 +453,71 @@ def test_application_on_preset_selected_ignores_noop(monkeypatch):
     app._on_preset_selected(default_preset)
     assert loads == [presets.DEFAULT_PRESET_NAME]
     assert applied == [presets.DEFAULT_PRESET_NAME]
+
+
+# --- Select All / Remove Selected -------------------------------------------------------
+
+
+class _SelectableTree:
+    """Treeview stand-in supporting selection and deletion."""
+
+    def __init__(self, items: ty.List[str]):
+        self.items = list(items)
+        self._selection: ty.List[str] = []
+        self.selection_set_calls = []
+        self.deleted = []
+
+    def get_children(self):
+        return list(self.items)
+
+    def selection_set(self, items):
+        self.selection_set_calls.append(list(items))
+        self._selection = list(items)
+
+    def selection(self):
+        return list(self._selection)
+
+    def delete(self, item):
+        self.deleted.append(item)
+        self.items.remove(item)
+        if item in self._selection:
+            self._selection.remove(item)
+
+
+def test_input_area_select_all_selects_every_tree_item():
+    area = InputArea.__new__(InputArea)
+    tree = _SelectableTree(["row-1", "row-2", "row-3"])
+    area._videos = tree
+
+    area.select_all()
+
+    assert tree.selection_set_calls == [["row-1", "row-2", "row-3"]]
+    assert tree.selection() == ["row-1", "row-2", "row-3"]
+
+
+def test_input_area_remove_selected_deletes_each_selected_item_and_refreshes():
+    area = InputArea.__new__(InputArea)
+    tree = _SelectableTree(["row-1", "row-2", "row-3"])
+    tree.selection_set(["row-1", "row-3"])
+    area._videos = tree
+    refreshed = []
+    area._refresh_remove_state = lambda: refreshed.append(True)
+
+    area.remove_selected()
+
+    assert tree.deleted == ["row-1", "row-3"]
+    assert tree.get_children() == ["row-2"]
+    assert refreshed == [True]
+
+
+def test_input_area_key_handlers_act_and_break():
+    area = InputArea.__new__(InputArea)
+    tree = _SelectableTree(["row-1", "row-2"])
+    area._videos = tree
+    area._refresh_remove_state = lambda: None
+
+    assert area._on_select_all_key(object()) == "break"
+    assert tree.selection() == ["row-1", "row-2"]
+
+    assert area._on_remove_key(object()) == "break"
+    assert tree.get_children() == []

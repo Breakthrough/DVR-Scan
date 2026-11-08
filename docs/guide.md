@@ -13,6 +13,8 @@ Start by clicking the <b>Add</b> button to add one or more videos:
 
 <img alt="[Main App Window]" src="../assets/app-main-window.jpg"/>
 
+You can select several videos at once with Shift-click, Ctrl-click, or Command-click on Mac. Select every video with `Ctrl + A` (`Command + A` on Mac). To remove the selected videos, use the `Delete` key or the <b>Remove</b> button. These actions are also available from the <b>Edit</b> menu.
+
 To extract and save the motion events from the input, click the <b>Start</b> button. You will be prompted for a location to save the events to, after which scanning will begin:
 
 

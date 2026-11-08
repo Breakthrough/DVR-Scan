@@ -23,11 +23,18 @@ labels per row inside a scrollable canvas. A compact vertical icon toolbar (Add 
 Up / Down / Sort) sits on the right so the up/down arrows point the way the selected row
 moves. Sorting is also available via the wizard's File > Sort menu.
 
+Rows support multi-selection like a standard list: click selects one row, Shift+click
+extends a range from the last clicked row, and Ctrl+click (Command+click on macOS) toggles a
+row. Clicking empty space clears the selection. Remove / Up / Down act on every selected row;
+the wizard binds Ctrl+A (Select All) and Delete (Remove Selected) via `select_all` and
+`remove_selected`.
+
 The widget mirrors the subset of the `InputArea` API the wizard depends on (`videos`,
 `add_video`, `update`, `sort_by`, `clear`) so it can be dropped in without changes to the
 surrounding `ScanWizard` code."""
 
 import dataclasses
+import sys
 import tkinter as tk
 import tkinter.filedialog
 import tkinter.messagebox
@@ -155,6 +162,11 @@ class VideoList:
         )
         self._bind_mousewheel(self._canvas)
         self._bind_mousewheel(self._rows_frame)
+        # Clicking empty space (not on a row) clears the selection. Row widgets are children
+        # of the rows frame, but Tk delivers a click only to the widget under the pointer, so
+        # these fire only for the uncovered area.
+        self._canvas.bind("<Button-1>", self.clear_selection, add="+")
+        self._rows_frame.bind("<Button-1>", self.clear_selection, add="+")
 
         # Vertical icon toolbar: Add / Remove / Up / Down then Sort, so the arrows point the
         # same direction the selected row moves.
@@ -162,7 +174,7 @@ class VideoList:
         toolbar.grid(row=0, column=2, sticky=tk.N, padx=(PADDING, 0))
         self._add_button = self._toolbar_button(toolbar, 0, ADD_GLYPH, "Add videos", self.add_video)
         self._remove_button = self._toolbar_button(
-            toolbar, 1, REMOVE_GLYPH, "Remove selected", self._on_remove
+            toolbar, 1, REMOVE_GLYPH, "Remove selected (Del)", self.remove_selected
         )
         self._up_button = self._toolbar_button(toolbar, 2, UP_GLYPH, "Move up", self._on_move_up)
         self._down_button = self._toolbar_button(
@@ -175,7 +187,10 @@ class VideoList:
         self._thumbnails = ThumbnailLoader(self._canvas, apply_image=self._apply_thumbnail)
         self._rows: ty.Dict[str, _Row] = {}
         self._order: ty.List[str] = []
-        self._selected: ty.Optional[str] = None
+        # Selected row iids, and the anchor row (last plain-clicked or toggled) that Shift+click
+        # extends a range from.
+        self._selected: ty.Set[str] = set()
+        self._anchor: ty.Optional[str] = None
         # Monotonic counter for unique row iids ("row-0", "row-1", ...). Never reset, even on
         # clear(), so a thumbnail job for a removed row can't collide with a reused iid.
         self._counter = 0
@@ -201,6 +216,44 @@ class VideoList:
     @property
     def videos(self) -> ty.List[str]:
         return [self._rows[iid].info.path for iid in self._order]
+
+    @property
+    def selected_videos(self) -> ty.List[str]:
+        """Paths of the selected videos, in display order."""
+        return [self._rows[iid].info.path for iid in self._order if iid in self._selected]
+
+    def select_all(self):
+        """Select every row in the list."""
+        self._selected = set(self._order)
+        self._paint_selection()
+        self._refresh_button_state()
+
+    def clear_selection(self, _event=None):
+        """Deselect all rows."""
+        self._selected = set()
+        self._paint_selection()
+        self._refresh_button_state()
+
+    def remove_selected(self):
+        """Remove all selected rows, then select the row that fell into the top-most removed
+        slot (if any) for quick repeated removal."""
+        indices = self._selected_indices()
+        if not indices:
+            return
+        lowest = indices[0]
+        for iid in self._selected:
+            self._rows.pop(iid).frame.destroy()
+        self._order[:] = [iid for iid in self._order if iid not in self._selected]
+        self._selected = set()
+        self._anchor = None
+        self._regrid()
+        if self._order:
+            # The auto-selected row also becomes the anchor so a following Shift+click
+            # extends from it, as it would after a plain click.
+            self._anchor = self._order[min(lowest, len(self._order) - 1)]
+            self._selected = {self._anchor}
+            self._paint_selection()
+        self._refresh_button_state()
 
     def add_video(self, path: str = "", parent: ty.Optional[tk.Widget] = None):
         """Add a video to the list by path, or open a file dialog if no path is given.
@@ -265,7 +318,8 @@ class VideoList:
             row.frame.destroy()
         self._rows.clear()
         self._order.clear()
-        self._selected = None
+        self._selected = set()
+        self._anchor = None
         # Drop pending thumbnail jobs so they don't target deleted rows, then start fresh.
         self._thumbnails.cancel()
         self._thumbnails = ThumbnailLoader(self._canvas, apply_image=self._apply_thumbnail)
@@ -317,7 +371,13 @@ class VideoList:
             text_labels=text_labels,
         )
         for widget in row.selectable:
-            widget.bind("<Button-1>", lambda _e, i=iid: self._on_select(i), add="+")
+            widget.bind("<Button-1>", lambda _e, i=iid: self._on_click(i), add="+")
+            widget.bind("<Shift-Button-1>", lambda _e, i=iid: self._on_shift_click(i), add="+")
+            widget.bind("<Control-Button-1>", lambda _e, i=iid: self._on_toggle_click(i), add="+")
+            if sys.platform == "darwin":
+                widget.bind(
+                    "<Command-Button-1>", lambda _e, i=iid: self._on_toggle_click(i), add="+"
+                )
             self._bind_mousewheel(widget)
 
         self._rows[iid] = row
@@ -338,55 +398,78 @@ class VideoList:
 
     # --- Selection and toolbar actions ----------------------------------------------------
 
-    def _on_select(self, iid: str):
-        self._selected = iid
+    def _selected_indices(self) -> ty.List[int]:
+        """Sorted display indices (into `_order`) of the selected rows."""
+        return [index for index, iid in enumerate(self._order) if iid in self._selected]
+
+    def _on_click(self, iid: str):
+        """Plain click: select only this row and make it the range anchor."""
+        self._selected = {iid}
+        self._anchor = iid
+        self._paint_selection()
+        self._refresh_button_state()
+
+    def _on_shift_click(self, iid: str):
+        """Shift+click: select the inclusive range between the anchor and this row. The
+        anchor is unchanged so the range can be adjusted with further Shift+clicks."""
+        if self._anchor is None or self._anchor not in self._order:
+            self._on_click(iid)
+            return
+        first, last = sorted((self._order.index(self._anchor), self._order.index(iid)))
+        self._selected = set(self._order[first : last + 1])
+        self._paint_selection()
+        self._refresh_button_state()
+
+    def _on_toggle_click(self, iid: str):
+        """Ctrl+click (Command+click on macOS): toggle this row and make it the anchor."""
+        if iid in self._selected:
+            self._selected.discard(iid)
+        else:
+            self._selected.add(iid)
+        self._anchor = iid
+        self._paint_selection()
+        self._refresh_button_state()
+
+    def _paint_selection(self):
+        """Recolor every row to reflect `_selected`."""
         for row_iid, row in self._rows.items():
-            selected = row_iid == iid
+            selected = row_iid in self._selected
             background = self._select_bg if selected else self._bg
             foreground = self._select_fg if selected else self._fg
             for widget in row.selectable:
                 widget.configure(background=background)
             for label in row.text_labels:
                 label.configure(foreground=foreground)
-        self._refresh_button_state()
-
-    def _on_remove(self):
-        if self._selected is None:
-            return
-        index = self._order.index(self._selected)
-        self._rows.pop(self._selected).frame.destroy()
-        del self._order[index]
-        self._selected = None
-        self._regrid()
-        # Select the row that fell into the removed slot, if any, for quick repeated removal.
-        if self._order:
-            self._on_select(self._order[min(index, len(self._order) - 1)])
-        else:
-            self._refresh_button_state()
 
     def _on_move_up(self):
-        if self._selected is None:
+        """Move each selected row up one slot, preserving their relative order. No-op if
+        the top-most selected row is already first."""
+        indices = self._selected_indices()
+        if not indices or indices[0] == 0:
             return
-        index = self._order.index(self._selected)
-        if index > 0:
+        # Ascending order: each row swaps into the slot just vacated (or held by an
+        # unselected row), so contiguous blocks shift up together.
+        for index in indices:
             self._order[index - 1], self._order[index] = (
                 self._order[index],
                 self._order[index - 1],
             )
-            self._regrid()
-            self._refresh_button_state()
+        self._regrid()
+        self._refresh_button_state()
 
     def _on_move_down(self):
-        if self._selected is None:
+        """Move each selected row down one slot, preserving their relative order. No-op if
+        the bottom-most selected row is already last."""
+        indices = self._selected_indices()
+        if not indices or indices[-1] == len(self._order) - 1:
             return
-        index = self._order.index(self._selected)
-        if index < len(self._order) - 1:
+        for index in reversed(indices):
             self._order[index + 1], self._order[index] = (
                 self._order[index],
                 self._order[index + 1],
             )
-            self._regrid()
-            self._refresh_button_state()
+        self._regrid()
+        self._refresh_button_state()
 
     def _open_sort(self):
         x = self._sort_button.winfo_rootx()
@@ -431,10 +514,11 @@ class VideoList:
         self.sort_by(self._sort_field.get(), self._sort_descending.get())
 
     def _refresh_button_state(self):
-        index = self._order.index(self._selected) if self._selected is not None else None
-        self._remove_button["state"] = tk.NORMAL if index is not None else tk.DISABLED
-        # Up/Down are only meaningful when there is somewhere to move the selection.
-        self._up_button["state"] = tk.NORMAL if index else tk.DISABLED
-        can_move_down = index is not None and index < len(self._order) - 1
+        indices = self._selected_indices()
+        self._remove_button["state"] = tk.NORMAL if indices else tk.DISABLED
+        # Up/Down are only meaningful when there is somewhere to move the whole selection.
+        can_move_up = bool(indices) and indices[0] > 0
+        self._up_button["state"] = tk.NORMAL if can_move_up else tk.DISABLED
+        can_move_down = bool(indices) and indices[-1] < len(self._order) - 1
         self._down_button["state"] = tk.NORMAL if can_move_down else tk.DISABLED
         self._sort_button["state"] = tk.NORMAL if self._order else tk.DISABLED

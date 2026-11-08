@@ -150,3 +150,406 @@ def test_add_video_missing_path_warns_and_continues_loading_remaining(monkeypatc
     assert added_infos[0].name == "valid.mp4"
     assert len(warnings) == 1
     assert warnings[0]["parent"] == "wizard-win"
+
+
+# --- Multi-selection, Select All and removal -----------------------------------------------
+
+
+class _FakeButton:
+    def __init__(self):
+        self.values = {}
+
+    def __setitem__(self, key, value):
+        self.values[key] = value
+
+    def __getitem__(self, key):
+        return self.values[key]
+
+
+class _FakeFrame:
+    def __init__(self, iid: str, destroyed: list):
+        self._iid = iid
+        self._destroyed = destroyed
+
+    def destroy(self):
+        self._destroyed.append(self._iid)
+
+
+def _selectable_list(count: int) -> VideoList:
+    """A Tk-free list of `count` rows (iids "r0", "r1", ...) with selection state, recording
+    frame destroys in `area.destroyed` and `_regrid` calls in `area.regrids`."""
+    destroyed = []
+    rows = {}
+    for index in range(count):
+        row = _row(f"v{index}.mp4", f"/tmp/v{index}.mp4")
+        row.frame = _FakeFrame(f"r{index}", destroyed)
+        rows[f"r{index}"] = row
+    area = _list_with(rows, [f"r{index}" for index in range(count)])
+    area._selected = set()
+    area._anchor = None
+    area.destroyed = destroyed
+    area.regrids = []
+    area._regrid = lambda: area.regrids.append(list(area._order))
+    area._paint_selection = lambda: None
+    area._refresh_button_state = lambda: None
+    return area
+
+
+def _with_buttons(area: VideoList) -> VideoList:
+    area._remove_button = _FakeButton()
+    area._up_button = _FakeButton()
+    area._down_button = _FakeButton()
+    area._sort_button = _FakeButton()
+    # Use the real implementation rather than the no-op stub.
+    del area._refresh_button_state
+    return area
+
+
+def _button_states(area: VideoList) -> dict:
+    return {
+        "remove": area._remove_button["state"],
+        "up": area._up_button["state"],
+        "down": area._down_button["state"],
+        "sort": area._sort_button["state"],
+    }
+
+
+def test_select_all_selects_every_row_and_selected_videos_in_display_order():
+    area = _selectable_list(3)
+    area._order = ["r2", "r0", "r1"]
+
+    area.select_all()
+
+    assert area._selected == {"r0", "r1", "r2"}
+    assert area.selected_videos == ["/tmp/v2.mp4", "/tmp/v0.mp4", "/tmp/v1.mp4"]
+
+
+def test_selected_videos_lists_only_selected_rows_in_display_order():
+    area = _selectable_list(4)
+    area._selected = {"r3", "r1"}
+
+    assert area.selected_videos == ["/tmp/v1.mp4", "/tmp/v3.mp4"]
+
+
+def test_clear_selection_empties_selection():
+    area = _selectable_list(3)
+    area.select_all()
+
+    area.clear_selection(object())
+
+    assert area._selected == set()
+    assert area.selected_videos == []
+
+
+def test_plain_click_resets_to_single_row_and_sets_anchor():
+    area = _selectable_list(4)
+    area._selected = {"r0", "r1", "r3"}
+    area._anchor = "r0"
+
+    area._on_click("r2")
+
+    assert area._selected == {"r2"}
+    assert area._anchor == "r2"
+
+
+def test_shift_click_selects_range_forward_and_keeps_anchor():
+    area = _selectable_list(5)
+    area._on_click("r1")
+
+    area._on_shift_click("r3")
+
+    assert area._selected == {"r1", "r2", "r3"}
+    assert area._anchor == "r1"
+
+
+def test_shift_click_selects_range_backward_and_keeps_anchor():
+    area = _selectable_list(5)
+    area._on_click("r3")
+
+    area._on_shift_click("r0")
+
+    assert area._selected == {"r0", "r1", "r2", "r3"}
+    assert area._anchor == "r3"
+
+
+def test_shift_click_range_can_be_adjusted_from_same_anchor():
+    area = _selectable_list(5)
+    area._on_click("r2")
+    area._on_shift_click("r4")
+
+    area._on_shift_click("r1")
+
+    assert area._selected == {"r1", "r2"}
+    assert area._anchor == "r2"
+
+
+def test_shift_click_without_anchor_acts_as_plain_click():
+    area = _selectable_list(4)
+    area._selected = {"r0"}
+
+    area._on_shift_click("r2")
+
+    assert area._selected == {"r2"}
+    assert area._anchor == "r2"
+
+
+def test_shift_click_with_stale_anchor_acts_as_plain_click():
+    area = _selectable_list(4)
+    area._anchor = "gone"
+
+    area._on_shift_click("r1")
+
+    assert area._selected == {"r1"}
+    assert area._anchor == "r1"
+
+
+def test_toggle_click_adds_and_removes_rows_and_sets_anchor():
+    area = _selectable_list(4)
+    area._on_click("r0")
+
+    area._on_toggle_click("r2")
+    assert area._selected == {"r0", "r2"}
+    assert area._anchor == "r2"
+
+    area._on_toggle_click("r0")
+    assert area._selected == {"r2"}
+    assert area._anchor == "r0"
+
+
+def test_remove_selected_with_nothing_selected_is_noop():
+    area = _selectable_list(3)
+
+    area.remove_selected()
+
+    assert area.destroyed == []
+    assert area.regrids == []
+    assert area._order == ["r0", "r1", "r2"]
+    assert len(area._rows) == 3
+
+
+def test_remove_selected_non_contiguous_rows_selects_row_at_lowest_removed_index():
+    area = _selectable_list(5)
+    area._selected = {"r1", "r3"}
+    area._anchor = "r3"
+    refreshed = []
+    area._refresh_button_state = lambda: refreshed.append(True)
+
+    area.remove_selected()
+
+    assert sorted(area.destroyed) == ["r1", "r3"]
+    assert area._order == ["r0", "r2", "r4"]
+    assert set(area._rows) == {"r0", "r2", "r4"}
+    assert area.regrids == [["r0", "r2", "r4"]]
+    # r2 fell into slot 1, the lowest removed index.
+    assert area._selected == {"r2"}
+    assert area._anchor == "r2"
+    assert refreshed
+
+
+def test_remove_selected_last_row_selects_new_last_row():
+    area = _selectable_list(3)
+    area._on_click("r2")
+
+    area.remove_selected()
+
+    assert area.destroyed == ["r2"]
+    assert area._order == ["r0", "r1"]
+    assert area._selected == {"r1"}
+    assert area._anchor == "r1"
+
+
+def test_remove_selected_trailing_block_clamps_to_new_last_row():
+    area = _selectable_list(4)
+    area._selected = {"r2", "r3"}
+
+    area.remove_selected()
+
+    assert area._order == ["r0", "r1"]
+    assert area._selected == {"r1"}
+    assert area._anchor == "r1"
+
+
+def test_remove_selected_all_rows_leaves_empty_selection_and_no_anchor():
+    area = _selectable_list(3)
+    area.select_all()
+    area._anchor = "r1"
+    refreshed = []
+    area._refresh_button_state = lambda: refreshed.append(True)
+
+    area.remove_selected()
+
+    assert sorted(area.destroyed) == ["r0", "r1", "r2"]
+    assert area._order == []
+    assert area._rows == {}
+    assert area._selected == set()
+    assert area._anchor is None
+    assert area.videos == []
+    assert refreshed
+
+
+def test_remove_selected_after_select_all_disables_buttons():
+    area = _with_buttons(_selectable_list(2))
+    area.select_all()
+
+    area.remove_selected()
+
+    assert _button_states(area) == {
+        "remove": "disabled",
+        "up": "disabled",
+        "down": "disabled",
+        "sort": "disabled",
+    }
+
+
+def test_move_up_shifts_contiguous_block_preserving_order():
+    area = _selectable_list(4)
+    area._selected = {"r2", "r3"}
+
+    area._on_move_up()
+
+    assert area._order == ["r0", "r2", "r3", "r1"]
+    assert area._selected == {"r2", "r3"}
+    assert area.regrids == [["r0", "r2", "r3", "r1"]]
+
+
+def test_move_down_shifts_contiguous_block_preserving_order():
+    area = _selectable_list(4)
+    area._selected = {"r0", "r1"}
+
+    area._on_move_down()
+
+    assert area._order == ["r2", "r0", "r1", "r3"]
+    assert area._selected == {"r0", "r1"}
+    assert area.regrids == [["r2", "r0", "r1", "r3"]]
+
+
+def test_move_up_is_noop_when_top_selected_row_is_first():
+    area = _selectable_list(4)
+    area._selected = {"r0", "r2"}
+
+    area._on_move_up()
+
+    assert area._order == ["r0", "r1", "r2", "r3"]
+    assert area.regrids == []
+
+
+def test_move_down_is_noop_when_bottom_selected_row_is_last():
+    area = _selectable_list(4)
+    area._selected = {"r1", "r3"}
+
+    area._on_move_down()
+
+    assert area._order == ["r0", "r1", "r2", "r3"]
+    assert area.regrids == []
+
+
+def test_move_with_empty_selection_is_noop():
+    area = _selectable_list(3)
+
+    area._on_move_up()
+    area._on_move_down()
+
+    assert area._order == ["r0", "r1", "r2"]
+    assert area.regrids == []
+
+
+def test_move_down_non_contiguous_selection_displaces_unselected_rows():
+    area = _selectable_list(4)
+    area._selected = {"r0", "r2"}
+
+    area._on_move_down()
+
+    assert area._order == ["r1", "r0", "r3", "r2"]
+    assert area._selected_indices() == [1, 3]
+
+
+def test_move_up_non_contiguous_selection_displaces_unselected_rows():
+    area = _selectable_list(4)
+    area._selected = {"r1", "r3"}
+
+    area._on_move_up()
+
+    assert area._order == ["r1", "r0", "r3", "r2"]
+    assert area._selected_indices() == [0, 2]
+
+
+def test_refresh_button_state_empty_list():
+    area = _with_buttons(_selectable_list(0))
+
+    area._refresh_button_state()
+
+    assert _button_states(area) == {
+        "remove": "disabled",
+        "up": "disabled",
+        "down": "disabled",
+        "sort": "disabled",
+    }
+
+
+def test_refresh_button_state_rows_without_selection():
+    area = _with_buttons(_selectable_list(3))
+
+    area._refresh_button_state()
+
+    assert _button_states(area) == {
+        "remove": "disabled",
+        "up": "disabled",
+        "down": "disabled",
+        "sort": "normal",
+    }
+
+
+def test_refresh_button_state_single_top_row_selected():
+    area = _with_buttons(_selectable_list(3))
+    area._selected = {"r0"}
+
+    area._refresh_button_state()
+
+    assert _button_states(area) == {
+        "remove": "normal",
+        "up": "disabled",
+        "down": "normal",
+        "sort": "normal",
+    }
+
+
+def test_refresh_button_state_single_bottom_row_selected():
+    area = _with_buttons(_selectable_list(3))
+    area._selected = {"r2"}
+
+    area._refresh_button_state()
+
+    assert _button_states(area) == {
+        "remove": "normal",
+        "up": "normal",
+        "down": "disabled",
+        "sort": "normal",
+    }
+
+
+def test_refresh_button_state_multiple_middle_rows_selected():
+    area = _with_buttons(_selectable_list(5))
+    area._selected = {"r1", "r3"}
+
+    area._refresh_button_state()
+
+    assert _button_states(area) == {
+        "remove": "normal",
+        "up": "normal",
+        "down": "normal",
+        "sort": "normal",
+    }
+
+
+def test_refresh_button_state_all_rows_selected():
+    area = _with_buttons(_selectable_list(3))
+    area._selected = {"r0", "r1", "r2"}
+
+    area._refresh_button_state()
+
+    assert _button_states(area) == {
+        "remove": "normal",
+        "up": "disabled",
+        "down": "disabled",
+        "sort": "normal",
+    }

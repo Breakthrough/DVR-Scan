@@ -34,7 +34,7 @@ from tkinterdnd2 import DND_FILES, TkinterDnD
 import dvr_scan.presets as presets
 from dvr_scan.app.about_window import AboutWindow
 from dvr_scan.app.common import MenuBar, register_icon
-from dvr_scan.app.region_editor import RegionEditor
+from dvr_scan.app.region_editor import ACCELERATOR_KEY, RegionEditor
 from dvr_scan.app.scan_window import ScanWindow, launch_scan
 from dvr_scan.app.thumbnails import (
     FILMSTRIP_FRAMES,
@@ -244,12 +244,18 @@ class InputArea:
         self._videos.column("path", width=80, minwidth=80, stretch=False)
 
         self._videos.grid(row=0, column=0, columnspan=6, sticky=tk.NSEW)
+        # The Treeview takes keyboard focus when clicked, so these widget-level bindings only
+        # fire while the list is focused and never interfere with text entries elsewhere.
+        for sequence in ("<<SelectAll>>", "<Control-a>", "<Control-A>"):
+            self._videos.bind(sequence, self._on_select_all_key)
+        for sequence in ("<Delete>", "<BackSpace>"):
+            self._videos.bind(sequence, self._on_remove_key)
 
         ttk.Button(root, text="Add", command=self.add_video).grid(
             row=2, column=0, sticky=EXPAND_HORIZONTAL, padx=PADDING
         )
         self._remove_button = ttk.Button(
-            root, text="Remove", state=tk.DISABLED, command=self._on_remove
+            root, text="Remove", state=tk.DISABLED, command=self.remove_selected
         )
         self._remove_button.grid(row=2, column=1, sticky=EXPAND_HORIZONTAL, padx=PADDING)
         ttk.Button(
@@ -424,10 +430,23 @@ class InputArea:
     def concatenate(self) -> bool:
         return self._concatenate.get()
 
-    def _on_remove(self):
+    def select_all(self):
+        """Select every video in the list."""
+        self._videos.selection_set(self._videos.get_children())
+
+    def remove_selected(self):
+        """Remove the selected videos from the list."""
         for selection in self._videos.selection():
             self._videos.delete(selection)
         self._refresh_remove_state()
+
+    def _on_select_all_key(self, _event=None):
+        self.select_all()
+        return "break"
+
+    def _on_remove_key(self, _event=None):
+        self.remove_selected()
+        return "break"
 
     def _on_move_up(self):
         for selection in self._videos.selection():
@@ -1826,6 +1845,20 @@ class Application:
             label="Quit",
             underline=0,
             command=self._destroy,
+        )
+
+        edit_menu = self._menubar.add_menu("Edit", underline=0)
+        edit_menu.add_command(
+            label="Select All",
+            underline=0,
+            accelerator=f"{ACCELERATOR_KEY}+A",
+            command=self._input_area.select_all,
+        )
+        edit_menu.add_command(
+            label="Remove Selected",
+            underline=0,
+            accelerator="Del",
+            command=self._input_area.remove_selected,
         )
 
         settings_menu = self._menubar.add_menu("Settings", underline=0)
