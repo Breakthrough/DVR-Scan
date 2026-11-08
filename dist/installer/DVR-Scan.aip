@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<DOCUMENT Type="Advanced Installer" CreateVersion="13.5" version="23.2" Modules="professional" RootPath="." Language="en" Id="{3919FEC9-E2C3-453E-81FD-9E8BABBE2CA4}">
+<DOCUMENT Type="Advanced Installer" CreateVersion="13.5" version="23.6" Modules="professional" RootPath="." Language="en" Id="{3919FEC9-E2C3-453E-81FD-9E8BABBE2CA4}">
   <COMPONENT cid="caphyon.advinst.msicomp.MsiPropsComponent">
     <ROW Property="AI_APP_FILE" Value="[#dvrscanapp.exe]"/>
     <ROW Property="AI_BITMAP_DISPLAY_MODE" Value="0"/>
@@ -22,10 +22,10 @@
     <ROW Property="CTRLS" Value="2"/>
     <ROW Property="DialogBitmap" Value="dialog.jpg" MultiBuildValue="DefaultBuild:installer_logo.jpg" Type="1" MsiKey="DialogBitmap"/>
     <ROW Property="Manufacturer" Value="Brandon Castellano"/>
-    <ROW Property="ProductCode" Value="1033:{022DFFA3-6E85-4A94-AD2B-326C13825CFE} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{5017F205-CF90-4B95-A4EF-53A2E276B236} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="DVR-Scan"/>
-    <ROW Property="ProductVersion" Value="1.8.2" Options="32"/>
+    <ROW Property="ProductVersion" Value="2.0" Options="32"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND"/>
     <ROW Property="UpgradeCode" Value="{8FEF5940-4574-4C5D-9776-2CDDC0375510}"/>
     <ROW Property="WindowsType9X" MultiBuildValue="DefaultBuild:Windows 9x/ME" ValueLocId="-"/>
@@ -71,45 +71,99 @@
     <ROW Directory="SystemV_Dir" Directory_Parent="tzdata_Dir" DefaultDir="SystemV"/>
     <ROW Directory="TARGETDIR" DefaultDir="SourceDir"/>
     <ROW Directory="US_Dir" Directory_Parent="tzdata_Dir" DefaultDir="US"/>
+    <ROW Directory="_core_1_Dir" Directory_Parent="numpy_1_Dir" DefaultDir="_core"/>
     <ROW Directory="_core_Dir" Directory_Parent="numpy_Dir" DefaultDir="_core"/>
     <ROW Directory="_internal_Dir" Directory_Parent="APPDIR" DefaultDir="_INTER~1|_internal"/>
     <ROW Directory="_tcl_data_Dir" Directory_Parent="_internal_Dir" DefaultDir="_TCL_D~1|_tcl_data"/>
     <ROW Directory="_tk_data_Dir" Directory_Parent="_internal_Dir" DefaultDir="_tk_data"/>
     <ROW Directory="assets_Dir" Directory_Parent="docs_Dir" DefaultDir="assets"/>
-    <ROW Directory="charset_normalizer_Dir" Directory_Parent="_internal_Dir" DefaultDir="CHARSE~1|charset_normalizer"/>
+    <ROW Directory="audio_Dir" Directory_Parent="av_Dir" DefaultDir="audio"/>
+    <ROW Directory="av.libs_Dir" Directory_Parent="_internal_Dir" DefaultDir="AV~1.LIB|av.libs"/>
+    <ROW Directory="av19.0.2.distinfo_Dir" Directory_Parent="_internal_Dir" DefaultDir="AV-190~1.DIS|av-19.0.2.dist-info"/>
+    <ROW Directory="av_Dir" Directory_Parent="_internal_Dir" DefaultDir="av"/>
+    <ROW Directory="codec_Dir" Directory_Parent="av_Dir" DefaultDir="codec"/>
+    <ROW Directory="common_Dir" Directory_Parent="src_1_Dir" DefaultDir="common"/>
+    <ROW Directory="container_Dir" Directory_Parent="av_Dir" DefaultDir="CONTAI~1|container"/>
     <ROW Directory="cv2_Dir" Directory_Parent="_internal_Dir" DefaultDir="cv2"/>
     <ROW Directory="data_Dir" Directory_Parent="cv2_Dir" DefaultDir="data"/>
+    <ROW Directory="distributions_Dir" Directory_Parent="src_Dir" DefaultDir="DISTRI~1|distributions"/>
     <ROW Directory="docs_Dir" Directory_Parent="APPDIR" DefaultDir="docs"/>
     <ROW Directory="dvr_scan_Dir" Directory_Parent="_internal_Dir" DefaultDir="dvr_scan"/>
     <ROW Directory="encoding_Dir" Directory_Parent="_tcl_data_Dir" DefaultDir="encoding"/>
+    <ROW Directory="fft_1_Dir" Directory_Parent="numpy_1_Dir" DefaultDir="fft"/>
     <ROW Directory="fft_Dir" Directory_Parent="numpy_Dir" DefaultDir="fft"/>
-    <ROW Directory="gapi_Dir" Directory_Parent="cv2_Dir" DefaultDir="gapi"/>
+    <ROW Directory="filter_Dir" Directory_Parent="av_Dir" DefaultDir="filter"/>
+    <ROW Directory="highway_Dir" Directory_Parent="src_1_Dir" DefaultDir="highway"/>
     <ROW Directory="http1.0_Dir" Directory_Parent="_tcl_data_Dir" DefaultDir="http1.0"/>
     <ROW Directory="images_Dir" Directory_Parent="_tk_data_Dir" DefaultDir="images"/>
+    <ROW Directory="include_Dir" Directory_Parent="_core_1_Dir" DefaultDir="include"/>
     <ROW Directory="javascripts_Dir" Directory_Parent="assets_Dir" DefaultDir="JAVASC~1|javascripts"/>
+    <ROW Directory="lapack_lite_Dir" Directory_Parent="linalg_1_Dir" DefaultDir="LAPACK~1|lapack_lite"/>
+    <ROW Directory="libdivide_Dir" Directory_Parent="numpy_2_Dir" DefaultDir="LIBDIV~1|libdivide"/>
+    <ROW Directory="licenses_1_Dir" Directory_Parent="numpy2.5.4.distinfo_Dir" DefaultDir="licenses"/>
+    <ROW Directory="licenses_2_Dir" Directory_Parent="tqdm4.70.1.distinfo_Dir" DefaultDir="licenses"/>
+    <ROW Directory="licenses_Dir" Directory_Parent="av19.0.2.distinfo_Dir" DefaultDir="licenses"/>
+    <ROW Directory="linalg_1_Dir" Directory_Parent="numpy_1_Dir" DefaultDir="linalg"/>
     <ROW Directory="linalg_Dir" Directory_Parent="numpy_Dir" DefaultDir="linalg"/>
+    <ROW Directory="linuxarm64_Dir" Directory_Parent="tkdnd_Dir" DefaultDir="LINUX-~1|linux-arm64"/>
+    <ROW Directory="linuxarm64tcl9_Dir" Directory_Parent="tkdnd_Dir" DefaultDir="LINUX-~2|linux-arm64-tcl9"/>
+    <ROW Directory="linuxx64_Dir" Directory_Parent="tkdnd_Dir" DefaultDir="LINUX-~3|linux-x64"/>
+    <ROW Directory="linuxx64tcl9_Dir" Directory_Parent="tkdnd_Dir" DefaultDir="LINUX-~4|linux-x64-tcl9"/>
+    <ROW Directory="ma_Dir" Directory_Parent="numpy_1_Dir" DefaultDir="ma"/>
     <ROW Directory="mat_wrapper_Dir" Directory_Parent="cv2_Dir" DefaultDir="MAT_WR~1|mat_wrapper"/>
     <ROW Directory="misc_Dir" Directory_Parent="cv2_Dir" DefaultDir="misc"/>
     <ROW Directory="msgs_1_Dir" Directory_Parent="_tk_data_Dir" DefaultDir="msgs"/>
     <ROW Directory="msgs_Dir" Directory_Parent="_tcl_data_Dir" DefaultDir="msgs"/>
+    <ROW Directory="mt19937_Dir" Directory_Parent="src_Dir" DefaultDir="mt19937"/>
+    <ROW Directory="multiarray_Dir" Directory_Parent="src_1_Dir" DefaultDir="MULTIA~1|multiarray"/>
+    <ROW Directory="npysort_Dir" Directory_Parent="src_1_Dir" DefaultDir="npysort"/>
     <ROW Directory="numpy.libs_Dir" Directory_Parent="_internal_Dir" DefaultDir="NUMPY~1.LIB|numpy.libs"/>
+    <ROW Directory="numpy2.5.4.distinfo_Dir" Directory_Parent="_internal_Dir" DefaultDir="NUMPY-~1.DIS|numpy-2.5.4.dist-info"/>
+    <ROW Directory="numpy_1_Dir" Directory_Parent="licenses_1_Dir" DefaultDir="numpy"/>
+    <ROW Directory="numpy_2_Dir" Directory_Parent="include_Dir" DefaultDir="numpy"/>
     <ROW Directory="numpy_Dir" Directory_Parent="_internal_Dir" DefaultDir="numpy"/>
     <ROW Directory="opt0.4_Dir" Directory_Parent="_tcl_data_Dir" DefaultDir="opt0.4"/>
+    <ROW Directory="osxarm64_Dir" Directory_Parent="tkdnd_Dir" DefaultDir="OSX-AR~1|osx-arm64"/>
+    <ROW Directory="osxarm64tcl9_Dir" Directory_Parent="tkdnd_Dir" DefaultDir="OSX-AR~2|osx-arm64-tcl9"/>
+    <ROW Directory="osxx64_Dir" Directory_Parent="tkdnd_Dir" DefaultDir="osx-x64"/>
+    <ROW Directory="pcg64_Dir" Directory_Parent="src_Dir" DefaultDir="pcg64"/>
+    <ROW Directory="philox_Dir" Directory_Parent="src_Dir" DefaultDir="philox"/>
+    <ROW Directory="pocketfft_Dir" Directory_Parent="fft_1_Dir" DefaultDir="POCKET~1|pocketfft"/>
+    <ROW Directory="pythoncapicompat_Dir" Directory_Parent="common_Dir" DefaultDir="PYTHON~1|pythoncapi-compat"/>
+    <ROW Directory="random_1_Dir" Directory_Parent="numpy_1_Dir" DefaultDir="random"/>
     <ROW Directory="random_Dir" Directory_Parent="numpy_Dir" DefaultDir="random"/>
+    <ROW Directory="sfc64_Dir" Directory_Parent="src_Dir" DefaultDir="sfc64"/>
+    <ROW Directory="sidedata_Dir" Directory_Parent="av_Dir" DefaultDir="sidedata"/>
+    <ROW Directory="splitmix64_Dir" Directory_Parent="src_Dir" DefaultDir="SPLITM~1|splitmix64"/>
+    <ROW Directory="src_1_Dir" Directory_Parent="_core_1_Dir" DefaultDir="src"/>
+    <ROW Directory="src_Dir" Directory_Parent="random_1_Dir" DefaultDir="src"/>
     <ROW Directory="stylesheets_Dir" Directory_Parent="assets_Dir" DefaultDir="STYLES~1|stylesheets"/>
+    <ROW Directory="subtitles_Dir" Directory_Parent="av_Dir" DefaultDir="SUBTIT~1|subtitles"/>
+    <ROW Directory="svml_Dir" Directory_Parent="umath_Dir" DefaultDir="svml"/>
+    <ROW Directory="tkdnd_Dir" Directory_Parent="tkinterdnd2_Dir" DefaultDir="tkdnd"/>
+    <ROW Directory="tkinterdnd2_Dir" Directory_Parent="_internal_Dir" DefaultDir="TKINTE~1|tkinterdnd2"/>
+    <ROW Directory="tqdm4.70.1.distinfo_Dir" Directory_Parent="_internal_Dir" DefaultDir="TQDM-4~1.DIS|tqdm-4.70.1.dist-info"/>
     <ROW Directory="ttk_Dir" Directory_Parent="_tk_data_Dir" DefaultDir="ttk"/>
     <ROW Directory="typing_Dir" Directory_Parent="cv2_Dir" DefaultDir="typing"/>
     <ROW Directory="tzdata_Dir" Directory_Parent="_tcl_data_Dir" DefaultDir="tzdata"/>
+    <ROW Directory="umath_Dir" Directory_Parent="src_1_Dir" DefaultDir="umath"/>
     <ROW Directory="utils_Dir" Directory_Parent="cv2_Dir" DefaultDir="utils"/>
-    <ROW Directory="yaml_Dir" Directory_Parent="_internal_Dir" DefaultDir="yaml"/>
+    <ROW Directory="video_Dir" Directory_Parent="av_Dir" DefaultDir="video"/>
+    <ROW Directory="winarm64_Dir" Directory_Parent="tkdnd_Dir" DefaultDir="WIN-AR~1|win-arm64"/>
+    <ROW Directory="winx64_Dir" Directory_Parent="tkdnd_Dir" DefaultDir="win-x64"/>
+    <ROW Directory="winx64tcl9_Dir" Directory_Parent="tkdnd_Dir" DefaultDir="WIN-X6~1|win-x64-tcl9"/>
+    <ROW Directory="winx86_Dir" Directory_Parent="tkdnd_Dir" DefaultDir="win-x86"/>
+    <ROW Directory="winx86tcl9_Dir" Directory_Parent="tkdnd_Dir" DefaultDir="WIN-X8~1|win-x86-tcl9"/>
+    <ROW Directory="x86simdsort_Dir" Directory_Parent="npysort_Dir" DefaultDir="X86-SI~1|x86-simd-sort"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCompsComponent">
     <ROW Component="ACT" ComponentId="{D95A9999-B504-484E-A1D8-14BF76FBD948}" Directory_="Australia_Dir" Attributes="0" KeyPath="ACT" Type="0"/>
-    <ROW Component="AI_CustomARPName" ComponentId="{499B9B44-78E1-409D-A799-D919B27BC279}" Directory_="APPDIR" Attributes="260" KeyPath="DisplayName" Options="1"/>
+    <ROW Component="AI_CustomARPName" ComponentId="{69FFF83B-5E0E-456D-B4DD-8EEB8DF52F95}" Directory_="APPDIR" Attributes="260" KeyPath="DisplayName" Options="1"/>
     <ROW Component="AI_DisableModify" ComponentId="{653C9260-5E39-41EA-9C74-362F9C299BED}" Directory_="APPDIR" Attributes="260" KeyPath="NoModify" Options="1"/>
     <ROW Component="AI_SHORTCUTSREG" ComponentId="{271A6EBA-4BA8-47EE-B3BA-34DC4C1A6531}" Directory_="APPDIR" Attributes="260" KeyPath="AI_SHORTCUTSREG" Options="1"/>
     <ROW Component="APPDIR" ComponentId="{088A429B-96BF-40BE-9BA2-B2CA5EB76862}" Directory_="APPDIR" Attributes="0"/>
     <ROW Component="AST4" ComponentId="{D3AA5737-678B-426E-B6DD-A5D29A98FCBC}" Directory_="SystemV_Dir" Attributes="0" KeyPath="AST4" Type="0"/>
+    <ROW Component="AUTHORS.py" ComponentId="{4A7CED6F-97D9-4519-9758-A2B15C462A85}" Directory_="licenses_Dir" Attributes="0" KeyPath="AUTHORS.py" Type="0"/>
     <ROW Component="Abidjan" ComponentId="{C33E848E-7245-42DC-BB09-CADB5358E40F}" Directory_="Africa_Dir" Attributes="0" KeyPath="Abidjan" Type="0"/>
     <ROW Component="Acre" ComponentId="{5D85CE14-6412-40CD-A914-B799B0EC8455}" Directory_="Brazil_Dir" Attributes="0" KeyPath="Acre" Type="0"/>
     <ROW Component="Adak" ComponentId="{C5AB969C-5236-4489-9BDB-068BFFE7B670}" Directory_="America_Dir" Attributes="0" KeyPath="Adak" Type="0"/>
@@ -125,12 +179,31 @@
     <ROW Component="Buenos_Aires" ComponentId="{F6754B32-F5F7-4940-AE6D-34584A16B1C6}" Directory_="Argentina_Dir" Attributes="0" KeyPath="Buenos_Aires" Type="0"/>
     <ROW Component="C4FE6FD5B7C4D07B3A313E754A9A6A8" ComponentId="{0DC87E5B-5F60-4A9A-AB46-BF92FDC477F3}" Directory_="APPDIR" Attributes="260" KeyPath="C4FE6FD5B7C4D07B3A313E754A9A6A8" Options="2"/>
     <ROW Component="CET" ComponentId="{D5E3C26E-66EE-4A71-AF3E-A5079C13766D}" Directory_="tzdata_Dir" Attributes="0" KeyPath="CET" Type="0"/>
+    <ROW Component="COPYING" ComponentId="{8C06C3FB-E2D4-47C2-8D70-731B39F212AA}" Directory_="pythoncapicompat_Dir" Attributes="0" KeyPath="COPYING" Type="0"/>
     <ROW Component="Casey" ComponentId="{3792A477-85AE-4E17-BE0A-7E1A50AF6ABD}" Directory_="Antarctica_Dir" Attributes="0" KeyPath="Casey" Type="0"/>
     <ROW Component="Continental" ComponentId="{3AAB3360-C5DA-4585-9542-0F4111B6F082}" Directory_="Chile_Dir" Attributes="0" KeyPath="Continental" Type="0"/>
+    <ROW Component="DELVEWHEEL" ComponentId="{3B3DC918-3C36-4E9E-8FC6-DB08E45306D2}" Directory_="av19.0.2.distinfo_Dir" Attributes="0" KeyPath="DELVEWHEEL" Type="0"/>
+    <ROW Component="DELVEWHEEL_1" ComponentId="{014BEEAD-7BC8-45C8-A37A-9DBFDC87F391}" Directory_="numpy2.5.4.distinfo_Dir" Attributes="0" KeyPath="DELVEWHEEL_1" Type="0"/>
     <ROW Component="GMT" ComponentId="{DA91BAC8-39B4-4C1D-837B-DE3DB5A07A23}" Directory_="Etc_Dir" Attributes="0" KeyPath="GMT" Type="0"/>
     <ROW Component="Indianapolis" ComponentId="{A5CBFD37-E2B2-4970-9751-3E5E579FD9EE}" Directory_="Indiana_Dir" Attributes="0" KeyPath="Indianapolis" Type="0"/>
+    <ROW Component="LICENCE" ComponentId="{26564873-6326-45A3-BFC2-649311F7FF3D}" Directory_="licenses_2_Dir" Attributes="0" KeyPath="LICENCE" Type="0"/>
     <ROW Component="LICENSE" ComponentId="{72CE02CB-34F8-4662-9A9D-CE17C62EFCE7}" Directory_="APPDIR" Attributes="0" KeyPath="LICENSE" Type="0"/>
+    <ROW Component="LICENSE.md" ComponentId="{8DB867A2-E6EA-4AC9-960D-EF49C71DD8A2}" Directory_="pocketfft_Dir" Attributes="0" KeyPath="LICENSE.md" Type="0"/>
+    <ROW Component="LICENSE.md_1" ComponentId="{AC22074E-C641-463F-8BE4-F6F6949D3AA5}" Directory_="random_1_Dir" Attributes="0" KeyPath="LICENSE.md_1" Type="0"/>
+    <ROW Component="LICENSE.md_2" ComponentId="{5B9E7827-D863-439C-9F8B-E1A418529C4B}" Directory_="distributions_Dir" Attributes="0" KeyPath="LICENSE.md_2" Type="0"/>
+    <ROW Component="LICENSE.md_3" ComponentId="{C6534200-7C01-4EF9-81F0-90B56ACCBAFE}" Directory_="mt19937_Dir" Attributes="0" KeyPath="LICENSE.md_3" Type="0"/>
+    <ROW Component="LICENSE.md_4" ComponentId="{F740D174-59DE-4537-8D8F-6AAA3E0B5DA2}" Directory_="pcg64_Dir" Attributes="0" KeyPath="LICENSE.md_4" Type="0"/>
+    <ROW Component="LICENSE.md_5" ComponentId="{D73C7A91-35FD-41F6-87D1-0C9F6F2326C0}" Directory_="philox_Dir" Attributes="0" KeyPath="LICENSE.md_5" Type="0"/>
+    <ROW Component="LICENSE.md_6" ComponentId="{D857AB9B-757D-445D-ACA1-8BE32E894DDC}" Directory_="sfc64_Dir" Attributes="0" KeyPath="LICENSE.md_6" Type="0"/>
+    <ROW Component="LICENSE.md_7" ComponentId="{177619BE-E3E7-481C-9874-0ED6799C864A}" Directory_="splitmix64_Dir" Attributes="0" KeyPath="LICENSE.md_7" Type="0"/>
+    <ROW Component="LICENSE.md_8" ComponentId="{DE870454-8109-4941-9DB2-A622D5AEB579}" Directory_="x86simdsort_Dir" Attributes="0" KeyPath="LICENSE.md_8" Type="0"/>
+    <ROW Component="LICENSE.txt" ComponentId="{D6ED4FB4-824B-4BE9-8949-EF7315548A85}" Directory_="licenses_1_Dir" Attributes="0" KeyPath="LICENSE.txt_1" Type="0"/>
+    <ROW Component="LICENSE.txt_1" ComponentId="{52CB0845-509C-46E7-9976-E7381A9F525E}" Directory_="lapack_lite_Dir" Attributes="0" KeyPath="LICENSE.txt_2" Type="0"/>
+    <ROW Component="LICENSE.txt_2" ComponentId="{84FD200A-53DB-47B7-9E59-875E7C6679D1}" Directory_="libdivide_Dir" Attributes="0" KeyPath="LICENSE.txt_3" Type="0"/>
     <ROW Component="LICENSEFFMPEG" ComponentId="{7FF009E0-E703-4184-A411-754BF36869CA}" Directory_="APPDIR" Attributes="0" KeyPath="LICENSEFFMPEG"/>
+    <ROW Component="LICENSE_1" ComponentId="{ECFF4D73-EFE3-49B0-BBF1-9B62283A0355}" Directory_="ma_Dir" Attributes="0" KeyPath="LICENSE_2" Type="0"/>
+    <ROW Component="LICENSE_2" ComponentId="{A2B24836-5A0E-465F-A42E-D6B954F8AC12}" Directory_="highway_Dir" Attributes="0" KeyPath="LICENSE_3" Type="0"/>
+    <ROW Component="LICENSE_3" ComponentId="{A40B649F-0770-480F-BD4B-7BE3EF769801}" Directory_="svml_Dir" Attributes="0" KeyPath="LICENSE_4" Type="0"/>
     <ROW Component="Longyearbyen" ComponentId="{C2C9D81C-083D-4D7C-9A52-04422007B6C9}" Directory_="Arctic_Dir" Attributes="0" KeyPath="Longyearbyen" Type="0"/>
     <ROW Component="Louisville" ComponentId="{9E697D16-D334-4BC9-8F59-CC03A5F41156}" Directory_="Kentucky_Dir" Attributes="0" KeyPath="Louisville" Type="0"/>
     <ROW Component="ProductInformation" ComponentId="{C45D033C-5DD4-40D4-AABA-C6639AF83796}" Directory_="APPDIR" Attributes="4" KeyPath="Version"/>
@@ -138,89 +211,95 @@
     <ROW Component="VCRUNTIME140.dll" ComponentId="{33C848B3-80F7-4F51-B124-04240817CE3F}" Directory_="_internal_Dir" Attributes="256" KeyPath="VCRUNTIME140.dll"/>
     <ROW Component="VCRUNTIME140_1.dll" ComponentId="{9611E5BF-193B-435F-9CA6-3E052DBB11F4}" Directory_="_internal_Dir" Attributes="256" KeyPath="VCRUNTIME140_1.dll"/>
     <ROW Component="__init__.py" ComponentId="{41A6EB7E-3421-44EA-9EEB-44B889988DE1}" Directory_="data_Dir" Attributes="0" KeyPath="__init__.py" Type="0"/>
-    <ROW Component="__init__.py_1" ComponentId="{091AE55F-10A4-434B-9E27-B2575D7AF5A7}" Directory_="gapi_Dir" Attributes="0" KeyPath="__init__.py_1" Type="0"/>
     <ROW Component="__init__.py_2" ComponentId="{A9F39636-2F40-472D-9650-FB4F4AD77234}" Directory_="mat_wrapper_Dir" Attributes="0" KeyPath="__init__.py_2" Type="0"/>
     <ROW Component="__init__.py_3" ComponentId="{695FAF65-515C-4B9E-8840-A2690DD56943}" Directory_="typing_Dir" Attributes="0" KeyPath="__init__.py_4" Type="0"/>
     <ROW Component="__init__.py_4" ComponentId="{067BA7C7-5CBA-4E38-A0B9-2D088B598EAF}" Directory_="utils_Dir" Attributes="0" KeyPath="__init__.py_5" Type="0"/>
-    <ROW Component="_imaging.cp312win_amd64.pyd" ComponentId="{48CFE159-72AF-47FF-B4A9-1ED2CFF9C2DF}" Directory_="PIL_Dir" Attributes="256" KeyPath="_imaging.cp312win_amd64.pyd" Type="0"/>
-    <ROW Component="_multiarray_tests.cp312win_amd64.pyd" ComponentId="{008F94CD-E815-42F1-A408-D67B53528A52}" Directory_="_core_Dir" Attributes="256" KeyPath="_multiarray_tests.cp312win_amd64.pyd" Type="0"/>
-    <ROW Component="_pocketfft_umath.cp312win_amd64.pyd" ComponentId="{8A421D60-BA4F-44EA-8FBB-99FE6152162B}" Directory_="fft_Dir" Attributes="256" KeyPath="_pocketfft_umath.cp312win_amd64.pyd" Type="0"/>
-    <ROW Component="_umath_linalg.cp312win_amd64.pyd" ComponentId="{F1EAF97D-8309-4A4C-8360-617C145E0A06}" Directory_="linalg_Dir" Attributes="256" KeyPath="_umath_linalg.cp312win_amd64.pyd" Type="0"/>
-    <ROW Component="_yaml.cp312win_amd64.pyd" ComponentId="{F6DBDE06-2AD9-412D-AA71-A2ACAC794181}" Directory_="yaml_Dir" Attributes="256" KeyPath="_yaml.cp312win_amd64.pyd" Type="0"/>
+    <ROW Component="_imaging.cp312win_amd64.pyd" ComponentId="{48CFE159-72AF-47FF-B4A9-1ED2CFF9C2DF}" Directory_="PIL_Dir" Attributes="256" KeyPath="_avif.cp313win_amd64.pyd" Type="0"/>
+    <ROW Component="_multiarray_tests.cp312win_amd64.pyd" ComponentId="{008F94CD-E815-42F1-A408-D67B53528A52}" Directory_="_core_Dir" Attributes="256" KeyPath="_multiarray_tests.cp313win_amd64.pyd" Type="0"/>
+    <ROW Component="_pocketfft_umath.cp312win_amd64.pyd" ComponentId="{8A421D60-BA4F-44EA-8FBB-99FE6152162B}" Directory_="fft_Dir" Attributes="256" KeyPath="_pocketfft_umath.cp313win_amd64.pyd" Type="0"/>
+    <ROW Component="_umath_linalg.cp312win_amd64.pyd" ComponentId="{F1EAF97D-8309-4A4C-8360-617C145E0A06}" Directory_="linalg_Dir" Attributes="256" KeyPath="_umath_linalg.cp313win_amd64.pyd" Type="0"/>
+    <ROW Component="about.py" ComponentId="{C6984B9E-BC72-4345-A42B-9307CF47DC18}" Directory_="av_Dir" Attributes="0" KeyPath="about.py" Type="0"/>
     <ROW Component="af.msg" ComponentId="{63E46675-3F01-470A-A747-87DA5835E3E0}" Directory_="msgs_Dir" Attributes="0" KeyPath="af.msg" Type="0"/>
     <ROW Component="altTheme.tcl" ComponentId="{9D087000-3AA9-439A-A4A7-F492054B5244}" Directory_="ttk_Dir" Attributes="0" KeyPath="altTheme.tcl" Type="0"/>
-    <ROW Component="apimswincoreconsolel110.dll" ComponentId="{194CF3E8-6A25-496A-8F6B-D2F612DC6E71}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincoreconsolel110.dll"/>
-    <ROW Component="apimswincoredatetimel110.dll" ComponentId="{DBEC76D8-4F45-4CB3-A6CA-17705460DB9C}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincoredatetimel110.dll"/>
-    <ROW Component="apimswincoredebugl110.dll" ComponentId="{BE15BDB4-01C3-4D14-B676-B3567AA9DD0B}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincoredebugl110.dll"/>
-    <ROW Component="apimswincoreerrorhandlingl110.dll" ComponentId="{4DA58BF9-83C3-4054-BFB7-8B6E090D3979}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincoreerrorhandlingl110.dll"/>
-    <ROW Component="apimswincorefilel110.dll" ComponentId="{27682C19-EA2F-45BD-9B69-BC155CFCB80D}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincorefilel110.dll"/>
-    <ROW Component="apimswincorefilel120.dll" ComponentId="{61FD3F66-D1F4-45B1-BF6E-F29ED5998B42}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincorefilel120.dll"/>
-    <ROW Component="apimswincorefilel210.dll" ComponentId="{4D6B289B-5C18-4488-A90E-8822448DA867}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincorefilel210.dll"/>
-    <ROW Component="apimswincorehandlel110.dll" ComponentId="{77C3C437-1191-4993-994A-4143B8EFDF2C}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincorehandlel110.dll"/>
-    <ROW Component="apimswincoreheapl110.dll" ComponentId="{62BF7838-3E19-4373-8E48-90CF371C4239}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincoreheapl110.dll"/>
-    <ROW Component="apimswincoreinterlockedl110.dll" ComponentId="{DF707E62-2222-40BF-94E4-8210944D0093}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincoreinterlockedl110.dll"/>
-    <ROW Component="apimswincorelibraryloaderl110.dll" ComponentId="{199CAE9B-A4B6-4DFA-A8AD-3A5F5FCFCA3F}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincorelibraryloaderl110.dll"/>
-    <ROW Component="apimswincorelocalizationl120.dll" ComponentId="{7257C682-9A34-4EB3-8E6F-3C80FCCC9835}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincorelocalizationl120.dll"/>
-    <ROW Component="apimswincorememoryl110.dll" ComponentId="{B30E74FC-9611-4F5C-A463-188B7F9D539E}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincorememoryl110.dll"/>
-    <ROW Component="apimswincorenamedpipel110.dll" ComponentId="{18878502-DFC9-496E-AB48-05E331B8E5BA}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincorenamedpipel110.dll"/>
-    <ROW Component="apimswincoreprocessenvironmentl110.dll" ComponentId="{0A38DFF8-9D36-45F4-A94A-2F3FFEF99FD9}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincoreprocessenvironmentl110.dll"/>
-    <ROW Component="apimswincoreprocessthreadsl110.dll" ComponentId="{7B0E58F5-3816-45F1-98D3-0C511F32732B}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincoreprocessthreadsl110.dll"/>
-    <ROW Component="apimswincoreprocessthreadsl111.dll" ComponentId="{ACD6C93C-7639-4B13-BD3D-B79B5DBFEE3A}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincoreprocessthreadsl111.dll"/>
-    <ROW Component="apimswincoreprofilel110.dll" ComponentId="{AFE8FA8C-49D1-4932-A720-3CE836289715}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincoreprofilel110.dll"/>
-    <ROW Component="apimswincorertlsupportl110.dll" ComponentId="{017DB1DE-C6AA-4A73-9DB7-8F09E80ABC4A}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincorertlsupportl110.dll"/>
-    <ROW Component="apimswincorestringl110.dll" ComponentId="{F8B487A4-7DAB-40E5-B09A-CB930A1F21AC}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincorestringl110.dll"/>
-    <ROW Component="apimswincoresynchl110.dll" ComponentId="{EEEA1526-EF55-43F5-BB81-2F5A67EE2A2A}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincoresynchl110.dll"/>
-    <ROW Component="apimswincoresynchl120.dll" ComponentId="{BEF03436-8195-4BA6-A776-FD84666A4F69}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincoresynchl120.dll"/>
-    <ROW Component="apimswincoresysinfol110.dll" ComponentId="{155A3E2A-71BA-4B6E-922A-5D6480206C8F}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincoresysinfol110.dll"/>
-    <ROW Component="apimswincoretimezonel110.dll" ComponentId="{12574B05-6505-4402-A628-69D65E25A3A7}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincoretimezonel110.dll"/>
-    <ROW Component="apimswincoreutill110.dll" ComponentId="{BA7EFA91-BB1D-46E5-A6CB-07D1E9CBAFD2}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincoreutill110.dll"/>
-    <ROW Component="apimswincrtconiol110.dll" ComponentId="{DABD2171-0858-4EA1-AAB1-E0AB0E55D39D}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincrtconiol110.dll"/>
-    <ROW Component="apimswincrtconvertl110.dll" ComponentId="{0FC16B56-BBAF-4C7B-8896-1FCE518A492C}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincrtconvertl110.dll"/>
-    <ROW Component="apimswincrtenvironmentl110.dll" ComponentId="{B5283266-DF97-4573-90E8-C5174C6686CC}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincrtenvironmentl110.dll"/>
-    <ROW Component="apimswincrtfilesysteml110.dll" ComponentId="{07C6FB22-F5B0-4FC9-AA3C-7947CDE4ACC6}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincrtfilesysteml110.dll"/>
-    <ROW Component="apimswincrtheapl110.dll" ComponentId="{25D8B4C6-7670-4C75-A6E8-ADDD9AE44A2B}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincrtheapl110.dll"/>
-    <ROW Component="apimswincrtlocalel110.dll" ComponentId="{05316EF7-F875-448F-AFCD-282425756B44}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincrtlocalel110.dll"/>
-    <ROW Component="apimswincrtmathl110.dll" ComponentId="{1B1FFD9C-2F07-4710-A487-0204A706AF23}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincrtmathl110.dll"/>
-    <ROW Component="apimswincrtprivatel110.dll" ComponentId="{6CFCAD17-7AE3-4DCB-9EA1-6CEC325E9B41}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincrtprivatel110.dll"/>
-    <ROW Component="apimswincrtprocessl110.dll" ComponentId="{A75BD996-CE2D-4E4F-B132-2F1EE7CE8873}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincrtprocessl110.dll"/>
-    <ROW Component="apimswincrtruntimel110.dll" ComponentId="{FBD8FDDF-B8C0-4519-8D7D-30294831031C}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincrtruntimel110.dll"/>
-    <ROW Component="apimswincrtstdiol110.dll" ComponentId="{8BDBFE52-634F-4B57-9C75-479F4729CE2A}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincrtstdiol110.dll"/>
-    <ROW Component="apimswincrtstringl110.dll" ComponentId="{44CBB436-6A87-4DFE-BF3A-BE4A99B9B0DD}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincrtstringl110.dll"/>
-    <ROW Component="apimswincrttimel110.dll" ComponentId="{A6F0A7AF-BCB7-4679-A7B1-B170F4A20915}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincrttimel110.dll"/>
-    <ROW Component="apimswincrtutilityl110.dll" ComponentId="{21F3097A-F1CD-4C60-B151-1DA60BE217AD}" Directory_="_internal_Dir" Attributes="256" KeyPath="apimswincrtutilityl110.dll"/>
     <ROW Component="ascii.enc" ComponentId="{FAB89276-E56F-493E-81EB-B679C82C69AE}" Directory_="encoding_Dir" Attributes="0" KeyPath="ascii.enc" Type="0"/>
     <ROW Component="auto.tcl" ComponentId="{A8171CEB-7552-4F4F-967F-4D01831C3BFB}" Directory_="_tcl_data_Dir" Attributes="0" KeyPath="auto.tcl" Type="0"/>
+    <ROW Component="avcodec632756d4fffb772585dcdece87427716a4.dll" ComponentId="{BDB19C0C-B73F-41C3-B106-2F543F71FA15}" Directory_="av.libs_Dir" Attributes="256" KeyPath="avcodec632756d4fffb772585dcdece87427716a4.dll"/>
+    <ROW Component="avdevice632b26d22512639c049532c0bc6f6c022f.dll" ComponentId="{4C2975D0-C6BF-4CCD-9705-440FD582B1F8}" Directory_="av.libs_Dir" Attributes="256" KeyPath="avdevice632b26d22512639c049532c0bc6f6c022f.dll"/>
+    <ROW Component="avfilter1287c7677b784d3ea4ecceb3e6cae9c9f1.dll" ComponentId="{22BE7586-E83F-4287-839F-173090F9D518}" Directory_="av.libs_Dir" Attributes="256" KeyPath="avfilter1287c7677b784d3ea4ecceb3e6cae9c9f1.dll"/>
+    <ROW Component="avformat63e8c4f8fc30664f2b7e85dcc683bd4b0d.dll" ComponentId="{7E6E1315-28B8-4328-A6F7-5B48A1ADCED3}" Directory_="av.libs_Dir" Attributes="256" KeyPath="avformat63e8c4f8fc30664f2b7e85dcc683bd4b0d.dll"/>
+    <ROW Component="avutil61e540ec7976bbd26a4a94dc737be3001c.dll" ComponentId="{1DE6AECF-A66F-4562-A9C6-3F7F2F9CC615}" Directory_="av.libs_Dir" Attributes="256" KeyPath="avutil61e540ec7976bbd26a4a94dc737be3001c.dll"/>
     <ROW Component="base_library.zip" ComponentId="{AB18D192-9422-4C7E-876B-74A7A0DB46D2}" Directory_="_internal_Dir" Attributes="0" KeyPath="base_library.zip" Type="0"/>
     <ROW Component="bgerror.tcl" ComponentId="{9AC37A62-47E4-4575-B654-48D0F2E60239}" Directory_="_tk_data_Dir" Attributes="0" KeyPath="bgerror.tcl" Type="0"/>
-    <ROW Component="bit_generator.cp312win_amd64.pyd" ComponentId="{9E215E36-96D3-4D51-A0FF-41FE1623DF3F}" Directory_="random_Dir" Attributes="256" KeyPath="bit_generator.cp312win_amd64.pyd" Type="0"/>
+    <ROW Component="bit_generator.cp312win_amd64.pyd" ComponentId="{9E215E36-96D3-4D51-A0FF-41FE1623DF3F}" Directory_="random_Dir" Attributes="256" KeyPath="bit_generator.cp313win_amd64.pyd" Type="0"/>
     <ROW Component="boundingbox.gif" ComponentId="{78D8A9E1-7B17-4A50-A7E4-44189661EE78}" Directory_="assets_Dir" Attributes="0" KeyPath="boundingbox.gif" Type="0"/>
     <ROW Component="bundle.220ee61c.min.js" ComponentId="{DFC5F207-19F3-4B95-AA97-6F2B06E039D3}" Directory_="javascripts_Dir" Attributes="0" KeyPath="bundle.88dd0f4e.min.js" Type="0"/>
+    <ROW Component="codec.pxd" ComponentId="{E55E7DFB-55E6-4CEF-BF82-D8BBAE4E6BEF}" Directory_="codec_Dir" Attributes="0" KeyPath="codec.pxd" Type="0"/>
+    <ROW Component="codeccontext.pxd" ComponentId="{D463678F-E5DA-4B6D-8F12-3905BF6DBD7A}" Directory_="audio_Dir" Attributes="0" KeyPath="codeccontext.pxd" Type="0"/>
+    <ROW Component="codeccontext.pxd_1" ComponentId="{C2F7356C-B33A-4612-9825-C2516F74182D}" Directory_="subtitles_Dir" Attributes="0" KeyPath="codeccontext.pxd_1" Type="0"/>
+    <ROW Component="codeccontext.pxd_2" ComponentId="{011817E7-9618-4249-B6E5-C8862FA46412}" Directory_="video_Dir" Attributes="0" KeyPath="codeccontext.pxd_2" Type="0"/>
     <ROW Component="config3.py" ComponentId="{7F316289-C026-4FBE-A80C-2A802DA19D76}" Directory_="cv2_Dir" Attributes="0" KeyPath="config3.py" Type="0"/>
+    <ROW Component="context.pxd" ComponentId="{5CCF5635-B052-492F-A34B-49D6CB2AAC6A}" Directory_="filter_Dir" Attributes="0" KeyPath="context.pxd_1" Type="0"/>
+    <ROW Component="core.pxd" ComponentId="{157B8E19-49ED-41CE-A96F-AC183025715C}" Directory_="container_Dir" Attributes="0" KeyPath="core.pxd" Type="0"/>
     <ROW Component="cs.msg" ComponentId="{F272B5C4-45E3-4492-AB70-0672D653C745}" Directory_="msgs_1_Dir" Attributes="0" KeyPath="cs.msg_1" Type="0"/>
+    <ROW Component="dragon4_LICENSE.txt" ComponentId="{44839B10-F245-4DE3-A138-90116B9C295D}" Directory_="multiarray_Dir" Attributes="0" KeyPath="dragon4_LICENSE.txt" Type="0"/>
     <ROW Component="dvrscan.cfg" ComponentId="{18A37A49-86C6-42DF-A130-DC5499CD6677}" Directory_="DVRScan_Dir" Attributes="16" KeyPath="dvrscan.cfg_1" Type="0"/>
     <ROW Component="dvrscan.exe" ComponentId="{BFAC0A4B-76D6-4EF9-B2B5-DFB8B5AC8885}" Directory_="APPDIR" Attributes="256" KeyPath="dvrscan.exe"/>
     <ROW Component="dvrscanapp.exe" ComponentId="{A045E3AE-324D-423D-8B7C-1B428B3F619C}" Directory_="APPDIR" Attributes="256" KeyPath="dvrscanapp.exe"/>
     <ROW Component="dvrscanlogo.png" ComponentId="{1A521399-BE46-4639-A4CD-92BBB2F07C9A}" Directory_="dvr_scan_Dir" Attributes="0" KeyPath="dvrscanlogo.png_1" Type="0"/>
+    <ROW Component="encparams.pxd" ComponentId="{332C697E-90F2-4D0D-9DB9-1DEAFB4E35FA}" Directory_="sidedata_Dir" Attributes="0" KeyPath="encparams.pxd" Type="0"/>
+    <ROW Component="entry_points.txt" ComponentId="{A039DEB5-CBE6-436E-B1FB-D0D105EB695B}" Directory_="tqdm4.70.1.distinfo_Dir" Attributes="0" KeyPath="entry_points.txt_2" Type="0"/>
     <ROW Component="ffmpeg.exe" ComponentId="{BBCE1F27-65DC-461F-B81C-CF84ED2D7201}" Directory_="APPDIR" Attributes="256" KeyPath="ffmpeg.exe"/>
     <ROW Component="html" ComponentId="{4C35D225-4654-4A96-BABB-5A69EF7F4260}" Directory_="docs_Dir" Attributes="0" KeyPath="html" Type="0"/>
     <ROW Component="http.tcl" ComponentId="{F2552B0B-7171-4625-89D3-46A81E93D741}" Directory_="http1.0_Dir" Attributes="0" KeyPath="http.tcl" Type="0"/>
-    <ROW Component="libcrypto3.dll" ComponentId="{006C2B07-67FC-446C-B3E9-74B38A772A10}" Directory_="_internal_Dir" Attributes="256" KeyPath="libcrypto3.dll"/>
+    <ROW Component="libSvtAv1Enc7a2b2046575991edd70ef501ca085458.dll" ComponentId="{FDE6FDFA-9D21-4445-B1A8-4E9087EC452F}" Directory_="av.libs_Dir" Attributes="256" KeyPath="libSvtAv1Enc7a2b2046575991edd70ef501ca085458.dll"/>
+    <ROW Component="libcrypto3x64.dll" ComponentId="{1AD34504-241B-4650-AFC3-1EFC3D1BDD20}" Directory_="_internal_Dir" Attributes="256" KeyPath="libcrypto3x64.dll"/>
+    <ROW Component="libdav1d5469d6ef7baf7426269a9483c24587b7.dll" ComponentId="{676C1BB1-4867-43A7-B0E0-156B156EA0D5}" Directory_="av.libs_Dir" Attributes="256" KeyPath="libdav1d5469d6ef7baf7426269a9483c24587b7.dll"/>
     <ROW Component="libffi8.dll" ComponentId="{EC4BB2AA-5981-438C-9BFC-38275669877B}" Directory_="_internal_Dir" Attributes="256" KeyPath="libffi8.dll"/>
-    <ROW Component="libscipy_openblas64_43e11ff0749b8cbe0a615c9cf6737e0e.dll" ComponentId="{3E521CBD-C029-422D-A022-16CABCFEE4E9}" Directory_="numpy.libs_Dir" Attributes="256" KeyPath="libscipy_openblas64_43e11ff0749b8cbe0a615c9cf6737e0e.dll"/>
-    <ROW Component="libssl3.dll" ComponentId="{5F821691-9B46-4CD2-BECB-1D2D13E255C4}" Directory_="_internal_Dir" Attributes="256" KeyPath="libssl3.dll"/>
+    <ROW Component="libgcc_s_seh13e3b83c1f8de213bb810010a5622b180.dll" ComponentId="{7FC0A21F-CB21-408A-BA9F-0DA450CD895A}" Directory_="av.libs_Dir" Attributes="256" KeyPath="libgcc_s_seh13e3b83c1f8de213bb810010a5622b180.dll"/>
+    <ROW Component="libiconv25e7e51fe6a6e182df6c9f30f41700345.dll" ComponentId="{46EDC5B0-E293-4529-B529-2EDB613D1968}" Directory_="av.libs_Dir" Attributes="256" KeyPath="libiconv25e7e51fe6a6e182df6c9f30f41700345.dll"/>
+    <ROW Component="libopus0278e2dd25a2793d306204c9d966fe0de.dll" ComponentId="{BA6F8183-9696-49CE-82D2-7E788685AC77}" Directory_="av.libs_Dir" Attributes="256" KeyPath="libopus0278e2dd25a2793d306204c9d966fe0de.dll"/>
+    <ROW Component="libscipy_openblas64_ed4f167a5330424524f45258e7ca2c8d.dll" ComponentId="{DB0AE70D-8B43-449E-A214-5274EB5D263D}" Directory_="numpy.libs_Dir" Attributes="256" KeyPath="libscipy_openblas64_ed4f167a5330424524f45258e7ca2c8d.dll"/>
+    <ROW Component="libsharpyuv90c3f670f207c806d3e44db799e78832.dll" ComponentId="{B0DC2DE8-15DD-4005-AEC4-7D49D30D255C}" Directory_="av.libs_Dir" Attributes="256" KeyPath="libsharpyuv90c3f670f207c806d3e44db799e78832.dll"/>
+    <ROW Component="libssl3x64.dll" ComponentId="{C300653D-2E2B-448A-BBBF-6691BC51FDED}" Directory_="_internal_Dir" Attributes="256" KeyPath="libssl3x64.dll"/>
+    <ROW Component="libstdc67ad22040206bf70776b13a24ec3f87b2.dll" ComponentId="{035D78BB-3654-41B7-B284-27E820B7C5DA}" Directory_="av.libs_Dir" Attributes="256" KeyPath="libstdc67ad22040206bf70776b13a24ec3f87b2.dll"/>
+    <ROW Component="libtcl9tkdnd2.10.3.dylib" ComponentId="{5841849A-5C3E-40E9-BE5D-86B078912CDE}" Directory_="osxarm64tcl9_Dir" Attributes="0" KeyPath="libtcl9tkdnd2.10.3.dylib" Type="0"/>
+    <ROW Component="libtcl9tkdnd2.10.3.so" ComponentId="{F6ED5AB1-33D7-4DFE-868F-F38316B4547F}" Directory_="linuxarm64tcl9_Dir" Attributes="0" KeyPath="libtcl9tkdnd2.10.3.so" Type="0"/>
+    <ROW Component="libtcl9tkdnd2.10.3.so_1" ComponentId="{D9D4ED7D-41FD-4D87-B3D6-A2DA5303D2ED}" Directory_="linuxx64tcl9_Dir" Attributes="0" KeyPath="libtcl9tkdnd2.10.3.so_1" Type="0"/>
+    <ROW Component="libtkdnd2.10.3.dll" ComponentId="{41FBB1C8-CFA5-4BB7-ABFC-2D21952D8318}" Directory_="winarm64_Dir" Attributes="256" KeyPath="libtkdnd2.10.3.dll"/>
+    <ROW Component="libtkdnd2.10.3.dll_1" ComponentId="{EA8045EC-91EF-4625-98C5-8AE5CB2B9C2B}" Directory_="winx64_Dir" Attributes="256" KeyPath="libtkdnd2.10.3.dll_1"/>
+    <ROW Component="libtkdnd2.10.3.dll_2" ComponentId="{BD410610-4DBD-4472-A8EE-D9A91E7920FF}" Directory_="winx64tcl9_Dir" Attributes="256" KeyPath="libtkdnd2.10.3.dll_2"/>
+    <ROW Component="libtkdnd2.10.3.dll_3" ComponentId="{34B7258C-05ED-4400-95E6-6C48DC4723EF}" Directory_="winx86_Dir" Attributes="0" KeyPath="libtkdnd2.10.3.dll_3"/>
+    <ROW Component="libtkdnd2.10.3.dll_4" ComponentId="{60457F14-ABBB-4E5B-9703-B85B70082E7D}" Directory_="winx86tcl9_Dir" Attributes="0" KeyPath="libtkdnd2.10.3.dll_4"/>
+    <ROW Component="libtkdnd2.10.3.dylib" ComponentId="{4DCEE959-5C90-4297-87A2-203D6C6684A1}" Directory_="osxarm64_Dir" Attributes="0" KeyPath="libtkdnd2.10.3.dylib" Type="0"/>
+    <ROW Component="libtkdnd2.10.3.so" ComponentId="{211BCFCB-25A3-4771-B4C0-E897C3009712}" Directory_="linuxarm64_Dir" Attributes="0" KeyPath="libtkdnd2.10.3.so" Type="0"/>
+    <ROW Component="libtkdnd2.10.3.so_1" ComponentId="{9BDB9EEF-A2D9-44B4-8955-233690C7845F}" Directory_="linuxx64_Dir" Attributes="0" KeyPath="libtkdnd2.10.3.so_1" Type="0"/>
+    <ROW Component="libtkdnd2.9.4.dylib" ComponentId="{F5680455-C3B2-447D-B6F6-D11AF476935A}" Directory_="osxx64_Dir" Attributes="0" KeyPath="libtkdnd2.9.4.dylib" Type="0"/>
+    <ROW Component="libvmafe1698aa5c58a07400697833b5f19b0a3.dll" ComponentId="{E24D2533-832B-4BA5-89D3-12BC45E32306}" Directory_="av.libs_Dir" Attributes="256" KeyPath="libvmafe1698aa5c58a07400697833b5f19b0a3.dll"/>
+    <ROW Component="libvpl45cd70cb42c579529a30ad6fc282c626.dll" ComponentId="{AA7FE937-E7B7-43E2-B63F-E0AA39D6A472}" Directory_="av.libs_Dir" Attributes="256" KeyPath="libvpl45cd70cb42c579529a30ad6fc282c626.dll"/>
+    <ROW Component="libvpx1dd81d2b55a771749d485047772201cc1.dll" ComponentId="{3F39B6FB-F5A1-4B38-A6DC-2A13CB701F13}" Directory_="av.libs_Dir" Attributes="256" KeyPath="libvpx1dd81d2b55a771749d485047772201cc1.dll"/>
+    <ROW Component="libwebpabac96c4759f9eb9b31588c8a839816c.dll" ComponentId="{A655E91F-CDE8-4CF7-9049-ABFB633A1C2D}" Directory_="av.libs_Dir" Attributes="256" KeyPath="libwebpabac96c4759f9eb9b31588c8a839816c.dll"/>
+    <ROW Component="libwebpmux0b9545d83accdb1110a7efa5d1c54007.dll" ComponentId="{A18ABD91-2D84-416B-BECD-A5A5AED880CF}" Directory_="av.libs_Dir" Attributes="256" KeyPath="libwebpmux0b9545d83accdb1110a7efa5d1c54007.dll"/>
+    <ROW Component="libwinpthread13e9f18fdf7e856e1e9fedd138e84e874.dll" ComponentId="{2AB2CD2C-FA40-4DE7-B9D6-827DB4F7E3FF}" Directory_="av.libs_Dir" Attributes="256" KeyPath="libwinpthread13e9f18fdf7e856e1e9fedd138e84e874.dll"/>
+    <ROW Component="libx2641650f71f37cf3f3ee0e2ecac2b06829e9ff.dll" ComponentId="{9C1B0B54-9115-42C7-BE78-1D55A24926F6}" Directory_="av.libs_Dir" Attributes="256" KeyPath="libx2641650f71f37cf3f3ee0e2ecac2b06829e9ff.dll"/>
+    <ROW Component="libx265ee9d492f3fb55d0a3b564bb1bf4f6822.dll" ComponentId="{D0F4C394-0BAC-460E-8B8F-CCE30EEF2C5F}" Directory_="av.libs_Dir" Attributes="256" KeyPath="libx265ee9d492f3fb55d0a3b564bb1bf4f6822.dll"/>
     <ROW Component="logo.eps" ComponentId="{C6F6936E-79DF-4902-A08E-8BAF9346FFB9}" Directory_="images_Dir" Attributes="0" KeyPath="logo.eps" Type="0"/>
-    <ROW Component="md.cp312win_amd64.pyd" ComponentId="{1710C759-632F-417C-858A-28A4230BBF2A}" Directory_="charset_normalizer_Dir" Attributes="256" KeyPath="md.cp312win_amd64.pyd" Type="0"/>
-    <ROW Component="msvcp140d64049c6e3865410a7dda6a7e9f0c575.dll" ComponentId="{56FC98F8-303A-4F1B-A969-2AAC73549F5F}" Directory_="numpy.libs_Dir" Attributes="256" KeyPath="msvcp140d64049c6e3865410a7dda6a7e9f0c575.dll"/>
-    <ROW Component="opencv_videoio_ffmpeg4100_64.dll" ComponentId="{F4812C86-91A0-4F52-990A-23643EF82719}" Directory_="cv2_Dir" Attributes="256" KeyPath="opencv_videoio_ffmpeg4100_64.dll"/>
+    <ROW Component="msvcp140a4c2229bdc2a2a630acdc095b4d86008.dll" ComponentId="{690E7E89-4791-4B10-93C1-40803F6032CF}" Directory_="numpy.libs_Dir" Attributes="256" KeyPath="msvcp140a4c2229bdc2a2a630acdc095b4d86008.dll"/>
+    <ROW Component="opencv_videoio_ffmpeg500_64.dll" ComponentId="{96360B2E-0050-436B-84FD-E948F72B2879}" Directory_="cv2_Dir" Attributes="256" KeyPath="opencv_videoio_ffmpeg500_64.dll"/>
     <ROW Component="optparse.tcl" ComponentId="{CF49057A-D2CB-4437-9A85-47D0BB5C941A}" Directory_="opt0.4_Dir" Attributes="0" KeyPath="optparse.tcl" Type="0"/>
     <ROW Component="palette.06af60db.min.css" ComponentId="{EFE36AC8-357F-452C-B651-C49EDD4FA415}" Directory_="stylesheets_Dir" Attributes="0" KeyPath="palette.06af60db.min.css" Type="0"/>
+    <ROW Component="pkgIndex.tcl" ComponentId="{405F9D7B-B36A-4A56-9763-CCB69537F838}" Directory_="winarm64_Dir" Attributes="0" KeyPath="pkgIndex.tcl_10" Type="0"/>
+    <ROW Component="pkgIndex.tcl_1" ComponentId="{8301CF20-2801-4721-8AC5-A4497B8F2439}" Directory_="winx64_Dir" Attributes="0" KeyPath="pkgIndex.tcl_11" Type="0"/>
+    <ROW Component="pkgIndex.tcl_2" ComponentId="{6FDB9DDF-BFC6-4F30-A557-5D76957DAAF5}" Directory_="winx64tcl9_Dir" Attributes="0" KeyPath="pkgIndex.tcl_12" Type="0"/>
+    <ROW Component="pkgIndex.tcl_3" ComponentId="{94BB8670-5B5D-426B-B292-6F84BB467A7B}" Directory_="winx86_Dir" Attributes="0" KeyPath="pkgIndex.tcl_13" Type="0"/>
+    <ROW Component="pkgIndex.tcl_4" ComponentId="{9B2F050B-EC24-4B7F-B9CE-66D9F576E9EB}" Directory_="winx86tcl9_Dir" Attributes="0" KeyPath="pkgIndex.tcl_14" Type="0"/>
     <ROW Component="python3.dll" ComponentId="{F825A068-99F4-459F-BA7B-03E0209CB189}" Directory_="_internal_Dir" Attributes="256" KeyPath="python3.dll"/>
-    <ROW Component="python312.dll" ComponentId="{188A40AB-4272-4F2F-9157-A1EFEADA9943}" Directory_="_internal_Dir" Attributes="256" KeyPath="python312.dll"/>
+    <ROW Component="python313.dll" ComponentId="{C628D0C8-1F4A-4509-BFDB-D1519618BF10}" Directory_="_internal_Dir" Attributes="256" KeyPath="python313.dll"/>
+    <ROW Component="swresample74f9462a1fb73b949ccad2774dd941624.dll" ComponentId="{E7FA07E0-C40C-4B5F-A61A-A1530C2BA422}" Directory_="av.libs_Dir" Attributes="256" KeyPath="swresample74f9462a1fb73b949ccad2774dd941624.dll"/>
+    <ROW Component="swscale109af0a10ad7003982e48548ff39e98465.dll" ComponentId="{8BFAB0AF-5C99-499C-9F8B-301B364E8E68}" Directory_="av.libs_Dir" Attributes="256" KeyPath="swscale109af0a10ad7003982e48548ff39e98465.dll"/>
     <ROW Component="tcl86t.dll" ComponentId="{38512805-2CE9-4771-A175-51FBEBF9FF71}" Directory_="_internal_Dir" Attributes="256" KeyPath="tcl86t.dll"/>
     <ROW Component="tk86t.dll" ComponentId="{C62A97B3-E49B-4545-9154-1EB8BCB6944A}" Directory_="_internal_Dir" Attributes="256" KeyPath="tk86t.dll"/>
-    <ROW Component="ucrtbase.dll" ComponentId="{5AA78262-0A31-4F33-8663-734BDE552305}" Directory_="_internal_Dir" Attributes="256" KeyPath="ucrtbase.dll"/>
     <ROW Component="version.py" ComponentId="{AC36B781-DF33-4284-BB97-1190C2F7E050}" Directory_="misc_Dir" Attributes="0" KeyPath="version.py" Type="0"/>
-    <ROW Component="zlib1.dll" ComponentId="{7FD2B192-4ADF-4D87-AACE-12501EEAC1DD}" Directory_="_internal_Dir" Attributes="256" KeyPath="zlib1.dll"/>
+    <ROW Component="zlib14d767210e087ff082d94ef0a09ddc7f8.dll" ComponentId="{6007A8BB-C7D8-4EFA-9C2B-F66BFB4F4181}" Directory_="av.libs_Dir" Attributes="256" KeyPath="zlib14d767210e087ff082d94ef0a09ddc7f8.dll"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiFeatsComponent">
     <ROW Feature="C4FE6FD5B7C4D07B3A313E754A9A6A8" Title="Visual C++ Redistributable for Visual Studio 2015-2019 x64" Description="Visual C++ Redistributable for Visual Studio 2015-2019 x64" Display="7" Level="1" Attributes="0"/>
@@ -251,58 +330,15 @@
     <ROW File="guide.html" Component_="html" FileName="GUIDE~1.HTM|guide.html" Attributes="0" SourcePath="..\dvr-scan\docs\guide.html" SelfReg="false"/>
     <ROW File="index.html" Component_="html" FileName="INDEX~1.HTM|index.html" Attributes="0" SourcePath="..\dvr-scan\docs\index.html" SelfReg="false"/>
     <ROW File="resources.html" Component_="html" FileName="RESOUR~1.HTM|resources.html" Attributes="0" SourcePath="..\dvr-scan\docs\resources.html" SelfReg="false"/>
-    <ROW File="apimswincoreconsolel110.dll" Component_="apimswincoreconsolel110.dll" FileName="API-MS~1.DLL|api-ms-win-core-console-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-console-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincoredatetimel110.dll" Component_="apimswincoredatetimel110.dll" FileName="API-MS~2.DLL|api-ms-win-core-datetime-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-datetime-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincoredebugl110.dll" Component_="apimswincoredebugl110.dll" FileName="API-MS~3.DLL|api-ms-win-core-debug-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-debug-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincoreerrorhandlingl110.dll" Component_="apimswincoreerrorhandlingl110.dll" FileName="API-MS~4.DLL|api-ms-win-core-errorhandling-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-errorhandling-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincorefilel110.dll" Component_="apimswincorefilel110.dll" FileName="API-MS~7.DLL|api-ms-win-core-file-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-file-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincorefilel120.dll" Component_="apimswincorefilel120.dll" FileName="API-MS~8.DLL|api-ms-win-core-file-l1-2-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-file-l1-2-0.dll" SelfReg="false"/>
-    <ROW File="apimswincorefilel210.dll" Component_="apimswincorefilel210.dll" FileName="API-MS~9.DLL|api-ms-win-core-file-l2-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-file-l2-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincorehandlel110.dll" Component_="apimswincorehandlel110.dll" FileName="API-M~10.DLL|api-ms-win-core-handle-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-handle-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincoreheapl110.dll" Component_="apimswincoreheapl110.dll" FileName="API-M~11.DLL|api-ms-win-core-heap-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-heap-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincoreinterlockedl110.dll" Component_="apimswincoreinterlockedl110.dll" FileName="API-M~12.DLL|api-ms-win-core-interlocked-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-interlocked-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincorelibraryloaderl110.dll" Component_="apimswincorelibraryloaderl110.dll" FileName="API-M~14.DLL|api-ms-win-core-libraryloader-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-libraryloader-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincorelocalizationl120.dll" Component_="apimswincorelocalizationl120.dll" FileName="API-M~15.DLL|api-ms-win-core-localization-l1-2-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-localization-l1-2-0.dll" SelfReg="false"/>
-    <ROW File="apimswincorememoryl110.dll" Component_="apimswincorememoryl110.dll" FileName="API-M~16.DLL|api-ms-win-core-memory-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-memory-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincorenamedpipel110.dll" Component_="apimswincorenamedpipel110.dll" FileName="API-M~17.DLL|api-ms-win-core-namedpipe-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-namedpipe-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincoreprocessenvironmentl110.dll" Component_="apimswincoreprocessenvironmentl110.dll" FileName="API-M~18.DLL|api-ms-win-core-processenvironment-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-processenvironment-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincoreprocessthreadsl110.dll" Component_="apimswincoreprocessthreadsl110.dll" FileName="API-M~19.DLL|api-ms-win-core-processthreads-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-processthreads-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincoreprocessthreadsl111.dll" Component_="apimswincoreprocessthreadsl111.dll" FileName="API-M~20.DLL|api-ms-win-core-processthreads-l1-1-1.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-processthreads-l1-1-1.dll" SelfReg="false"/>
-    <ROW File="apimswincoreprofilel110.dll" Component_="apimswincoreprofilel110.dll" FileName="API-M~21.DLL|api-ms-win-core-profile-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-profile-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincorertlsupportl110.dll" Component_="apimswincorertlsupportl110.dll" FileName="API-M~22.DLL|api-ms-win-core-rtlsupport-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-rtlsupport-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincorestringl110.dll" Component_="apimswincorestringl110.dll" FileName="API-M~23.DLL|api-ms-win-core-string-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-string-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincoresynchl110.dll" Component_="apimswincoresynchl110.dll" FileName="API-M~24.DLL|api-ms-win-core-synch-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-synch-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincoresynchl120.dll" Component_="apimswincoresynchl120.dll" FileName="API-M~25.DLL|api-ms-win-core-synch-l1-2-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-synch-l1-2-0.dll" SelfReg="false"/>
-    <ROW File="apimswincoresysinfol110.dll" Component_="apimswincoresysinfol110.dll" FileName="API-M~26.DLL|api-ms-win-core-sysinfo-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-sysinfo-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincoretimezonel110.dll" Component_="apimswincoretimezonel110.dll" FileName="API-M~28.DLL|api-ms-win-core-timezone-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-timezone-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincoreutill110.dll" Component_="apimswincoreutill110.dll" FileName="API-M~29.DLL|api-ms-win-core-util-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-core-util-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincrtconiol110.dll" Component_="apimswincrtconiol110.dll" FileName="API-M~30.DLL|api-ms-win-crt-conio-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-crt-conio-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincrtconvertl110.dll" Component_="apimswincrtconvertl110.dll" FileName="API-M~31.DLL|api-ms-win-crt-convert-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-crt-convert-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincrtenvironmentl110.dll" Component_="apimswincrtenvironmentl110.dll" FileName="API-M~32.DLL|api-ms-win-crt-environment-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-crt-environment-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincrtfilesysteml110.dll" Component_="apimswincrtfilesysteml110.dll" FileName="API-M~33.DLL|api-ms-win-crt-filesystem-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-crt-filesystem-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincrtheapl110.dll" Component_="apimswincrtheapl110.dll" FileName="API-M~34.DLL|api-ms-win-crt-heap-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-crt-heap-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincrtlocalel110.dll" Component_="apimswincrtlocalel110.dll" FileName="API-M~35.DLL|api-ms-win-crt-locale-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-crt-locale-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincrtmathl110.dll" Component_="apimswincrtmathl110.dll" FileName="API-M~36.DLL|api-ms-win-crt-math-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-crt-math-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincrtprivatel110.dll" Component_="apimswincrtprivatel110.dll" FileName="API-M~37.DLL|api-ms-win-crt-private-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-crt-private-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincrtprocessl110.dll" Component_="apimswincrtprocessl110.dll" FileName="API-M~38.DLL|api-ms-win-crt-process-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-crt-process-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincrtruntimel110.dll" Component_="apimswincrtruntimel110.dll" FileName="API-M~39.DLL|api-ms-win-crt-runtime-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-crt-runtime-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincrtstdiol110.dll" Component_="apimswincrtstdiol110.dll" FileName="API-M~40.DLL|api-ms-win-crt-stdio-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-crt-stdio-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincrtstringl110.dll" Component_="apimswincrtstringl110.dll" FileName="API-M~41.DLL|api-ms-win-crt-string-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-crt-string-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincrttimel110.dll" Component_="apimswincrttimel110.dll" FileName="API-M~42.DLL|api-ms-win-crt-time-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-crt-time-l1-1-0.dll" SelfReg="false"/>
-    <ROW File="apimswincrtutilityl110.dll" Component_="apimswincrtutilityl110.dll" FileName="API-M~43.DLL|api-ms-win-crt-utility-l1-1-0.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\api-ms-win-crt-utility-l1-1-0.dll" SelfReg="false"/>
     <ROW File="base_library.zip" Component_="base_library.zip" FileName="BASE_L~1.ZIP|base_library.zip" Attributes="0" SourcePath="..\dvr-scan\_internal\base_library.zip" SelfReg="false"/>
-    <ROW File="md.cp312win_amd64.pyd" Component_="md.cp312win_amd64.pyd" FileName="MDCP31~1.PYD|md.cp312-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\charset_normalizer\md.cp312-win_amd64.pyd" SelfReg="false"/>
-    <ROW File="md__mypyc.cp312win_amd64.pyd" Component_="md.cp312win_amd64.pyd" FileName="MD__MY~1.PYD|md__mypyc.cp312-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\charset_normalizer\md__mypyc.cp312-win_amd64.pyd" SelfReg="false"/>
     <ROW File="config3.py" Component_="config3.py" FileName="config-3.py" Attributes="0" SourcePath="..\dvr-scan\_internal\cv2\config-3.py" SelfReg="false"/>
     <ROW File="config.py" Component_="config3.py" FileName="config.py" Attributes="0" SourcePath="..\dvr-scan\_internal\cv2\config.py" SelfReg="false"/>
     <ROW File="cv2.pyd" Component_="config3.py" FileName="cv2.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\cv2\cv2.pyd" SelfReg="false"/>
     <ROW File="__init__.py" Component_="__init__.py" FileName="__init__.py" Attributes="0" SourcePath="..\dvr-scan\_internal\cv2\data\__init__.py" SelfReg="false"/>
-    <ROW File="__init__.py_1" Component_="__init__.py_1" FileName="__init__.py" Attributes="0" SourcePath="..\dvr-scan\_internal\cv2\gapi\__init__.py" SelfReg="false"/>
     <ROW File="load_config_py3.py" Component_="config3.py" FileName="LOAD_C~1.PY|load_config_py3.py" Attributes="0" SourcePath="..\dvr-scan\_internal\cv2\load_config_py3.py" SelfReg="false"/>
     <ROW File="__init__.py_2" Component_="__init__.py_2" FileName="__init__.py" Attributes="0" SourcePath="..\dvr-scan\_internal\cv2\mat_wrapper\__init__.py" SelfReg="false"/>
     <ROW File="version.py" Component_="version.py" FileName="version.py" Attributes="0" SourcePath="..\dvr-scan\_internal\cv2\misc\version.py" SelfReg="false"/>
     <ROW File="__init__.py_3" Component_="version.py" FileName="__init__.py" Attributes="0" SourcePath="..\dvr-scan\_internal\cv2\misc\__init__.py" SelfReg="false"/>
-    <ROW File="opencv_videoio_ffmpeg4100_64.dll" Component_="opencv_videoio_ffmpeg4100_64.dll" FileName="OPENCV~1.DLL|opencv_videoio_ffmpeg4100_64.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\cv2\opencv_videoio_ffmpeg4100_64.dll" SelfReg="false"/>
     <ROW File="__init__.py_4" Component_="__init__.py_3" FileName="__init__.py" Attributes="0" SourcePath="..\dvr-scan\_internal\cv2\typing\__init__.py" SelfReg="false"/>
     <ROW File="__init__.py_5" Component_="__init__.py_4" FileName="__init__.py" Attributes="0" SourcePath="..\dvr-scan\_internal\cv2\utils\__init__.py" SelfReg="false"/>
     <ROW File="version.py_1" Component_="config3.py" FileName="version.py" Attributes="0" SourcePath="..\dvr-scan\_internal\cv2\version.py" SelfReg="false"/>
@@ -311,41 +347,15 @@
     <ROW File="dvrscan.ico" Component_="dvrscanlogo.png" FileName="dvr-scan.ico" Attributes="0" SourcePath="..\dvr-scan\_internal\dvr_scan\dvr-scan.ico" SelfReg="false"/>
     <ROW File="LICENSE_1" Component_="dvrscanlogo.png" FileName="LICENSE" Attributes="0" SourcePath="..\dvr-scan\_internal\dvr_scan\LICENSE" SelfReg="false"/>
     <ROW File="LICENSETHIRDPARTY" Component_="dvrscanlogo.png" FileName="LICENS~1|LICENSE-THIRDPARTY" Attributes="0" SourcePath="..\dvr-scan\_internal\dvr_scan\LICENSE-THIRDPARTY" SelfReg="false"/>
-    <ROW File="libcrypto3.dll" Component_="libcrypto3.dll" FileName="LIBCRY~1.DLL|libcrypto-3.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\libcrypto-3.dll" SelfReg="false"/>
     <ROW File="libffi8.dll" Component_="libffi8.dll" FileName="libffi-8.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\libffi-8.dll" SelfReg="false"/>
-    <ROW File="libssl3.dll" Component_="libssl3.dll" FileName="libssl-3.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\libssl-3.dll" SelfReg="false"/>
-    <ROW File="_pocketfft_umath.cp312win_amd64.pyd" Component_="_pocketfft_umath.cp312win_amd64.pyd" FileName="_POCKE~1.PYD|_pocketfft_umath.cp312-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy\fft\_pocketfft_umath.cp312-win_amd64.pyd" SelfReg="false"/>
-    <ROW File="_umath_linalg.cp312win_amd64.pyd" Component_="_umath_linalg.cp312win_amd64.pyd" FileName="_UMATH~1.PYD|_umath_linalg.cp312-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy\linalg\_umath_linalg.cp312-win_amd64.pyd" SelfReg="false"/>
-    <ROW File="bit_generator.cp312win_amd64.pyd" Component_="bit_generator.cp312win_amd64.pyd" FileName="BIT_GE~1.PYD|bit_generator.cp312-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy\random\bit_generator.cp312-win_amd64.pyd" SelfReg="false"/>
-    <ROW File="mtrand.cp312win_amd64.pyd" Component_="bit_generator.cp312win_amd64.pyd" FileName="MTRAND~1.PYD|mtrand.cp312-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy\random\mtrand.cp312-win_amd64.pyd" SelfReg="false"/>
-    <ROW File="_bounded_integers.cp312win_amd64.pyd" Component_="bit_generator.cp312win_amd64.pyd" FileName="_BOUND~1.PYD|_bounded_integers.cp312-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy\random\_bounded_integers.cp312-win_amd64.pyd" SelfReg="false"/>
-    <ROW File="_common.cp312win_amd64.pyd" Component_="bit_generator.cp312win_amd64.pyd" FileName="_COMMO~1.PYD|_common.cp312-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy\random\_common.cp312-win_amd64.pyd" SelfReg="false"/>
-    <ROW File="_generator.cp312win_amd64.pyd" Component_="bit_generator.cp312win_amd64.pyd" FileName="_GENER~1.PYD|_generator.cp312-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy\random\_generator.cp312-win_amd64.pyd" SelfReg="false"/>
-    <ROW File="_mt19937.cp312win_amd64.pyd" Component_="bit_generator.cp312win_amd64.pyd" FileName="_MT199~1.PYD|_mt19937.cp312-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy\random\_mt19937.cp312-win_amd64.pyd" SelfReg="false"/>
-    <ROW File="_pcg64.cp312win_amd64.pyd" Component_="bit_generator.cp312win_amd64.pyd" FileName="_PCG64~1.PYD|_pcg64.cp312-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy\random\_pcg64.cp312-win_amd64.pyd" SelfReg="false"/>
-    <ROW File="_philox.cp312win_amd64.pyd" Component_="bit_generator.cp312win_amd64.pyd" FileName="_PHILO~1.PYD|_philox.cp312-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy\random\_philox.cp312-win_amd64.pyd" SelfReg="false"/>
-    <ROW File="_sfc64.cp312win_amd64.pyd" Component_="bit_generator.cp312win_amd64.pyd" FileName="_SFC64~1.PYD|_sfc64.cp312-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy\random\_sfc64.cp312-win_amd64.pyd" SelfReg="false"/>
-    <ROW File="_multiarray_tests.cp312win_amd64.pyd" Component_="_multiarray_tests.cp312win_amd64.pyd" FileName="_MULTI~1.PYD|_multiarray_tests.cp312-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy\_core\_multiarray_tests.cp312-win_amd64.pyd" SelfReg="false"/>
-    <ROW File="_multiarray_umath.cp312win_amd64.pyd" Component_="_multiarray_tests.cp312win_amd64.pyd" FileName="_MULTI~2.PYD|_multiarray_umath.cp312-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy\_core\_multiarray_umath.cp312-win_amd64.pyd" SelfReg="false"/>
-    <ROW File="libscipy_openblas64_43e11ff0749b8cbe0a615c9cf6737e0e.dll" Component_="libscipy_openblas64_43e11ff0749b8cbe0a615c9cf6737e0e.dll" FileName="LIBSCI~1.DLL|libscipy_openblas64_-43e11ff0749b8cbe0a615c9cf6737e0e.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy.libs\libscipy_openblas64_-43e11ff0749b8cbe0a615c9cf6737e0e.dll" SelfReg="false"/>
-    <ROW File="msvcp140d64049c6e3865410a7dda6a7e9f0c575.dll" Component_="msvcp140d64049c6e3865410a7dda6a7e9f0c575.dll" FileName="MSVCP1~1.DLL|msvcp140-d64049c6e3865410a7dda6a7e9f0c575.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy.libs\msvcp140-d64049c6e3865410a7dda6a7e9f0c575.dll" SelfReg="false"/>
-    <ROW File="_imaging.cp312win_amd64.pyd" Component_="_imaging.cp312win_amd64.pyd" FileName="_IMAGI~1.PYD|_imaging.cp312-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\PIL\_imaging.cp312-win_amd64.pyd" SelfReg="false"/>
-    <ROW File="_imagingcms.cp312win_amd64.pyd" Component_="_imaging.cp312win_amd64.pyd" FileName="_IMAGI~2.PYD|_imagingcms.cp312-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\PIL\_imagingcms.cp312-win_amd64.pyd" SelfReg="false"/>
-    <ROW File="_imagingmath.cp312win_amd64.pyd" Component_="_imaging.cp312win_amd64.pyd" FileName="_IMAGI~3.PYD|_imagingmath.cp312-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\PIL\_imagingmath.cp312-win_amd64.pyd" SelfReg="false"/>
-    <ROW File="_imagingtk.cp312win_amd64.pyd" Component_="_imaging.cp312win_amd64.pyd" FileName="_IMAGI~4.PYD|_imagingtk.cp312-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\PIL\_imagingtk.cp312-win_amd64.pyd" SelfReg="false"/>
-    <ROW File="_webp.cp312win_amd64.pyd" Component_="_imaging.cp312win_amd64.pyd" FileName="_WEBPC~1.PYD|_webp.cp312-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\PIL\_webp.cp312-win_amd64.pyd" SelfReg="false"/>
     <ROW File="pyexpat.pyd" Component_="base_library.zip" FileName="pyexpat.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\pyexpat.pyd" SelfReg="false"/>
     <ROW File="python3.dll" Component_="python3.dll" FileName="python3.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\python3.dll" SelfReg="false"/>
-    <ROW File="python312.dll" Component_="python312.dll" FileName="PYTHON~1.DLL|python312.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\python312.dll" SelfReg="false"/>
     <ROW File="select.pyd" Component_="base_library.zip" FileName="select.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\select.pyd" SelfReg="false"/>
     <ROW File="tcl86t.dll" Component_="tcl86t.dll" FileName="tcl86t.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\tcl86t.dll" SelfReg="false"/>
     <ROW File="tk86t.dll" Component_="tk86t.dll" FileName="tk86t.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\tk86t.dll" SelfReg="false"/>
-    <ROW File="ucrtbase.dll" Component_="ucrtbase.dll" FileName="ucrtbase.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\ucrtbase.dll" SelfReg="false"/>
     <ROW File="unicodedata.pyd" Component_="base_library.zip" FileName="UNICOD~1.PYD|unicodedata.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\unicodedata.pyd" SelfReg="false"/>
     <ROW File="VCRUNTIME140.dll" Component_="VCRUNTIME140.dll" FileName="VCRUNT~1.DLL|VCRUNTIME140.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\VCRUNTIME140.dll" SelfReg="false"/>
     <ROW File="VCRUNTIME140_1.dll" Component_="VCRUNTIME140_1.dll" FileName="VCRUNT~2.DLL|VCRUNTIME140_1.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\VCRUNTIME140_1.dll" SelfReg="false"/>
-    <ROW File="_yaml.cp312win_amd64.pyd" Component_="_yaml.cp312win_amd64.pyd" FileName="_YAMLC~1.PYD|_yaml.cp312-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\yaml\_yaml.cp312-win_amd64.pyd" SelfReg="false"/>
-    <ROW File="zlib1.dll" Component_="zlib1.dll" FileName="zlib1.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\zlib1.dll" SelfReg="false"/>
     <ROW File="_asyncio.pyd" Component_="base_library.zip" FileName="_asyncio.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\_asyncio.pyd" SelfReg="false"/>
     <ROW File="_ctypes.pyd" Component_="base_library.zip" FileName="_ctypes.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\_ctypes.pyd" SelfReg="false"/>
     <ROW File="_overlapped.pyd" Component_="base_library.zip" FileName="_OVERL~1.PYD|_overlapped.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\_overlapped.pyd" SelfReg="false"/>
@@ -1021,7 +1031,6 @@
     <ROW File="Kaliningrad" Component_="Amsterdam" FileName="KALINI~1|Kaliningrad" Attributes="0" SourcePath="..\dvr-scan\_internal\_tcl_data\tzdata\Europe\Kaliningrad" SelfReg="false"/>
     <ROW File="Kiev" Component_="Amsterdam" FileName="Kiev" Attributes="0" SourcePath="..\dvr-scan\_internal\_tcl_data\tzdata\Europe\Kiev" SelfReg="false"/>
     <ROW File="Kirov" Component_="Amsterdam" FileName="Kirov" Attributes="0" SourcePath="..\dvr-scan\_internal\_tcl_data\tzdata\Europe\Kirov" SelfReg="false"/>
-    <ROW File="Kyiv" Component_="Amsterdam" FileName="Kyiv" Attributes="0" SourcePath="..\dvr-scan\_internal\_tcl_data\tzdata\Europe\Kyiv" SelfReg="false"/>
     <ROW File="Lisbon" Component_="Amsterdam" FileName="Lisbon" Attributes="0" SourcePath="..\dvr-scan\_internal\_tcl_data\tzdata\Europe\Lisbon" SelfReg="false"/>
     <ROW File="Ljubljana" Component_="Amsterdam" FileName="LJUBLJ~1|Ljubljana" Attributes="0" SourcePath="..\dvr-scan\_internal\_tcl_data\tzdata\Europe\Ljubljana" SelfReg="false"/>
     <ROW File="London" Component_="Amsterdam" FileName="London" Attributes="0" SourcePath="..\dvr-scan\_internal\_tcl_data\tzdata\Europe\London" SelfReg="false"/>
@@ -1221,7 +1230,6 @@
     <ROW File="en_gb.msg_1" Component_="cs.msg" FileName="en_gb.msg" Attributes="0" SourcePath="..\dvr-scan\_internal\_tk_data\msgs\en_gb.msg" SelfReg="false"/>
     <ROW File="eo.msg_1" Component_="cs.msg" FileName="eo.msg" Attributes="0" SourcePath="..\dvr-scan\_internal\_tk_data\msgs\eo.msg" SelfReg="false"/>
     <ROW File="es.msg_1" Component_="cs.msg" FileName="es.msg" Attributes="0" SourcePath="..\dvr-scan\_internal\_tk_data\msgs\es.msg" SelfReg="false"/>
-    <ROW File="fi.msg_1" Component_="cs.msg" FileName="fi.msg" Attributes="0" SourcePath="..\dvr-scan\_internal\_tk_data\msgs\fi.msg" SelfReg="false"/>
     <ROW File="fr.msg_1" Component_="cs.msg" FileName="fr.msg" Attributes="0" SourcePath="..\dvr-scan\_internal\_tk_data\msgs\fr.msg" SelfReg="false"/>
     <ROW File="hu.msg_1" Component_="cs.msg" FileName="hu.msg" Attributes="0" SourcePath="..\dvr-scan\_internal\_tk_data\msgs\hu.msg" SelfReg="false"/>
     <ROW File="it.msg_1" Component_="cs.msg" FileName="it.msg" Attributes="0" SourcePath="..\dvr-scan\_internal\_tk_data\msgs\it.msg" SelfReg="false"/>
@@ -1230,7 +1238,6 @@
     <ROW File="pt.msg_1" Component_="cs.msg" FileName="pt.msg" Attributes="0" SourcePath="..\dvr-scan\_internal\_tk_data\msgs\pt.msg" SelfReg="false"/>
     <ROW File="ru.msg_1" Component_="cs.msg" FileName="ru.msg" Attributes="0" SourcePath="..\dvr-scan\_internal\_tk_data\msgs\ru.msg" SelfReg="false"/>
     <ROW File="sv.msg_1" Component_="cs.msg" FileName="sv.msg" Attributes="0" SourcePath="..\dvr-scan\_internal\_tk_data\msgs\sv.msg" SelfReg="false"/>
-    <ROW File="zh_cn.msg_1" Component_="cs.msg" FileName="zh_cn.msg" Attributes="0" SourcePath="..\dvr-scan\_internal\_tk_data\msgs\zh_cn.msg" SelfReg="false"/>
     <ROW File="obsolete.tcl" Component_="bgerror.tcl" FileName="obsolete.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\_tk_data\obsolete.tcl" SelfReg="false"/>
     <ROW File="optMenu.tcl" Component_="bgerror.tcl" FileName="optMenu.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\_tk_data\optMenu.tcl" SelfReg="false"/>
     <ROW File="palette.tcl" Component_="bgerror.tcl" FileName="palette.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\_tk_data\palette.tcl" SelfReg="false"/>
@@ -1276,7 +1283,448 @@
     <ROW File="bundle.88dd0f4e.min.js" Component_="bundle.220ee61c.min.js" FileName="BUNDLE~2.JS|bundle.88dd0f4e.min.js" Attributes="0" SourcePath="..\..\dvr_scan\docs\assets\javascripts\bundle.88dd0f4e.min.js" SelfReg="false"/>
     <ROW File="palette.06af60db.min.css" Component_="palette.06af60db.min.css" FileName="PALETT~1.CSS|palette.06af60db.min.css" Attributes="0" SourcePath="..\..\dvr_scan\docs\assets\stylesheets\palette.06af60db.min.css" SelfReg="false"/>
     <ROW File="main.6f8fc17f.min.css" Component_="palette.06af60db.min.css" FileName="MAIN6F~1.CSS|main.6f8fc17f.min.css" Attributes="0" SourcePath="..\..\dvr_scan\docs\assets\stylesheets\main.6f8fc17f.min.css" SelfReg="false"/>
-    <ROW File="style.min.css" Component_="html" FileName="STYLEM~1.CSS|style.min.css" Attributes="0" SourcePath="..\..\dvr_scan\docs\style.min.css" SelfReg="false"/>
+    <ROW File="style.min.css" Component_="html" FileName="STYLEM~1.CSS|style.min.css" Attributes="0" SourcePath="..\dvr-scan\docs\style.min.css" SelfReg="false"/>
+    <ROW File="appffmpegsettings.jpg" Component_="boundingbox.gif" FileName="APP-FF~1.JPG|app-ffmpeg-settings.jpg" Attributes="0" SourcePath="..\dvr-scan\docs\assets\app-ffmpeg-settings.jpg" SelfReg="false"/>
+    <ROW File="appinputsettings.jpg" Component_="boundingbox.gif" FileName="APP-IN~1.JPG|app-input-settings.jpg" Attributes="0" SourcePath="..\dvr-scan\docs\assets\app-input-settings.jpg" SelfReg="false"/>
+    <ROW File="appmainwindow.jpg" Component_="boundingbox.gif" FileName="APP-MA~1.JPG|app-main-window.jpg" Attributes="0" SourcePath="..\dvr-scan\docs\assets\app-main-window.jpg" SelfReg="false"/>
+    <ROW File="appmotionsettings.jpg" Component_="boundingbox.gif" FileName="APP-MO~1.JPG|app-motion-settings.jpg" Attributes="0" SourcePath="..\dvr-scan\docs\assets\app-motion-settings.jpg" SelfReg="false"/>
+    <ROW File="appopencvsettings.jpg" Component_="boundingbox.gif" FileName="APP-OP~1.JPG|app-opencv-settings.jpg" Attributes="0" SourcePath="..\dvr-scan\docs\assets\app-opencv-settings.jpg" SelfReg="false"/>
+    <ROW File="appscanwindow.jpg" Component_="boundingbox.gif" FileName="APP-SC~1.JPG|app-scan-window.jpg" Attributes="0" SourcePath="..\dvr-scan\docs\assets\app-scan-window.jpg" SelfReg="false"/>
+    <ROW File="dvrscanlogofull.svg" Component_="boundingbox.gif" FileName="DVR-SC~1.SVG|dvr-scan-logo-full.svg" Attributes="0" SourcePath="..\dvr-scan\docs\assets\dvr-scan-logo-full.svg" SelfReg="false"/>
+    <ROW File="dvrscanlogo.svg" Component_="boundingbox.gif" FileName="DVR-SC~2.SVG|dvr-scan-logo.svg" Attributes="0" SourcePath="..\dvr-scan\docs\assets\dvr-scan-logo.svg" SelfReg="false"/>
+    <ROW File="dvrscansimple.svg" Component_="boundingbox.gif" FileName="DVR-SC~3.SVG|dvr-scan-simple.svg" Attributes="0" SourcePath="..\dvr-scan\docs\assets\dvr-scan-simple.svg" SelfReg="false"/>
+    <ROW File="dvrscan.svg" Component_="boundingbox.gif" FileName="dvr-scan.svg" Attributes="0" SourcePath="..\dvr-scan\docs\assets\dvr-scan.svg" SelfReg="false"/>
+    <ROW File="bundle.d7400e89.min.js" Component_="bundle.220ee61c.min.js" FileName="BUNDLE~1.JS|bundle.d7400e89.min.js" Attributes="0" SourcePath="..\dvr-scan\docs\assets\javascripts\bundle.d7400e89.min.js" SelfReg="false"/>
+    <ROW File="main.ec1eaa64.min.css" Component_="palette.06af60db.min.css" FileName="MAINEC~1.CSS|main.ec1eaa64.min.css" Attributes="0" SourcePath="..\dvr-scan\docs\assets\stylesheets\main.ec1eaa64.min.css" SelfReg="false"/>
+    <ROW File="palette.ab4e12ef.min.css" Component_="palette.06af60db.min.css" FileName="PALETT~2.CSS|palette.ab4e12ef.min.css" Attributes="0" SourcePath="..\dvr-scan\docs\assets\stylesheets\palette.ab4e12ef.min.css" SelfReg="false"/>
+    <ROW File="literature.html" Component_="html" FileName="LITERA~1.HTM|literature.html" Attributes="0" SourcePath="..\dvr-scan\docs\literature.html" SelfReg="false"/>
+    <ROW File="about.py" Component_="about.py" FileName="about.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\about.py" SelfReg="false"/>
+    <ROW File="codeccontext.pxd" Component_="codeccontext.pxd" FileName="CODECC~1.PXD|codeccontext.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\codeccontext.pxd" SelfReg="false"/>
+    <ROW File="codeccontext.py" Component_="codeccontext.pxd" FileName="CODECC~1.PY|codeccontext.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\codeccontext.py" SelfReg="false"/>
+    <ROW File="codeccontext.pyd" Component_="codeccontext.pxd" FileName="CODECC~1.PYD|codeccontext.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\codeccontext.pyd" SelfReg="false"/>
+    <ROW File="codeccontext.pyi" Component_="codeccontext.pxd" FileName="CODECC~1.PYI|codeccontext.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\codeccontext.pyi" SelfReg="false"/>
+    <ROW File="fifo.pxd" Component_="codeccontext.pxd" FileName="fifo.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\fifo.pxd" SelfReg="false"/>
+    <ROW File="fifo.py" Component_="codeccontext.pxd" FileName="fifo.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\fifo.py" SelfReg="false"/>
+    <ROW File="fifo.pyd" Component_="codeccontext.pxd" FileName="fifo.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\fifo.pyd" SelfReg="false"/>
+    <ROW File="fifo.pyi" Component_="codeccontext.pxd" FileName="fifo.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\fifo.pyi" SelfReg="false"/>
+    <ROW File="format.pxd" Component_="codeccontext.pxd" FileName="format.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\format.pxd" SelfReg="false"/>
+    <ROW File="format.py" Component_="codeccontext.pxd" FileName="format.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\format.py" SelfReg="false"/>
+    <ROW File="format.pyd" Component_="codeccontext.pxd" FileName="format.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\format.pyd" SelfReg="false"/>
+    <ROW File="format.pyi" Component_="codeccontext.pxd" FileName="format.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\format.pyi" SelfReg="false"/>
+    <ROW File="frame.pxd" Component_="codeccontext.pxd" FileName="frame.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\frame.pxd" SelfReg="false"/>
+    <ROW File="frame.py" Component_="codeccontext.pxd" FileName="frame.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\frame.py" SelfReg="false"/>
+    <ROW File="frame.pyd" Component_="codeccontext.pxd" FileName="frame.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\frame.pyd" SelfReg="false"/>
+    <ROW File="frame.pyi" Component_="codeccontext.pxd" FileName="frame.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\frame.pyi" SelfReg="false"/>
+    <ROW File="layout.pxd" Component_="codeccontext.pxd" FileName="layout.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\layout.pxd" SelfReg="false"/>
+    <ROW File="layout.py" Component_="codeccontext.pxd" FileName="layout.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\layout.py" SelfReg="false"/>
+    <ROW File="layout.pyd" Component_="codeccontext.pxd" FileName="layout.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\layout.pyd" SelfReg="false"/>
+    <ROW File="layout.pyi" Component_="codeccontext.pxd" FileName="layout.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\layout.pyi" SelfReg="false"/>
+    <ROW File="plane.pxd" Component_="codeccontext.pxd" FileName="plane.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\plane.pxd" SelfReg="false"/>
+    <ROW File="plane.py" Component_="codeccontext.pxd" FileName="plane.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\plane.py" SelfReg="false"/>
+    <ROW File="plane.pyd" Component_="codeccontext.pxd" FileName="plane.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\plane.pyd" SelfReg="false"/>
+    <ROW File="plane.pyi" Component_="codeccontext.pxd" FileName="plane.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\plane.pyi" SelfReg="false"/>
+    <ROW File="resampler.pxd" Component_="codeccontext.pxd" FileName="RESAMP~1.PXD|resampler.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\resampler.pxd" SelfReg="false"/>
+    <ROW File="resampler.py" Component_="codeccontext.pxd" FileName="RESAMP~1.PY|resampler.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\resampler.py" SelfReg="false"/>
+    <ROW File="resampler.pyd" Component_="codeccontext.pxd" FileName="RESAMP~1.PYD|resampler.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\resampler.pyd" SelfReg="false"/>
+    <ROW File="resampler.pyi" Component_="codeccontext.pxd" FileName="RESAMP~1.PYI|resampler.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\resampler.pyi" SelfReg="false"/>
+    <ROW File="stream.pxd" Component_="codeccontext.pxd" FileName="stream.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\stream.pxd" SelfReg="false"/>
+    <ROW File="stream.py" Component_="codeccontext.pxd" FileName="stream.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\stream.py" SelfReg="false"/>
+    <ROW File="stream.pyd" Component_="codeccontext.pxd" FileName="stream.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\stream.pyd" SelfReg="false"/>
+    <ROW File="stream.pyi" Component_="codeccontext.pxd" FileName="stream.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\stream.pyi" SelfReg="false"/>
+    <ROW File="__init__.pxd" Component_="codeccontext.pxd" FileName="__init__.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\__init__.pxd" SelfReg="false"/>
+    <ROW File="__init__.py_7" Component_="codeccontext.pxd" FileName="__init__.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\__init__.py" SelfReg="false"/>
+    <ROW File="__init__.pyi" Component_="codeccontext.pxd" FileName="__init__.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\audio\__init__.pyi" SelfReg="false"/>
+    <ROW File="bitstream.pxd" Component_="about.py" FileName="BITSTR~1.PXD|bitstream.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\bitstream.pxd" SelfReg="false"/>
+    <ROW File="bitstream.py" Component_="about.py" FileName="BITSTR~1.PY|bitstream.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\bitstream.py" SelfReg="false"/>
+    <ROW File="bitstream.pyd" Component_="about.py" FileName="BITSTR~1.PYD|bitstream.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\bitstream.pyd" SelfReg="false"/>
+    <ROW File="bitstream.pyi" Component_="about.py" FileName="BITSTR~1.PYI|bitstream.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\bitstream.pyi" SelfReg="false"/>
+    <ROW File="buffer.pxd" Component_="about.py" FileName="buffer.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\buffer.pxd" SelfReg="false"/>
+    <ROW File="buffer.py" Component_="about.py" FileName="buffer.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\buffer.py" SelfReg="false"/>
+    <ROW File="buffer.pyd" Component_="about.py" FileName="buffer.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\buffer.pyd" SelfReg="false"/>
+    <ROW File="buffer.pyi" Component_="about.py" FileName="buffer.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\buffer.pyi" SelfReg="false"/>
+    <ROW File="codec.pxd" Component_="codec.pxd" FileName="codec.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\codec\codec.pxd" SelfReg="false"/>
+    <ROW File="codec.py" Component_="codec.pxd" FileName="codec.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\codec\codec.py" SelfReg="false"/>
+    <ROW File="codec.pyd" Component_="codec.pxd" FileName="codec.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\codec\codec.pyd" SelfReg="false"/>
+    <ROW File="codec.pyi" Component_="codec.pxd" FileName="codec.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\codec\codec.pyi" SelfReg="false"/>
+    <ROW File="context.pxd" Component_="codec.pxd" FileName="context.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\codec\context.pxd" SelfReg="false"/>
+    <ROW File="context.py" Component_="codec.pxd" FileName="context.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\codec\context.py" SelfReg="false"/>
+    <ROW File="context.pyd" Component_="codec.pxd" FileName="context.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\codec\context.pyd" SelfReg="false"/>
+    <ROW File="context.pyi" Component_="codec.pxd" FileName="context.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\codec\context.pyi" SelfReg="false"/>
+    <ROW File="hwaccel.pxd" Component_="codec.pxd" FileName="hwaccel.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\codec\hwaccel.pxd" SelfReg="false"/>
+    <ROW File="hwaccel.py" Component_="codec.pxd" FileName="hwaccel.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\codec\hwaccel.py" SelfReg="false"/>
+    <ROW File="hwaccel.pyd" Component_="codec.pxd" FileName="hwaccel.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\codec\hwaccel.pyd" SelfReg="false"/>
+    <ROW File="hwaccel.pyi" Component_="codec.pxd" FileName="hwaccel.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\codec\hwaccel.pyi" SelfReg="false"/>
+    <ROW File="__init__.pxd_1" Component_="codec.pxd" FileName="__init__.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\codec\__init__.pxd" SelfReg="false"/>
+    <ROW File="__init__.py_8" Component_="codec.pxd" FileName="__init__.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\codec\__init__.py" SelfReg="false"/>
+    <ROW File="core.pxd" Component_="core.pxd" FileName="core.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\container\core.pxd" SelfReg="false"/>
+    <ROW File="core.py" Component_="core.pxd" FileName="core.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\container\core.py" SelfReg="false"/>
+    <ROW File="core.pyd" Component_="core.pxd" FileName="core.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\container\core.pyd" SelfReg="false"/>
+    <ROW File="core.pyi" Component_="core.pxd" FileName="core.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\container\core.pyi" SelfReg="false"/>
+    <ROW File="input.pxd" Component_="core.pxd" FileName="input.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\container\input.pxd" SelfReg="false"/>
+    <ROW File="input.py" Component_="core.pxd" FileName="input.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\container\input.py" SelfReg="false"/>
+    <ROW File="input.pyd" Component_="core.pxd" FileName="input.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\container\input.pyd" SelfReg="false"/>
+    <ROW File="input.pyi" Component_="core.pxd" FileName="input.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\container\input.pyi" SelfReg="false"/>
+    <ROW File="output.pxd" Component_="core.pxd" FileName="output.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\container\output.pxd" SelfReg="false"/>
+    <ROW File="output.py" Component_="core.pxd" FileName="output.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\container\output.py" SelfReg="false"/>
+    <ROW File="output.pyd" Component_="core.pxd" FileName="output.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\container\output.pyd" SelfReg="false"/>
+    <ROW File="output.pyi" Component_="core.pxd" FileName="output.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\container\output.pyi" SelfReg="false"/>
+    <ROW File="pyio.pxd" Component_="core.pxd" FileName="pyio.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\container\pyio.pxd" SelfReg="false"/>
+    <ROW File="pyio.py" Component_="core.pxd" FileName="pyio.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\container\pyio.py" SelfReg="false"/>
+    <ROW File="pyio.pyd" Component_="core.pxd" FileName="pyio.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\container\pyio.pyd" SelfReg="false"/>
+    <ROW File="streams.pxd" Component_="core.pxd" FileName="streams.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\container\streams.pxd" SelfReg="false"/>
+    <ROW File="streams.py" Component_="core.pxd" FileName="streams.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\container\streams.py" SelfReg="false"/>
+    <ROW File="streams.pyd" Component_="core.pxd" FileName="streams.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\container\streams.pyd" SelfReg="false"/>
+    <ROW File="streams.pyi" Component_="core.pxd" FileName="streams.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\container\streams.pyi" SelfReg="false"/>
+    <ROW File="__init__.pxd_2" Component_="core.pxd" FileName="__init__.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\container\__init__.pxd" SelfReg="false"/>
+    <ROW File="__init__.py_9" Component_="core.pxd" FileName="__init__.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\container\__init__.py" SelfReg="false"/>
+    <ROW File="__init__.pyi_1" Component_="core.pxd" FileName="__init__.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\container\__init__.pyi" SelfReg="false"/>
+    <ROW File="datasets.py" Component_="about.py" FileName="datasets.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\datasets.py" SelfReg="false"/>
+    <ROW File="device.py" Component_="about.py" FileName="device.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\device.py" SelfReg="false"/>
+    <ROW File="device.pyd" Component_="about.py" FileName="device.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\device.pyd" SelfReg="false"/>
+    <ROW File="device.pyi" Component_="about.py" FileName="device.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\device.pyi" SelfReg="false"/>
+    <ROW File="dictionary.pxd" Component_="about.py" FileName="DICTIO~1.PXD|dictionary.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\dictionary.pxd" SelfReg="false"/>
+    <ROW File="dictionary.py" Component_="about.py" FileName="DICTIO~1.PY|dictionary.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\dictionary.py" SelfReg="false"/>
+    <ROW File="dictionary.pyd" Component_="about.py" FileName="DICTIO~1.PYD|dictionary.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\dictionary.pyd" SelfReg="false"/>
+    <ROW File="dictionary.pyi" Component_="about.py" FileName="DICTIO~1.PYI|dictionary.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\dictionary.pyi" SelfReg="false"/>
+    <ROW File="error.pxd" Component_="about.py" FileName="error.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\error.pxd" SelfReg="false"/>
+    <ROW File="error.py" Component_="about.py" FileName="error.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\error.py" SelfReg="false"/>
+    <ROW File="error.pyd" Component_="about.py" FileName="error.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\error.pyd" SelfReg="false"/>
+    <ROW File="error.pyi" Component_="about.py" FileName="error.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\error.pyi" SelfReg="false"/>
+    <ROW File="context.pxd_1" Component_="context.pxd" FileName="context.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\filter\context.pxd" SelfReg="false"/>
+    <ROW File="context.py_1" Component_="context.pxd" FileName="context.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\filter\context.py" SelfReg="false"/>
+    <ROW File="context.pyd_1" Component_="context.pxd" FileName="context.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\filter\context.pyd" SelfReg="false"/>
+    <ROW File="context.pyi_1" Component_="context.pxd" FileName="context.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\filter\context.pyi" SelfReg="false"/>
+    <ROW File="filter.pxd" Component_="context.pxd" FileName="filter.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\filter\filter.pxd" SelfReg="false"/>
+    <ROW File="filter.py" Component_="context.pxd" FileName="filter.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\filter\filter.py" SelfReg="false"/>
+    <ROW File="filter.pyd" Component_="context.pxd" FileName="filter.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\filter\filter.pyd" SelfReg="false"/>
+    <ROW File="filter.pyi" Component_="context.pxd" FileName="filter.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\filter\filter.pyi" SelfReg="false"/>
+    <ROW File="graph.pxd" Component_="context.pxd" FileName="graph.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\filter\graph.pxd" SelfReg="false"/>
+    <ROW File="graph.py" Component_="context.pxd" FileName="graph.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\filter\graph.py" SelfReg="false"/>
+    <ROW File="graph.pyd" Component_="context.pxd" FileName="graph.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\filter\graph.pyd" SelfReg="false"/>
+    <ROW File="graph.pyi" Component_="context.pxd" FileName="graph.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\filter\graph.pyi" SelfReg="false"/>
+    <ROW File="link.pxd" Component_="context.pxd" FileName="link.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\filter\link.pxd" SelfReg="false"/>
+    <ROW File="link.py" Component_="context.pxd" FileName="link.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\filter\link.py" SelfReg="false"/>
+    <ROW File="link.pyd" Component_="context.pxd" FileName="link.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\filter\link.pyd" SelfReg="false"/>
+    <ROW File="link.pyi" Component_="context.pxd" FileName="link.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\filter\link.pyi" SelfReg="false"/>
+    <ROW File="loudnorm.pxd" Component_="context.pxd" FileName="loudnorm.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\filter\loudnorm.pxd" SelfReg="false"/>
+    <ROW File="loudnorm.py" Component_="context.pxd" FileName="loudnorm.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\filter\loudnorm.py" SelfReg="false"/>
+    <ROW File="loudnorm.pyd" Component_="context.pxd" FileName="loudnorm.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\filter\loudnorm.pyd" SelfReg="false"/>
+    <ROW File="loudnorm.pyi" Component_="context.pxd" FileName="loudnorm.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\filter\loudnorm.pyi" SelfReg="false"/>
+    <ROW File="loudnorm_impl.c" Component_="context.pxd" FileName="LOUDNO~1.C|loudnorm_impl.c" Attributes="0" SourcePath="..\dvr-scan\_internal\av\filter\loudnorm_impl.c" SelfReg="false"/>
+    <ROW File="loudnorm_impl.h" Component_="context.pxd" FileName="LOUDNO~1.H|loudnorm_impl.h" Attributes="0" SourcePath="..\dvr-scan\_internal\av\filter\loudnorm_impl.h" SelfReg="false"/>
+    <ROW File="__init__.pxd_3" Component_="context.pxd" FileName="__init__.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\filter\__init__.pxd" SelfReg="false"/>
+    <ROW File="__init__.py_10" Component_="context.pxd" FileName="__init__.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\filter\__init__.py" SelfReg="false"/>
+    <ROW File="__init__.pyi_2" Component_="context.pxd" FileName="__init__.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\filter\__init__.pyi" SelfReg="false"/>
+    <ROW File="format.pxd_1" Component_="about.py" FileName="format.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\format.pxd" SelfReg="false"/>
+    <ROW File="format.py_1" Component_="about.py" FileName="format.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\format.py" SelfReg="false"/>
+    <ROW File="format.pyd_1" Component_="about.py" FileName="format.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\format.pyd" SelfReg="false"/>
+    <ROW File="format.pyi_1" Component_="about.py" FileName="format.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\format.pyi" SelfReg="false"/>
+    <ROW File="frame.pxd_1" Component_="about.py" FileName="frame.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\frame.pxd" SelfReg="false"/>
+    <ROW File="frame.py_1" Component_="about.py" FileName="frame.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\frame.py" SelfReg="false"/>
+    <ROW File="frame.pyd_1" Component_="about.py" FileName="frame.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\frame.pyd" SelfReg="false"/>
+    <ROW File="frame.pyi_1" Component_="about.py" FileName="frame.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\frame.pyi" SelfReg="false"/>
+    <ROW File="index.pxd" Component_="about.py" FileName="index.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\index.pxd" SelfReg="false"/>
+    <ROW File="index.py" Component_="about.py" FileName="index.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\index.py" SelfReg="false"/>
+    <ROW File="index.pyd" Component_="about.py" FileName="index.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\index.pyd" SelfReg="false"/>
+    <ROW File="index.pyi" Component_="about.py" FileName="index.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\index.pyi" SelfReg="false"/>
+    <ROW File="logging.pxd" Component_="about.py" FileName="logging.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\logging.pxd" SelfReg="false"/>
+    <ROW File="logging.py" Component_="about.py" FileName="logging.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\logging.py" SelfReg="false"/>
+    <ROW File="logging.pyd" Component_="about.py" FileName="logging.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\logging.pyd" SelfReg="false"/>
+    <ROW File="logging.pyi" Component_="about.py" FileName="logging.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\logging.pyi" SelfReg="false"/>
+    <ROW File="opaque.pxd" Component_="about.py" FileName="opaque.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\opaque.pxd" SelfReg="false"/>
+    <ROW File="opaque.py" Component_="about.py" FileName="opaque.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\opaque.py" SelfReg="false"/>
+    <ROW File="opaque.pyd" Component_="about.py" FileName="opaque.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\opaque.pyd" SelfReg="false"/>
+    <ROW File="packet.pxd" Component_="about.py" FileName="packet.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\packet.pxd" SelfReg="false"/>
+    <ROW File="packet.py" Component_="about.py" FileName="packet.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\packet.py" SelfReg="false"/>
+    <ROW File="packet.pyd" Component_="about.py" FileName="packet.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\packet.pyd" SelfReg="false"/>
+    <ROW File="packet.pyi" Component_="about.py" FileName="packet.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\packet.pyi" SelfReg="false"/>
+    <ROW File="plane.pxd_1" Component_="about.py" FileName="plane.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\plane.pxd" SelfReg="false"/>
+    <ROW File="plane.py_1" Component_="about.py" FileName="plane.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\plane.py" SelfReg="false"/>
+    <ROW File="plane.pyd_1" Component_="about.py" FileName="plane.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\plane.pyd" SelfReg="false"/>
+    <ROW File="plane.pyi_1" Component_="about.py" FileName="plane.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\plane.pyi" SelfReg="false"/>
+    <ROW File="py.typed" Component_="about.py" FileName="PY~1.TYP|py.typed" Attributes="0" SourcePath="..\dvr-scan\_internal\av\py.typed" SelfReg="false"/>
+    <ROW File="rational.pxd" Component_="about.py" FileName="rational.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\rational.pxd" SelfReg="false"/>
+    <ROW File="rational.py" Component_="about.py" FileName="rational.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\rational.py" SelfReg="false"/>
+    <ROW File="rational.pyd" Component_="about.py" FileName="rational.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\rational.pyd" SelfReg="false"/>
+    <ROW File="rational.pyi" Component_="about.py" FileName="rational.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\rational.pyi" SelfReg="false"/>
+    <ROW File="encparams.pxd" Component_="encparams.pxd" FileName="ENCPAR~1.PXD|encparams.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\sidedata\encparams.pxd" SelfReg="false"/>
+    <ROW File="encparams.py" Component_="encparams.pxd" FileName="ENCPAR~1.PY|encparams.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\sidedata\encparams.py" SelfReg="false"/>
+    <ROW File="encparams.pyd" Component_="encparams.pxd" FileName="ENCPAR~1.PYD|encparams.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\sidedata\encparams.pyd" SelfReg="false"/>
+    <ROW File="encparams.pyi" Component_="encparams.pxd" FileName="ENCPAR~1.PYI|encparams.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\sidedata\encparams.pyi" SelfReg="false"/>
+    <ROW File="motionvectors.pxd" Component_="encparams.pxd" FileName="MOTION~1.PXD|motionvectors.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\sidedata\motionvectors.pxd" SelfReg="false"/>
+    <ROW File="motionvectors.py" Component_="encparams.pxd" FileName="MOTION~1.PY|motionvectors.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\sidedata\motionvectors.py" SelfReg="false"/>
+    <ROW File="motionvectors.pyd" Component_="encparams.pxd" FileName="MOTION~1.PYD|motionvectors.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\sidedata\motionvectors.pyd" SelfReg="false"/>
+    <ROW File="motionvectors.pyi" Component_="encparams.pxd" FileName="MOTION~1.PYI|motionvectors.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\sidedata\motionvectors.pyi" SelfReg="false"/>
+    <ROW File="sidedata.pxd" Component_="encparams.pxd" FileName="sidedata.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\sidedata\sidedata.pxd" SelfReg="false"/>
+    <ROW File="sidedata.py" Component_="encparams.pxd" FileName="sidedata.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\sidedata\sidedata.py" SelfReg="false"/>
+    <ROW File="sidedata.pyd" Component_="encparams.pxd" FileName="sidedata.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\sidedata\sidedata.pyd" SelfReg="false"/>
+    <ROW File="sidedata.pyi" Component_="encparams.pxd" FileName="sidedata.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\sidedata\sidedata.pyi" SelfReg="false"/>
+    <ROW File="__init__.pxd_4" Component_="encparams.pxd" FileName="__init__.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\sidedata\__init__.pxd" SelfReg="false"/>
+    <ROW File="__init__.py_11" Component_="encparams.pxd" FileName="__init__.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\sidedata\__init__.py" SelfReg="false"/>
+    <ROW File="stream.pxd_1" Component_="about.py" FileName="stream.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\stream.pxd" SelfReg="false"/>
+    <ROW File="stream.py_1" Component_="about.py" FileName="stream.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\stream.py" SelfReg="false"/>
+    <ROW File="stream.pyd_1" Component_="about.py" FileName="stream.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\stream.pyd" SelfReg="false"/>
+    <ROW File="stream.pyi_1" Component_="about.py" FileName="stream.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\stream.pyi" SelfReg="false"/>
+    <ROW File="codeccontext.pxd_1" Component_="codeccontext.pxd_1" FileName="CODECC~1.PXD|codeccontext.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\subtitles\codeccontext.pxd" SelfReg="false"/>
+    <ROW File="codeccontext.py_1" Component_="codeccontext.pxd_1" FileName="CODECC~1.PY|codeccontext.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\subtitles\codeccontext.py" SelfReg="false"/>
+    <ROW File="codeccontext.pyd_1" Component_="codeccontext.pxd_1" FileName="CODECC~1.PYD|codeccontext.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\subtitles\codeccontext.pyd" SelfReg="false"/>
+    <ROW File="codeccontext.pyi_1" Component_="codeccontext.pxd_1" FileName="CODECC~1.PYI|codeccontext.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\subtitles\codeccontext.pyi" SelfReg="false"/>
+    <ROW File="stream.pxd_2" Component_="codeccontext.pxd_1" FileName="stream.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\subtitles\stream.pxd" SelfReg="false"/>
+    <ROW File="stream.py_2" Component_="codeccontext.pxd_1" FileName="stream.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\subtitles\stream.py" SelfReg="false"/>
+    <ROW File="stream.pyd_2" Component_="codeccontext.pxd_1" FileName="stream.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\subtitles\stream.pyd" SelfReg="false"/>
+    <ROW File="stream.pyi_2" Component_="codeccontext.pxd_1" FileName="stream.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\subtitles\stream.pyi" SelfReg="false"/>
+    <ROW File="subtitle.pxd" Component_="codeccontext.pxd_1" FileName="subtitle.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\subtitles\subtitle.pxd" SelfReg="false"/>
+    <ROW File="subtitle.py" Component_="codeccontext.pxd_1" FileName="subtitle.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\subtitles\subtitle.py" SelfReg="false"/>
+    <ROW File="subtitle.pyd" Component_="codeccontext.pxd_1" FileName="subtitle.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\subtitles\subtitle.pyd" SelfReg="false"/>
+    <ROW File="subtitle.pyi" Component_="codeccontext.pxd_1" FileName="subtitle.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\subtitles\subtitle.pyi" SelfReg="false"/>
+    <ROW File="__init__.pxd_5" Component_="codeccontext.pxd_1" FileName="__init__.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\subtitles\__init__.pxd" SelfReg="false"/>
+    <ROW File="__init__.py_12" Component_="codeccontext.pxd_1" FileName="__init__.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\subtitles\__init__.py" SelfReg="false"/>
+    <ROW File="__init__.pyi_3" Component_="codeccontext.pxd_1" FileName="__init__.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\subtitles\__init__.pyi" SelfReg="false"/>
+    <ROW File="utils.pxd" Component_="about.py" FileName="utils.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\utils.pxd" SelfReg="false"/>
+    <ROW File="utils.py" Component_="about.py" FileName="utils.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\utils.py" SelfReg="false"/>
+    <ROW File="utils.pyd" Component_="about.py" FileName="utils.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\utils.pyd" SelfReg="false"/>
+    <ROW File="codeccontext.pxd_2" Component_="codeccontext.pxd_2" FileName="CODECC~1.PXD|codeccontext.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\video\codeccontext.pxd" SelfReg="false"/>
+    <ROW File="codeccontext.py_2" Component_="codeccontext.pxd_2" FileName="CODECC~1.PY|codeccontext.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\video\codeccontext.py" SelfReg="false"/>
+    <ROW File="codeccontext.pyd_2" Component_="codeccontext.pxd_2" FileName="CODECC~1.PYD|codeccontext.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\video\codeccontext.pyd" SelfReg="false"/>
+    <ROW File="codeccontext.pyi_2" Component_="codeccontext.pxd_2" FileName="CODECC~1.PYI|codeccontext.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\video\codeccontext.pyi" SelfReg="false"/>
+    <ROW File="format.pxd_2" Component_="codeccontext.pxd_2" FileName="format.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\video\format.pxd" SelfReg="false"/>
+    <ROW File="format.py_2" Component_="codeccontext.pxd_2" FileName="format.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\video\format.py" SelfReg="false"/>
+    <ROW File="format.pyd_2" Component_="codeccontext.pxd_2" FileName="format.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\video\format.pyd" SelfReg="false"/>
+    <ROW File="format.pyi_2" Component_="codeccontext.pxd_2" FileName="format.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\video\format.pyi" SelfReg="false"/>
+    <ROW File="frame.pxd_2" Component_="codeccontext.pxd_2" FileName="frame.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\video\frame.pxd" SelfReg="false"/>
+    <ROW File="frame.py_2" Component_="codeccontext.pxd_2" FileName="frame.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\video\frame.py" SelfReg="false"/>
+    <ROW File="frame.pyd_2" Component_="codeccontext.pxd_2" FileName="frame.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\video\frame.pyd" SelfReg="false"/>
+    <ROW File="frame.pyi_2" Component_="codeccontext.pxd_2" FileName="frame.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\video\frame.pyi" SelfReg="false"/>
+    <ROW File="plane.pxd_2" Component_="codeccontext.pxd_2" FileName="plane.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\video\plane.pxd" SelfReg="false"/>
+    <ROW File="plane.py_2" Component_="codeccontext.pxd_2" FileName="plane.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\video\plane.py" SelfReg="false"/>
+    <ROW File="plane.pyd_2" Component_="codeccontext.pxd_2" FileName="plane.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\video\plane.pyd" SelfReg="false"/>
+    <ROW File="plane.pyi_2" Component_="codeccontext.pxd_2" FileName="plane.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\video\plane.pyi" SelfReg="false"/>
+    <ROW File="reformatter.pxd" Component_="codeccontext.pxd_2" FileName="REFORM~1.PXD|reformatter.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\video\reformatter.pxd" SelfReg="false"/>
+    <ROW File="reformatter.py" Component_="codeccontext.pxd_2" FileName="REFORM~1.PY|reformatter.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\video\reformatter.py" SelfReg="false"/>
+    <ROW File="reformatter.pyd" Component_="codeccontext.pxd_2" FileName="REFORM~1.PYD|reformatter.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\video\reformatter.pyd" SelfReg="false"/>
+    <ROW File="reformatter.pyi" Component_="codeccontext.pxd_2" FileName="REFORM~1.PYI|reformatter.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\video\reformatter.pyi" SelfReg="false"/>
+    <ROW File="stream.pxd_3" Component_="codeccontext.pxd_2" FileName="stream.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\video\stream.pxd" SelfReg="false"/>
+    <ROW File="stream.py_3" Component_="codeccontext.pxd_2" FileName="stream.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\video\stream.py" SelfReg="false"/>
+    <ROW File="stream.pyd_3" Component_="codeccontext.pxd_2" FileName="stream.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\video\stream.pyd" SelfReg="false"/>
+    <ROW File="stream.pyi_3" Component_="codeccontext.pxd_2" FileName="stream.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\video\stream.pyi" SelfReg="false"/>
+    <ROW File="__init__.pxd_6" Component_="codeccontext.pxd_2" FileName="__init__.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\video\__init__.pxd" SelfReg="false"/>
+    <ROW File="__init__.py_13" Component_="codeccontext.pxd_2" FileName="__init__.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\video\__init__.py" SelfReg="false"/>
+    <ROW File="__init__.pyi_4" Component_="codeccontext.pxd_2" FileName="__init__.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\video\__init__.pyi" SelfReg="false"/>
+    <ROW File="_core.pxd" Component_="about.py" FileName="_core.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\_core.pxd" SelfReg="false"/>
+    <ROW File="_core.py" Component_="about.py" FileName="_core.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\_core.py" SelfReg="false"/>
+    <ROW File="_core.pyd" Component_="about.py" FileName="_core.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\_core.pyd" SelfReg="false"/>
+    <ROW File="_core.pyi" Component_="about.py" FileName="_core.pyi" Attributes="0" SourcePath="..\dvr-scan\_internal\av\_core.pyi" SelfReg="false"/>
+    <ROW File="_cyutil.pyd" Component_="about.py" FileName="_cyutil.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\_cyutil.pyd" SelfReg="false"/>
+    <ROW File="__init__.pxd_7" Component_="about.py" FileName="__init__.pxd" Attributes="0" SourcePath="..\dvr-scan\_internal\av\__init__.pxd" SelfReg="false"/>
+    <ROW File="__init__.py_14" Component_="about.py" FileName="__init__.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\__init__.py" SelfReg="false"/>
+    <ROW File="__main__.py" Component_="about.py" FileName="__main__.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av\__main__.py" SelfReg="false"/>
+    <ROW File="DELVEWHEEL" Component_="DELVEWHEEL" FileName="DELVEW~1|DELVEWHEEL" Attributes="0" SourcePath="..\dvr-scan\_internal\av-19.0.2.dist-info\DELVEWHEEL" SelfReg="false"/>
+    <ROW File="entry_points.txt" Component_="DELVEWHEEL" FileName="ENTRY_~1.TXT|entry_points.txt" Attributes="0" SourcePath="..\dvr-scan\_internal\av-19.0.2.dist-info\entry_points.txt" SelfReg="false"/>
+    <ROW File="INSTALLER" Component_="DELVEWHEEL" FileName="INSTAL~1|INSTALLER" Attributes="0" SourcePath="..\dvr-scan\_internal\av-19.0.2.dist-info\INSTALLER" SelfReg="false"/>
+    <ROW File="AUTHORS.py" Component_="AUTHORS.py" FileName="AUTHORS.py" Attributes="0" SourcePath="..\dvr-scan\_internal\av-19.0.2.dist-info\licenses\AUTHORS.py" SelfReg="false"/>
+    <ROW File="AUTHORS.rst" Component_="AUTHORS.py" FileName="AUTHORS.rst" Attributes="0" SourcePath="..\dvr-scan\_internal\av-19.0.2.dist-info\licenses\AUTHORS.rst" SelfReg="false"/>
+    <ROW File="LICENSE.txt" Component_="AUTHORS.py" FileName="LICENSE.txt" Attributes="0" SourcePath="..\dvr-scan\_internal\av-19.0.2.dist-info\licenses\LICENSE.txt" SelfReg="false"/>
+    <ROW File="METADATA" Component_="DELVEWHEEL" FileName="METADATA" Attributes="0" SourcePath="..\dvr-scan\_internal\av-19.0.2.dist-info\METADATA" SelfReg="false"/>
+    <ROW File="RECORD" Component_="DELVEWHEEL" FileName="RECORD" Attributes="0" SourcePath="..\dvr-scan\_internal\av-19.0.2.dist-info\RECORD" SelfReg="false"/>
+    <ROW File="REQUESTED" Component_="DELVEWHEEL" FileName="REQUES~1|REQUESTED" Attributes="0" SourcePath="..\dvr-scan\_internal\av-19.0.2.dist-info\REQUESTED" SelfReg="false"/>
+    <ROW File="top_level.txt" Component_="DELVEWHEEL" FileName="TOP_LE~1.TXT|top_level.txt" Attributes="0" SourcePath="..\dvr-scan\_internal\av-19.0.2.dist-info\top_level.txt" SelfReg="false"/>
+    <ROW File="WHEEL" Component_="DELVEWHEEL" FileName="WHEEL" Attributes="0" SourcePath="..\dvr-scan\_internal\av-19.0.2.dist-info\WHEEL" SelfReg="false"/>
+    <ROW File="avcodec632756d4fffb772585dcdece87427716a4.dll" Component_="avcodec632756d4fffb772585dcdece87427716a4.dll" FileName="AVCODE~1.DLL|avcodec-63-2756d4fffb772585dcdece87427716a4.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\av.libs\avcodec-63-2756d4fffb772585dcdece87427716a4.dll" SelfReg="false"/>
+    <ROW File="avdevice632b26d22512639c049532c0bc6f6c022f.dll" Component_="avdevice632b26d22512639c049532c0bc6f6c022f.dll" FileName="AVDEVI~1.DLL|avdevice-63-2b26d22512639c049532c0bc6f6c022f.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\av.libs\avdevice-63-2b26d22512639c049532c0bc6f6c022f.dll" SelfReg="false"/>
+    <ROW File="avfilter1287c7677b784d3ea4ecceb3e6cae9c9f1.dll" Component_="avfilter1287c7677b784d3ea4ecceb3e6cae9c9f1.dll" FileName="AVFILT~1.DLL|avfilter-12-87c7677b784d3ea4ecceb3e6cae9c9f1.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\av.libs\avfilter-12-87c7677b784d3ea4ecceb3e6cae9c9f1.dll" SelfReg="false"/>
+    <ROW File="avformat63e8c4f8fc30664f2b7e85dcc683bd4b0d.dll" Component_="avformat63e8c4f8fc30664f2b7e85dcc683bd4b0d.dll" FileName="AVFORM~1.DLL|avformat-63-e8c4f8fc30664f2b7e85dcc683bd4b0d.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\av.libs\avformat-63-e8c4f8fc30664f2b7e85dcc683bd4b0d.dll" SelfReg="false"/>
+    <ROW File="avutil61e540ec7976bbd26a4a94dc737be3001c.dll" Component_="avutil61e540ec7976bbd26a4a94dc737be3001c.dll" FileName="AVUTIL~1.DLL|avutil-61-e540ec7976bbd26a4a94dc737be3001c.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\av.libs\avutil-61-e540ec7976bbd26a4a94dc737be3001c.dll" SelfReg="false"/>
+    <ROW File="libdav1d5469d6ef7baf7426269a9483c24587b7.dll" Component_="libdav1d5469d6ef7baf7426269a9483c24587b7.dll" FileName="LIBDAV~1.DLL|libdav1d-5469d6ef7baf7426269a9483c24587b7.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\av.libs\libdav1d-5469d6ef7baf7426269a9483c24587b7.dll" SelfReg="false"/>
+    <ROW File="libgcc_s_seh13e3b83c1f8de213bb810010a5622b180.dll" Component_="libgcc_s_seh13e3b83c1f8de213bb810010a5622b180.dll" FileName="LIBGCC~1.DLL|libgcc_s_seh-1-3e3b83c1f8de213bb810010a5622b180.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\av.libs\libgcc_s_seh-1-3e3b83c1f8de213bb810010a5622b180.dll" SelfReg="false"/>
+    <ROW File="libiconv25e7e51fe6a6e182df6c9f30f41700345.dll" Component_="libiconv25e7e51fe6a6e182df6c9f30f41700345.dll" FileName="LIBICO~1.DLL|libiconv-2-5e7e51fe6a6e182df6c9f30f41700345.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\av.libs\libiconv-2-5e7e51fe6a6e182df6c9f30f41700345.dll" SelfReg="false"/>
+    <ROW File="libopus0278e2dd25a2793d306204c9d966fe0de.dll" Component_="libopus0278e2dd25a2793d306204c9d966fe0de.dll" FileName="LIBOPU~1.DLL|libopus-0-278e2dd25a2793d306204c9d966fe0de.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\av.libs\libopus-0-278e2dd25a2793d306204c9d966fe0de.dll" SelfReg="false"/>
+    <ROW File="libsharpyuv90c3f670f207c806d3e44db799e78832.dll" Component_="libsharpyuv90c3f670f207c806d3e44db799e78832.dll" FileName="LIBSHA~1.DLL|libsharpyuv-90c3f670f207c806d3e44db799e78832.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\av.libs\libsharpyuv-90c3f670f207c806d3e44db799e78832.dll" SelfReg="false"/>
+    <ROW File="libstdc67ad22040206bf70776b13a24ec3f87b2.dll" Component_="libstdc67ad22040206bf70776b13a24ec3f87b2.dll" FileName="LIBSTD~1.DLL|libstdc++-6-7ad22040206bf70776b13a24ec3f87b2.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\av.libs\libstdc++-6-7ad22040206bf70776b13a24ec3f87b2.dll" SelfReg="false"/>
+    <ROW File="libSvtAv1Enc7a2b2046575991edd70ef501ca085458.dll" Component_="libSvtAv1Enc7a2b2046575991edd70ef501ca085458.dll" FileName="LIBSVT~1.DLL|libSvtAv1Enc-7a2b2046575991edd70ef501ca085458.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\av.libs\libSvtAv1Enc-7a2b2046575991edd70ef501ca085458.dll" SelfReg="false"/>
+    <ROW File="libvmafe1698aa5c58a07400697833b5f19b0a3.dll" Component_="libvmafe1698aa5c58a07400697833b5f19b0a3.dll" FileName="LIBVMA~1.DLL|libvmaf-e1698aa5c58a07400697833b5f19b0a3.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\av.libs\libvmaf-e1698aa5c58a07400697833b5f19b0a3.dll" SelfReg="false"/>
+    <ROW File="libvpl45cd70cb42c579529a30ad6fc282c626.dll" Component_="libvpl45cd70cb42c579529a30ad6fc282c626.dll" FileName="LIBVPL~1.DLL|libvpl-45cd70cb42c579529a30ad6fc282c626.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\av.libs\libvpl-45cd70cb42c579529a30ad6fc282c626.dll" SelfReg="false"/>
+    <ROW File="libvpx1dd81d2b55a771749d485047772201cc1.dll" Component_="libvpx1dd81d2b55a771749d485047772201cc1.dll" FileName="LIBVPX~1.DLL|libvpx-1-dd81d2b55a771749d485047772201cc1.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\av.libs\libvpx-1-dd81d2b55a771749d485047772201cc1.dll" SelfReg="false"/>
+    <ROW File="libwebpabac96c4759f9eb9b31588c8a839816c.dll" Component_="libwebpabac96c4759f9eb9b31588c8a839816c.dll" FileName="LIBWEB~1.DLL|libwebp-abac96c4759f9eb9b31588c8a839816c.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\av.libs\libwebp-abac96c4759f9eb9b31588c8a839816c.dll" SelfReg="false"/>
+    <ROW File="libwebpmux0b9545d83accdb1110a7efa5d1c54007.dll" Component_="libwebpmux0b9545d83accdb1110a7efa5d1c54007.dll" FileName="LIBWEB~2.DLL|libwebpmux-0b9545d83accdb1110a7efa5d1c54007.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\av.libs\libwebpmux-0b9545d83accdb1110a7efa5d1c54007.dll" SelfReg="false"/>
+    <ROW File="libwinpthread13e9f18fdf7e856e1e9fedd138e84e874.dll" Component_="libwinpthread13e9f18fdf7e856e1e9fedd138e84e874.dll" FileName="LIBWIN~1.DLL|libwinpthread-1-3e9f18fdf7e856e1e9fedd138e84e874.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\av.libs\libwinpthread-1-3e9f18fdf7e856e1e9fedd138e84e874.dll" SelfReg="false"/>
+    <ROW File="libx2641650f71f37cf3f3ee0e2ecac2b06829e9ff.dll" Component_="libx2641650f71f37cf3f3ee0e2ecac2b06829e9ff.dll" FileName="LIBX26~1.DLL|libx264-165-0f71f37cf3f3ee0e2ecac2b06829e9ff.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\av.libs\libx264-165-0f71f37cf3f3ee0e2ecac2b06829e9ff.dll" SelfReg="false"/>
+    <ROW File="libx265ee9d492f3fb55d0a3b564bb1bf4f6822.dll" Component_="libx265ee9d492f3fb55d0a3b564bb1bf4f6822.dll" FileName="LIBX26~2.DLL|libx265-ee9d492f3fb55d0a3b564bb1bf4f6822.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\av.libs\libx265-ee9d492f3fb55d0a3b564bb1bf4f6822.dll" SelfReg="false"/>
+    <ROW File="swresample74f9462a1fb73b949ccad2774dd941624.dll" Component_="swresample74f9462a1fb73b949ccad2774dd941624.dll" FileName="SWRESA~1.DLL|swresample-7-4f9462a1fb73b949ccad2774dd941624.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\av.libs\swresample-7-4f9462a1fb73b949ccad2774dd941624.dll" SelfReg="false"/>
+    <ROW File="swscale109af0a10ad7003982e48548ff39e98465.dll" Component_="swscale109af0a10ad7003982e48548ff39e98465.dll" FileName="SWSCAL~1.DLL|swscale-10-9af0a10ad7003982e48548ff39e98465.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\av.libs\swscale-10-9af0a10ad7003982e48548ff39e98465.dll" SelfReg="false"/>
+    <ROW File="zlib14d767210e087ff082d94ef0a09ddc7f8.dll" Component_="zlib14d767210e087ff082d94ef0a09ddc7f8.dll" FileName="ZLIB1-~1.DLL|zlib1-4d767210e087ff082d94ef0a09ddc7f8.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\av.libs\zlib1-4d767210e087ff082d94ef0a09ddc7f8.dll" SelfReg="false"/>
+    <ROW File="opencv_videoio_ffmpeg500_64.dll" Component_="opencv_videoio_ffmpeg500_64.dll" FileName="OPENCV~2.DLL|opencv_videoio_ffmpeg500_64.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\cv2\opencv_videoio_ffmpeg500_64.dll" SelfReg="false"/>
+    <ROW File="dvrscan.png_1" Component_="dvrscanlogo.png" FileName="dvr-scan.png" Attributes="0" SourcePath="..\dvr-scan\_internal\dvr_scan\dvr-scan.png" SelfReg="false"/>
+    <ROW File="libcrypto3x64.dll" Component_="libcrypto3x64.dll" FileName="LIBCRY~2.DLL|libcrypto-3-x64.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\libcrypto-3-x64.dll" SelfReg="false"/>
+    <ROW File="libssl3x64.dll" Component_="libssl3x64.dll" FileName="LIBSSL~1.DLL|libssl-3-x64.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\libssl-3-x64.dll" SelfReg="false"/>
+    <ROW File="_pocketfft_umath.cp313win_amd64.pyd" Component_="_pocketfft_umath.cp312win_amd64.pyd" FileName="_POCKE~2.PYD|_pocketfft_umath.cp313-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy\fft\_pocketfft_umath.cp313-win_amd64.pyd" SelfReg="false"/>
+    <ROW File="_umath_linalg.cp313win_amd64.pyd" Component_="_umath_linalg.cp312win_amd64.pyd" FileName="_UMATH~2.PYD|_umath_linalg.cp313-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy\linalg\_umath_linalg.cp313-win_amd64.pyd" SelfReg="false"/>
+    <ROW File="bit_generator.cp313win_amd64.pyd" Component_="bit_generator.cp312win_amd64.pyd" FileName="BIT_GE~2.PYD|bit_generator.cp313-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy\random\bit_generator.cp313-win_amd64.pyd" SelfReg="false"/>
+    <ROW File="mtrand.cp313win_amd64.pyd" Component_="bit_generator.cp312win_amd64.pyd" FileName="MTRAND~2.PYD|mtrand.cp313-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy\random\mtrand.cp313-win_amd64.pyd" SelfReg="false"/>
+    <ROW File="_bounded_integers.cp313win_amd64.pyd" Component_="bit_generator.cp312win_amd64.pyd" FileName="_BOUND~2.PYD|_bounded_integers.cp313-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy\random\_bounded_integers.cp313-win_amd64.pyd" SelfReg="false"/>
+    <ROW File="_common.cp313win_amd64.pyd" Component_="bit_generator.cp312win_amd64.pyd" FileName="_COMMO~2.PYD|_common.cp313-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy\random\_common.cp313-win_amd64.pyd" SelfReg="false"/>
+    <ROW File="_generator.cp313win_amd64.pyd" Component_="bit_generator.cp312win_amd64.pyd" FileName="_GENER~2.PYD|_generator.cp313-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy\random\_generator.cp313-win_amd64.pyd" SelfReg="false"/>
+    <ROW File="_mt19937.cp313win_amd64.pyd" Component_="bit_generator.cp312win_amd64.pyd" FileName="_MT199~2.PYD|_mt19937.cp313-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy\random\_mt19937.cp313-win_amd64.pyd" SelfReg="false"/>
+    <ROW File="_pcg64.cp313win_amd64.pyd" Component_="bit_generator.cp312win_amd64.pyd" FileName="_PCG64~2.PYD|_pcg64.cp313-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy\random\_pcg64.cp313-win_amd64.pyd" SelfReg="false"/>
+    <ROW File="_philox.cp313win_amd64.pyd" Component_="bit_generator.cp312win_amd64.pyd" FileName="_PHILO~2.PYD|_philox.cp313-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy\random\_philox.cp313-win_amd64.pyd" SelfReg="false"/>
+    <ROW File="_sfc64.cp313win_amd64.pyd" Component_="bit_generator.cp312win_amd64.pyd" FileName="_SFC64~2.PYD|_sfc64.cp313-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy\random\_sfc64.cp313-win_amd64.pyd" SelfReg="false"/>
+    <ROW File="_multiarray_tests.cp313win_amd64.pyd" Component_="_multiarray_tests.cp312win_amd64.pyd" FileName="_MULTI~3.PYD|_multiarray_tests.cp313-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy\_core\_multiarray_tests.cp313-win_amd64.pyd" SelfReg="false"/>
+    <ROW File="_multiarray_umath.cp313win_amd64.pyd" Component_="_multiarray_tests.cp312win_amd64.pyd" FileName="_MULTI~4.PYD|_multiarray_umath.cp313-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy\_core\_multiarray_umath.cp313-win_amd64.pyd" SelfReg="false"/>
+    <ROW File="DELVEWHEEL_1" Component_="DELVEWHEEL_1" FileName="DELVEW~1|DELVEWHEEL" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy-2.5.4.dist-info\DELVEWHEEL" SelfReg="false"/>
+    <ROW File="entry_points.txt_1" Component_="DELVEWHEEL_1" FileName="ENTRY_~1.TXT|entry_points.txt" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy-2.5.4.dist-info\entry_points.txt" SelfReg="false"/>
+    <ROW File="INSTALLER_1" Component_="DELVEWHEEL_1" FileName="INSTAL~1|INSTALLER" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy-2.5.4.dist-info\INSTALLER" SelfReg="false"/>
+    <ROW File="LICENSE.txt_1" Component_="LICENSE.txt" FileName="LICENSE.txt" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy-2.5.4.dist-info\licenses\LICENSE.txt" SelfReg="false"/>
+    <ROW File="LICENSE.md" Component_="LICENSE.md" FileName="LICENSE.md" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy-2.5.4.dist-info\licenses\numpy\fft\pocketfft\LICENSE.md" SelfReg="false"/>
+    <ROW File="LICENSE.txt_2" Component_="LICENSE.txt_1" FileName="LICENSE.txt" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy-2.5.4.dist-info\licenses\numpy\linalg\lapack_lite\LICENSE.txt" SelfReg="false"/>
+    <ROW File="LICENSE_2" Component_="LICENSE_1" FileName="LICENSE" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy-2.5.4.dist-info\licenses\numpy\ma\LICENSE" SelfReg="false"/>
+    <ROW File="LICENSE.md_1" Component_="LICENSE.md_1" FileName="LICENSE.md" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy-2.5.4.dist-info\licenses\numpy\random\LICENSE.md" SelfReg="false"/>
+    <ROW File="LICENSE.md_2" Component_="LICENSE.md_2" FileName="LICENSE.md" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy-2.5.4.dist-info\licenses\numpy\random\src\distributions\LICENSE.md" SelfReg="false"/>
+    <ROW File="LICENSE.md_3" Component_="LICENSE.md_3" FileName="LICENSE.md" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy-2.5.4.dist-info\licenses\numpy\random\src\mt19937\LICENSE.md" SelfReg="false"/>
+    <ROW File="LICENSE.md_4" Component_="LICENSE.md_4" FileName="LICENSE.md" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy-2.5.4.dist-info\licenses\numpy\random\src\pcg64\LICENSE.md" SelfReg="false"/>
+    <ROW File="LICENSE.md_5" Component_="LICENSE.md_5" FileName="LICENSE.md" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy-2.5.4.dist-info\licenses\numpy\random\src\philox\LICENSE.md" SelfReg="false"/>
+    <ROW File="LICENSE.md_6" Component_="LICENSE.md_6" FileName="LICENSE.md" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy-2.5.4.dist-info\licenses\numpy\random\src\sfc64\LICENSE.md" SelfReg="false"/>
+    <ROW File="LICENSE.md_7" Component_="LICENSE.md_7" FileName="LICENSE.md" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy-2.5.4.dist-info\licenses\numpy\random\src\splitmix64\LICENSE.md" SelfReg="false"/>
+    <ROW File="LICENSE.txt_3" Component_="LICENSE.txt_2" FileName="LICENSE.txt" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy-2.5.4.dist-info\licenses\numpy\_core\include\numpy\libdivide\LICENSE.txt" SelfReg="false"/>
+    <ROW File="COPYING" Component_="COPYING" FileName="COPYING" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy-2.5.4.dist-info\licenses\numpy\_core\src\common\pythoncapi-compat\COPYING" SelfReg="false"/>
+    <ROW File="LICENSE_3" Component_="LICENSE_2" FileName="LICENSE" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy-2.5.4.dist-info\licenses\numpy\_core\src\highway\LICENSE" SelfReg="false"/>
+    <ROW File="dragon4_LICENSE.txt" Component_="dragon4_LICENSE.txt" FileName="DRAGON~1.TXT|dragon4_LICENSE.txt" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy-2.5.4.dist-info\licenses\numpy\_core\src\multiarray\dragon4_LICENSE.txt" SelfReg="false"/>
+    <ROW File="LICENSE.md_8" Component_="LICENSE.md_8" FileName="LICENSE.md" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy-2.5.4.dist-info\licenses\numpy\_core\src\npysort\x86-simd-sort\LICENSE.md" SelfReg="false"/>
+    <ROW File="LICENSE_4" Component_="LICENSE_3" FileName="LICENSE" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy-2.5.4.dist-info\licenses\numpy\_core\src\umath\svml\LICENSE" SelfReg="false"/>
+    <ROW File="METADATA_1" Component_="DELVEWHEEL_1" FileName="METADATA" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy-2.5.4.dist-info\METADATA" SelfReg="false"/>
+    <ROW File="RECORD_1" Component_="DELVEWHEEL_1" FileName="RECORD" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy-2.5.4.dist-info\RECORD" SelfReg="false"/>
+    <ROW File="REQUESTED_1" Component_="DELVEWHEEL_1" FileName="REQUES~1|REQUESTED" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy-2.5.4.dist-info\REQUESTED" SelfReg="false"/>
+    <ROW File="WHEEL_1" Component_="DELVEWHEEL_1" FileName="WHEEL" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy-2.5.4.dist-info\WHEEL" SelfReg="false"/>
+    <ROW File="libscipy_openblas64_ed4f167a5330424524f45258e7ca2c8d.dll" Component_="libscipy_openblas64_ed4f167a5330424524f45258e7ca2c8d.dll" FileName="LIBSCI~2.DLL|libscipy_openblas64_-ed4f167a5330424524f45258e7ca2c8d.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy.libs\libscipy_openblas64_-ed4f167a5330424524f45258e7ca2c8d.dll" SelfReg="false"/>
+    <ROW File="msvcp140a4c2229bdc2a2a630acdc095b4d86008.dll" Component_="msvcp140a4c2229bdc2a2a630acdc095b4d86008.dll" FileName="MSVCP1~2.DLL|msvcp140-a4c2229bdc2a2a630acdc095b4d86008.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\numpy.libs\msvcp140-a4c2229bdc2a2a630acdc095b4d86008.dll" SelfReg="false"/>
+    <ROW File="_avif.cp313win_amd64.pyd" Component_="_imaging.cp312win_amd64.pyd" FileName="_AVIFC~1.PYD|_avif.cp313-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\PIL\_avif.cp313-win_amd64.pyd" SelfReg="false"/>
+    <ROW File="_imaging.cp313win_amd64.pyd" Component_="_imaging.cp312win_amd64.pyd" FileName="_IMAGI~5.PYD|_imaging.cp313-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\PIL\_imaging.cp313-win_amd64.pyd" SelfReg="false"/>
+    <ROW File="_imagingcms.cp313win_amd64.pyd" Component_="_imaging.cp312win_amd64.pyd" FileName="_IMAGI~6.PYD|_imagingcms.cp313-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\PIL\_imagingcms.cp313-win_amd64.pyd" SelfReg="false"/>
+    <ROW File="_imagingtk.cp313win_amd64.pyd" Component_="_imaging.cp312win_amd64.pyd" FileName="_IMAGI~7.PYD|_imagingtk.cp313-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\PIL\_imagingtk.cp313-win_amd64.pyd" SelfReg="false"/>
+    <ROW File="_webp.cp313win_amd64.pyd" Component_="_imaging.cp312win_amd64.pyd" FileName="_WEBPC~2.PYD|_webp.cp313-win_amd64.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\PIL\_webp.cp313-win_amd64.pyd" SelfReg="false"/>
+    <ROW File="python313.dll" Component_="python313.dll" FileName="PYTHON~2.DLL|python313.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\python313.dll" SelfReg="false"/>
+    <ROW File="libtkdnd2.10.3.so" Component_="libtkdnd2.10.3.so" FileName="LIBTKD~1.SO|libtkdnd2.10.3.so" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-arm64\libtkdnd2.10.3.so" SelfReg="false"/>
+    <ROW File="pkgIndex.tcl_3" Component_="libtkdnd2.10.3.so" FileName="pkgIndex.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-arm64\pkgIndex.tcl" SelfReg="false"/>
+    <ROW File="tkdnd.tcl" Component_="libtkdnd2.10.3.so" FileName="tkdnd.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-arm64\tkdnd.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_compat.tcl" Component_="libtkdnd2.10.3.so" FileName="TKDND_~1.TCL|tkdnd_compat.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-arm64\tkdnd_compat.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_generic.tcl" Component_="libtkdnd2.10.3.so" FileName="TKDND_~2.TCL|tkdnd_generic.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-arm64\tkdnd_generic.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_macosx.tcl" Component_="libtkdnd2.10.3.so" FileName="TKDND_~3.TCL|tkdnd_macosx.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-arm64\tkdnd_macosx.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_unix.tcl" Component_="libtkdnd2.10.3.so" FileName="TKDND_~4.TCL|tkdnd_unix.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-arm64\tkdnd_unix.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_utils.tcl" Component_="libtkdnd2.10.3.so" FileName="TKDND_~5.TCL|tkdnd_utils.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-arm64\tkdnd_utils.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_windows.tcl" Component_="libtkdnd2.10.3.so" FileName="TKDND_~6.TCL|tkdnd_windows.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-arm64\tkdnd_windows.tcl" SelfReg="false"/>
+    <ROW File="libtcl9tkdnd2.10.3.so" Component_="libtcl9tkdnd2.10.3.so" FileName="LIBTCL~1.SO|libtcl9tkdnd2.10.3.so" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-arm64-tcl9\libtcl9tkdnd2.10.3.so" SelfReg="false"/>
+    <ROW File="pkgIndex.tcl_4" Component_="libtcl9tkdnd2.10.3.so" FileName="pkgIndex.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-arm64-tcl9\pkgIndex.tcl" SelfReg="false"/>
+    <ROW File="tkdnd.tcl_1" Component_="libtcl9tkdnd2.10.3.so" FileName="tkdnd.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-arm64-tcl9\tkdnd.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_compat.tcl_1" Component_="libtcl9tkdnd2.10.3.so" FileName="TKDND_~1.TCL|tkdnd_compat.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-arm64-tcl9\tkdnd_compat.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_generic.tcl_1" Component_="libtcl9tkdnd2.10.3.so" FileName="TKDND_~2.TCL|tkdnd_generic.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-arm64-tcl9\tkdnd_generic.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_macosx.tcl_1" Component_="libtcl9tkdnd2.10.3.so" FileName="TKDND_~3.TCL|tkdnd_macosx.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-arm64-tcl9\tkdnd_macosx.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_unix.tcl_1" Component_="libtcl9tkdnd2.10.3.so" FileName="TKDND_~4.TCL|tkdnd_unix.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-arm64-tcl9\tkdnd_unix.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_utils.tcl_1" Component_="libtcl9tkdnd2.10.3.so" FileName="TKDND_~5.TCL|tkdnd_utils.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-arm64-tcl9\tkdnd_utils.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_windows.tcl_1" Component_="libtcl9tkdnd2.10.3.so" FileName="TKDND_~6.TCL|tkdnd_windows.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-arm64-tcl9\tkdnd_windows.tcl" SelfReg="false"/>
+    <ROW File="libtkdnd2.10.3.so_1" Component_="libtkdnd2.10.3.so_1" FileName="LIBTKD~1.SO|libtkdnd2.10.3.so" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-x64\libtkdnd2.10.3.so" SelfReg="false"/>
+    <ROW File="pkgIndex.tcl_5" Component_="libtkdnd2.10.3.so_1" FileName="pkgIndex.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-x64\pkgIndex.tcl" SelfReg="false"/>
+    <ROW File="tkdnd.tcl_2" Component_="libtkdnd2.10.3.so_1" FileName="tkdnd.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-x64\tkdnd.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_compat.tcl_2" Component_="libtkdnd2.10.3.so_1" FileName="TKDND_~1.TCL|tkdnd_compat.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-x64\tkdnd_compat.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_generic.tcl_2" Component_="libtkdnd2.10.3.so_1" FileName="TKDND_~2.TCL|tkdnd_generic.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-x64\tkdnd_generic.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_macosx.tcl_2" Component_="libtkdnd2.10.3.so_1" FileName="TKDND_~3.TCL|tkdnd_macosx.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-x64\tkdnd_macosx.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_unix.tcl_2" Component_="libtkdnd2.10.3.so_1" FileName="TKDND_~4.TCL|tkdnd_unix.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-x64\tkdnd_unix.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_utils.tcl_2" Component_="libtkdnd2.10.3.so_1" FileName="TKDND_~5.TCL|tkdnd_utils.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-x64\tkdnd_utils.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_windows.tcl_2" Component_="libtkdnd2.10.3.so_1" FileName="TKDND_~6.TCL|tkdnd_windows.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-x64\tkdnd_windows.tcl" SelfReg="false"/>
+    <ROW File="libtcl9tkdnd2.10.3.so_1" Component_="libtcl9tkdnd2.10.3.so_1" FileName="LIBTCL~1.SO|libtcl9tkdnd2.10.3.so" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-x64-tcl9\libtcl9tkdnd2.10.3.so" SelfReg="false"/>
+    <ROW File="pkgIndex.tcl_6" Component_="libtcl9tkdnd2.10.3.so_1" FileName="pkgIndex.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-x64-tcl9\pkgIndex.tcl" SelfReg="false"/>
+    <ROW File="tkdnd.tcl_3" Component_="libtcl9tkdnd2.10.3.so_1" FileName="tkdnd.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-x64-tcl9\tkdnd.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_compat.tcl_3" Component_="libtcl9tkdnd2.10.3.so_1" FileName="TKDND_~1.TCL|tkdnd_compat.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-x64-tcl9\tkdnd_compat.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_generic.tcl_3" Component_="libtcl9tkdnd2.10.3.so_1" FileName="TKDND_~2.TCL|tkdnd_generic.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-x64-tcl9\tkdnd_generic.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_macosx.tcl_3" Component_="libtcl9tkdnd2.10.3.so_1" FileName="TKDND_~3.TCL|tkdnd_macosx.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-x64-tcl9\tkdnd_macosx.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_unix.tcl_3" Component_="libtcl9tkdnd2.10.3.so_1" FileName="TKDND_~4.TCL|tkdnd_unix.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-x64-tcl9\tkdnd_unix.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_utils.tcl_3" Component_="libtcl9tkdnd2.10.3.so_1" FileName="TKDND_~5.TCL|tkdnd_utils.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-x64-tcl9\tkdnd_utils.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_windows.tcl_3" Component_="libtcl9tkdnd2.10.3.so_1" FileName="TKDND_~6.TCL|tkdnd_windows.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\linux-x64-tcl9\tkdnd_windows.tcl" SelfReg="false"/>
+    <ROW File="libtkdnd2.10.3.dylib" Component_="libtkdnd2.10.3.dylib" FileName="LIBTKD~1.DYL|libtkdnd2.10.3.dylib" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\osx-arm64\libtkdnd2.10.3.dylib" SelfReg="false"/>
+    <ROW File="pkgIndex.tcl_7" Component_="libtkdnd2.10.3.dylib" FileName="pkgIndex.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\osx-arm64\pkgIndex.tcl" SelfReg="false"/>
+    <ROW File="tkdnd.tcl_4" Component_="libtkdnd2.10.3.dylib" FileName="tkdnd.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\osx-arm64\tkdnd.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_compat.tcl_4" Component_="libtkdnd2.10.3.dylib" FileName="TKDND_~1.TCL|tkdnd_compat.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\osx-arm64\tkdnd_compat.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_generic.tcl_4" Component_="libtkdnd2.10.3.dylib" FileName="TKDND_~2.TCL|tkdnd_generic.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\osx-arm64\tkdnd_generic.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_macosx.tcl_4" Component_="libtkdnd2.10.3.dylib" FileName="TKDND_~3.TCL|tkdnd_macosx.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\osx-arm64\tkdnd_macosx.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_unix.tcl_4" Component_="libtkdnd2.10.3.dylib" FileName="TKDND_~4.TCL|tkdnd_unix.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\osx-arm64\tkdnd_unix.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_utils.tcl_4" Component_="libtkdnd2.10.3.dylib" FileName="TKDND_~5.TCL|tkdnd_utils.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\osx-arm64\tkdnd_utils.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_windows.tcl_4" Component_="libtkdnd2.10.3.dylib" FileName="TKDND_~6.TCL|tkdnd_windows.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\osx-arm64\tkdnd_windows.tcl" SelfReg="false"/>
+    <ROW File="libtcl9tkdnd2.10.3.dylib" Component_="libtcl9tkdnd2.10.3.dylib" FileName="LIBTCL~1.DYL|libtcl9tkdnd2.10.3.dylib" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\osx-arm64-tcl9\libtcl9tkdnd2.10.3.dylib" SelfReg="false"/>
+    <ROW File="pkgIndex.tcl_8" Component_="libtcl9tkdnd2.10.3.dylib" FileName="pkgIndex.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\osx-arm64-tcl9\pkgIndex.tcl" SelfReg="false"/>
+    <ROW File="tkdnd.tcl_5" Component_="libtcl9tkdnd2.10.3.dylib" FileName="tkdnd.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\osx-arm64-tcl9\tkdnd.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_compat.tcl_5" Component_="libtcl9tkdnd2.10.3.dylib" FileName="TKDND_~1.TCL|tkdnd_compat.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\osx-arm64-tcl9\tkdnd_compat.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_generic.tcl_5" Component_="libtcl9tkdnd2.10.3.dylib" FileName="TKDND_~2.TCL|tkdnd_generic.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\osx-arm64-tcl9\tkdnd_generic.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_macosx.tcl_5" Component_="libtcl9tkdnd2.10.3.dylib" FileName="TKDND_~3.TCL|tkdnd_macosx.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\osx-arm64-tcl9\tkdnd_macosx.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_unix.tcl_5" Component_="libtcl9tkdnd2.10.3.dylib" FileName="TKDND_~4.TCL|tkdnd_unix.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\osx-arm64-tcl9\tkdnd_unix.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_utils.tcl_5" Component_="libtcl9tkdnd2.10.3.dylib" FileName="TKDND_~5.TCL|tkdnd_utils.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\osx-arm64-tcl9\tkdnd_utils.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_windows.tcl_5" Component_="libtcl9tkdnd2.10.3.dylib" FileName="TKDND_~6.TCL|tkdnd_windows.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\osx-arm64-tcl9\tkdnd_windows.tcl" SelfReg="false"/>
+    <ROW File="libtkdnd2.9.4.dylib" Component_="libtkdnd2.9.4.dylib" FileName="LIBTKD~1.DYL|libtkdnd2.9.4.dylib" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\osx-x64\libtkdnd2.9.4.dylib" SelfReg="false"/>
+    <ROW File="pkgIndex.tcl_9" Component_="libtkdnd2.9.4.dylib" FileName="pkgIndex.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\osx-x64\pkgIndex.tcl" SelfReg="false"/>
+    <ROW File="tkdnd.tcl_6" Component_="libtkdnd2.9.4.dylib" FileName="tkdnd.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\osx-x64\tkdnd.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_compat.tcl_6" Component_="libtkdnd2.9.4.dylib" FileName="TKDND_~1.TCL|tkdnd_compat.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\osx-x64\tkdnd_compat.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_generic.tcl_6" Component_="libtkdnd2.9.4.dylib" FileName="TKDND_~2.TCL|tkdnd_generic.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\osx-x64\tkdnd_generic.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_macosx.tcl_6" Component_="libtkdnd2.9.4.dylib" FileName="TKDND_~3.TCL|tkdnd_macosx.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\osx-x64\tkdnd_macosx.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_unix.tcl_6" Component_="libtkdnd2.9.4.dylib" FileName="TKDND_~4.TCL|tkdnd_unix.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\osx-x64\tkdnd_unix.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_utils.tcl_6" Component_="libtkdnd2.9.4.dylib" FileName="TKDND_~5.TCL|tkdnd_utils.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\osx-x64\tkdnd_utils.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_windows.tcl_6" Component_="libtkdnd2.9.4.dylib" FileName="TKDND_~6.TCL|tkdnd_windows.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\osx-x64\tkdnd_windows.tcl" SelfReg="false"/>
+    <ROW File="libtkdnd2.10.3.dll" Component_="libtkdnd2.10.3.dll" FileName="LIBTKD~1.DLL|libtkdnd2.10.3.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-arm64\libtkdnd2.10.3.dll" SelfReg="false"/>
+    <ROW File="pkgIndex.tcl_10" Component_="pkgIndex.tcl" FileName="pkgIndex.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-arm64\pkgIndex.tcl" SelfReg="false"/>
+    <ROW File="tkdnd.tcl_7" Component_="pkgIndex.tcl" FileName="tkdnd.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-arm64\tkdnd.tcl" SelfReg="false"/>
+    <ROW File="tkdnd2.10.3.lib" Component_="pkgIndex.tcl" FileName="TKDND2~1.LIB|tkdnd2.10.3.lib" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-arm64\tkdnd2.10.3.lib" SelfReg="false"/>
+    <ROW File="tkdnd_compat.tcl_7" Component_="pkgIndex.tcl" FileName="TKDND_~1.TCL|tkdnd_compat.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-arm64\tkdnd_compat.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_generic.tcl_7" Component_="pkgIndex.tcl" FileName="TKDND_~2.TCL|tkdnd_generic.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-arm64\tkdnd_generic.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_macosx.tcl_7" Component_="pkgIndex.tcl" FileName="TKDND_~3.TCL|tkdnd_macosx.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-arm64\tkdnd_macosx.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_unix.tcl_7" Component_="pkgIndex.tcl" FileName="TKDND_~4.TCL|tkdnd_unix.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-arm64\tkdnd_unix.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_utils.tcl_7" Component_="pkgIndex.tcl" FileName="TKDND_~5.TCL|tkdnd_utils.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-arm64\tkdnd_utils.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_windows.tcl_7" Component_="pkgIndex.tcl" FileName="TKDND_~6.TCL|tkdnd_windows.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-arm64\tkdnd_windows.tcl" SelfReg="false"/>
+    <ROW File="libtkdnd2.10.3.dll_1" Component_="libtkdnd2.10.3.dll_1" FileName="LIBTKD~1.DLL|libtkdnd2.10.3.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x64\libtkdnd2.10.3.dll" SelfReg="false"/>
+    <ROW File="pkgIndex.tcl_11" Component_="pkgIndex.tcl_1" FileName="pkgIndex.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x64\pkgIndex.tcl" SelfReg="false"/>
+    <ROW File="tkdnd.tcl_8" Component_="pkgIndex.tcl_1" FileName="tkdnd.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x64\tkdnd.tcl" SelfReg="false"/>
+    <ROW File="tkdnd2.10.3.lib_1" Component_="pkgIndex.tcl_1" FileName="TKDND2~1.LIB|tkdnd2.10.3.lib" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x64\tkdnd2.10.3.lib" SelfReg="false"/>
+    <ROW File="tkdnd_compat.tcl_8" Component_="pkgIndex.tcl_1" FileName="TKDND_~1.TCL|tkdnd_compat.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x64\tkdnd_compat.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_generic.tcl_8" Component_="pkgIndex.tcl_1" FileName="TKDND_~2.TCL|tkdnd_generic.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x64\tkdnd_generic.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_macosx.tcl_8" Component_="pkgIndex.tcl_1" FileName="TKDND_~3.TCL|tkdnd_macosx.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x64\tkdnd_macosx.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_unix.tcl_8" Component_="pkgIndex.tcl_1" FileName="TKDND_~4.TCL|tkdnd_unix.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x64\tkdnd_unix.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_utils.tcl_8" Component_="pkgIndex.tcl_1" FileName="TKDND_~5.TCL|tkdnd_utils.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x64\tkdnd_utils.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_windows.tcl_8" Component_="pkgIndex.tcl_1" FileName="TKDND_~6.TCL|tkdnd_windows.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x64\tkdnd_windows.tcl" SelfReg="false"/>
+    <ROW File="libtkdnd2.10.3.dll_2" Component_="libtkdnd2.10.3.dll_2" FileName="LIBTKD~1.DLL|libtkdnd2.10.3.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x64-tcl9\libtkdnd2.10.3.dll" SelfReg="false"/>
+    <ROW File="pkgIndex.tcl_12" Component_="pkgIndex.tcl_2" FileName="pkgIndex.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x64-tcl9\pkgIndex.tcl" SelfReg="false"/>
+    <ROW File="tkdnd.tcl_9" Component_="pkgIndex.tcl_2" FileName="tkdnd.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x64-tcl9\tkdnd.tcl" SelfReg="false"/>
+    <ROW File="tkdnd2.10.3.lib_2" Component_="pkgIndex.tcl_2" FileName="TKDND2~1.LIB|tkdnd2.10.3.lib" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x64-tcl9\tkdnd2.10.3.lib" SelfReg="false"/>
+    <ROW File="tkdnd_compat.tcl_9" Component_="pkgIndex.tcl_2" FileName="TKDND_~1.TCL|tkdnd_compat.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x64-tcl9\tkdnd_compat.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_generic.tcl_9" Component_="pkgIndex.tcl_2" FileName="TKDND_~2.TCL|tkdnd_generic.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x64-tcl9\tkdnd_generic.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_macosx.tcl_9" Component_="pkgIndex.tcl_2" FileName="TKDND_~3.TCL|tkdnd_macosx.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x64-tcl9\tkdnd_macosx.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_unix.tcl_9" Component_="pkgIndex.tcl_2" FileName="TKDND_~4.TCL|tkdnd_unix.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x64-tcl9\tkdnd_unix.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_utils.tcl_9" Component_="pkgIndex.tcl_2" FileName="TKDND_~5.TCL|tkdnd_utils.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x64-tcl9\tkdnd_utils.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_windows.tcl_9" Component_="pkgIndex.tcl_2" FileName="TKDND_~6.TCL|tkdnd_windows.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x64-tcl9\tkdnd_windows.tcl" SelfReg="false"/>
+    <ROW File="libtkdnd2.10.3.dll_3" Component_="libtkdnd2.10.3.dll_3" FileName="LIBTKD~1.DLL|libtkdnd2.10.3.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x86\libtkdnd2.10.3.dll" SelfReg="false"/>
+    <ROW File="pkgIndex.tcl_13" Component_="pkgIndex.tcl_3" FileName="pkgIndex.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x86\pkgIndex.tcl" SelfReg="false"/>
+    <ROW File="tkdnd.tcl_10" Component_="pkgIndex.tcl_3" FileName="tkdnd.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x86\tkdnd.tcl" SelfReg="false"/>
+    <ROW File="tkdnd2.10.3.lib_3" Component_="pkgIndex.tcl_3" FileName="TKDND2~1.LIB|tkdnd2.10.3.lib" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x86\tkdnd2.10.3.lib" SelfReg="false"/>
+    <ROW File="tkdnd_compat.tcl_10" Component_="pkgIndex.tcl_3" FileName="TKDND_~1.TCL|tkdnd_compat.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x86\tkdnd_compat.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_generic.tcl_10" Component_="pkgIndex.tcl_3" FileName="TKDND_~2.TCL|tkdnd_generic.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x86\tkdnd_generic.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_macosx.tcl_10" Component_="pkgIndex.tcl_3" FileName="TKDND_~3.TCL|tkdnd_macosx.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x86\tkdnd_macosx.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_unix.tcl_10" Component_="pkgIndex.tcl_3" FileName="TKDND_~4.TCL|tkdnd_unix.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x86\tkdnd_unix.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_utils.tcl_10" Component_="pkgIndex.tcl_3" FileName="TKDND_~5.TCL|tkdnd_utils.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x86\tkdnd_utils.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_windows.tcl_10" Component_="pkgIndex.tcl_3" FileName="TKDND_~6.TCL|tkdnd_windows.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x86\tkdnd_windows.tcl" SelfReg="false"/>
+    <ROW File="libtkdnd2.10.3.dll_4" Component_="libtkdnd2.10.3.dll_4" FileName="LIBTKD~1.DLL|libtkdnd2.10.3.dll" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x86-tcl9\libtkdnd2.10.3.dll" SelfReg="false"/>
+    <ROW File="pkgIndex.tcl_14" Component_="pkgIndex.tcl_4" FileName="pkgIndex.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x86-tcl9\pkgIndex.tcl" SelfReg="false"/>
+    <ROW File="tkdnd.tcl_11" Component_="pkgIndex.tcl_4" FileName="tkdnd.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x86-tcl9\tkdnd.tcl" SelfReg="false"/>
+    <ROW File="tkdnd2.10.3.lib_4" Component_="pkgIndex.tcl_4" FileName="TKDND2~1.LIB|tkdnd2.10.3.lib" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x86-tcl9\tkdnd2.10.3.lib" SelfReg="false"/>
+    <ROW File="tkdnd_compat.tcl_11" Component_="pkgIndex.tcl_4" FileName="TKDND_~1.TCL|tkdnd_compat.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x86-tcl9\tkdnd_compat.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_generic.tcl_11" Component_="pkgIndex.tcl_4" FileName="TKDND_~2.TCL|tkdnd_generic.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x86-tcl9\tkdnd_generic.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_macosx.tcl_11" Component_="pkgIndex.tcl_4" FileName="TKDND_~3.TCL|tkdnd_macosx.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x86-tcl9\tkdnd_macosx.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_unix.tcl_11" Component_="pkgIndex.tcl_4" FileName="TKDND_~4.TCL|tkdnd_unix.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x86-tcl9\tkdnd_unix.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_utils.tcl_11" Component_="pkgIndex.tcl_4" FileName="TKDND_~5.TCL|tkdnd_utils.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x86-tcl9\tkdnd_utils.tcl" SelfReg="false"/>
+    <ROW File="tkdnd_windows.tcl_11" Component_="pkgIndex.tcl_4" FileName="TKDND_~6.TCL|tkdnd_windows.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\tkinterdnd2\tkdnd\win-x86-tcl9\tkdnd_windows.tcl" SelfReg="false"/>
+    <ROW File="entry_points.txt_2" Component_="entry_points.txt" FileName="ENTRY_~1.TXT|entry_points.txt" Attributes="0" SourcePath="..\dvr-scan\_internal\tqdm-4.70.1.dist-info\entry_points.txt" SelfReg="false"/>
+    <ROW File="INSTALLER_2" Component_="entry_points.txt" FileName="INSTAL~1|INSTALLER" Attributes="0" SourcePath="..\dvr-scan\_internal\tqdm-4.70.1.dist-info\INSTALLER" SelfReg="false"/>
+    <ROW File="LICENCE" Component_="LICENCE" FileName="LICENCE" Attributes="0" SourcePath="..\dvr-scan\_internal\tqdm-4.70.1.dist-info\licenses\LICENCE" SelfReg="false"/>
+    <ROW File="METADATA_2" Component_="entry_points.txt" FileName="METADATA" Attributes="0" SourcePath="..\dvr-scan\_internal\tqdm-4.70.1.dist-info\METADATA" SelfReg="false"/>
+    <ROW File="RECORD_2" Component_="entry_points.txt" FileName="RECORD" Attributes="0" SourcePath="..\dvr-scan\_internal\tqdm-4.70.1.dist-info\RECORD" SelfReg="false"/>
+    <ROW File="REQUESTED_2" Component_="entry_points.txt" FileName="REQUES~1|REQUESTED" Attributes="0" SourcePath="..\dvr-scan\_internal\tqdm-4.70.1.dist-info\REQUESTED" SelfReg="false"/>
+    <ROW File="top_level.txt_1" Component_="entry_points.txt" FileName="TOP_LE~1.TXT|top_level.txt" Attributes="0" SourcePath="..\dvr-scan\_internal\tqdm-4.70.1.dist-info\top_level.txt" SelfReg="false"/>
+    <ROW File="WHEEL_2" Component_="entry_points.txt" FileName="WHEEL" Attributes="0" SourcePath="..\dvr-scan\_internal\tqdm-4.70.1.dist-info\WHEEL" SelfReg="false"/>
+    <ROW File="EastSaskatchewan" Component_="Atlantic" FileName="EAST-S~1|East-Saskatchewan" Attributes="0" SourcePath="..\dvr-scan\_internal\_tcl_data\tzdata\Canada\East-Saskatchewan" SelfReg="false"/>
+    <ROW File="PacificNew" Component_="Alaska" FileName="PACIFI~1|Pacific-New" Attributes="0" SourcePath="..\dvr-scan\_internal\_tcl_data\tzdata\US\Pacific-New" SelfReg="false"/>
+    <ROW File="_uuid.pyd" Component_="base_library.zip" FileName="_uuid.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\_uuid.pyd" SelfReg="false"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.AiPersistentDataComponent">
     <ROW PersistentRow="dvrscan.cfg_1" Type="0" Condition="1"/>
@@ -1295,7 +1743,7 @@
     <ROW Action="AI_RESTORE_AI_SETUPEXEPATH" Condition="AI_SETUPEXEPATH_ORIGINAL" Sequence="251"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.BuildComponent">
-    <ROW BuildKey="DefaultBuild" BuildName="DefaultBuild" BuildOrder="1" BuildType="0" PackageFolder="." PackageFileName="DVR-Scan-1.8.2-win64" Languages="en" InstallationType="4" ExtUI="true" UseLargeSchema="true" MsiPackageType="x64"/>
+    <ROW BuildKey="DefaultBuild" BuildName="DefaultBuild" BuildOrder="1" BuildType="0" PackageFolder="." PackageFileName="dvr-scan-2.0-win64" Languages="en" InstallationType="4" ExtUI="true" UseLargeSchema="true" MsiPackageType="x64"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.DictionaryComponent">
     <ROW Path="&lt;AI_DICTS&gt;ui.ail"/>
@@ -1449,79 +1897,29 @@
     <ROW Feature_="DVRScan" Component_="AI_CustomARPName"/>
     <ROW Feature_="DVRScan" Component_="AI_DisableModify"/>
     <ROW Feature_="DVRScan" Component_="LICENSE"/>
-    <ROW Feature_="DVRScan" Component_="apimswincoreconsolel110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincoredatetimel110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincoredebugl110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincoreerrorhandlingl110.dll"/>
     <ROW Feature_="C4FE6FD5B7C4D07B3A313E754A9A6A8" Component_="C4FE6FD5B7C4D07B3A313E754A9A6A8"/>
-    <ROW Feature_="DVRScan" Component_="apimswincorefilel110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincorefilel120.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincorefilel210.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincorehandlel110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincoreheapl110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincoreinterlockedl110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincorelibraryloaderl110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincorelocalizationl120.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincorememoryl110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincorenamedpipel110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincoreprocessenvironmentl110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincoreprocessthreadsl110.dll"/>
     <ROW Feature_="DVRScan" Component_="dvrscan.exe"/>
     <ROW Feature_="ffmpeg" Component_="ffmpeg.exe"/>
-    <ROW Feature_="DVRScan" Component_="apimswincoreprocessthreadsl111.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincoreprofilel110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincorertlsupportl110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincorestringl110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincoresynchl110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincoresynchl120.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincoresysinfol110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincoretimezonel110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincoreutill110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincrtconiol110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincrtconvertl110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincrtenvironmentl110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincrtfilesysteml110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincrtheapl110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincrtlocalel110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincrtmathl110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincrtprivatel110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincrtprocessl110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincrtruntimel110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincrtstdiol110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincrtstringl110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincrttimel110.dll"/>
-    <ROW Feature_="DVRScan" Component_="apimswincrtutilityl110.dll"/>
     <ROW Feature_="DVRScan" Component_="base_library.zip"/>
-    <ROW Feature_="DVRScan" Component_="md.cp312win_amd64.pyd"/>
     <ROW Feature_="DVRScan" Component_="config3.py"/>
     <ROW Feature_="DVRScan" Component_="__init__.py"/>
-    <ROW Feature_="DVRScan" Component_="__init__.py_1"/>
     <ROW Feature_="DVRScan" Component_="__init__.py_2"/>
     <ROW Feature_="DVRScan" Component_="version.py"/>
-    <ROW Feature_="DVRScan" Component_="opencv_videoio_ffmpeg4100_64.dll"/>
     <ROW Feature_="DVRScan" Component_="__init__.py_3"/>
     <ROW Feature_="DVRScan" Component_="__init__.py_4"/>
     <ROW Feature_="DVRScan" Component_="dvrscanlogo.png"/>
-    <ROW Feature_="DVRScan" Component_="libcrypto3.dll"/>
     <ROW Feature_="DVRScan" Component_="libffi8.dll"/>
-    <ROW Feature_="DVRScan" Component_="libssl3.dll"/>
     <ROW Feature_="DVRScan" Component_="_pocketfft_umath.cp312win_amd64.pyd"/>
     <ROW Feature_="DVRScan" Component_="_umath_linalg.cp312win_amd64.pyd"/>
     <ROW Feature_="DVRScan" Component_="bit_generator.cp312win_amd64.pyd"/>
     <ROW Feature_="DVRScan" Component_="_multiarray_tests.cp312win_amd64.pyd"/>
     <ROW Feature_="ffmpeg" Component_="LICENSEFFMPEG"/>
-    <ROW Feature_="DVRScan" Component_="libscipy_openblas64_43e11ff0749b8cbe0a615c9cf6737e0e.dll"/>
-    <ROW Feature_="DVRScan" Component_="msvcp140d64049c6e3865410a7dda6a7e9f0c575.dll"/>
     <ROW Feature_="DVRScan" Component_="_imaging.cp312win_amd64.pyd"/>
     <ROW Feature_="DVRScan" Component_="python3.dll"/>
-    <ROW Feature_="DVRScan" Component_="python312.dll"/>
     <ROW Feature_="DVRScan" Component_="tcl86t.dll"/>
     <ROW Feature_="DVRScan" Component_="tk86t.dll"/>
-    <ROW Feature_="DVRScan" Component_="ucrtbase.dll"/>
     <ROW Feature_="DVRScan" Component_="VCRUNTIME140.dll"/>
     <ROW Feature_="DVRScan" Component_="VCRUNTIME140_1.dll"/>
-    <ROW Feature_="DVRScan" Component_="_yaml.cp312win_amd64.pyd"/>
-    <ROW Feature_="DVRScan" Component_="zlib1.dll"/>
     <ROW Feature_="DVRScan" Component_="auto.tcl"/>
     <ROW Feature_="DVRScan" Component_="ascii.enc"/>
     <ROW Feature_="DVRScan" Component_="http.tcl"/>
@@ -1561,6 +1959,82 @@
     <ROW Feature_="DVRScan" Component_="AI_SHORTCUTSREG"/>
     <ROW Feature_="DVRScan" Component_="SHORTCUTDIR"/>
     <ROW Feature_="DVRScan" Component_="palette.06af60db.min.css"/>
+    <ROW Feature_="DVRScan" Component_="about.py"/>
+    <ROW Feature_="DVRScan" Component_="codeccontext.pxd"/>
+    <ROW Feature_="DVRScan" Component_="codec.pxd"/>
+    <ROW Feature_="DVRScan" Component_="core.pxd"/>
+    <ROW Feature_="DVRScan" Component_="context.pxd"/>
+    <ROW Feature_="DVRScan" Component_="encparams.pxd"/>
+    <ROW Feature_="DVRScan" Component_="codeccontext.pxd_1"/>
+    <ROW Feature_="DVRScan" Component_="codeccontext.pxd_2"/>
+    <ROW Feature_="DVRScan" Component_="DELVEWHEEL"/>
+    <ROW Feature_="DVRScan" Component_="AUTHORS.py"/>
+    <ROW Feature_="DVRScan" Component_="avcodec632756d4fffb772585dcdece87427716a4.dll"/>
+    <ROW Feature_="DVRScan" Component_="avdevice632b26d22512639c049532c0bc6f6c022f.dll"/>
+    <ROW Feature_="DVRScan" Component_="avfilter1287c7677b784d3ea4ecceb3e6cae9c9f1.dll"/>
+    <ROW Feature_="DVRScan" Component_="avformat63e8c4f8fc30664f2b7e85dcc683bd4b0d.dll"/>
+    <ROW Feature_="DVRScan" Component_="avutil61e540ec7976bbd26a4a94dc737be3001c.dll"/>
+    <ROW Feature_="DVRScan" Component_="libdav1d5469d6ef7baf7426269a9483c24587b7.dll"/>
+    <ROW Feature_="DVRScan" Component_="libgcc_s_seh13e3b83c1f8de213bb810010a5622b180.dll"/>
+    <ROW Feature_="DVRScan" Component_="libiconv25e7e51fe6a6e182df6c9f30f41700345.dll"/>
+    <ROW Feature_="DVRScan" Component_="libopus0278e2dd25a2793d306204c9d966fe0de.dll"/>
+    <ROW Feature_="DVRScan" Component_="libsharpyuv90c3f670f207c806d3e44db799e78832.dll"/>
+    <ROW Feature_="DVRScan" Component_="libstdc67ad22040206bf70776b13a24ec3f87b2.dll"/>
+    <ROW Feature_="DVRScan" Component_="libSvtAv1Enc7a2b2046575991edd70ef501ca085458.dll"/>
+    <ROW Feature_="DVRScan" Component_="libvmafe1698aa5c58a07400697833b5f19b0a3.dll"/>
+    <ROW Feature_="DVRScan" Component_="libvpl45cd70cb42c579529a30ad6fc282c626.dll"/>
+    <ROW Feature_="DVRScan" Component_="libvpx1dd81d2b55a771749d485047772201cc1.dll"/>
+    <ROW Feature_="DVRScan" Component_="libwebpabac96c4759f9eb9b31588c8a839816c.dll"/>
+    <ROW Feature_="DVRScan" Component_="libwebpmux0b9545d83accdb1110a7efa5d1c54007.dll"/>
+    <ROW Feature_="DVRScan" Component_="libwinpthread13e9f18fdf7e856e1e9fedd138e84e874.dll"/>
+    <ROW Feature_="DVRScan" Component_="libx2641650f71f37cf3f3ee0e2ecac2b06829e9ff.dll"/>
+    <ROW Feature_="DVRScan" Component_="libx265ee9d492f3fb55d0a3b564bb1bf4f6822.dll"/>
+    <ROW Feature_="DVRScan" Component_="swresample74f9462a1fb73b949ccad2774dd941624.dll"/>
+    <ROW Feature_="DVRScan" Component_="swscale109af0a10ad7003982e48548ff39e98465.dll"/>
+    <ROW Feature_="DVRScan" Component_="zlib14d767210e087ff082d94ef0a09ddc7f8.dll"/>
+    <ROW Feature_="DVRScan" Component_="opencv_videoio_ffmpeg500_64.dll"/>
+    <ROW Feature_="DVRScan" Component_="libcrypto3x64.dll"/>
+    <ROW Feature_="DVRScan" Component_="libssl3x64.dll"/>
+    <ROW Feature_="DVRScan" Component_="DELVEWHEEL_1"/>
+    <ROW Feature_="DVRScan" Component_="LICENSE.txt"/>
+    <ROW Feature_="DVRScan" Component_="LICENSE.md"/>
+    <ROW Feature_="DVRScan" Component_="LICENSE.txt_1"/>
+    <ROW Feature_="DVRScan" Component_="LICENSE_1"/>
+    <ROW Feature_="DVRScan" Component_="LICENSE.md_1"/>
+    <ROW Feature_="DVRScan" Component_="LICENSE.md_2"/>
+    <ROW Feature_="DVRScan" Component_="LICENSE.md_3"/>
+    <ROW Feature_="DVRScan" Component_="LICENSE.md_4"/>
+    <ROW Feature_="DVRScan" Component_="LICENSE.md_5"/>
+    <ROW Feature_="DVRScan" Component_="LICENSE.md_6"/>
+    <ROW Feature_="DVRScan" Component_="LICENSE.md_7"/>
+    <ROW Feature_="DVRScan" Component_="LICENSE.txt_2"/>
+    <ROW Feature_="DVRScan" Component_="COPYING"/>
+    <ROW Feature_="DVRScan" Component_="LICENSE_2"/>
+    <ROW Feature_="DVRScan" Component_="dragon4_LICENSE.txt"/>
+    <ROW Feature_="DVRScan" Component_="LICENSE.md_8"/>
+    <ROW Feature_="DVRScan" Component_="LICENSE_3"/>
+    <ROW Feature_="DVRScan" Component_="libscipy_openblas64_ed4f167a5330424524f45258e7ca2c8d.dll"/>
+    <ROW Feature_="DVRScan" Component_="msvcp140a4c2229bdc2a2a630acdc095b4d86008.dll"/>
+    <ROW Feature_="DVRScan" Component_="python313.dll"/>
+    <ROW Feature_="DVRScan" Component_="libtkdnd2.10.3.so"/>
+    <ROW Feature_="DVRScan" Component_="libtcl9tkdnd2.10.3.so"/>
+    <ROW Feature_="DVRScan" Component_="libtkdnd2.10.3.so_1"/>
+    <ROW Feature_="DVRScan" Component_="libtcl9tkdnd2.10.3.so_1"/>
+    <ROW Feature_="DVRScan" Component_="libtkdnd2.10.3.dylib"/>
+    <ROW Feature_="DVRScan" Component_="libtcl9tkdnd2.10.3.dylib"/>
+    <ROW Feature_="DVRScan" Component_="libtkdnd2.9.4.dylib"/>
+    <ROW Feature_="DVRScan" Component_="libtkdnd2.10.3.dll"/>
+    <ROW Feature_="DVRScan" Component_="pkgIndex.tcl"/>
+    <ROW Feature_="DVRScan" Component_="libtkdnd2.10.3.dll_1"/>
+    <ROW Feature_="DVRScan" Component_="pkgIndex.tcl_1"/>
+    <ROW Feature_="DVRScan" Component_="libtkdnd2.10.3.dll_2"/>
+    <ROW Feature_="DVRScan" Component_="pkgIndex.tcl_2"/>
+    <ROW Feature_="DVRScan" Component_="libtkdnd2.10.3.dll_3"/>
+    <ROW Feature_="DVRScan" Component_="pkgIndex.tcl_3"/>
+    <ROW Feature_="DVRScan" Component_="libtkdnd2.10.3.dll_4"/>
+    <ROW Feature_="DVRScan" Component_="pkgIndex.tcl_4"/>
+    <ROW Feature_="DVRScan" Component_="entry_points.txt"/>
+    <ROW Feature_="DVRScan" Component_="LICENCE"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiIconsComponent">
     <ROW Name="dvr_scan_icon.exe" SourcePath="dvr_scan_icon.ico" Index="0"/>
@@ -1655,7 +2129,7 @@
     <ROW Registry="UninstallString" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="UninstallString" Value="[AI_UNINSTALLER] /x [ProductCode] AI_UNINSTALLER_CTP=1" Component_="AI_CustomARPName"/>
     <ROW Registry="UpgradeCode" Root="-1" Key="Software\[Manufacturer]\[UpgradeCode]" Name="\"/>
     <ROW Registry="Version" Root="-1" Key="Software\[Manufacturer]\[ProductName]" Name="Version" Value="[ProductVersion]" Component_="ProductInformation"/>
-    <ROW Registry="VersionMajor" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="VersionMajor" Value="#1" Component_="AI_CustomARPName" VirtualValue="#"/>
+    <ROW Registry="VersionMajor" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="VersionMajor" Value="#2" Component_="AI_CustomARPName" VirtualValue="#"/>
     <ROW Registry="VersionMinor" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="VersionMinor" Value="#0" Component_="AI_CustomARPName" VirtualValue="#"/>
     <ROW Registry="Windows" Root="-1" Key="Software\Microsoft\Windows" Name="\"/>
   </COMPONENT>
@@ -1677,5 +2151,8 @@
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.PreReqSearchComponent">
     <ROW SearchKey="C4FE6FD5B7C4D07B3A313E754A9A6A8Vers" Prereq="C4FE6FD5B7C4D07B3A313E754A9A6A8" SearchType="2" SearchString="HKLM\SOFTWARE\Microsoft\DevDiv\VC\Servicing\14.0\RuntimeMinimum\Version" VerMin="14.26.28720" Order="1" Property="PreReqSearch_C4FE6FD5B7C4D07B3A313E"/>
+  </COMPONENT>
+  <COMPONENT cid="caphyon.advinst.msicomp.SynchronizedFolderComponent">
+    <ROW Directory_="APPDIR" SourcePath="..\dvr-scan" Feature="DVRScan"/>
   </COMPONENT>
 </DOCUMENT>
