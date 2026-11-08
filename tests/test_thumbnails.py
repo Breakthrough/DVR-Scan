@@ -78,3 +78,19 @@ def test_filmstrip_image_concatenates_frames():
 def test_filmstrip_image_empty_falls_back_to_placeholder():
     image = filmstrip_image([], height=54)
     assert image.size == placeholder_image(height=54).size
+
+
+def test_pad_right_adds_transparent_margin():
+    import PIL.Image
+
+    from dvr_scan.app.thumbnails import pad_right
+
+    image = PIL.Image.new("RGB", (10, 4), PLACEHOLDER_COLOR)
+    padded = pad_right(image, 8)
+    assert padded.size == (18, 4)
+    assert padded.mode == "RGBA"
+    # Original pixels kept, margin fully transparent.
+    assert padded.getpixel((0, 0))[:3] == PLACEHOLDER_COLOR
+    assert padded.getpixel((17, 0))[3] == 0
+    # Zero margin is a no-op (same object, no mode change).
+    assert pad_right(image, 0) is image

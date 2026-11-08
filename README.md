@@ -26,9 +26,9 @@ Windows builds (installer + portable) are also available on [the Downloads page]
 
 ## Quickstart (UI)
 
-Start DVR-Scan (run `dvr-scan-app` or click the app shortcut), **Add** your input videos, and hit **Start**:
+Start DVR-Scan (run `dvr-scan-app` or click the app shortcut). The Scan Wizard walks you through each step: add your input videos, pick a preset, choose where to save the output, and hit **Start Scan**:
 
-<img alt="main app window" src="https://www.dvr-scan.com/assets/app-main-window.jpg" width="480"/>
+<img alt="scan wizard" src="https://www.dvr-scan.com/assets/app-wizard-videos.jpg" width="480"/>
 
 See the [User Guide](https://www.dvr-scan.com/guide/) for a more comprehensive overview.
 

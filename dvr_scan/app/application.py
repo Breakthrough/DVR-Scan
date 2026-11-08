@@ -47,6 +47,7 @@ from dvr_scan.app.thumbnails import (
     FILMSTRIP_FRAMES,
     FILMSTRIP_WIDTH,
     THUMBNAIL_STYLE,
+    THUMBNAIL_TEXT_GAP,
     ThumbnailLoader,
     configure_thumbnail_rows,
     filmstrip_placeholder,
@@ -214,8 +215,9 @@ class InputArea:
         )
         # Each row gets a filmstrip preview (frames sampled across the video) decoded off
         # the UI thread; a shared placeholder is shown until the real strip is ready.
-        self._thumbnails = ThumbnailLoader(self._videos)
-        self._placeholder = to_photo(filmstrip_placeholder())
+        # The filename follows the filmstrip in the same cell, so pad the image.
+        self._thumbnails = ThumbnailLoader(self._videos, text_gap=THUMBNAIL_TEXT_GAP)
+        self._placeholder = to_photo(filmstrip_placeholder(), margin_right=THUMBNAIL_TEXT_GAP)
 
         scroll_horizontal = ttk.Scrollbar(frame, orient=tk.HORIZONTAL, command=self._videos.xview)
         scroll_vertical = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=self._videos.yview)
@@ -427,7 +429,7 @@ class InputArea:
         self._videos.delete(*self._videos.get_children())
         # Drop pending thumbnail jobs so they don't target deleted rows, then start fresh.
         self._thumbnails.cancel()
-        self._thumbnails = ThumbnailLoader(self._videos)
+        self._thumbnails = ThumbnailLoader(self._videos, text_gap=THUMBNAIL_TEXT_GAP)
         self._refresh_remove_state()
 
     def _refresh_remove_state(self):

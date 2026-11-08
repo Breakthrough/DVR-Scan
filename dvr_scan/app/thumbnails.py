@@ -50,6 +50,8 @@ FILMSTRIP_FRAMES = 4
 # Gap (px) and its color between adjacent frames in the strip.
 FILMSTRIP_GAP = 2
 FILMSTRIP_GAP_COLOR = (20, 20, 20)
+# Space (px) between a filmstrip and the text in the same cell (classic input list).
+THUMBNAIL_TEXT_GAP = 8
 # Nominal per-frame width (16:9), used to size the placeholder and column before any
 # real frame (whose true aspect ratio may differ) has been decoded.
 _NOMINAL_FRAME_WIDTH = round(THUMBNAIL_HEIGHT * 16 / 9)
@@ -97,9 +99,21 @@ def filmstrip_placeholder(height: int = THUMBNAIL_HEIGHT) -> PIL.Image.Image:
     return PIL.Image.new("RGB", (FILMSTRIP_WIDTH, height), PLACEHOLDER_COLOR)
 
 
-def to_photo(image: PIL.Image.Image) -> PIL.ImageTk.PhotoImage:
-    """Wrap a `PIL.Image` as a Tk image. Must be called on the UI thread."""
-    return PIL.ImageTk.PhotoImage(image)
+def pad_right(image: PIL.Image.Image, margin: int) -> PIL.Image.Image:
+    """Return `image` with `margin` transparent pixels appended on the right. Used to put
+    space between a thumbnail and the text that follows it in the same treeview cell,
+    which ttk offers no option for. Returns `image` unchanged when `margin` is 0."""
+    if margin <= 0:
+        return image
+    padded = PIL.Image.new("RGBA", (image.width + margin, image.height), (0, 0, 0, 0))
+    padded.paste(image, (0, 0))
+    return padded
+
+
+def to_photo(image: PIL.Image.Image, margin_right: int = 0) -> PIL.ImageTk.PhotoImage:
+    """Wrap a `PIL.Image` as a Tk image, optionally with a transparent right margin (see
+    `pad_right`). Must be called on the UI thread."""
+    return PIL.ImageTk.PhotoImage(pad_right(image, margin_right))
 
 
 def configure_thumbnail_rows(style_name: str = THUMBNAIL_STYLE) -> str:
@@ -137,11 +151,15 @@ class ThumbnailLoader:
         height: int = THUMBNAIL_HEIGHT,
         poll_interval_ms: int = POLL_INTERVAL_MS,
         apply_image: ty.Optional[ApplyImage] = None,
+        text_gap: int = 0,
     ):
+        """`text_gap` adds a transparent right margin to each thumbnail, for cells where
+        text follows the image (see `pad_right`)."""
         self._widget = widget
         self._apply_image = apply_image if apply_image is not None else self._apply_to_tree
         self._height = height
         self._poll_interval_ms = poll_interval_ms
+        self._text_gap = text_gap
         self._jobs: "queue.Queue[ty.Optional[ty.Tuple[str, FrameProvider]]]" = queue.Queue()
         self._results: "queue.Queue[ty.Tuple[str, ty.Optional[PIL.Image.Image]]]" = queue.Queue()
         self._photos: ty.Dict[str, PIL.ImageTk.PhotoImage] = {}
@@ -209,7 +227,7 @@ class ThumbnailLoader:
                 iid, image = self._results.get_nowait()
                 self._pending -= 1
                 if image is not None:
-                    photo = to_photo(image)
+                    photo = to_photo(image, margin_right=self._text_gap)
                     if self._apply_image(iid, photo):
                         self._photos[iid] = photo
         except queue.Empty:
