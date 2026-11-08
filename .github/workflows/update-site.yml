@@ -4,11 +4,8 @@ name: Update Website
 
 on:
   push:
-    branches:
-      - release
-    paths:
-      - "docs/**"
-      - "website/**"
+    tags:
+      - 'v*-release'
   workflow_dispatch:
 
 env:
@@ -19,7 +16,12 @@ env:
 jobs:
   update_site:
     runs-on: ubuntu-latest
-    if: github.repository == 'Breakthrough/DVR-Scan'
+    # Skip rehearsal tags (e.g. v2.0-rc1-release, v2.0-dev1-release) so only real
+    # releases and manual dispatches republish the website.
+    if: >-
+      github.repository == 'Breakthrough/DVR-Scan' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (!contains(github.ref_name, '-rc') && !contains(github.ref_name, '-dev')))
 
     steps:
       - uses: actions/checkout@v7

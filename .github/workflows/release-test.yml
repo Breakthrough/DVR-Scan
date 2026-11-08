@@ -1,0 +1,64 @@
+# Static release checks run on every pushed release tag: version consistency,
+# both Python distributions build and pass `twine check`, and a dependency audit.
+# publish-pypi.yml requires this workflow to be green before a production publish.
+name: Release Tests
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*-release'
+
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          # setuptools is upgraded because the toolcache copy periodically lags
+          # security fixes and would fail the audit below.
+          python -m pip install --upgrade pip setuptools
+          # docs/requirements.txt supplies mkdocs, which dist/pre_release.py
+          # needs to generate the bundled documentation.
+          pip install build twine pip-audit -r docs/requirements.txt
+      - name: Version consistency check
+        run: |
+          # Parse __version__ directly so we don't have to install dvr_scan to inspect the version.
+          VERSION=$(python -c "import ast,pathlib; print(next(n.value.value for n in ast.parse(pathlib.Path('dvr_scan/__init__.py').read_text()).body if isinstance(n, ast.Assign) and any(getattr(t,'id',None)=='__version__' for t in n.targets)))")
+          echo "dvr_scan.__version__ = $VERSION"
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            # Release tags are vX.Y[.Z]-release (e.g. v2.0-release -> 2.0).
+            TAG_VERSION=${GITHUB_REF#refs/tags/v}
+            TAG_VERSION=${TAG_VERSION%-release}
+            if [[ "$VERSION" != "$TAG_VERSION" ]]; then
+              echo "Version mismatch: dvr_scan=$VERSION, tag=$TAG_VERSION"
+              exit 1
+            fi
+            if [[ "$TAG_VERSION" == *-dev* || "$TAG_VERSION" == *-rc* ]]; then
+              echo "Pre-release ($TAG_VERSION); skipping changelog heading check."
+            # Release headings in docs/changelog.md look like "### 2.0 (2026-11-01)"
+            elif ! grep -Eq "^### $TAG_VERSION \(" docs/changelog.md; then
+              echo "Changelog is missing a heading for $TAG_VERSION (e.g. '### $TAG_VERSION (YYYY-MM-DD)')"
+              exit 1
+            fi
+          fi
+      - name: Build and Check
+        run: |
+          # Build both the regular and eadless Python distributions.
+          python dist/pre_release.py
+          python -m build
+          python dist/build_headless.py
+          python -m build
+          # Cleanup the modified pyproject.toml.
+          git checkout -- pyproject.toml
+          # Glob by extension: dist/ also holds tracked build scripts and assets,
+          # which `twine check dist/*` would reject as unknown distributions.
+          twine check dist/*.whl dist/*.tar.gz
+      - name: pip-audit
+        run: pip-audit

@@ -33,7 +33,7 @@ jobs:
           TAG: ${{ github.event.inputs.tag }}
         run: |
           set -euo pipefail
-          required=("Python Distribution" "Windows Distribution")
+          required=("Python Distribution" "Windows Distribution" "Release Tests")
           failed=0
           for workflow in "${required[@]}"; do
             conclusion=$(gh run list \

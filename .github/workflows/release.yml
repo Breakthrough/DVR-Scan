@@ -1,0 +1,191 @@
+# Release orchestrator: verifies the artifacts attached to a DRAFT GitHub
+# release actually work, then publishes stage by stage, verifying each stage
+# before starting the next:
+#
+#   MSI install/upgrade test against the draft's assets (test-installer.yml)
+#     -> TestPyPI publish  -> pip smoke install from TestPyPI
+#     -> publish the GitHub release (draft -> public, marked latest)
+#     -> PyPI publish      -> pip smoke install from PyPI
+#
+# This workflow is dispatched manually once the GitHub release has been DRAFTED
+# with its artifacts attached (signed MSI/zip, wheels, SHA256SUMS); nothing goes
+# public until artifact verification passes. Each stage is driven through the
+# existing workflows via `gh workflow run` (rather than workflow_call) so they
+# keep working standalone and the PyPI trusted-publisher configuration (which is
+# bound to publish-pypi.yml as the top-level workflow) is unaffected.
+#
+# Unlike PySceneDetect there is no Docker image, so there is no container stage.
+
+name: Release Orchestrator
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to verify and publish (e.g. v2.0-release)'
+        required: true
+      verify-only:
+        description: 'Stop after verification (no GitHub release / PyPI publish)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions: write
+
+# *NOTE*: The run-id lookup after each dispatch assumes this is the only orchestrator running.
+# We should never have two concurrent releases running.
+concurrency:
+  group: release-orchestrator
+
+jobs:
+  orchestrate:
+    name: ${{ inputs.verify-only && 'Verify' || 'Verify + Publish' }} ${{ inputs.tag }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ inputs.tag }}
+    steps:
+      - name: Validate release
+        run: |
+          set -euo pipefail
+          state=$(gh release view "$TAG" --json isDraft,isPrerelease \
+            -q 'if .isDraft then "draft" elif .isPrerelease then "prerelease" else "published" end')
+          if [[ "$state" == "draft" ]]; then
+            echo "Release $TAG is a draft; it will be published after artifact verification passes."
+          else
+            echo "Release $TAG is already $state; the GitHub release publish step will be a no-op (re-run mode)."
+          fi
+          # Display version used by the pip smoke test; mirrors the tag
+          # normalization in release-test.yml (v2.0-release -> 2.0).
+          VERSION="${TAG#v}"
+          VERSION="${VERSION%-release}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Write dispatch helper
+        # `gh workflow run` returns no run id, so the helper polls for the
+        # newest workflow_dispatch run created at/after dispatch time (the
+        # concurrency group above guarantees it is ours), then watches it to
+        # completion, propagating failure.
+        run: |
+          cat > "$RUNNER_TEMP/dispatch.sh" <<'EOF'
+          dispatch_and_watch() {
+            local workflow="$1" ref="$2"
+            shift 2
+            local start_epoch
+            start_epoch=$(date -u +%s)
+            echo "::group::Dispatch $workflow (ref $ref) $*"
+            gh workflow run "$workflow" --ref "$ref" "$@"
+            local run_id=""
+            for _ in $(seq 1 24); do
+              sleep 5
+              run_id=$(gh run list --workflow "$workflow" --event workflow_dispatch --limit 5 \
+                --json databaseId,createdAt \
+                -q "[.[] | select((.createdAt | fromdateiso8601) >= $((start_epoch - 5)))] | first | .databaseId // \"\"")
+              [[ -n "$run_id" ]] && break
+            done
+            if [[ -z "$run_id" ]]; then
+              echo "::error::Dispatched $workflow but its run never appeared."
+              return 1
+            fi
+            echo "Watching run $run_id: https://github.com/$GH_REPO/actions/runs/$run_id"
+            echo "::endgroup::"
+            gh run watch "$run_id" --exit-status --interval 30
+          }
+          EOF
+
+      - name: Write pip smoke-install helper
+        # Same smoke test for TestPyPI and production PyPI: fresh venv, install
+        # the exact release version, and check `dvr-scan --version` reports it.
+        # Invoked as `python -m dvr_scan` so the check does not depend on the
+        # console-script shim. Both indexes can lag a fresh upload, so installs
+        # are retried briefly.
+        run: |
+          cat > "$RUNNER_TEMP/smoke.sh" <<'EOF'
+          pip_smoke_install() {
+            local venv="$1"
+            shift
+            python3 -m venv "$venv"
+            local ok=0
+            for attempt in 1 2 3 4 5; do
+              if "$venv/bin/pip" install --quiet "$@" "dvr-scan==$VERSION"; then
+                ok=1
+                break
+              fi
+              echo "pip install attempt $attempt failed; retrying in 30s..."
+              sleep 30
+            done
+            [[ "$ok" -eq 1 ]]
+            local out
+            out=$("$venv/bin/python" -m dvr_scan --version)
+            echo "$out"
+            grep -F "DVR-Scan $VERSION" <<<"$out"
+          }
+          EOF
+
+      - name: 'Stage 1 - Verify: Windows installer (install + upgrade on clean runner)'
+        run: |
+          set -euo pipefail
+          source "$RUNNER_TEMP/dispatch.sh"
+          dispatch_and_watch test-installer.yml "$GITHUB_REF_NAME" -f "tag=$TAG"
+
+      - name: 'Stage 2 - Publish: TestPyPI'
+        run: |
+          set -euo pipefail
+          source "$RUNNER_TEMP/dispatch.sh"
+          # Dispatched on the release tag: the pypi environment's deployment
+          # branch policy should only permit release refs, and the tag is the
+          # immutable ref being released anyway.
+          dispatch_and_watch publish-pypi.yml "$TAG" -f "tag=$TAG" -f "environment=testpypi"
+
+      - name: 'Stage 2 - Verify: pip install from TestPyPI'
+        run: |
+          set -euo pipefail
+          source "$RUNNER_TEMP/smoke.sh"
+          # Dependencies are not mirrored on TestPyPI, so resolve them from the
+          # production index.
+          pip_smoke_install smoke-testpypi \
+            --index-url https://test.pypi.org/simple/ \
+            --extra-index-url https://pypi.org/simple/
+
+      - name: 'Stage 3 - Publish: GitHub release (draft -> public)'
+        if: ${{ !inputs.verify-only }}
+        run: |
+          set -euo pipefail
+          is_draft=$(gh release view "$TAG" --json isDraft -q .isDraft)
+          if [[ "$is_draft" == "true" ]]; then
+            gh release edit "$TAG" --draft=false --latest
+            echo "Published release $TAG (marked as latest)."
+          else
+            echo "Release $TAG is already published; skipping."
+          fi
+
+      - name: 'Stage 4 - Publish: PyPI (production)'
+        if: ${{ !inputs.verify-only }}
+        run: |
+          set -euo pipefail
+          source "$RUNNER_TEMP/dispatch.sh"
+          # publish-pypi.yml additionally gates production publishes on the
+          # build + release-test workflows being green for the tag. Dispatched
+          # on the tag ref to satisfy the pypi environment's deployment policy.
+          dispatch_and_watch publish-pypi.yml "$TAG" -f "tag=$TAG" -f "environment=pypi"
+
+      - name: 'Stage 4 - Verify: pip install from PyPI'
+        if: ${{ !inputs.verify-only }}
+        run: |
+          set -euo pipefail
+          source "$RUNNER_TEMP/smoke.sh"
+          pip_smoke_install smoke-pypi
+
+      - name: Summary
+        run: |
+          if [[ "${{ inputs.verify-only }}" == "true" ]]; then
+            echo "Verification of $TAG passed (release left as draft). Re-run without verify-only to publish."
+          else
+            echo "Release $TAG verified and published:"
+            echo "  https://github.com/$GH_REPO/releases/tag/$TAG"
+            echo "  https://pypi.org/project/dvr-scan/$VERSION/"
+            echo "  https://pypi.org/project/dvr-scan-headless/$VERSION/"
+          fi
