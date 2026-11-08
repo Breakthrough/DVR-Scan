@@ -94,7 +94,7 @@ StringFileInfo(
     StringStruct(u'FileDescription', u'www.dvr-scan.com'),
     StringStruct(u'FileVersion', u'{VERSION}'),
     StringStruct(u'InternalName', u'DVR-Scan'),
-    StringStruct(u'LegalCopyright', u'Copyright © 2025 Brandon Castellano'),
+    StringStruct(u'LegalCopyright', u'Copyright © 2026 Brandon Castellano'),
     StringStruct(u'OriginalFilename', u'dvr-scan.exe'),
     StringStruct(u'ProductName', u'DVR-Scan'),
     StringStruct(u'ProductVersion', u'{VERSION}')])
