@@ -14,7 +14,7 @@ hide:
 
 ------------------------------------------------------
 
-!!! success "Latest Version: 1.8.2 (January 18, 2026)"
+!!! success "Latest Version: 2.0 (November 8, 2026)"
 
     <div class="buttongrid">[:fontawesome-solid-download: &nbsp; Download](download.md){ .md-button #download-button }[:fontawesome-solid-book: User Guide](guide.md){ .md-button #changelog-button }[:fontawesome-solid-bars: &nbsp; Documentation](docs.md){ .md-button #documentation-button }[:fontawesome-solid-gear: &nbsp; Resources](resources.md){ .md-button #quickstart-button }</div>
 

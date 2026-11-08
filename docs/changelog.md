@@ -5,7 +5,7 @@
 
 #### Changelog
 
-### 2.0 (In Development)
+### 2.0 (2026-11-08)
 
 #### Release Notes
 

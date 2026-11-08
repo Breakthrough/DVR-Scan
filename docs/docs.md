@@ -11,7 +11,7 @@ To extract all motion events from a video, you can start with:
 
     dvr-scan -i video.mp4
 
-This will produce output events in your working directory starting with the prefix `video.DSME_` (e.g. `video.DSME_0001.avi`). If you want to limit scanning to a particular part of the video frame, you can use the [region editor](#region-editor):
+This will produce output events in your working directory starting with the prefix `video.DSME_` (e.g. `video.DSME_0001.mp4`). If you want to limit scanning to a particular part of the video frame, you can use the [region editor](#region-editor):
 
     dvr-scan -i video.mp4 -r
 
@@ -192,7 +192,7 @@ dvr-scan -i video.mp4 --start-time 00:35:52 --duration 00:05:00
 
 ### Motion
 
-All time values can be given as a timecode (`HH:MM:SS` or `HH:MM:SS.nnn`), in seconds as a number followed by `s` (`123s` or `123.45s`), or as number of frames (e.g. `1234`). When modifying detection options, it can be useful to generate a motion mask (`-mo mask.avi`) to visually see how DVR-Scan processes the input.
+All time values can be given as a timecode (`HH:MM:SS` or `HH:MM:SS.nnn`), in seconds as a number followed by `s` (`123s` or `123.45s`), or as number of frames (e.g. `1234`). When modifying detection options, it can be useful to generate a motion mask (`-mo mask.mp4`) to visually see how DVR-Scan processes the input.
 
  * <b><pre>-l time, --min-event-length time</pre></b> Amount of time/frames that must have a motion score above the threshold setting before triggering a new event.
 <span class="dvr-scan-default">
@@ -295,7 +295,7 @@ All time values can be given as a timecode (`HH:MM:SS` or `HH:MM:SS.nnn`), in se
 
 !!! warning "Multiple input files are not supported when `-m`/`--output-mode` is set to `ffmpeg` or `copy` (they are supported with `opencv` and `encode`). You can use `ffmpeg` to [concatenate all input videos](https://trac.ffmpeg.org/wiki/Concatenate) *before* using DVR-Scan, or [run DVR-Scan in a for-loop](guide.md#multiple-videos)."
 
- * <b><pre>-o video.avi, --output video.avi</pre></b> Save all motion events to a single file, instead of the default (one file per event). Only supported when `-m`/`--output-mode` is `opencv` (requires `.avi` extension) or `encode` (video-only output).
+ * <b><pre>-o video.mp4, --output video.mp4</pre></b> Save all motion events to a single file, instead of the default (one file per event). Only supported when `-m`/`--output-mode` is `opencv` (requires `.avi` extension) or `encode` (video-only output).
 
  * <b><pre>--report file</pre></b> Write a report of all detected motion events to `file`, including in scan-only mode. The format is set by the file extension, and must be either `.csv` or `.json`. Relative paths are joined with `-d`/`--output-dir` when set.
 <span class="dvr-scan-example">
@@ -304,7 +304,7 @@ All time values can be given as a timecode (`HH:MM:SS` or `HH:MM:SS.nnn`), in se
 ```
 </span>
 
- * <b><pre>-mo mask.avi, --mask-output mask.avi</pre></b> Save a video containing the calculated motion mask on each frame. Useful for tuning motion detection. Requires `.avi` extension.
+ * <b><pre>-mo mask.mp4, --mask-output mask.mp4</pre></b> Save a video containing the calculated motion mask on each frame. Useful for tuning motion detection. The mask is encoded as MP4 (H.264) via ffmpeg when available (respecting `encode-args`); otherwise it is written with OpenCV and requires an `.avi` extension.
 
  * <b><pre>--thumbnails highscore</pre></b> Save a thumbnail of the frame with the highest motion score for each event. Thumbnails are named after the source video containing the event (e.g. `video.DSME_0001.jpg`), or after the combined output file when `-o`/`--output` is used.
 

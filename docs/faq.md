@@ -66,7 +66,7 @@ done
 Adjusting [motion detection settings](docs.md#motion-settings) can have a large effect on performance:
 
  - Limiting detection to a specific region of the frame with the region editor will also improve performance
- - Setting the output mode to either `ffmpeg` or `copy` can also improve performance compared to the default (`opencv`)
+ - Setting the output mode to either `ffmpeg` or `copy` can also improve performance compared to the default (`encode`), since they avoid re-encoding every frame
  - Downscaling high resolution videos can also improve performance greatly, at the expense of accuracy
 
 
