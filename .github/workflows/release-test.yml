@@ -27,6 +27,13 @@ jobs:
           # docs/requirements.txt supplies mkdocs, which dist/pre_release.py
           # needs to generate the bundled documentation.
           pip install build twine pip-audit -r docs/requirements.txt
+          # dist/pre_release.py imports dvr_scan, which requires OpenCV at import time, so the
+          # package and its runtime dependencies must be installed. Use the headless OpenCV
+          # variant on CI to reduce download size (same approach as build.yml). Installing the
+          # runtime dependencies also lets pip-audit cover what we actually ship.
+          pip install -e .
+          pip uninstall -y opencv-python opencv-contrib-python
+          pip install opencv-contrib-python-headless --only-binary :all:
       - name: Version consistency check
         run: |
           # Parse __version__ directly so we don't have to install dvr_scan to inspect the version.
@@ -50,7 +57,7 @@ jobs:
           fi
       - name: Build and Check
         run: |
-          # Build both the regular and eadless Python distributions.
+          # Build both the regular and headless Python distributions.
           python dist/pre_release.py
           python -m build
           python dist/build_headless.py
