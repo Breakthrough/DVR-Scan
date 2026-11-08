@@ -58,8 +58,10 @@ jobs:
           VERSION="${VERSION%-release}"
           # DVR-Scan.aip stamps the display version verbatim into the MSI
           # ProductVersion / DisplayVersion (e.g. "2.0", "1.8.2"; no padding
-          # to X.Y.Z), so the MSI version is the display version.
-          MSI_VERSION="$VERSION"
+          # to X.Y.Z). Pre-release rehearsal tags (v2.0-rc1-release) still
+          # build the stable MSI (dvr-scan-2.0-win64.msi, DisplayVersion 2.0),
+          # so strip the suffix, mirroring scripts/common.py:display_version.
+          MSI_VERSION="${VERSION%%-*}"
 
           if [[ -n "$INPUT_PREV_TAG" ]]; then
             PREV_TAG="$INPUT_PREV_TAG"
@@ -95,7 +97,7 @@ jobs:
           fi
           PREV_VERSION="${PREV_TAG#v}"
           PREV_VERSION="${PREV_VERSION%-release}"
-          PREV_MSI_VERSION="$PREV_VERSION"
+          PREV_MSI_VERSION="${PREV_VERSION%%-*}"
 
           {
             echo "tag=$TAG"
@@ -282,7 +284,7 @@ jobs:
         run: |
           gh release download $env:TAG --pattern 'dvr-scan-*-win64.msi' --pattern 'SHA256SUMS' --dir dist-release
           if ($LASTEXITCODE -ne 0) { throw "gh release download failed for $env:TAG" }
-          $expected = "dvr-scan-$env:VERSION-win64.msi"
+          $expected = "dvr-scan-$env:MSI_VERSION-win64.msi"
           $msis = @(Get-ChildItem dist-release -Filter '*.msi')
           if ($msis.Count -ne 1 -or $msis[0].Name -cne $expected) {
             throw "Expected exactly one MSI named $expected, got: $($msis.Name -join ', ')"
@@ -291,7 +293,7 @@ jobs:
 
       - name: Verify checksum and Authenticode signature
         run: |
-          $msi = "dist-release\dvr-scan-$env:VERSION-win64.msi"
+          $msi = "dist-release\dvr-scan-$env:MSI_VERSION-win64.msi"
           $name = Split-Path $msi -Leaf
           # SHA256SUMS lines are `<hash>  <name>` (two spaces; the sha256sum -c
           # format written by scripts/finalize_windows_dist.py).
@@ -315,7 +317,7 @@ jobs:
       - name: Install MSI
         run: |
           . (Join-Path $env:RUNNER_TEMP 'installer-helpers.ps1')
-          $msi = (Resolve-Path "dist-release\dvr-scan-$env:VERSION-win64.msi").Path
+          $msi = (Resolve-Path "dist-release\dvr-scan-$env:MSI_VERSION-win64.msi").Path
           Invoke-Msiexec -MsiArgs @('/i', $msi, '/qn', '/norestart') -LogPath install.log
 
       - name: Verify installation
@@ -361,7 +363,7 @@ jobs:
           . (Join-Path $env:RUNNER_TEMP 'installer-helpers.ps1')
           # Uninstall via the same local MSI file (not the ProductCode) so a
           # broken product registration surfaces as a failure here.
-          $msi = (Resolve-Path "dist-release\dvr-scan-$env:VERSION-win64.msi").Path
+          $msi = (Resolve-Path "dist-release\dvr-scan-$env:MSI_VERSION-win64.msi").Path
           Invoke-Msiexec -MsiArgs @('/x', $msi, '/qn', '/norestart') -LogPath uninstall.log
 
       - name: Verify clean removal
@@ -584,7 +586,7 @@ jobs:
         run: |
           gh release download $env:TAG --pattern 'dvr-scan-*-win64.msi' --pattern 'SHA256SUMS' --dir dist-release
           if ($LASTEXITCODE -ne 0) { throw "gh release download failed for $env:TAG" }
-          $expected = "dvr-scan-$env:VERSION-win64.msi"
+          $expected = "dvr-scan-$env:MSI_VERSION-win64.msi"
           $msis = @(Get-ChildItem dist-release -Filter '*.msi')
           if ($msis.Count -ne 1 -or $msis[0].Name -cne $expected) {
             throw "Expected exactly one MSI named $expected, got: $($msis.Name -join ', ')"
@@ -593,7 +595,7 @@ jobs:
 
       - name: Verify checksum and Authenticode signature
         run: |
-          $msi = "dist-release\dvr-scan-$env:VERSION-win64.msi"
+          $msi = "dist-release\dvr-scan-$env:MSI_VERSION-win64.msi"
           $name = Split-Path $msi -Leaf
           # SHA256SUMS lines are `<hash>  <name>` (two spaces; the sha256sum -c
           # format written by scripts/finalize_windows_dist.py).
@@ -617,7 +619,7 @@ jobs:
       - name: Install new release over previous
         run: |
           . (Join-Path $env:RUNNER_TEMP 'installer-helpers.ps1')
-          $msi = (Resolve-Path "dist-release\dvr-scan-$env:VERSION-win64.msi").Path
+          $msi = (Resolve-Path "dist-release\dvr-scan-$env:MSI_VERSION-win64.msi").Path
           Invoke-Msiexec -MsiArgs @('/i', $msi, '/qn', '/norestart') -LogPath install-upgrade.log
 
       - name: Verify upgrade
@@ -664,7 +666,7 @@ jobs:
       - name: Uninstall new MSI
         run: |
           . (Join-Path $env:RUNNER_TEMP 'installer-helpers.ps1')
-          $msi = (Resolve-Path "dist-release\dvr-scan-$env:VERSION-win64.msi").Path
+          $msi = (Resolve-Path "dist-release\dvr-scan-$env:MSI_VERSION-win64.msi").Path
           Invoke-Msiexec -MsiArgs @('/x', $msi, '/qn', '/norestart') -LogPath uninstall.log
 
       - name: Verify clean removal

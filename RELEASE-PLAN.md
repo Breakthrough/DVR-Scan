@@ -1,6 +1,21 @@
 # DVR-Scan Release Checklist
 
-Copy this into the release PR and check off each item. Replace `X.Y` throughout with the version.
+Each release gets its own branch `releases/X.Y[.Z]` and a pull request `Release vX.Y` into
+`main`. Copy this checklist into the PR description and check off each item. Replace `X.Y`
+throughout with the version.
+
+## 0. Release branch
+
+```bash
+git checkout -b releases/X.Y main
+git push -u origin releases/X.Y
+gh pr create --draft --base main --head releases/X.Y --title "Release vX.Y" --body-file RELEASE-PLAN.md
+```
+
+- [ ] `releases/X.Y` exists and the draft PR is open with this checklist as its body.
+
+All release work (optional rehearsal, the release commit, the tag) happens on this branch; it
+is merged into `main` in section 6 and then stays as the hotfix line for `X.Y.Z` patches.
 
 ## 1. Pre-release
 
@@ -53,9 +68,38 @@ git checkout -- dvr_scan/docs         # pre_release.py overwrites the docs, so w
       (`scripts/validate_release.py` repeats these checks against the final artifacts)
 - [ ] `dvr-scan-app.exe` launches, wizard opens, and can perform a scan
 
+### Rehearsal (optional, recommended after changes to the build/sign/publish pipeline)
+
+Exercises everything a tag triggers without publishing anything. On `releases/X.Y`, commit the
+release edits with `__version__ = "X.Y-rc1"` (dates may still be placeholders), then:
+
+```bash
+git tag vX.Y-rc1-release && git push origin vX.Y-rc1-release
+```
+
+- [ ] `gh run list --branch vX.Y-rc1-release`: `Release Tests` (tag vs `__version__`; the
+      changelog heading check is skipped for `-rc`/`-dev` tags), `Python Distribution` and
+      `Windows Distribution` pass; `Update Website` is **skipped** (its job guard excludes
+      `-rc`/`-dev` tags).
+- [ ] AppVeyor builds the tag: `.aip` re-sync, MSI named `dvr-scan-X.Y-win64.msi` (the `.aip`
+      carries the stable version, so rc builds produce the stable MSI name/version), SignPath
+      request created.
+- [ ] Approve the SignPath request, download `dvr-scan-signed.zip` into `dist/signed/`, run
+      `python scripts/finalize_windows_dist.py` (section 4).
+- [ ] Create a **draft pre-release** with the eight assets (section 5, add `--prerelease`), then
+      `gh workflow run release.yml -f tag=vX.Y-rc1-release -f verify-only=true`: installer
+      fresh-install + upgrade test (`test-installer.yml` maps rc tags to the stable MSI version)
+      and TestPyPI publish + pip smoke install.
+- [ ] Clean up: `gh release delete vX.Y-rc1-release --yes`,
+      `git push origin :refs/tags/vX.Y-rc1-release && git tag -d vX.Y-rc1-release`, delete the
+      local `dist/signed/*` and downloaded artifacts. The rc commit stays in the branch history;
+      the TestPyPI upload is harmless.
+
 ## 2. Release commit
 
-- [ ] `dvr_scan/__init__.py`: `__version__ = "X.Y"` (no `-dev` suffix).
+On `releases/X.Y`:
+
+- [ ] `dvr_scan/__init__.py`: `__version__ = "X.Y"` (no `-dev`/`-rc` suffix).
 - [ ] `docs/changelog.md`: heading `(In Development)` -> `(YYYY-MM-DD)`; the heading must be
       `### X.Y (YYYY-MM-DD)` (checked by `release-test.yml`).
 - [ ] `README.md`: `### Latest Release: vX.Y (Month D, YYYY)`.
@@ -72,17 +116,18 @@ git add README.md docs/changelog.md docs/download.md docs/index.md docs/index_do
 git commit -m "[release] Release vX.Y"
 ```
 
-## 3. Tag and branch
+## 3. Tag
 
 ```bash
-git tag vX.Y-release
-git push origin main vX.Y-release
-# either create a new release branch, or fast-forward the existing one
-git branch -f releases/X.Y vX.Y-release
 git push origin releases/X.Y
+git tag vX.Y-release
+git push origin vX.Y-release
 ```
 
-- [ ] Tag is on `main`; `releases/X.Y` points at the release commit.
+- [ ] Tag points at the head of `releases/X.Y` (the release commit); the PR's CI is green.
+
+The PR is merged in section 6 **with a merge commit or fast-forward, never squash**: the tagged
+commit must become an ancestor of `main`.
 
 ## 4. CI artifacts and code signing
 
@@ -161,6 +206,9 @@ dvr-scan -i tests/resources/simple_movement.mp4 -so -df 4 -et 100
 pip install --force-reinstall dvr-scan-headless==X.Y && dvr-scan --version
 ```
 
+- [ ] Mark the PR ready and merge it into `main` with a **merge commit or fast-forward (not
+      squash)** so the tagged commit is an ancestor of `main`. Keep `releases/X.Y`.
+
 ## 7. Website
 
 `update-site.yml` runs automatically when the `vX.Y-release` tag is pushed (and on
@@ -197,6 +245,6 @@ gh workflow run update-site.yml --ref vX.Y-release
 | `dist/pre_release.py --release` | asserts the `.aip` `ProductVersion` matches `__version__` |
 | `release-test.yml` | tag vs `__version__`, changelog heading, build + `twine check`, `pip-audit` |
 | `test-installer.yml` | MSI fresh install / upgrade / uninstall on a clean runner |
-| `release.yml` | orchestrates installer test -> TestPyPI -> GitHub release -> PyPI |
+| `release.yml` | orchestrates installer test -> TestPyPI -> GitHub release -> PyPI (`verify-only=true` stops before anything goes public) |
 | `update-site.yml` | rebuilds www.dvr-scan.com on `v*-release` tags |
 | `appveyor.yml` | frozen build, `.aip` re-sync, MSI build, SignPath hand-off |

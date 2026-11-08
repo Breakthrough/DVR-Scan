@@ -100,7 +100,8 @@ jobs:
         # Same smoke test for TestPyPI and production PyPI: fresh venv, install
         # the exact release version, and check `dvr-scan --version` reports it.
         # Invoked as `python -m dvr_scan` so the check does not depend on the
-        # console-script shim. Both indexes can lag a fresh upload, so installs
+        # console-script shim. The version banner is written to stderr, so both
+        # streams are captured. Both indexes can lag a fresh upload, so installs
         # are retried briefly.
         run: |
           cat > "$RUNNER_TEMP/smoke.sh" <<'EOF'
@@ -119,7 +120,7 @@ jobs:
             done
             [[ "$ok" -eq 1 ]]
             local out
-            out=$("$venv/bin/python" -m dvr_scan --version)
+            out=$("$venv/bin/python" -m dvr_scan --version 2>&1)
             echo "$out"
             grep -F "DVR-Scan $VERSION" <<<"$out"
           }
