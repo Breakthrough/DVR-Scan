@@ -16,3 +16,12 @@ dist/dvr-scan/*
 .vs_code/
 .vscode/
 .venv/
+
+# Release staging (scripts/finalize_windows_dist.py)
+dist/signed/
+
+# Advanced Installer outputs (scripts/update_installer.py, /build)
+dist/installer/DVR-Scan.back*.aip
+dist/installer/dvr-scan-*.msi
+dist/installer/DVR-Scan-*.msi
+dist/installer/DVR-Scan-cache/

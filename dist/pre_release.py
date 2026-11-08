@@ -9,13 +9,38 @@
 # LICENSE file, or visit one of the above pages for details.
 #
 
-"""Infrastructure script to run before generating a release."""
+"""Infrastructure script to run before generating a release.
 
+Usage:
+    python dist/pre_release.py [--use-local-images] [--release]
+
+With --release, also asserts the Advanced Installer project's ProductVersion
+matches dvr_scan.__version__ (run `python scripts/update_installer.py` to fix).
+"""
+
+import argparse
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
+
+REPO_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_DIR / "scripts"))
+
+from common import INSTALLER_AIP, display_version, read_version  # noqa: E402
+
+
+def check_installer_version():
+    """Ensure the .aip ProductVersion matches the display form of __version__."""
+    expected = display_version(read_version())
+    aip_row = f'<ROW Property="ProductVersion" Value="{expected}" Options="32"/>'
+    print(f"Checking {INSTALLER_AIP.name} ProductVersion == {expected}.")
+    if aip_row not in INSTALLER_AIP.read_text(encoding="utf-8"):
+        sys.exit(
+            f"Installer ProductVersion in {INSTALLER_AIP.name} does not match {expected!r}. "
+            "Run `python scripts/update_installer.py` to refresh the .aip."
+        )
 
 
 def write_version_info_for_windows_exe():
@@ -69,7 +94,7 @@ StringFileInfo(
     StringStruct(u'FileDescription', u'www.dvr-scan.com'),
     StringStruct(u'FileVersion', u'{VERSION}'),
     StringStruct(u'InternalName', u'DVR-Scan'),
-    StringStruct(u'LegalCopyright', u'Copyright © 2025 Brandon Castellano'),
+    StringStruct(u'LegalCopyright', u'Copyright © 2026 Brandon Castellano'),
     StringStruct(u'OriginalFilename', u'dvr-scan.exe'),
     StringStruct(u'ProductName', u'DVR-Scan'),
     StringStruct(u'ProductVersion', u'{VERSION}')])
@@ -190,9 +215,20 @@ def build_docs(use_local_images=True):
 
 
 if __name__ == "__main__":
-    if not (len(sys.argv) == 1 or (len(sys.argv) == 2 and sys.argv[1] == "--use-local-images")):
-        print("Usage: pre_release.py [--use-local-images]")
-        raise SystemExit(1)
+    parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
+    parser.add_argument(
+        "--use-local-images",
+        action="store_true",
+        help="Keep doc images local instead of linking to www.dvr-scan.com.",
+    )
+    parser.add_argument(
+        "--release",
+        action="store_true",
+        help="Also verify the installer .aip ProductVersion matches dvr_scan.__version__.",
+    )
+    args = parser.parse_args()
 
+    if args.release:
+        check_installer_version()
     write_version_info_for_windows_exe()
-    build_docs(use_local_images=bool(len(sys.argv) == 2 and sys.argv[1] == "--use-local-images"))
+    build_docs(use_local_images=args.use_local_images)

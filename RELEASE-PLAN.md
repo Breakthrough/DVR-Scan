@@ -13,9 +13,8 @@ Where applicable (mark as complete if nothing to update):
 - [ ] `uv lock --upgrade`.
 - [ ] update ffmpeg pin (`ffmpeg_version`, GyanD/codexffmpeg release name) across all builders
 - [ ] Python version
-- [ ] `appveyor.yml`: Advanced Installer `PATH` entry (`Advanced Installer 23.3`) must match the
-      version `advinst.msi` currently installs
-- [ ] Advanced Installer OSS license still valid
+- [ ] Advanced Installer OSS license still valid (`appveyor.yml` resolves the installed
+      Advanced Installer version dynamically, so no path to update)
 
 ### Changelog and docs
 
@@ -26,16 +25,20 @@ Where applicable (mark as complete if nothing to update):
 
 ### Installer project (Windows releases)
 
-- [ ] `dist/installer/DVR-Scan.aip`: set `ProductVersion` to `X.Y`, `PackageFileName` to
-      `DVR-Scan-X.Y-win64`, and generate a new `ProductCode` GUID.
-      See 1d6a057 (`git show 1d6a057 -- dist/installer/DVR-Scan.aip`) for a historical example.
-- [ ] If bundled files changed (new Python/PyAV/OpenCV DLLs), re-sync the `.aip` file list
-      against a local `dist/dvr-scan/` build in the Advanced Installer GUI
+- [ ] `python scripts/update_installer.py` bumps `dist/installer/DVR-Scan.aip` from
+      `__version__`: `ProductVersion` -> `X.Y`, new `ProductCode` GUID, `PackageFileName` ->
+      `dvr-scan-X.Y-win64`. Needs Advanced Installer installed locally (set `ADVINST` to the full
+      path of `AdvancedInstaller.com` if it is not under `C:\Program Files (x86)\Caphyon`).
+- [ ] If bundled files changed (new Python/PyAV/OpenCV DLLs), run
+      `python scripts/update_installer.py --sync-files` after the local frozen build below to
+      re-sync `APPDIR` against `dist/dvr-scan/`. CI re-syncs on every build (`--sync-only`), so
+      this only keeps the committed `.aip` representative. Structural changes (dialogs, features,
+      prerequisites, shortcuts, install directory layout) still need the Advanced Installer GUI.
 
 ### Local frozen build test
 
 ```bash
-python dist/pre_release.py --use-local-images
+python dist/pre_release.py --release --use-local-images   # --release asserts the .aip ProductVersion matches __version__
 pyinstaller dist/dvr-scan.spec
 python dist/post_release.py
 cp ffmpeg.exe dist/dvr-scan/          # the pinned GyanD full_build, not whatever is on PATH
@@ -47,23 +50,25 @@ git checkout -- dvr_scan/docs         # pre_release.py overwrites the docs, so w
       is empty), the following must succeed and produce an mp4 with audio:
       `dvr-scan.exe --version`, `dvr-scan-app.exe --version`,
       `dvr-scan.exe -i <repo>/tests/resources/simple_movement.mp4 -et 5s -df 3`
+      (`scripts/validate_release.py` repeats these checks against the final artifacts)
 - [ ] `dvr-scan-app.exe` launches, wizard opens, and can perform a scan
 
 ## 2. Release commit
 
 - [ ] `dvr_scan/__init__.py`: `__version__ = "X.Y"` (no `-dev` suffix).
-- [ ] `docs/changelog.md`: heading `(In Development)` -> `(YYYY-MM-DD)`.
+- [ ] `docs/changelog.md`: heading `(In Development)` -> `(YYYY-MM-DD)`; the heading must be
+      `### X.Y (YYYY-MM-DD)` (checked by `release-test.yml`).
 - [ ] `README.md`: `### Latest Release: vX.Y (Month D, YYYY)`.
 - [ ] `docs/download.md`: Python block and Windows blocks need updated version/date information
       and download links
 - [ ] `docs/index.md` and `docs/index_docs.md`: `Latest Version: X.Y (Month D, YYYY)`
-- [ ] `dist/installer/DVR-Scan.aip` and `appveyor.yml` if not already committed above
+- [ ] `dist/installer/DVR-Scan.aip` if not already committed above
 - [ ] Dates are the actual tag date, consistent across all five files
 - [ ] `git status` shows nothing else (`dvr_scan/docs/` is clean)
 
 ```bash
 git add README.md docs/changelog.md docs/download.md docs/index.md docs/index_docs.md \
-        dvr_scan/__init__.py dist/installer/DVR-Scan.aip appveyor.yml
+        dvr_scan/__init__.py dist/installer/DVR-Scan.aip
 git commit -m "[release] Release vX.Y"
 ```
 
@@ -81,27 +86,35 @@ git push origin releases/X.Y
 
 ## 4. CI artifacts and code signing
 
-Pushing the tag triggers various runs automatically.
+Pushing the tag triggers `Python Distribution`, `Windows Distribution`, `Release Tests`
+(tag vs `__version__`, changelog heading, `twine check`, `pip-audit`), `Update Website`, and the
+AppVeyor build (which re-syncs the `.aip` file list via `scripts/update_installer.py --sync-only`
+before building the MSI and hands the result to SignPath).
 
 - [ ] `gh run list --branch vX.Y-release` shows all GitHub workflows passing
 - [ ] AppVeyor build passes
-- [ ] SignPath: approved signing request and assembled release artifacts:
-  - `dvr-scan-X.Y-win64.msi`: the signed MSI (filename must be lowercase)
-  - `dvr-scan-X.Y-win64.zip`: AppVeyor artifact `DVR-Scan-win64_portable` with the two
-    `.exe` files inside replaced with the signed variants, and renamed correctly
-- [ ] `Get-AuthenticodeSignature` is `Valid` on the MSI and on both EXE files inside the archive
-- [ ] Install the MSI on a clean Windows machine: shortcut should launches the app,
-      `dvr-scan --version` works from a command prompt, upgrade over the previous version works,
-      and uninstall leaves no traces aside from user config data.
-- [ ] Portable zip: extract, run `dvr-scan.exe --version` and one scan.
+- [ ] SignPath: approve the signing request and download `dvr-scan-signed.zip` (signed
+      `dvr-scan.exe`, `dvr-scan-app.exe` and MSI) into `dist/signed/`. No other inputs are
+      needed: the portable zip is rebuilt from the signed MSI.
+- [ ] `python scripts/finalize_windows_dist.py`: verifies the Authenticode signatures, copies the
+      MSI as `dvr-scan-X.Y-win64.msi`, extracts its file tree with `msiexec /a` and repacks it as
+      `dvr-scan-X.Y-win64.zip` with 7-Zip, writes `dvr-scan-X.Y-win64.manifest.json` +
+      `SHA256SUMS`, then runs `scripts/validate_release.py` (filenames, hashes, signatures on the
+      MSI and both EXEs inside the zip, MSI/zip parity, frozen-exe smoke tests with ffmpeg removed
+      from `PATH`). Re-run the checks alone with `python scripts/validate_release.py`.
+- [ ] Portable zip: extract, run `dvr-scan.exe --version` and one scan (also covered by validate).
 
-## 5. GitHub release
+Installing the MSI on a clean machine (shortcut, `dvr-scan --version` from a prompt, upgrade over
+the previous version, clean uninstall) is automated by `test-installer.yml`, run in section 6.
+
+## 5. GitHub release (draft)
 
 - [ ] Zenodo: the GitHub switch for `Breakthrough/DVR-Scan` is ON **before** publishing, so the
       publish event mints a new DOI (the tag itself does not).
 - [ ] Download the Python artifacts from the tag's Python Distribution:
       `gh run download <run-id> -n dvr-scan-dist -D release/`
       (should be four files: `dvr_scan-X.Y` and `dvr_scan_headless-X.Y`, `.whl` + `.tar.gz`).
+- [ ] Copy the finalized Windows artifacts from `dist/signed/` into `release/`.
 - [ ] Release notes: verbatim to the corresponding the `X.Y` changelog section, but with adjusted
       `####` headings promoted to `##` (`#### Release Notes` -> `## Release Notes`) since the
       existing headers are chosen for the website
@@ -109,30 +122,35 @@ Pushing the tag triggers various runs automatically.
 ```bash
 gh release create vX.Y-release --draft --title "DVR-Scan vX.Y" --notes-file release-notes.md \
     release/dvr-scan-X.Y-win64.msi release/dvr-scan-X.Y-win64.zip \
+    release/dvr-scan-X.Y-win64.manifest.json release/SHA256SUMS \
     release/dvr_scan-X.Y-py3-none-any.whl release/dvr_scan-X.Y.tar.gz \
     release/dvr_scan_headless-X.Y-py3-none-any.whl release/dvr_scan_headless-X.Y.tar.gz
 ```
 
-- [ ] Six assets, names exactly as linked from `docs/download.md`.
-- [ ] Upload draft (`gh release edit vX.Y-release --draft=false --latest`).
-- [ ] Zenodo record appears at https://zenodo.org/account/settings/github/
+- [ ] Eight assets, Windows names exactly as linked from `docs/download.md`. Leave the release
+      as a **draft**; the orchestrator publishes it.
 
-## 6. PyPI
+## 6. Publish (release orchestrator)
 
-`publish-pypi.yml` is manually triggered. For `pypi` it requires the tag's Python Distribution and
-Windows Distribution runs to have succeeded via push event. It reuses the same `dvr-scan-dist`
-artifact for the release commit test run.
+`release.yml` verifies the draft release's artifacts and then publishes stage by stage:
+`test-installer.yml` (fresh install + upgrade from the previous release on a clean
+`windows-latest` runner) -> TestPyPI publish + pip smoke install -> GitHub release
+(draft -> public, marked latest) -> PyPI publish + pip smoke install.
 
 ```bash
-gh workflow run publish-pypi.yml -f tag=vX.Y-release -f environment=testpypi
-gh workflow run publish-pypi.yml -f tag=vX.Y-release -f environment=pypi
+gh workflow run release.yml -f tag=vX.Y-release -f verify-only=true   # optional: stop before anything goes public
+gh workflow run release.yml -f tag=vX.Y-release
+gh run watch
 ```
 
-- [ ] Publish on TestPyPI: `gh workflow run publish-pypi.yml -f tag=vX.Y-release -f environment=testpypi`
-- [ ] `pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple dvr-scan==X.Y` works
-- [ ] https://test.pypi.org/project/dvr-scan/ and https://test.pypi.org/project/dvr-scan-headless/ show `X.Y`.
-- [ ] Publish on PyPI: `gh workflow run publish-pypi.yml -f tag=vX.Y-release -f environment=pypi`
+`publish-pypi.yml` can still be dispatched by hand (`-f tag=vX.Y-release -f environment=testpypi|pypi`);
+for `pypi` it requires the tag's `Python Distribution`, `Windows Distribution` and
+`Release Tests` runs to have succeeded.
+
+- [ ] Orchestrator run is green
 - [ ] https://pypi.org/project/dvr-scan/ and https://pypi.org/project/dvr-scan-headless/ show `X.Y`.
+- [ ] Release is public and marked latest; Zenodo record appears at
+      https://zenodo.org/account/settings/github/
 - [ ] Smoke test using `pip`:
 
 ```bash
@@ -145,8 +163,9 @@ pip install --force-reinstall dvr-scan-headless==X.Y && dvr-scan --version
 
 ## 7. Website
 
-The site is usually automatically built by `update-site.yml` from `main`. To trigger a manual build
-from the release tag itself instead:
+`update-site.yml` runs automatically when the `vX.Y-release` tag is pushed (and on
+`workflow_dispatch`). Because that happens before section 6, the download links on the site
+resolve only once the release is public; re-dispatch if the site needs rebuilding later:
 
 ```bash
 gh workflow run update-site.yml --ref vX.Y-release
@@ -167,18 +186,17 @@ gh workflow run update-site.yml --ref vX.Y-release
 - [ ] Announce: Discord, GitHub Discussions, any issues that asked for the feature.
 
 
-# Missing Automation
+# Automation Reference
 
-TODOs for this plan which are outstanding (most of these already exist for PySceneDetect):
-
-- `scripts/update_installer.py` equivalent: bump `.aip` `ProductVersion`/`PackageFileName`
-  from `__version__` and re-sync the file list (`AdvancedInstaller.com /edit ... /NewSync`).
-- `scripts/finalize_windows_dist.py` + `validate_release.py` equivalents
-- Rebuild the portable zip from the signed MSI (`msiexec /a`), emit `SHA256SUMS`, verify
-  Authenticode signatures and MSI/zip parity, smoke-test the frozen exe.
-- `release-test.yml`: tag vs `__version__` check, changelog heading check,
-  `twine check`, `pip-audit`.
-- Add a release orchestrator (`release.yml`) and `test-installer.yml` (MSI install/upgrade on a
-  Github Actions runner instead of a local VM).
-- Trigger `update-site.yml` on `v*-release` tags instead of the `release` branch.
-
+| Script/Workflow | Description |
+| --- | --- |
+| `scripts/common.py` | version normalization, artifact names, hashing, Authenticode check |
+| `scripts/update_installer.py` | `.aip` version/GUID/package-name bump; `--sync-files` / `--sync-only [--dev]` re-sync `APPDIR` |
+| `scripts/finalize_windows_dist.py` | signed bundle -> MSI + portable zip + manifest + `SHA256SUMS`, then validate |
+| `scripts/validate_release.py` | standalone artifact validation (`--allow-unsigned` for local dry runs) |
+| `dist/pre_release.py --release` | asserts the `.aip` `ProductVersion` matches `__version__` |
+| `release-test.yml` | tag vs `__version__`, changelog heading, build + `twine check`, `pip-audit` |
+| `test-installer.yml` | MSI fresh install / upgrade / uninstall on a clean runner |
+| `release.yml` | orchestrates installer test -> TestPyPI -> GitHub release -> PyPI |
+| `update-site.yml` | rebuilds www.dvr-scan.com on `v*-release` tags |
+| `appveyor.yml` | frozen build, `.aip` re-sync, MSI build, SignPath hand-off |

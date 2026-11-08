@@ -66,23 +66,33 @@ install:
   - appveyor-tools\secure-file -decrypt license65.dat.enc -secret %ai_license_secret% -salt %ai_license_salt%
   - appveyor DownloadFile https://www.advancedinstaller.com/downloads/advinst.msi
   - msiexec /i advinst.msi /qn
-  # TODO: Determine the path to Advanced Installer more programatically.
-  - 'SET PATH=%PATH%;C:\\Program Files (x86)\\Caphyon\\Advanced Installer 23.3\\bin\\x86'
-  # License path must be absolute
+  # Resolve the installed Advanced Installer path. The directory name changes with each release.
+  - ps: $aiBin = (Get-ChildItem 'C:\Program Files (x86)\Caphyon\Advanced Installer*\bin\x86' | Sort-Object FullName -Descending | Select-Object -First 1).FullName; Add-Content $env:APPVEYOR_BUILD_FOLDER\ai_path.txt $aiBin
+  - set /p AI_BIN=<%APPVEYOR_BUILD_FOLDER%\ai_path.txt
+  - 'SET PATH=%PATH%;%AI_BIN%'
+  # License path must be absolute.
   - AdvancedInstaller.com /RegisterOffline "%cd%\license65.dat"
-  # Create MSI installer
-  - AdvancedInstaller.com /build DVR-Scan.aip
   - cd ../..
+  # Re-sync APPDIR with our build artifacts. Does not touch version/GUID fields, those should
+  # be committed on the actual release tag and must stay stable across builds/releases.
+  # On non-tag builds, we use --dev so the MSI is named dvr-scan-{ver}-dev-win64.msi.
+  - if "%APPVEYOR_REPO_TAG%"=="true" (python scripts/update_installer.py --sync-only) else (python scripts/update_installer.py --sync-only --dev)
+  # Save the final installer project as a build artifact.
+  - copy dist\installer\DVR-Scan.aip dist\DVR-Scan.aip
+  # Create the actual MSI installer.
+  - AdvancedInstaller.com /build dist/installer/DVR-Scan.aip
 
   - echo * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
   - echo * *                        PACKAGING BUILD ARTIFACTS                        * *
   - echo * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
   # Zip all resources together for code signing
   - cd dist
-  - move installer\DVR-Scan-*.msi .
+  # The .aip's PackageFileName now emits the lowercase dvr-scan-X.Y-win64.msi name
+  # (releases up to 1.8.2 shipped DVR-Scan-X.Y-win64.msi).
+  - move installer\dvr-scan-*.msi .
   - cp dvr-scan\dvr-scan.exe .
   - cp dvr-scan\dvr-scan-app.exe .
-  - 7z a dvr-scan-signed.zip dvr-scan.exe dvr-scan-app.exe DVR-Scan-*.msi
+  - 7z a dvr-scan-signed.zip dvr-scan.exe dvr-scan-app.exe dvr-scan-*.msi
   - cd ..
 
 test_script:
@@ -98,9 +108,12 @@ test_script:
   - dvr-scan-app.exe --version
 
 artifacts:
-  # Portable ZIP
+  # Portable ZIP.
   - path: dist/dvr-scan-win64.zip
     name: DVR-Scan-win64_portable
-  # Bundle for Code Signing
+  # Executable bundle for code signing.
   - path: dist/dvr-scan-signed.zip
     name: DVR-Scan-win64_installer
+  # The Advanced Installer project file the MSI was actually built from.
+  - path: dist/DVR-Scan.aip
+    name: DVR-Scan-build-manifest-aip
