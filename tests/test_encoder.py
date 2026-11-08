@@ -326,6 +326,19 @@ def test_output_mode_reexported_from_scanner():
     assert ScannerOutputMode is OutputMode
 
 
+def _patch_ffmpeg_available(monkeypatch, available: bool):
+    """Patch the ffmpeg check in every module that imported it by name. init_scanner()
+    decides the fallback in dvr_scan.shared, but MotionScanner.set_output() and the
+    encoders re-check through their own imports, so patching only one module makes the
+    outcome depend on whether the machine running the tests has ffmpeg on PATH."""
+    import dvr_scan.encoder as encoder_module
+    import dvr_scan.scanner as scanner_module
+    import dvr_scan.shared as shared
+
+    for module in (shared, scanner_module, encoder_module):
+        monkeypatch.setattr(module, "is_ffmpeg_available", lambda: available)
+
+
 def test_init_scanner_default_output_mode(traffic_camera_video, monkeypatch):
     """The default output mode is ENCODE when ffmpeg is available, falling back to
     OPENCV with a warning when it is not (explicitly-set modes still raise instead)."""
@@ -341,10 +354,10 @@ def test_init_scanner_default_output_mode(traffic_camera_video, monkeypatch):
             config=ConfigRegistry(),
         )
 
-    monkeypatch.setattr(shared, "is_ffmpeg_available", lambda: True)
+    _patch_ffmpeg_available(monkeypatch, True)
     assert shared.init_scanner(make_settings()).output_mode == OutputMode.ENCODE
 
-    monkeypatch.setattr(shared, "is_ffmpeg_available", lambda: False)
+    _patch_ffmpeg_available(monkeypatch, False)
     assert shared.init_scanner(make_settings()).output_mode == OutputMode.OPENCV
 
 
@@ -377,10 +390,10 @@ def test_init_scanner_mask_output_extension(traffic_camera_video, monkeypatch):
             config=ConfigRegistry(),
         )
 
-    monkeypatch.setattr(shared, "is_ffmpeg_available", lambda: True)
+    _patch_ffmpeg_available(monkeypatch, True)
     assert shared.init_scanner(make_settings())._mask_file == Path("mask.mp4")
 
-    monkeypatch.setattr(shared, "is_ffmpeg_available", lambda: False)
+    _patch_ffmpeg_available(monkeypatch, False)
     assert shared.init_scanner(make_settings())._mask_file == Path("mask.avi")
 
 
