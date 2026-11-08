@@ -44,6 +44,42 @@ def _darken(widget: tk.Widget, color: str, factor: float = _MENUBAR_HOVER_FACTOR
     return f"#{red:02x}{green:02x}{blue:02x}"
 
 
+def fit_window_to_screen(
+    window: ty.Union[tk.Tk, tk.Toplevel], margin_x: int = 40, margin_y: int = 120
+) -> bool:
+    """Shrink `window`'s initial size so it fits on screen when the size its contents request
+    is larger (e.g. the classic window's thumbnail list on a small laptop display). Resizable
+    content with a grid weight absorbs the difference. The margins leave room for window
+    decorations and the taskbar, which Tk cannot query portably. Returns True if the window
+    geometry was changed."""
+    window.update_idletasks()
+    req_width, req_height = window.winfo_reqwidth(), window.winfo_reqheight()
+    max_width = max(window.winfo_screenwidth() - margin_x, 1)
+    max_height = max(window.winfo_screenheight() - margin_y, 1)
+    if req_width <= max_width and req_height <= max_height:
+        return False
+    window.geometry(f"{min(req_width, max_width)}x{min(req_height, max_height)}")
+    return True
+
+
+def add_startup_mode_menu(
+    parent: tk.Menu, variable: tk.StringVar, command: ty.Callable[[], None]
+) -> tk.Menu:
+    """Add a `Startup Mode` cascade to `parent` with Wizard / Advanced Mode radio buttons
+    bound to `variable` ("wizard" or "classic"). `command` runs after each selection.
+    Shared by the classic window and the Scan Wizard so both menus stay in sync."""
+    menu = tk.Menu(parent, tearoff=0)
+    menu.add_radiobutton(
+        label="Wizard", underline=0, variable=variable, value="wizard", command=command
+    )
+    menu.add_radiobutton(
+        label="Advanced Mode", underline=0, variable=variable, value="classic", command=command
+    )
+    # Underline "M": "S" collides with Start Scan / Sort in the File menus.
+    parent.add_cascade(label="Startup Mode", underline=8, menu=menu)
+    return menu
+
+
 class MenuBar:
     """A custom menubar built from `tk.Menubutton` headings so the top-level menus get a
     real hover highlight. The native Windows menubar (`toplevel["menu"] = ...`) exposes no

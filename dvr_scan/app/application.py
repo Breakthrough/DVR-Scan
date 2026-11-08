@@ -9,6 +9,7 @@
 # LICENSE file, or visit one of the above pages for details.
 #
 
+import argparse
 import copy
 import dataclasses
 import os
@@ -33,9 +34,15 @@ from tkinterdnd2 import DND_FILES, TkinterDnD
 
 import dvr_scan.presets as presets
 from dvr_scan.app.about_window import AboutWindow
-from dvr_scan.app.common import MenuBar, register_icon
+from dvr_scan.app.common import (
+    MenuBar,
+    add_startup_mode_menu,
+    fit_window_to_screen,
+    register_icon,
+)
 from dvr_scan.app.region_editor import ACCELERATOR_KEY, RegionEditor
 from dvr_scan.app.scan_window import ScanWindow, launch_scan
+from dvr_scan.app.startup import CLASSIC, WIZARD, save_startup_mode
 from dvr_scan.app.thumbnails import (
     FILMSTRIP_FRAMES,
     FILMSTRIP_WIDTH,
@@ -1748,20 +1755,46 @@ class ScanArea:
         self.open_on_completion = settings.get("open-output-dir")
 
 
+def loaded_config_is_default_preset(args: ty.Optional[argparse.Namespace]) -> bool:
+    """True if the settings the app started with come from the user config file (or
+    program defaults when no user config exists), i.e. match the `Default` preset. False
+    when a config file was given with `-c` or the user config was ignored."""
+    if args is None:
+        return True
+    return not hasattr(args, "config") and not getattr(args, "ignore_user_config", False)
+
+
 class Application:
     def run(self):
         logger.debug("starting main loop")
-        if str(self._settings.get("startup-mode")).lower() == "wizard":
+        if self._startup_mode == WIZARD:
             self._open_wizard(initial=True)
         else:
             self._root.deiconify()
             self._root.focus()
         self._root.mainloop()
 
-    def __init__(self, settings: ScanSettings, initial_videos: ty.List[str]):
+    def __init__(
+        self,
+        settings: ScanSettings,
+        initial_videos: ty.List[str],
+        startup_mode: str = CLASSIC,
+        default_startup_mode: str = CLASSIC,
+    ):
+        """Arguments:
+        settings: Settings to initialize the UI from.
+        initial_videos: Videos to add to the input list.
+        startup_mode: Mode to show when `run()` is called ("wizard" or "classic").
+        default_startup_mode: The value persisted in the user config file, shown (and
+            edited) by the File > Startup Mode menu. Differs from `startup_mode` when
+            `--startup-mode`, `-c` or `--ignore-user-config` was given.
+        """
         self._root = TkinterDnD.Tk()
         self._root.withdraw()
         self._settings: ScanSettings = None
+        self._startup_mode = startup_mode
+        self._saved_startup_mode = default_startup_mode
+        self._startup_mode_var = tk.StringVar(self._root, value=default_startup_mode)
 
         self._root.option_add("*tearOff", False)
         self._root.title(WINDOW_TITLE)
@@ -1821,8 +1854,15 @@ class Application:
         # Initialize UI state from config.
         self._initialize(settings)
         self._preset_area.refresh(presets.list_presets())
+        # The user config *is* the Default preset, so show it as active until a setting is
+        # changed. Settings from `-c` or program defaults (`--ignore-user-config`) are not.
+        if loaded_config_is_default_preset(settings.args):
+            self._mark_preset_applied(presets.DEFAULT_PRESET_NAME)
         for path in initial_videos:
             self._input_area.add_video(path)
+        # The window is still withdrawn; the geometry applies once it is shown.
+        if fit_window_to_screen(self._root):
+            logger.debug("shrunk main window to fit screen: %s", self._root.geometry())
 
     def _create_menubar(self):
         self._menubar = MenuBar(self._root)
@@ -1835,6 +1875,7 @@ class Application:
             underline=0,
             command=self._open_wizard,
         )
+        add_startup_mode_menu(file_menu, self._startup_mode_var, self._on_startup_mode_changed)
         file_menu.add_command(
             label="Start Scan",
             underline=0,
@@ -1919,6 +1960,9 @@ class Application:
         # Imported here to avoid a circular import (the wizard reuses InputArea).
         from dvr_scan.app.wizard import ScanWizard
 
+        if not initial:
+            # Settings may have been edited in classic mode since the preset was applied.
+            self._refresh_active_preset()
         if self._wizard is None:
             self._wizard = ScanWizard(
                 self._root,
@@ -1926,6 +1970,9 @@ class Application:
                 on_close=self._destroy,
                 on_switch_to_classic=self._on_switch_to_classic,
                 on_preset_applied=self._on_preset_applied,
+                startup_mode_var=self._startup_mode_var,
+                on_startup_mode_changed=self._on_startup_mode_changed,
+                active_preset=self._active_preset,
             )
         if not initial:
             self._wizard.sync_from_settings(
@@ -1934,6 +1981,25 @@ class Application:
         self._wizard.set_videos(self._input_area.videos)
         self._root.withdraw()
         self._wizard.show()
+
+    def _on_startup_mode_changed(self):
+        """Persist the default startup mode selected from a File > Startup Mode menu."""
+        mode = self._startup_mode_var.get()
+        if mode == self._saved_startup_mode:
+            return
+        try:
+            path = save_startup_mode(mode)
+        except (OSError, UnicodeError) as ex:
+            logger.error(f"Failed to save startup mode: {ex}")
+            self._startup_mode_var.set(self._saved_startup_mode)
+            tkinter.messagebox.showerror(
+                title="Startup Mode",
+                message="Failed to save startup mode to the config file. "
+                "See log messages for details.",
+            )
+            return
+        self._saved_startup_mode = mode
+        logger.debug(f"saved startup-mode = {mode} to {path}")
 
     def _on_switch_to_classic(self, videos: ty.List[str]):
         """Show the classic main window, syncing videos and settings from the wizard."""
@@ -2115,6 +2181,10 @@ class Application:
         # TODO: This stats the presets directory on every dropdown open, which is fine
         # for a local folder but could be slow on a network drive. Cache on mtime if so.
         self._preset_area.refresh(presets.list_presets())
+        self._refresh_active_preset()
+
+    def _refresh_active_preset(self):
+        """Blank the active preset if any setting changed since it was applied."""
         if self._active_preset is not None and self._preset_snapshot != self._serialize_ui_state():
             self._active_preset = None
             self._preset_snapshot = None
@@ -2173,7 +2243,7 @@ class Application:
                 return
         try:
             path = presets.save_user_preset(name, self._get_config_settings())
-        except OSError as ex:
+        except (OSError, UnicodeError) as ex:
             logger.error(f"Failed to save preset: {ex}")
             tkinter.messagebox.showerror(
                 title="Preset Save Failure",

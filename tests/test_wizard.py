@@ -407,3 +407,60 @@ def test_wizard_remove_selected_removes_then_refreshes_state_and_breaks():
 
     assert wizard._on_remove_selected(object()) == "break"
     assert wizard.calls == ["remove_selected", "state_changed"]
+
+
+# --- Preset step initial selection --------------------------------------------------------
+
+
+class _FakeCombo:
+    """Stand-in for the preset ttk.Combobox: tracks the selection and item config."""
+
+    def __init__(self):
+        self.value = ""
+        self.config = {}
+
+    def get(self):
+        return self.value
+
+    def set(self, value):
+        self.value = value
+
+    def __setitem__(self, key, value):
+        self.config[key] = value
+
+
+def _preset_step_for_on_show(active_preset):
+    from dvr_scan.app.wizard import _PresetStep
+
+    step = _PresetStep.__new__(_PresetStep)
+    step._active_preset = active_preset
+    step._combo_initialized = False
+    step._presets = {}
+    step._combo = _FakeCombo()
+    step._preset_desc = {"text": ""}
+    return step
+
+
+def test_preset_step_shows_default_on_first_show():
+    step = _preset_step_for_on_show("Default")
+    step.on_show()
+    assert step._combo.get() == "Default"
+    assert "Default" in step._combo.config["values"]
+    assert step._preset_desc["text"].startswith("Balanced")
+
+
+def test_preset_step_shows_custom_when_no_active_preset():
+    step = _preset_step_for_on_show(None)
+    step.on_show()
+    assert step._combo.get() == ""
+    assert step._active_preset is None
+    assert step._preset_desc["text"].startswith("Custom settings")
+
+
+def test_preset_step_on_show_keeps_user_selection_after_first_show():
+    step = _preset_step_for_on_show("Default")
+    step.on_show()
+    step._combo.set("Fast Scan")
+    step._active_preset = "Fast Scan"
+    step.on_show()
+    assert step._combo.get() == "Fast Scan"

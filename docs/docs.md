@@ -369,10 +369,10 @@ bounding-box-color = 0xFF0000
     </span>
 
  * <b><pre>startup-mode</pre></b>
-    Which mode the DVR-Scan app (`dvr-scan-app`) starts in (`wizard` or `classic`). The Scan Wizard provides a simplified step-by-step workflow, while classic mode shows all settings at once. You can switch between modes at any time from the application. Has no effect on the `dvr-scan` command line.
+    Which mode the DVR-Scan app (`dvr-scan-app`) starts in (`wizard` or `classic`). The Scan Wizard provides a simplified step-by-step workflow, while classic mode (Advanced Mode) shows all settings at once. You can switch between modes at any time from the application, and change this option from <b>File -> Startup Mode</b>. New installs start in the wizard (the config file created by the installer sets `startup-mode = wizard`); existing installs keep the classic view. If no user config file exists at all (e.g. after `pip install`), the app starts in the wizard unless DVR-Scan has run before, and saves that choice to a new user config file. To force a mode for a single launch, run `dvr-scan-app --startup-mode wizard` or `dvr-scan-app --startup-mode classic`. Has no effect on the `dvr-scan` command line.
     <span class="dvr-scan-default">
     ```
-    startup-mode = wizard
+    startup-mode = classic
     ```
     </span>
 

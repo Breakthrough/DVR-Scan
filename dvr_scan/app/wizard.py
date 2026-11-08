@@ -38,7 +38,7 @@ from dvr_scan.app.application import (
     SORT_FIELDS,
     finalize_output_names,
 )
-from dvr_scan.app.common import MenuBar, register_icon
+from dvr_scan.app.common import MenuBar, add_startup_mode_menu, register_icon
 from dvr_scan.app.region_editor import ACCELERATOR_KEY
 from dvr_scan.app.scan_window import (
     ScanProgressView,
@@ -276,11 +276,18 @@ class _PresetStep:
         root: tk.Widget,
         on_preset_applied: ty.Callable[[presets.Preset, ConfigRegistry], None],
         base_config: ty.Optional[ConfigRegistry] = None,
+        active_preset: ty.Optional[str] = presets.DEFAULT_PRESET_NAME,
     ):
+        """`active_preset` names the preset `base_config` corresponds to (None when it
+        came from a config file given on the command line, or when the user config was
+        ignored); it is shown in the dropdown the first time the step is displayed."""
         self.frame = ttk.Frame(root)
         self._on_preset_applied = on_preset_applied
         self._presets: ty.Dict[str, presets.Preset] = {}
-        self._active_preset: ty.Optional[str] = presets.DEFAULT_PRESET_NAME
+        self._active_preset: ty.Optional[str] = active_preset
+        # Set once the dropdown has been populated from `active_preset` or synced from
+        # classic mode, so a later `on_show` does not override the user's selection.
+        self._combo_initialized = False
         if base_config is not None:
             self.config = copy.deepcopy(base_config)
         else:
@@ -332,7 +339,7 @@ class _PresetStep:
     def _update_description(self):
         name = self._combo.get()
         if not name:
-            self._preset_desc["text"] = "Custom settings configured in Advanced Mode."
+            self._preset_desc["text"] = "Custom settings (from a config file or Advanced Mode)."
         else:
             self._preset_desc["text"] = self._PRESET_DESCRIPTIONS.get(name, "Custom user preset.")
 
@@ -367,6 +374,7 @@ class _PresetStep:
     def sync_from_settings(self, settings: ScanSettings, active_preset: ty.Optional[str] = None):
         self._presets = {preset.name: preset for preset in presets.list_presets()}
         self._combo["values"] = list(self._presets)
+        self._combo_initialized = True
         if active_preset and active_preset in self._presets:
             self._combo.set(active_preset)
             self._active_preset = active_preset
@@ -383,9 +391,13 @@ class _PresetStep:
     def on_show(self):
         self._presets = {preset.name: preset for preset in presets.list_presets()}
         self._combo["values"] = list(self._presets)
-        if not self._combo.get() and self._preset_desc["text"] == "":
-            self._combo.set(presets.DEFAULT_PRESET_NAME)
-            self._active_preset = presets.DEFAULT_PRESET_NAME
+        if not self._combo_initialized:
+            self._combo_initialized = True
+            if self._active_preset in self._presets:
+                self._combo.set(self._active_preset)
+            else:
+                self._combo.set("")
+                self._active_preset = None
         self._update_description()
 
     def validate(self) -> ty.Optional[str]:
@@ -624,10 +636,18 @@ class ScanWizard:
         on_close: ty.Callable[[], None],
         on_switch_to_classic: ty.Callable[[ty.List[str]], None],
         on_preset_applied: ty.Callable[[presets.Preset, ConfigRegistry], None],
+        startup_mode_var: tk.StringVar,
+        on_startup_mode_changed: ty.Callable[[], None],
+        active_preset: ty.Optional[str] = presets.DEFAULT_PRESET_NAME,
     ):
+        """`active_preset` is the preset `settings` corresponds to, if any (see
+        `_PresetStep`)."""
         self._settings = settings
         self._on_close = on_close
         self._on_switch_to_classic = on_switch_to_classic
+        # Shared with the classic window so both Startup Mode menus stay in sync.
+        self._startup_mode_var = startup_mode_var
+        self._on_startup_mode_changed = on_startup_mode_changed
         self._scan_view: ty.Optional[ScanProgressView] = None
         self._scanning = False
         self._browse_in_progress = False
@@ -657,7 +677,9 @@ class ScanWizard:
             on_browse=self._browse_videos,
             can_accept_drop=self._can_modify_videos,
         )
-        preset_step = _PresetStep(content, on_preset_applied, base_config=settings.config)
+        preset_step = _PresetStep(
+            content, on_preset_applied, base_config=settings.config, active_preset=active_preset
+        )
         output_step = _OutputStep(content, videos_step=videos_step, settings=settings)
         summary_step = _SummaryStep(content, videos_step, preset_step, output_step)
         scan_step = _ScanStep(content)
@@ -987,6 +1009,7 @@ class ScanWizard:
         )
         file_menu.add_cascade(label="Sort", underline=0, menu=self._build_sort_menu(file_menu))
         file_menu.add_command(label="Advanced Mode", underline=0, command=self._on_switch)
+        add_startup_mode_menu(file_menu, self._startup_mode_var, self._on_startup_mode_changed)
         file_menu.add_command(label="Quit", underline=0, command=self._on_quit)
 
         edit_menu = self._menubar.add_menu("Edit", underline=0)

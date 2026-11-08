@@ -19,10 +19,14 @@ in the `dvr_scan` module.
 """
 
 import logging
+import re
+import shutil
 import typing as ty
 from abc import ABC, abstractmethod
-from configparser import DEFAULTSECT, ConfigParser, ParsingError
+from configparser import DEFAULTSECT, ConfigParser
+from configparser import Error as ConfigParserError
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 
 from platformdirs import user_config_dir
 from scenedetect import FrameTimecode
@@ -305,6 +309,94 @@ _CONFIG_FILE_DIR: Path = Path(user_config_dir("DVR-Scan", False))
 
 USER_CONFIG_FILE_PATH: Path = _CONFIG_FILE_DIR / _CONFIG_FILE_NAME
 
+
+_UTF8_BOM = b"\xef\xbb\xbf"
+
+
+def atomic_write_text(path: Path, text: str, encoding: ty.Optional[str] = None):
+    """Write `text` to `path` atomically (temp file in the same folder, then replace),
+    creating parent folders as required. `encoding` defaults to the locale encoding, which
+    is what `ConfigRegistry.load` reads config files with. An existing file's permission
+    bits are kept.
+
+    Raises:
+        OSError: The file could not be written.
+        UnicodeError: `text` cannot be represented in `encoding`.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = NamedTemporaryFile(
+        mode="w", dir=path.parent, suffix=".tmp", delete=False, encoding=encoding
+    )
+    try:
+        with tmp:
+            tmp.write(text)
+        if path.exists():
+            try:
+                shutil.copymode(path, tmp.name)
+            except OSError:
+                pass
+        Path(tmp.name).replace(path)
+    except BaseException:
+        Path(tmp.name).unlink(missing_ok=True)
+        raise
+
+
+def set_user_config_option(option: str, value: str, path: ty.Optional[Path] = None) -> Path:
+    """Set a single `option = value` line in the user config file (or `path`), preserving
+    every other line and comment. The first active line setting `option` (any case, as
+    config keys are case-insensitive) is replaced along with any indented continuation
+    lines; if there is none, the first commented-out one is; otherwise the option is
+    appended. The file is created if it does not exist. Files are read and written in the
+    locale encoding like `ConfigRegistry.load`, or as UTF-8 if they start with a BOM.
+
+    Returns:
+        Path the option was written to.
+
+    Raises:
+        OSError: The file could not be read or written.
+        UnicodeError: The file could not be decoded or `value` encoded.
+    """
+    assert option in CONFIG_MAP
+    if path is None:
+        path = USER_CONFIG_FILE_PATH
+    new_line = f"{option} = {value}"
+    encoding = None
+    if path.exists():
+        raw = path.read_bytes()
+        if raw.startswith(_UTF8_BOM):
+            encoding = "utf-8-sig"
+        # Decode via text mode semantics (universal newlines) in the chosen encoding.
+        with open(path, encoding=encoding) as file:
+            text = file.read()
+        lines = text.split("\n")
+        if lines and lines[-1] == "":
+            lines.pop()
+    else:
+        # Deferred import: dvr_scan/__init__ may import this module.
+        import dvr_scan
+
+        lines = ["# DVR-Scan Config File", f"# Created by: DVR-Scan {dvr_scan.__version__}"]
+    active = re.compile(r"^\s*%s\s*[=:]" % re.escape(option), re.IGNORECASE)
+    commented = re.compile(r"^\s*#\s*%s\s*[=:]" % re.escape(option), re.IGNORECASE)
+    index = next((i for i, line in enumerate(lines) if active.match(line)), None)
+    if index is not None:
+        # Indented non-empty lines following an option are continuations of its value.
+        end = index + 1
+        while end < len(lines) and lines[end] and lines[end][0] in " \t":
+            end += 1
+        lines[index:end] = [new_line]
+    else:
+        index = next((i for i, line in enumerate(lines) if commented.match(line)), None)
+        if index is not None:
+            lines[index] = new_line
+        else:
+            if lines and lines[-1].strip():
+                lines.append("")
+            lines.append(new_line)
+    atomic_write_text(path, "\n".join(lines) + "\n", encoding=encoding)
+    return path
+
+
 # TODO: Investigate if centralizing user help strings here would be useful.
 # It might make CLI help and documentation are easier to create, as well as
 # for generating a default config file template.
@@ -313,8 +405,10 @@ USER_CONFIG_FILE_PATH: Path = _CONFIG_FILE_DIR / _CONFIG_FILE_NAME
 CONFIG_MAP: ConfigDict = {
     # General Options
     "quiet-mode": False,
-    # Application (dvr-scan-app only)
-    "startup-mode": "wizard",
+    # Application (dvr-scan-app only). The code default is `classic` so existing installs
+    # keep the full settings view; the shipped config template sets `wizard`, so fresh
+    # installs (which receive the template) start in the Scan Wizard. See app/startup.py.
+    "startup-mode": "classic",
     # Input/Output
     "encode-args": DEFAULT_ENCODE_ARGS,
     "ffmpeg-input-args": DEFAULT_FFMPEG_INPUT_ARGS,
@@ -397,6 +491,26 @@ CHOICE_MAP: ty.Dict[str, ty.List[str]] = {
 of a set to preserve order when generating error contexts. Values are case-insensitive, and must be
 in lowercase in this map."""
 
+APP_ONLY_OPTIONS: ty.FrozenSet[str] = frozenset(
+    {
+        "quiet-mode",
+        "startup-mode",
+        "region-editor",
+        "timecode-list-format",
+        "max-events",
+        "max-event-length",
+        "thumbnails",
+        "verbosity",
+        "save-log",
+        "max-log-size",
+        "max-log-files",
+        "debug",
+    }
+)
+"""Config options the GUI has no widget for. When the GUI saves the `Default` preset (the
+user config file), these are carried over from the existing file unchanged instead of being
+dropped; every other known option is written from the UI state."""
+
 
 class ConfigLoadFailure(Exception):
     """Raised when a user-specified configuration file fails to be loaded or validated."""
@@ -475,7 +589,8 @@ class ConfigRegistry:
         config = ConfigParser()
         try:
             config.read_string("[%s]\n%s" % (DEFAULTSECT, contents), source=source)
-        except ParsingError as ex:
+        except ConfigParserError as ex:
+            # Covers ParsingError as well as e.g. DuplicateOptionError.
             raise ConfigLoadFailure(self._init_log, reason=ex) from ex
         self._parse_config(config)
         if any(level >= logging.ERROR for level, _ in self._init_log):

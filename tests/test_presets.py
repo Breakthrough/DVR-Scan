@@ -14,6 +14,7 @@ import logging
 
 import pytest
 
+import dvr_scan.presets as presets_module
 from dvr_scan.config import USER_CONFIG_FILE_PATH, ConfigLoadFailure, ConfigRegistry
 from dvr_scan.presets import (
     BUILTIN_PRESETS,
@@ -157,11 +158,51 @@ def test_timecode_list_format_choices():
 
 def test_startup_mode_choices():
     config = ConfigRegistry()
-    config.load_from_string("startup-mode = classic\n")
-    assert config.get("startup-mode") == "classic"
-    assert ConfigRegistry().get("startup-mode") == "wizard"
+    config.load_from_string("startup-mode = wizard\n")
+    assert config.get("startup-mode") == "wizard"
+    # Code default is classic so existing installs keep the classic view; the shipped
+    # config template sets wizard for fresh installs.
+    assert ConfigRegistry().get("startup-mode") == "classic"
     with pytest.raises(ConfigLoadFailure):
         ConfigRegistry().load_from_string("startup-mode = invalid\n")
+
+
+def test_save_default_preserves_unmanaged_options(tmp_path, monkeypatch):
+    """Saving the Default preset rewrites the user config, but must keep options the UI
+    has no widget for (startup-mode, verbosity, ...). UI values still win."""
+    user_config = tmp_path / "dvr-scan.cfg"
+    user_config.write_text(
+        "startup-mode = wizard\nverbosity = debug\nsave-log = no\nthreshold = 0.9\n"
+    )
+    monkeypatch.setattr(presets_module, "USER_CONFIG_FILE_PATH", user_config)
+    path = save_user_preset(DEFAULT_PRESET_NAME, make_settings(threshold=0.3))
+    assert path == user_config
+    config = ConfigRegistry()
+    config.load(user_config)
+    assert config.get("startup-mode") == "wizard"
+    assert config.get("verbosity") == "debug"
+    assert config.get("save-log") is False
+    assert config.get("threshold") == 0.3
+    assert list(tmp_path.glob("*.tmp")) == []
+
+
+def test_save_default_over_invalid_config_still_writes(tmp_path, monkeypatch):
+    user_config = tmp_path / "dvr-scan.cfg"
+    user_config.write_text("threshold = not-a-number\n")
+    monkeypatch.setattr(presets_module, "USER_CONFIG_FILE_PATH", user_config)
+    save_user_preset(DEFAULT_PRESET_NAME, make_settings(threshold=0.3))
+    config = ConfigRegistry()
+    config.load(user_config)
+    assert config.get("threshold") == 0.3
+
+
+def test_save_default_creates_missing_config(tmp_path, monkeypatch):
+    user_config = tmp_path / "nested" / "dvr-scan.cfg"
+    monkeypatch.setattr(presets_module, "USER_CONFIG_FILE_PATH", user_config)
+    save_user_preset(DEFAULT_PRESET_NAME, make_settings(threshold=0.3))
+    config = ConfigRegistry()
+    config.load(user_config)
+    assert config.get("threshold") == 0.3
 
 
 def test_load_preset_logs_at_debug_level(tmp_path):
@@ -185,3 +226,38 @@ def test_scan_user_presets_warns_only_once_per_unchanged_file(tmp_path, caplog):
         caplog.clear()
         assert scan_user_presets(tmp_path) == []
         assert len(caplog.records) == 0
+
+
+def test_save_default_does_not_resurrect_cleared_ui_options(tmp_path, monkeypatch):
+    """Options the UI manages come from the UI state only: an output folder cleared in
+    the UI ("Ask Me") must not be brought back from the old file."""
+    user_config = tmp_path / "dvr-scan.cfg"
+    user_config.write_text("output-dir = C:/old\nthreshold = 0.9\nload-region = r.txt\n")
+    monkeypatch.setattr(presets_module, "USER_CONFIG_FILE_PATH", user_config)
+    save_user_preset(DEFAULT_PRESET_NAME, make_settings(threshold=0.3))
+    text = user_config.read_text()
+    assert "output-dir" not in text
+    assert "load-region" not in text
+    assert "threshold = 0.3" in text
+
+
+def test_save_default_preserves_validated_unknown_and_raw_values(tmp_path, monkeypatch):
+    user_config = tmp_path / "dvr-scan.cfg"
+    user_config.write_text(
+        "max-event-length = 30s\n"
+        "future-option = 5\n"
+        "timecode = yes\n"  # migrated name: dropped, the UI writes time-code
+        "region-of-interest = 0 0 10 10\n"  # deprecated: dropped
+        "verbosity = DEBUG\n"
+    )
+    monkeypatch.setattr(presets_module, "USER_CONFIG_FILE_PATH", user_config)
+    save_user_preset(DEFAULT_PRESET_NAME, make_settings(threshold=0.3))
+    text = user_config.read_text()
+    assert "max-event-length = 30s\n" in text
+    assert "future-option = 5\n" in text
+    assert "verbosity = DEBUG\n" in text
+    assert "timecode" not in text.replace("time-code", "")
+    assert "region-of-interest" not in text
+    config = ConfigRegistry()
+    config.load(user_config)
+    assert config.get("max-event-length") == "30s"

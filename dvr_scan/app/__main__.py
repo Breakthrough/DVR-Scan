@@ -21,6 +21,11 @@ from scenedetect import VideoOpenFailure
 import dvr_scan
 from dvr_scan import get_license_info
 from dvr_scan.app.application import Application
+from dvr_scan.app.startup import (
+    has_prior_logs,
+    resolve_default_startup_mode,
+    save_startup_mode,
+)
 from dvr_scan.config import CHOICE_MAP, USER_CONFIG_FILE_PATH, ConfigLoadFailure, ConfigRegistry
 from dvr_scan.shared import (
     ScanSettings,
@@ -99,6 +104,16 @@ def get_cli_parser():
         action="store_true",
         default=False,
         help=("Ignore loading the user config file if present."),
+    )
+
+    parser.add_argument(
+        "--startup-mode",
+        metavar="mode",
+        type=string_type_check(CHOICE_MAP["startup-mode"], False, "mode"),
+        help=(
+            "Mode to start the application in. Must be one of: %s. Overrides the startup-mode "
+            "config option for this launch only." % (", ".join(CHOICE_MAP["startup-mode"]),)
+        ),
     )
 
     parser.add_argument(
@@ -188,10 +203,51 @@ def main():
     show_traceback = getattr(logging, settings.get("verbosity").upper()) == logging.DEBUG
     # TODO: Use Python __debug__ mode instead of hard-coding as config option.
     debug_mode = settings.get("debug")
+
+    # Resolve the default startup mode (wizard or classic). The first-run heuristic only
+    # applies when the user config is in play and no file was given explicitly, since it
+    # may write the result to the user config file.
+    allow_heuristic = not args.ignore_user_config and not hasattr(args, "config")
+    default_startup_mode, persist_startup_mode = resolve_default_startup_mode(
+        config,
+        user_config_exists=USER_CONFIG_FILE_PATH.exists(),
+        prior_logs=has_prior_logs(LOGFILE_PATH.parent, exclude=LOGFILE_PATH),
+        allow_heuristic=allow_heuristic,
+    )
+    if persist_startup_mode:
+        try:
+            path = save_startup_mode(default_startup_mode)
+            logger.debug("first run: saved startup-mode = %s to %s", default_startup_mode, path)
+        except (OSError, UnicodeError) as ex:
+            logger.warning("Failed to save startup mode to user config file: %s", ex)
+    startup_mode = (
+        args.startup_mode.lower() if hasattr(args, "startup_mode") else default_startup_mode
+    )
+    # The File > Startup Mode menu shows and edits the value in the user config file. With
+    # -c or --ignore-user-config that is not the config we launched from, so read it here
+    # (falling back to the program default if the user config is missing or invalid).
+    menu_startup_mode = default_startup_mode
+    if not allow_heuristic:
+        try:
+            user_config = ConfigRegistry()
+            user_config.load(log_level=logging.DEBUG)
+            menu_startup_mode = str(user_config.get("startup-mode")).lower()
+        except ConfigLoadFailure:
+            menu_startup_mode = str(ConfigRegistry().get("startup-mode")).lower()
+    logger.debug(
+        "startup mode: %s (default: %s, user config: %s)",
+        startup_mode,
+        default_startup_mode,
+        menu_startup_mode,
+    )
+
     with logging_redirect_tqdm(loggers=[logger]):
         try:
             app = Application(
-                settings=settings, initial_videos=args.input if hasattr(args, "input") else []
+                settings=settings,
+                initial_videos=args.input if hasattr(args, "input") else [],
+                startup_mode=startup_mode,
+                default_startup_mode=menu_startup_mode,
             )
             app.run()
 

@@ -521,3 +521,154 @@ def test_input_area_key_handlers_act_and_break():
 
     assert area._on_remove_key(object()) == "break"
     assert tree.get_children() == []
+
+
+class _FakeStringVar:
+    def __init__(self, value: str):
+        self.value = value
+
+    def get(self) -> str:
+        return self.value
+
+    def set(self, value: str):
+        self.value = value
+
+
+def _startup_mode_app(default: str):
+    """A Tk-free Application with only the startup mode state set."""
+    from dvr_scan.app.application import Application
+
+    app = Application.__new__(Application)
+    app._saved_startup_mode = default
+    app._startup_mode_var = _FakeStringVar(default)
+    return app
+
+
+def test_startup_mode_change_is_saved(monkeypatch):
+    app = _startup_mode_app("classic")
+    saved = []
+    monkeypatch.setattr(application, "save_startup_mode", lambda mode: saved.append(mode))
+    app._startup_mode_var.set("wizard")
+    app._on_startup_mode_changed()
+    assert saved == ["wizard"]
+    assert app._saved_startup_mode == "wizard"
+
+
+def test_startup_mode_unchanged_selection_does_not_save(monkeypatch):
+    app = _startup_mode_app("classic")
+    monkeypatch.setattr(
+        application, "save_startup_mode", lambda mode: pytest.fail("should not save")
+    )
+    app._on_startup_mode_changed()
+    assert app._saved_startup_mode == "classic"
+
+
+def test_startup_mode_save_failure_reverts_selection(monkeypatch):
+    app = _startup_mode_app("classic")
+
+    def failing_save(mode):
+        raise OSError("disk full")
+
+    errors = []
+    monkeypatch.setattr(application, "save_startup_mode", failing_save)
+    monkeypatch.setattr(
+        application.tkinter.messagebox, "showerror", lambda **kwargs: errors.append(kwargs)
+    )
+    app._startup_mode_var.set("wizard")
+    app._on_startup_mode_changed()
+    assert app._startup_mode_var.get() == "classic"
+    assert app._saved_startup_mode == "classic"
+    assert len(errors) == 1 and errors[0]["title"] == "Startup Mode"
+
+
+# --- Default preset shown at startup ----------------------------------------------------
+
+
+def test_loaded_config_is_default_preset():
+    import argparse
+
+    from dvr_scan.app.application import loaded_config_is_default_preset
+
+    assert loaded_config_is_default_preset(None) is True
+    assert loaded_config_is_default_preset(argparse.Namespace(ignore_user_config=False)) is True
+    assert (
+        loaded_config_is_default_preset(
+            argparse.Namespace(ignore_user_config=False, config="other.cfg")
+        )
+        is False
+    )
+    assert loaded_config_is_default_preset(argparse.Namespace(ignore_user_config=True)) is False
+
+
+# --- Fit main window to screen ----------------------------------------------------------
+
+
+class _FakeWindow:
+    def __init__(self, req, screen):
+        self._req = req
+        self._screen = screen
+        self.geometry_calls = []
+
+    def update_idletasks(self):
+        pass
+
+    def winfo_reqwidth(self):
+        return self._req[0]
+
+    def winfo_reqheight(self):
+        return self._req[1]
+
+    def winfo_screenwidth(self):
+        return self._screen[0]
+
+    def winfo_screenheight(self):
+        return self._screen[1]
+
+    def geometry(self, value):
+        self.geometry_calls.append(value)
+
+
+def test_fit_window_to_screen_noop_when_it_fits():
+    from dvr_scan.app.common import fit_window_to_screen
+
+    window = _FakeWindow(req=(1073, 1107), screen=(3440, 1440))
+    assert fit_window_to_screen(window) is False
+    assert window.geometry_calls == []
+
+
+def test_fit_window_to_screen_shrinks_oversized_dimensions_only():
+    from dvr_scan.app.common import fit_window_to_screen
+
+    # 1366x768 laptop: width fits, height does not.
+    window = _FakeWindow(req=(1073, 1107), screen=(1366, 768))
+    assert fit_window_to_screen(window) is True
+    assert window.geometry_calls == ["1073x648"]
+    # Both too large.
+    window = _FakeWindow(req=(1073, 1107), screen=(1024, 600))
+    assert fit_window_to_screen(window) is True
+    assert window.geometry_calls == ["984x480"]
+
+
+# --- Active preset refresh ----------------------------------------------------------------
+
+
+def test_refresh_active_preset_clears_when_ui_state_changed():
+    from dvr_scan.app.application import Application
+
+    app = Application.__new__(Application)
+    app._active_preset = "Default"
+    app._preset_snapshot = {"threshold": "0.15"}
+    app._serialize_ui_state = lambda: {"threshold": "0.3"}
+    cleared = []
+    app._preset_area = type("Area", (), {"set_active": lambda self, name: cleared.append(name)})()
+    app._refresh_active_preset()
+    assert app._active_preset is None
+    assert app._preset_snapshot is None
+    assert cleared == [None]
+
+    # Unchanged state keeps the preset.
+    app._active_preset = "Default"
+    app._preset_snapshot = {"threshold": "0.3"}
+    app._refresh_active_preset()
+    assert app._active_preset == "Default"
+    assert cleared == [None]

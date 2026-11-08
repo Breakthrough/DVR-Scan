@@ -9,6 +9,14 @@ After installation, you can run DVR-Scan by clicking on the application shortcut
 
 !!! note "The `dvr-scan` command is the command-line interface for DVR-Scan. To launch the GUI, run `dvr-scan-app`. For help with the command-line interface or config files, see the [Documentation](docs.md) page for details. "
 
+### Scan Wizard and Advanced Mode
+
+DVR-Scan has two views. The <b>Scan Wizard</b> walks you through a scan step by step: add videos, pick a preset, choose an output folder, and scan. <b>Advanced Mode</b> (the classic view described below) shows all settings at once. You can switch between them at any time using <b>File -> Wizard</b> in Advanced Mode, or the <b>Advanced Mode</b> button in the wizard.
+
+New installs start in the wizard, while existing installs keep Advanced Mode. To change which view opens at startup, use <b>File -> Startup Mode</b> in either view (this sets the [`startup-mode`](docs.md#config-file) config option). To force a view for a single launch, run `dvr-scan-app --startup-mode wizard` or `dvr-scan-app --startup-mode classic`.
+
+### Advanced Mode
+
 Start by clicking the <b>Add</b> button to add one or more videos:
 
 <img alt="[Main App Window]" src="../assets/app-main-window.jpg"/>
