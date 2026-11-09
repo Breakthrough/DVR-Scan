@@ -9,18 +9,35 @@ After installation, you can run DVR-Scan by clicking on the application shortcut
 
 !!! note "The `dvr-scan` command is the command-line interface for DVR-Scan. To launch the GUI, run `dvr-scan-app`. For help with the command-line interface or config files, see the [Documentation](docs.md) page for details. "
 
+### Scan Wizard and Advanced Mode
+
+DVR-Scan has two views. The <b>Scan Wizard</b> walks you through a scan step by step: add videos, pick a preset, choose an output folder, and scan. <b>Advanced Mode</b> (described below) shows all settings at once. You can switch between them at any time using <b>File -> Scan Wizard</b> in Advanced Mode, or the <b>Advanced Mode</b> button in the wizard.
+
+The wizard opens on the <b>Add Videos</b> step. Click the drop zone (or drag and drop files onto the window) to add one or more videos, then press <b>Next</b>:
+
+<img alt="[Scan Wizard: Add Videos]" src="../assets/app-wizard-videos.jpg"/>
+
+Next, pick a <b>Preset</b>. <b>Default</b> uses your saved settings, <b>High Sensitivity</b> catches faint or small motion, <b>Low Sensitivity</b> reduces false detections, and <b>Fast Scan</b> trades accuracy for speed (see [Presets](docs.md#presets) for the settings each one changes). You can also adjust the sensitivity threshold directly, where lower values detect smaller amounts of motion (if motion you expect is not detected, see [this FAQ entry](faq.md#why-is-some-motion-not-detected-or-why-are-there-false-detections)):
+
+<img alt="[Scan Wizard: Choose Preset]" src="../assets/app-wizard-preset.jpg"/>
+
+On the <b>Choose Output</b> step, select how events should be saved (or <b>Scan Only</b> to just produce a report), review your choices, and press <b>Start Scan</b>. The scan runs in place, and the detected events are listed when it finishes:
+
+<img alt="[Scan Wizard: Scan Results]" src="../assets/app-wizard-scan.jpg"/>
+
+New installs start in the wizard, while existing installs keep Advanced Mode. To change which view opens at startup, use <b>File -> Startup Mode</b> in either view (this sets the [`startup-mode`](docs.md#config-file) config option). To force a view for a single launch, run `dvr-scan-app --startup-mode wizard` or `dvr-scan-app --startup-mode advanced`.
+
+### Advanced Mode
+
 Start by clicking the <b>Add</b> button to add one or more videos:
 
 <img alt="[Main App Window]" src="../assets/app-main-window.jpg"/>
 
 You can select several videos at once with Shift-click, Ctrl-click, or Command-click on Mac. Select every video with `Ctrl + A` (`Command + A` on Mac). To remove the selected videos, use the `Delete` key or the <b>Remove</b> button. These actions are also available from the <b>Edit</b> menu.
 
-To extract and save the motion events from the input, click the <b>Start</b> button. You will be prompted for a location to save the events to, after which scanning will begin:
+To extract and save the motion events from the input, click the <b>Start</b> button. You will be prompted for a location to save the events to, after which scanning will begin in a separate progress window. Once complete, each event will be saved to the output folder you selected.
 
-
-<img alt="[Scan Window]" src="../assets/app-scan-window.jpg"/>
-
-Once complete, each event will be saved to the output folder you selected.  To tune motion sensitivity, go to <b>Settings -> Motion</b> and adjust threshold, where lower values are more sensitive to motion, and higher values are less sensitive.  You can also adjust event settings and more:
+To tune motion sensitivity, go to <b>Settings -> Motion</b> and adjust threshold, where lower values are more sensitive to motion, and higher values are less sensitive.  You can also adjust event settings and more:
 
 
 <img alt="[Motion Settings Window]" src="../assets/app-motion-settings.jpg"/>

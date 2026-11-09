@@ -14,9 +14,9 @@ hide:
 
 ------------------------------------------------------
 
-!!! success "Latest Version: 1.8.2 (January 18, 2026)"
+!!! success "Latest Version: 2.0 (November 8, 2026)"
 
-    <div class="buttongrid">[:fontawesome-solid-book: User Guide](guide.md){ .md-button #changelog-button }[:fontawesome-solid-bars: &nbsp; Documentation](docs.md){ .md-button #documentation-button }[:fontawesome-solid-gear: &nbsp; Resources](changelog.md){ .md-button #download-button }</div>
+    <div class="buttongrid">[:fontawesome-solid-book: User Guide](guide.md){ .md-button #changelog-button }[:fontawesome-solid-bars: &nbsp; Documentation](docs.md){ .md-button #documentation-button }[:fontawesome-solid-gear: &nbsp; Resources](resources.md){ .md-button #download-button }</div>
 
 ------------------------------------------------------
 
@@ -26,9 +26,9 @@ DVR-Scan is a command-line application that **automatically detects motion event
 
 ### UI
 
-Launch DVR-Scan from the shortcut or run the `dvr-scan-app` command.  Press **Add** to add your input videos, and press **Start** to find and extract segments with motion:
+Launch DVR-Scan from the shortcut or run the `dvr-scan-app` command.  The Scan Wizard walks you through each step: add your input videos, pick a preset, choose where to save the output, and press **Start Scan** to find and extract segments with motion:
 
-<img alt="ui example" src="assets/app-main-window.jpg" width="480"/>
+<img alt="ui example" src="assets/app-wizard-videos.jpg" width="480"/>
 
 To limit detection to certain areas, press **Set Regions** and use [the **Region Editor**](guide.md#region-editor). Motion sensitivity can be adjusted under **Settings -> Motion**.  See the [User Guide](guide.md) for more information.
 

@@ -9,7 +9,6 @@ on:
   workflow_dispatch:
 
 env:
-  ffmpeg_version: "8.0"
   UV_SYSTEM_PYTHON: 1
 
 
@@ -60,6 +59,12 @@ jobs:
           git rm website/build/* -r -f --ignore-unmatch
           git config --global user.name github-actions
           git config --global user.email github-actions@github.com
-          git commit -a -m "[docs] @${{ github.triggering_actor }}: Generate Website" \
-            -m "Commit: ${{ github.sha }}"
-          git push
+          # A re-pushed tag or a repeat dispatch can regenerate an identical site; `git commit`
+          # exits 1 with nothing to commit, so skip the publish instead of failing the run.
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "Generated website is identical to gh-pages; nothing to publish."
+          else
+            git commit -a -m "[docs] @${{ github.triggering_actor }}: Generate Website" \
+              -m "Commit: ${{ github.sha }}"
+            git push
+          fi

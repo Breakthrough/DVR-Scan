@@ -38,6 +38,16 @@ content = re.sub(r"^dvr-scan-app\s*=.*\n", "", content, flags=re.MULTILINE)
 assert '"opencv-contrib-python"' in content
 content = content.replace('"opencv-contrib-python"', '"opencv-contrib-python-headless"', 1)
 
+# scenedetect-headless depends on opencv-python-headless instead of opencv-python (same
+# version constraints otherwise), so the headless package pulls in no GUI OpenCV build.
+assert '"scenedetect[pyav]' in content
+content = content.replace('"scenedetect[pyav]', '"scenedetect-headless[pyav]', 1)
+
+# Drop the direct opencv-python dependency (see the comment in pyproject.toml): the
+# headless OpenCV build is pulled in through scenedetect-headless.
+assert re.search(r'^\s*"opencv-python",\n', content, flags=re.MULTILINE)
+content = re.sub(r'^\s*"opencv-python",\n', "", content, count=1, flags=re.MULTILINE)
+
 # Remove screeninfo (GUI dependency)
 assert "screeninfo" in content
 content = re.sub(r'^\s*"screeninfo",?\n', "", content, flags=re.MULTILINE)

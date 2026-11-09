@@ -20,7 +20,7 @@ import typing as ty
 from logging import getLogger
 from pathlib import Path
 
-from scenedetect import FrameTimecode
+from scenedetect import FrameTimecode, VideoOpenFailure
 from tqdm import tqdm
 
 from dvr_scan.app.thumbnails import (
@@ -67,8 +67,9 @@ def launch_scan(
     padding: int,
 ) -> ty.Optional["ScanWindow"]:
     """Create a `ScanWindow` for `settings`. Shows an error message and returns None
-    if the configured input mode is unavailable on this system. The caller must call
-    `show()` on the returned window to start the scan."""
+    if the scan cannot be set up (input mode unavailable on this system, inputs that can't
+    be opened or combined, output that can't be created). The caller must call `show()`
+    on the returned window to start the scan."""
     try:
         return ScanWindow(root, settings, on_closed, padding)
     except BackendUnavailable:
@@ -76,6 +77,15 @@ def launch_scan(
             title="Input Mode Unavailable",
             message=f"The specified input mode ({settings.get('input-mode')}) "
             "is not available on this system.",
+            parent=root,
+        )
+        return None
+    except (VideoOpenFailure, ValueError, OSError) as ex:
+        logger.error(f"Failed to start scan: {ex}", exc_info=True)
+        messagebox.showerror(
+            title="Scan Error",
+            message=f"Failed to start scan:\n\n{ex}\n\nSee the log for details (Help > Open Logs).",
+            parent=root,
         )
         return None
 
@@ -95,13 +105,22 @@ class ScanProgressView:
         on_finished: ty.Callable[[], None],
         padding: int,
     ):
+        # The UI stats are read from the scanner's tqdm progress bar, which quiet mode
+        # replaces with a stub, so always enable it (it only affects console output).
+        settings.set("quiet-mode", False)
+        # Set up the scanner first: it raises if the inputs or output can't be opened, and
+        # no widgets should be left behind in `parent` when it does.
+        self._scanner = init_scanner(settings)
         self.frame = ttk.Frame(parent)
         self._on_finished = on_finished
         self._finished_notified = False
+        # Pending `after` id of the UI update loop, cancelled if the frame is destroyed
+        # mid-scan (e.g. the window is closed) so it can't fire on a dead widget.
+        self._after_id: ty.Optional[str] = None
+        self.frame.bind("<Destroy>", self._on_frame_destroyed, add="+")
 
         # Source paths, exposed so a results table can seek them for event thumbnails.
         self.input_paths: ty.List[str] = [str(path) for path in settings.get("input")]
-        self._scanner = init_scanner(settings)
         self._scanner.set_callbacks(
             scan_started=self._on_scan_started,
             processed_frame=self._on_processed_frame,
@@ -164,7 +183,7 @@ class ScanProgressView:
         """Begin scanning in a worker thread and start updating the UI."""
         logger.debug("starting scan thread")
         self._scan_thread.start()
-        self.frame.after(10, self._update_continuous)
+        self._after_id = self.frame.after(10, self._update_continuous)
 
     def stop(self):
         """Signal the scan to stop and wait for the worker thread to exit."""
@@ -213,8 +232,17 @@ class ScanProgressView:
         return True
 
     def _update_continuous(self):
+        self._after_id = None
         if self._update():
-            self.frame.after(UI_UPDATE_RATE_MS, self._update_continuous)
+            self._after_id = self.frame.after(UI_UPDATE_RATE_MS, self._update_continuous)
+
+    def _on_frame_destroyed(self, _event=None):
+        if self._after_id is not None:
+            try:
+                self.frame.after_cancel(self._after_id)
+            except tk.TclError:
+                pass
+            self._after_id = None
 
     def _on_scan_started(self, num_frames: int):
         # We've now seeked to the start of the motion detection area and are processing frames.
@@ -278,7 +306,7 @@ class ScanProgressView:
 
 
 class ScanWindow:
-    """Modal window that runs a scan from the classic (advanced) UI, showing progress
+    """Modal window that runs a scan from the Advanced Mode UI, showing progress
     and then a Stop/Close control. On a successful scan a report can be saved to disk."""
 
     def __init__(
@@ -291,7 +319,12 @@ class ScanWindow:
         self._on_destroyed = on_destroyed
         self._padding = padding
         self._results_table: ty.Optional[ttk.Frame] = None
-        self._view = ScanProgressView(self._root, settings, self._on_finished, padding)
+        try:
+            self._view = ScanProgressView(self._root, settings, self._on_finished, padding)
+        except BaseException:
+            # Don't leave the (hidden) window behind if the scan can't be set up.
+            self._root.destroy()
+            raise
 
         self._root.bind("<<Shutdown>>", self.stop)
         self._root.protocol("WM_DELETE_WINDOW", self.prompt_stop)
@@ -332,6 +365,8 @@ class ScanWindow:
         logger.debug("scan complete")
         self._stop_button["state"] = tk.DISABLED
         self._close_button["state"] = tk.NORMAL
+        # Nothing left to stop: closing the window now just closes it.
+        self._root.protocol("WM_DELETE_WINDOW", self._destroy)
         # A report is only meaningful for a completed scan that produced an event list.
         if self._view.result is not None and not self._view.was_stopped:
             self._save_button["state"] = tk.NORMAL
@@ -391,18 +426,25 @@ def prompt_stop_scan(view: ScanProgressView, parent: tk.Misc) -> bool:
 
 def _event_frame_providers(
     input_paths: ty.List[str], event_list: ty.List[MotionEvent]
-) -> ty.List[FrameProvider]:
+) -> ty.Tuple[ty.List[FrameProvider], ty.Callable[[], None]]:
     """Build one frame provider per event, each sampling FILMSTRIP_FRAMES frames spread
     across the event for a filmstrip preview. All providers share a single input stream
     opened lazily on the worker thread, sampling by presentation time so this works for
-    single- and multi-video inputs alike."""
-    video: ty.Optional[VideoStreamConcat] = None
+    single- and multi-video inputs alike.
+
+    Also returns a `release` function which drops the shared stream so its files are
+    closed (the backends close them on deallocation); call it from the worker thread once
+    the providers are done (see `ThumbnailLoader`'s `on_exit`)."""
+    shared: ty.Dict[str, ty.Optional[VideoStreamConcat]] = {"video": None}
+
+    def release():
+        shared["video"] = None
 
     def make(event: MotionEvent) -> FrameProvider:
         def provide():
-            nonlocal video
+            video = shared["video"]
             if video is None:
-                video = open_input([Path(path) for path in input_paths])
+                video = shared["video"] = open_input([Path(path) for path in input_paths])
             start = event.start.seconds
             span = max(0.0, event.end.seconds - start)
             frames = []
@@ -417,7 +459,7 @@ def _event_frame_providers(
 
         return provide
 
-    return [make(event) for event in event_list]
+    return [make(event) for event in event_list], release
 
 
 def build_event_table(
@@ -425,7 +467,7 @@ def build_event_table(
 ) -> ttk.Frame:
     """A scrollable table of motion events, one row each, with a thumbnail (decoded off
     the UI thread from the source video) in the tree column. Shared by the wizard report
-    panel and the classic `ScanWindow`."""
+    panel and the Advanced Mode `ScanWindow`."""
     configure_thumbnail_rows()
     container = ttk.Frame(parent)
     container.rowconfigure(0, weight=1)
@@ -450,13 +492,16 @@ def build_event_table(
         table.column(col, width=width, minwidth=width, anchor=tk.CENTER, stretch=True)
 
     placeholder = to_photo(filmstrip_placeholder())
-    loader = ThumbnailLoader(table)
+    providers, release_video = _event_frame_providers(input_paths, event_list)
+    # The source video is closed once the last thumbnail is done, or when the table is
+    # destroyed first, so it is not held open (or the loader thread leaked) after a scan.
+    loader = ThumbnailLoader(table, on_exit=release_video)
+    container.bind("<Destroy>", lambda _event: loader.cancel(), add="+")
     # Keep the placeholder and loader (which owns the decoded PhotoImages) alive for as
     # long as the table is displayed; Tk only stores image names, not Python references.
     container.thumbnail_placeholder = placeholder
     container.thumbnail_loader = loader
 
-    providers = _event_frame_providers(input_paths, event_list)
     for index, (event, provider) in enumerate(zip(event_list, providers, strict=True)):
         duration = event.end - event.start
         iid = table.insert(
@@ -471,6 +516,9 @@ def build_event_table(
             ),
         )
         loader.submit(iid, provider)
+    # Drop our references so only the loader's queue holds the providers.
+    providers = provider = None
+    loader.finish()
 
     scroll = ttk.Scrollbar(container, orient=tk.VERTICAL, command=table.yview)
     table.configure(yscrollcommand=scroll.set)

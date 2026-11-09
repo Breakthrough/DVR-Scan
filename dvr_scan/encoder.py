@@ -60,6 +60,15 @@ on the audio streams present in the input video(s)."""
 RAW_VIDEO_INPUT_ARGS = "-f rawvideo -pix_fmt bgr24"
 """Arguments describing the raw frames piped to ffmpeg in OutputMode.ENCODE."""
 
+DEFAULT_PIPE_PIX_FMT = "yuv420p"
+"""Output pixel format used in OutputMode.ENCODE unless the encode args specify one. Without
+it, ffmpeg keeps full chroma for the bgr24 pipe (e.g. H.264 High 4:4:4 Predictive), which
+many players and devices cannot decode."""
+
+EVEN_DIMENSIONS_FILTER = "pad=ceil(iw/2)*2:ceil(ih/2)*2"
+"""Video filter padding frames to even dimensions, required by 4:2:0 output (e.g. after
+-df/--downscale-factor or region cropping yields an odd width or height)."""
+
 # TODO(#89): Add ability to set output name template.
 OUTPUT_FILE_TEMPLATE = "{VIDEO_NAME}.DSME_{EVENT_NUMBER}.{EXTENSION}"
 """Template to use for generating output files."""
@@ -349,6 +358,23 @@ def _audio_end_time(source: SourceInfo) -> ty.Optional[Fraction]:
     return end
 
 
+def _seek_offset(source: SourceInfo) -> Fraction:
+    """Offset to add to a time on `source`'s normalized video timeline (0 = first video
+    frame) to get the equivalent input seek (-ss) position for ffmpeg.
+
+    ffmpeg already adds the container start time to input seeks, so only the difference
+    between the video stream's start and the container's start is needed (e.g. AAC priming
+    makes audio start slightly before video). Adding the full video start time instead
+    would count a nonzero container start time (e.g. DVR .ts files) twice."""
+    video = source.video
+    if video.start_time is None or video.time_base is None:
+        return Fraction(0)
+    offset = Fraction(video.start_time) * video.time_base
+    if source.start_time is not None:
+        offset -= source.start_time
+    return offset
+
+
 def _drain_stream(stream: ty.IO[bytes], sink: ty.List[str]):
     """Read `stream` line-by-line into `sink` until EOF (run on a helper thread to
     prevent the subprocess from blocking on a full stderr pipe)."""
@@ -397,9 +423,38 @@ def build_pipe_command(
         args += ["-filter_complex", concat_filter, "-map", "[outa]"]
     if audio_inputs:
         args += ["-shortest"]
-    # Use split() without a separator so extra whitespace doesn't produce empty args.
-    args += encode_args.split()
+    args += _video_encode_args(encode_args, frame_size)
     args.append(str(output_path))
+    return args
+
+
+def _video_encode_args(encode_args: str, frame_size: ty.Tuple[int, int]) -> ty.List[str]:
+    """Split `encode_args` and add the output pixel format and even-dimension padding.
+
+    `-pix_fmt yuv420p` is added unless the user specified a pixel format. When the frame
+    size is odd, or the user supplied their own video filter (which may change the size),
+    a pad filter rounding the size up to even is appended to the video filter chain. A
+    filter graph (`-filter_complex`/`-lavfi`) cannot be combined with `-vf`, so users of
+    one are responsible for even output dimensions themselves."""
+    # Use split() without a separator so extra whitespace doesn't produce empty args.
+    args = encode_args.split()
+    if not any(arg.startswith("-pix_fmt") for arg in args):
+        args = ["-pix_fmt", DEFAULT_PIPE_PIX_FMT] + args
+    if any(arg in ("-filter_complex", "-lavfi") for arg in args):
+        return args
+    filter_index = next(
+        (
+            index
+            for index, arg in enumerate(args[:-1])
+            if arg in ("-vf", "-filter:v", "-filter:v:0", "-vf:0")
+        ),
+        None,
+    )
+    if filter_index is not None:
+        # Pad after the user's filters, since they may change the frame size.
+        args[filter_index + 1] += "," + EVEN_DIMENSIONS_FILTER
+    elif frame_size[0] % 2 or frame_size[1] % 2:
+        args = ["-vf", EVEN_DIMENSIONS_FILTER] + args
     return args
 
 
@@ -505,12 +560,8 @@ class FFmpegPipeEncoder(EventEncoder):
                 if index == span.source_index
                 else Fraction(0)
             )
-            video = source.video
-            if video.start_time is not None and video.time_base is not None:
-                # Local times are normalized to the first video frame, but -ss seeks in
-                # container time - compensate for a nonzero video stream start time.
-                start += Fraction(video.start_time) * video.time_base
-            audio_inputs.append((source.path, "%.6f" % float(start)))
+            start += _seek_offset(source)
+            audio_inputs.append((source.path, "%.6f" % float(max(start, Fraction(0)))))
         return audio_inputs
 
     def _start_process(self, frame_bgr: np.ndarray, timecode: FrameTimecode):

@@ -13,6 +13,8 @@
 
 from types import SimpleNamespace
 
+import pytest
+
 from dvr_scan.app.application import InputArea
 from dvr_scan.app.wizard import ScanWizard
 
@@ -407,3 +409,425 @@ def test_wizard_remove_selected_removes_then_refreshes_state_and_breaks():
 
     assert wizard._on_remove_selected(object()) == "break"
     assert wizard.calls == ["remove_selected", "state_changed"]
+
+
+# --- Preset step initial selection --------------------------------------------------------
+
+
+class _FakeCombo:
+    """Stand-in for the preset ttk.Combobox: tracks the selection and item config."""
+
+    def __init__(self):
+        self.value = ""
+        self.config = {}
+
+    def get(self):
+        return self.value
+
+    def set(self, value):
+        self.value = value
+
+    def __setitem__(self, key, value):
+        self.config[key] = value
+
+
+def _preset_step_for_on_show(active_preset):
+    from dvr_scan.app.wizard import _PresetStep
+
+    step = _PresetStep.__new__(_PresetStep)
+    step._active_preset = active_preset
+    step._combo_initialized = False
+    step._presets = {}
+    step._combo = _FakeCombo()
+    step._preset_desc = {"text": ""}
+    return step
+
+
+def test_preset_step_shows_default_on_first_show():
+    step = _preset_step_for_on_show("Default")
+    step.on_show()
+    assert step._combo.get() == "Default"
+    assert "Default" in step._combo.config["values"]
+    assert step._preset_desc["text"].startswith("Balanced")
+
+
+def test_preset_step_shows_custom_when_no_active_preset():
+    step = _preset_step_for_on_show(None)
+    step.on_show()
+    assert step._combo.get() == ""
+    assert step._active_preset is None
+    assert step._preset_desc["text"].startswith("Custom settings")
+
+
+def test_preset_step_on_show_keeps_user_selection_after_first_show():
+    step = _preset_step_for_on_show("Default")
+    step.on_show()
+    step._combo.set("Fast Scan")
+    step._active_preset = "Fast Scan"
+    step.on_show()
+    assert step._combo.get() == "Fast Scan"
+
+
+# --- Output step without ffmpeg (B4) ------------------------------------------------------
+
+
+class _FakeModeCombo:
+    """Stand-in for the output mode ttk.Combobox."""
+
+    def __init__(self, values):
+        self.values = list(values)
+        self.index = 0
+
+    def get(self):
+        return self.values[self.index]
+
+    def current(self, index):
+        self.index = index
+
+    def selection_clear(self):
+        pass
+
+
+def _output_step(ffmpeg_available: bool, mode_index: int = 0, directory: str = "/out"):
+    from dvr_scan.app.wizard import _OutputStep
+
+    step = _OutputStep.__new__(_OutputStep)
+    step._ffmpeg_available = ffmpeg_available
+    step._modes = _OutputStep.mode_choices(ffmpeg_available)
+    step._mode_combo = _FakeModeCombo(label for label, _ in step._modes)
+    step._mode_combo.current(mode_index)
+    step._directory = directory
+    step._user_selected_dir = bool(directory)
+    step._select_button = {}
+    step._directory_label = SimpleNamespace(set=lambda _value: None)
+    return step
+
+
+def test_output_mode_choices_label_ffmpeg_modes_when_missing():
+    from dvr_scan.app.wizard import FFMPEG_MISSING_SUFFIX, FFMPEG_OUTPUT_MODES, _OutputStep
+    from dvr_scan.scanner import OutputMode
+
+    assert _OutputStep.mode_choices(True) == _OutputStep._MODES
+    choices = _OutputStep.mode_choices(False)
+    assert [mode for _, mode in choices] == [mode for _, mode in _OutputStep._MODES]
+    for label, mode in choices:
+        assert label.endswith(FFMPEG_MISSING_SUFFIX) == (mode in FFMPEG_OUTPUT_MODES)
+        assert "Recommended" not in label or mode not in FFMPEG_OUTPUT_MODES
+    assert dict(choices)[next(lbl for lbl, m in choices if m == OutputMode.OPENCV)] == (
+        OutputMode.OPENCV
+    )
+
+
+def test_output_step_rejects_ffmpeg_modes_without_ffmpeg():
+    from dvr_scan.app.wizard import FFMPEG_OUTPUT_MODES
+    from dvr_scan.scanner import OutputMode
+
+    for index in range(5):
+        step = _output_step(ffmpeg_available=False, mode_index=index)
+        error = step.validate()
+        if step.output_mode in FFMPEG_OUTPUT_MODES:
+            assert error is not None and "ffmpeg" in error
+        else:
+            assert error is None
+    # With ffmpeg, the default (MP4) mode is fine.
+    step = _output_step(ffmpeg_available=True, mode_index=0)
+    assert step.output_mode == OutputMode.ENCODE
+    assert step.validate() is None
+
+
+def test_output_step_sync_falls_back_to_opencv_without_ffmpeg():
+    from dvr_scan.config import ConfigRegistry
+    from dvr_scan.scanner import OutputMode
+    from dvr_scan.shared import ScanSettings
+
+    for config_text in ("", "output-mode = ffmpeg\n"):
+        config = ConfigRegistry()
+        if config_text:
+            config.load_from_string(config_text)
+        step = _output_step(ffmpeg_available=False, mode_index=4)
+        step.sync_from_settings(ScanSettings(args=None, config=config))
+        assert step.output_mode == OutputMode.OPENCV
+        assert step.validate() is None
+
+
+# --- Dialog parents (S3e) -----------------------------------------------------------------
+
+
+def test_output_step_select_dialog_is_parented(monkeypatch):
+    step = _output_step(ffmpeg_available=True, directory="")
+    step.frame = SimpleNamespace(winfo_toplevel=lambda: "wizard-window")
+    seen = {}
+
+    def fake_askdirectory(**kwargs):
+        seen.update(kwargs)
+        return "/chosen"
+
+    monkeypatch.setattr("dvr_scan.app.wizard.tkinter.filedialog.askdirectory", fake_askdirectory)
+    step._on_select()
+    assert seen["parent"] == "wizard-window"
+    assert step.directory == "/chosen" and step.user_selected_directory
+
+
+def test_preset_load_failure_dialog_is_parented(monkeypatch):
+    import dvr_scan.presets as presets
+    from dvr_scan.app.wizard import _PresetStep
+    from dvr_scan.config import ConfigLoadFailure, ConfigRegistry
+
+    step = _PresetStep.__new__(_PresetStep)
+    step.frame = SimpleNamespace(winfo_toplevel=lambda: "wizard-window")
+    step.config = ConfigRegistry()
+    step._presets = {p.name: p for p in presets.list_presets()}
+    step._active_preset = presets.DEFAULT_PRESET_NAME
+    selected = ["Fast Scan"]
+    step._combo = SimpleNamespace(
+        selection_clear=lambda: None,
+        get=lambda: selected[0],
+        set=lambda value: selected.__setitem__(0, value),
+    )
+    step._threshold = SimpleNamespace(get=lambda: str(step.config.get("threshold")))
+
+    def failing_load(_preset):
+        raise ConfigLoadFailure(init_log=[])
+
+    shown = []
+    monkeypatch.setattr(presets, "load_preset", failing_load)
+    monkeypatch.setattr(
+        "dvr_scan.app.wizard.tkinter.messagebox.showerror", lambda **kwargs: shown.append(kwargs)
+    )
+    step._on_selected()
+    assert shown[0]["parent"] == "wizard-window"
+    assert selected[0] == presets.DEFAULT_PRESET_NAME
+
+
+# --- Dropping a config file on the wizard (S3c) -------------------------------------------
+
+
+def _videos_step_for_drop(on_load_config):
+    from dvr_scan.app.wizard import _VideosStep
+
+    step = _VideosStep.__new__(_VideosStep)
+    step._window = "wizard-window"
+    step._can_accept_drop = None
+    step._on_load_config = on_load_config
+    step._set_drag_active = lambda _active: None
+    step._refresh = lambda: None
+    step._drop_zone = SimpleNamespace(tk=SimpleNamespace(splitlist=lambda data: data))
+    added = []
+    step.input_area = SimpleNamespace(add_video=lambda path, parent: added.append(path))
+    return step, added
+
+
+def test_wizard_drop_loads_config_files_and_adds_videos(tmp_path):
+    video = tmp_path / "a.mp4"
+    first_cfg = tmp_path / "one.CFG"
+    second_cfg = tmp_path / "two.cfg"
+    for path in (video, first_cfg, second_cfg):
+        path.write_text("")
+    loaded = []
+    step, added = _videos_step_for_drop(lambda path: loaded.append(path) or True)
+    step._on_drop(SimpleNamespace(data=[str(first_cfg), str(video), str(second_cfg)]))
+    # Only the first config file is loaded, and none are added as videos.
+    assert loaded == [str(first_cfg)]
+    assert added == [str(video)]
+
+
+def test_wizard_drop_tries_next_config_if_first_fails(tmp_path):
+    bad_cfg, good_cfg = tmp_path / "bad.cfg", tmp_path / "good.cfg"
+    for path in (bad_cfg, good_cfg):
+        path.write_text("")
+    loaded = []
+    step, added = _videos_step_for_drop(
+        lambda path: loaded.append(path) or path.endswith("good.cfg")
+    )
+    step._on_drop(SimpleNamespace(data=[str(bad_cfg), str(good_cfg)]))
+    assert loaded == [str(bad_cfg), str(good_cfg)]
+    assert added == []
+
+
+# --- Output folder only copied to Advanced Mode if chosen by the user (S3h) ---------------
+
+
+def _wizard_for_apply(directory: str, user_selected: bool):
+    from dvr_scan.scanner import OutputMode
+
+    wizard = ScanWizard.__new__(ScanWizard)
+    wizard._preset_step = SimpleNamespace(threshold=0.15)
+    wizard._output_step = SimpleNamespace(
+        scan_only=False,
+        output_mode=OutputMode.OPENCV,
+        directory=directory,
+        user_selected_directory=user_selected,
+    )
+    motion = SimpleNamespace(_threshold=SimpleNamespace(set=lambda _value: None))
+    output = SimpleNamespace(_output_dir="", _on_mode_combo_selected=lambda: None)
+    scan = SimpleNamespace(scan_only=None)
+    return wizard, motion, output, scan
+
+
+def test_apply_to_classic_skips_auto_filled_output_dir():
+    wizard, motion, output, scan = _wizard_for_apply("/videos", user_selected=False)
+    wizard.apply_to_classic(motion, output, scan)
+    assert output._output_dir == ""
+
+
+def test_apply_to_classic_copies_user_selected_output_dir():
+    wizard, motion, output, scan = _wizard_for_apply("/chosen", user_selected=True)
+    wizard.apply_to_classic(motion, output, scan)
+    assert output._output_dir == "/chosen"
+
+
+# --- Advanced Mode start/end time and regions in wizard scans (S3f) -----------------------
+
+
+def test_wizard_scan_overrides_use_first_video_and_resolution():
+    wizard = ScanWizard.__new__(ScanWizard)
+    calls = []
+    wizard._get_scan_overrides = lambda video, size: calls.append((video, size)) or {"x": 1}
+    wizard._videos_step = SimpleNamespace(
+        input_area=SimpleNamespace(videos=["a.mp4", "b.mp4"], first_video_resolution=(64, 48))
+    )
+    assert wizard._scan_overrides() == {"x": 1}
+    assert calls == [("a.mp4", (64, 48))]
+    # No videos, or no Advanced Mode window: nothing to apply.
+    wizard._videos_step.input_area.videos = []
+    assert wizard._scan_overrides() == {}
+    wizard._get_scan_overrides = None
+    wizard._videos_step.input_area.videos = ["a.mp4"]
+    assert wizard._scan_overrides() == {}
+
+
+def test_summary_lists_advanced_mode_overrides():
+    from dvr_scan.app.wizard import _SummaryStep
+
+    step = _SummaryStep.__new__(_SummaryStep)
+    step._get_overrides = lambda: {
+        "start-time": "00:00:02.000",
+        "end-time": "00:00:05.000",
+        "regions": [[1], [2]],
+    }
+    assert step._override_lines() == [
+        "",
+        "From Advanced Mode:",
+        "    Start Time: 00:00:02.000",
+        "    End Time: 00:00:05.000",
+        "    Regions: 2",
+    ]
+    step._get_overrides = lambda: {}
+    assert step._override_lines() == []
+    step._get_overrides = None
+    assert step._override_lines() == []
+
+
+# --- Start Scan errors are shown (B4) -----------------------------------------------------
+
+
+def _wizard_for_start_scan(overrides=None):
+    from dvr_scan.config import ConfigRegistry
+
+    wizard = ScanWizard.__new__(ScanWizard)
+    wizard._settings = SimpleNamespace(args=None)
+    wizard._preset_step = SimpleNamespace(config=ConfigRegistry(), threshold=0.15)
+
+    def update(settings):
+        settings.set("input", ["a.mp4"])
+        return settings
+
+    wizard._videos_step = SimpleNamespace(
+        input_area=SimpleNamespace(update=update, videos=["a.mp4"], first_video_resolution=None)
+    )
+    wizard._output_step = SimpleNamespace(scan_only=True, output_mode=None, directory="")
+    wizard._get_scan_overrides = (lambda _video, _size: overrides) if overrides else None
+    wizard._scan_step = SimpleNamespace(body="scan-body")
+    wizard._window = "wizard-window"
+    wizard._scan_view = None
+    wizard._scanning = False
+    return wizard
+
+
+def test_wizard_start_scan_shows_error_when_setup_fails(monkeypatch):
+    import pytest
+    from scenedetect import VideoOpenFailure
+
+    import dvr_scan.app.wizard as wizard_module
+
+    for error in (VideoOpenFailure("mismatched"), ValueError("no ffmpeg"), OSError("bad dir")):
+        wizard = _wizard_for_start_scan()
+
+        def failing_view(*_args, error=error):
+            raise error
+
+        shown = []
+        monkeypatch.setattr(wizard_module, "ScanProgressView", failing_view)
+        monkeypatch.setattr(
+            wizard_module.tkinter.messagebox,
+            "showerror",
+            lambda shown=shown, **kwargs: shown.append(kwargs),
+        )
+        wizard._start_scan()
+        assert len(shown) == 1, error
+        assert shown[0]["parent"] == "wizard-window"
+        assert str(error) in shown[0]["message"]
+        assert wizard._scanning is False and wizard._scan_view is None
+
+    # Anything else is a bug: it propagates to the release-mode error handler.
+    def broken_view(*_args):
+        raise RuntimeError("bug")
+
+    monkeypatch.setattr(wizard_module, "ScanProgressView", broken_view)
+    with pytest.raises(RuntimeError):
+        _wizard_for_start_scan()._start_scan()
+
+
+def test_wizard_start_scan_applies_advanced_mode_overrides(monkeypatch):
+    import dvr_scan.app.wizard as wizard_module
+
+    seen = {}
+
+    def capture_view(_parent, settings, *_args):
+        seen.update(settings.app_settings)
+        raise ValueError("stop here")
+
+    monkeypatch.setattr(wizard_module, "ScanProgressView", capture_view)
+    monkeypatch.setattr(wizard_module.tkinter.messagebox, "showerror", lambda **kwargs: None)
+    _wizard_for_start_scan({"start-time": "00:00:02.000", "regions": [["r"]]})._start_scan()
+    assert seen["start-time"] == "00:00:02.000"
+    assert seen["regions"] == [["r"]]
+    assert seen["input"] == ["a.mp4"]
+
+
+def test_preset_step_sync_replaces_config_with_loaded_config():
+    """A config file dropped on the wizard replaces its base config, so options without
+    an Advanced Mode control (only copied when already set) still take effect."""
+    from dvr_scan.app.wizard import _PresetStep
+    from dvr_scan.config import ConfigRegistry
+    from dvr_scan.shared import ScanSettings
+
+    step = _preset_step_for_on_show("Default")
+    step._combo.set("Default")
+    step.config = ConfigRegistry()
+    threshold = ["0.15"]
+    step._threshold = SimpleNamespace(set=lambda value: threshold.__setitem__(0, value))
+    loaded = ConfigRegistry()
+    loaded.load_from_string("min-event-length = 5s\nthreshold = 0.4\n")
+    settings = ScanSettings(args=None, config=loaded)
+    settings.set("threshold", 0.4)
+    _PresetStep.sync_from_settings(step, settings, active_preset=None, config=loaded)
+    assert step.config is not loaded
+    assert not step.config.is_default("min-event-length")
+    assert step.config.get("threshold") == 0.4
+    assert threshold == ["0.4"]
+    assert step._active_preset is None
+
+
+@pytest.mark.parametrize("cnt_available", [True, False])
+def test_fast_scan_preset_hidden_without_cnt(monkeypatch, cnt_available):
+    """The Fast Scan preset uses CNT, which pip installs can lack (the regular OpenCV
+    package overwrites the contrib build), so it is only offered when CNT works."""
+    from dvr_scan.app import wizard as wizard_module
+
+    monkeypatch.setattr(
+        wizard_module.SubtractorCNT, "is_available", staticmethod(lambda: cnt_available)
+    )
+    names = [preset.name for preset in wizard_module._available_presets()]
+    assert ("Fast Scan" in names) == cnt_available
+    assert "High Sensitivity" in names and "Low Sensitivity" in names

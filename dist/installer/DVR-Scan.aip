@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<DOCUMENT Type="Advanced Installer" CreateVersion="13.5" version="23.6" Modules="professional" RootPath="." Language="en" Id="{3919FEC9-E2C3-453E-81FD-9E8BABBE2CA4}">
+<DOCUMENT Type="Advanced Installer" CreateVersion="13.5" version="24.1" Modules="professional" RootPath="." Language="en" Id="{3919FEC9-E2C3-453E-81FD-9E8BABBE2CA4}">
   <COMPONENT cid="caphyon.advinst.msicomp.MsiPropsComponent">
     <ROW Property="AI_APP_FILE" Value="[#dvrscanapp.exe]"/>
     <ROW Property="AI_BITMAP_DISPLAY_MODE" Value="0"/>
@@ -232,7 +232,7 @@
     <ROW Component="bgerror.tcl" ComponentId="{9AC37A62-47E4-4575-B654-48D0F2E60239}" Directory_="_tk_data_Dir" Attributes="0" KeyPath="bgerror.tcl" Type="0"/>
     <ROW Component="bit_generator.cp312win_amd64.pyd" ComponentId="{9E215E36-96D3-4D51-A0FF-41FE1623DF3F}" Directory_="random_Dir" Attributes="256" KeyPath="bit_generator.cp313win_amd64.pyd" Type="0"/>
     <ROW Component="boundingbox.gif" ComponentId="{78D8A9E1-7B17-4A50-A7E4-44189661EE78}" Directory_="assets_Dir" Attributes="0" KeyPath="boundingbox.gif" Type="0"/>
-    <ROW Component="bundle.220ee61c.min.js" ComponentId="{DFC5F207-19F3-4B95-AA97-6F2B06E039D3}" Directory_="javascripts_Dir" Attributes="0" KeyPath="bundle.88dd0f4e.min.js" Type="0"/>
+    <ROW Component="bundle.220ee61c.min.js" ComponentId="{DFC5F207-19F3-4B95-AA97-6F2B06E039D3}" Directory_="javascripts_Dir" Attributes="0" KeyPath="bundle.d7400e89.min.js" Type="0"/>
     <ROW Component="codec.pxd" ComponentId="{E55E7DFB-55E6-4CEF-BF82-D8BBAE4E6BEF}" Directory_="codec_Dir" Attributes="0" KeyPath="codec.pxd" Type="0"/>
     <ROW Component="codeccontext.pxd" ComponentId="{D463678F-E5DA-4B6D-8F12-3905BF6DBD7A}" Directory_="audio_Dir" Attributes="0" KeyPath="codeccontext.pxd" Type="0"/>
     <ROW Component="codeccontext.pxd_1" ComponentId="{C2F7356C-B33A-4612-9825-C2516F74182D}" Directory_="subtitles_Dir" Attributes="0" KeyPath="codeccontext.pxd_1" Type="0"/>
@@ -242,7 +242,7 @@
     <ROW Component="core.pxd" ComponentId="{157B8E19-49ED-41CE-A96F-AC183025715C}" Directory_="container_Dir" Attributes="0" KeyPath="core.pxd" Type="0"/>
     <ROW Component="cs.msg" ComponentId="{F272B5C4-45E3-4492-AB70-0672D653C745}" Directory_="msgs_1_Dir" Attributes="0" KeyPath="cs.msg_1" Type="0"/>
     <ROW Component="dragon4_LICENSE.txt" ComponentId="{44839B10-F245-4DE3-A138-90116B9C295D}" Directory_="multiarray_Dir" Attributes="0" KeyPath="dragon4_LICENSE.txt" Type="0"/>
-    <ROW Component="dvrscan.cfg" ComponentId="{18A37A49-86C6-42DF-A130-DC5499CD6677}" Directory_="DVRScan_Dir" Attributes="16" KeyPath="dvrscan.cfg_1" Type="0"/>
+    <ROW Component="dvrscan.cfg" ComponentId="{18A37A49-86C6-42DF-A130-DC5499CD6677}" Directory_="DVRScan_Dir" Attributes="144" KeyPath="dvrscan.cfg_1" Type="0"/>
     <ROW Component="dvrscan.exe" ComponentId="{BFAC0A4B-76D6-4EF9-B2B5-DFB8B5AC8885}" Directory_="APPDIR" Attributes="256" KeyPath="dvrscan.exe"/>
     <ROW Component="dvrscanapp.exe" ComponentId="{A045E3AE-324D-423D-8B7C-1B428B3F619C}" Directory_="APPDIR" Attributes="256" KeyPath="dvrscanapp.exe"/>
     <ROW Component="dvrscanlogo.png" ComponentId="{1A521399-BE46-4639-A4CD-92BBB2F07C9A}" Directory_="dvr_scan_Dir" Attributes="0" KeyPath="dvrscanlogo.png_1" Type="0"/>
@@ -286,7 +286,7 @@
     <ROW Component="msvcp140a4c2229bdc2a2a630acdc095b4d86008.dll" ComponentId="{690E7E89-4791-4B10-93C1-40803F6032CF}" Directory_="numpy.libs_Dir" Attributes="256" KeyPath="msvcp140a4c2229bdc2a2a630acdc095b4d86008.dll"/>
     <ROW Component="opencv_videoio_ffmpeg500_64.dll" ComponentId="{96360B2E-0050-436B-84FD-E948F72B2879}" Directory_="cv2_Dir" Attributes="256" KeyPath="opencv_videoio_ffmpeg500_64.dll"/>
     <ROW Component="optparse.tcl" ComponentId="{CF49057A-D2CB-4437-9A85-47D0BB5C941A}" Directory_="opt0.4_Dir" Attributes="0" KeyPath="optparse.tcl" Type="0"/>
-    <ROW Component="palette.06af60db.min.css" ComponentId="{EFE36AC8-357F-452C-B651-C49EDD4FA415}" Directory_="stylesheets_Dir" Attributes="0" KeyPath="palette.06af60db.min.css" Type="0"/>
+    <ROW Component="palette.06af60db.min.css" ComponentId="{EFE36AC8-357F-452C-B651-C49EDD4FA415}" Directory_="stylesheets_Dir" Attributes="0" KeyPath="main.ec1eaa64.min.css" Type="0"/>
     <ROW Component="pkgIndex.tcl" ComponentId="{405F9D7B-B36A-4A56-9763-CCB69537F838}" Directory_="winarm64_Dir" Attributes="0" KeyPath="pkgIndex.tcl_10" Type="0"/>
     <ROW Component="pkgIndex.tcl_1" ComponentId="{8301CF20-2801-4721-8AC5-A4497B8F2439}" Directory_="winx64_Dir" Attributes="0" KeyPath="pkgIndex.tcl_11" Type="0"/>
     <ROW Component="pkgIndex.tcl_2" ComponentId="{6FDB9DDF-BFC6-4F30-A557-5D76957DAAF5}" Directory_="winx64tcl9_Dir" Attributes="0" KeyPath="pkgIndex.tcl_12" Type="0"/>
@@ -1280,9 +1280,6 @@
     <ROW File="xmfbox.tcl" Component_="bgerror.tcl" FileName="xmfbox.tcl" Attributes="0" SourcePath="..\dvr-scan\_internal\_tk_data\xmfbox.tcl" SelfReg="false"/>
     <ROW File="_wmi.pyd" Component_="base_library.zip" FileName="_wmi.pyd" Attributes="0" SourcePath="..\dvr-scan\_internal\_wmi.pyd" SelfReg="false"/>
     <ROW File="dvrscanapp.exe" Component_="dvrscanapp.exe" FileName="DVR-SC~1.EXE|dvr-scan-app.exe" Attributes="0" SourcePath="..\dvr-scan\dvr-scan-app.exe" SelfReg="false"/>
-    <ROW File="bundle.88dd0f4e.min.js" Component_="bundle.220ee61c.min.js" FileName="BUNDLE~2.JS|bundle.88dd0f4e.min.js" Attributes="0" SourcePath="..\..\dvr_scan\docs\assets\javascripts\bundle.88dd0f4e.min.js" SelfReg="false"/>
-    <ROW File="palette.06af60db.min.css" Component_="palette.06af60db.min.css" FileName="PALETT~1.CSS|palette.06af60db.min.css" Attributes="0" SourcePath="..\..\dvr_scan\docs\assets\stylesheets\palette.06af60db.min.css" SelfReg="false"/>
-    <ROW File="main.6f8fc17f.min.css" Component_="palette.06af60db.min.css" FileName="MAIN6F~1.CSS|main.6f8fc17f.min.css" Attributes="0" SourcePath="..\..\dvr_scan\docs\assets\stylesheets\main.6f8fc17f.min.css" SelfReg="false"/>
     <ROW File="style.min.css" Component_="html" FileName="STYLEM~1.CSS|style.min.css" Attributes="0" SourcePath="..\dvr-scan\docs\style.min.css" SelfReg="false"/>
     <ROW File="appffmpegsettings.jpg" Component_="boundingbox.gif" FileName="APP-FF~1.JPG|app-ffmpeg-settings.jpg" Attributes="0" SourcePath="..\dvr-scan\docs\assets\app-ffmpeg-settings.jpg" SelfReg="false"/>
     <ROW File="appinputsettings.jpg" Component_="boundingbox.gif" FileName="APP-IN~1.JPG|app-input-settings.jpg" Attributes="0" SourcePath="..\dvr-scan\docs\assets\app-input-settings.jpg" SelfReg="false"/>
@@ -2135,6 +2132,8 @@
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiShortsComponent">
     <ROW Shortcut="DVRScan" Directory_="SHORTCUTDIR" Name="DVR-Scan" Component_="dvrscanapp.exe" Target="[#dvrscanapp.exe]" Description="Find and extract motion events from videos." Hotkey="0" Icon_="dvrscanapp.exe" IconIndex="0" ShowCmd="1" WkDir="APPDIR"/>
+    <ROW Shortcut="DVRScanAdvancedMode" Directory_="SHORTCUTDIR" Name="DVR-SC~2|DVR-Scan Advanced Mode" Component_="dvrscanapp.exe" Target="[#dvrscanapp.exe]" Arguments="--startup-mode advanced" Description="Find and extract motion events from videos in Advanced Mode." Hotkey="0" Icon_="dvrscanapp.exe" IconIndex="0" ShowCmd="1" WkDir="APPDIR"/>
+    <ROW Shortcut="DVRScanWizard" Directory_="SHORTCUTDIR" Name="DVR-SC~1|DVR-Scan Wizard" Component_="dvrscanapp.exe" Target="[#dvrscanapp.exe]" Arguments="--startup-mode wizard" Description="Find and extract motion events from videos using the Scan Wizard." Hotkey="0" Icon_="dvrscanapp.exe" IconIndex="0" ShowCmd="1" WkDir="APPDIR"/>
     <ROW Shortcut="DVRScan_1" Directory_="DesktopFolder" Name="DVR-Scan" Component_="dvrscanapp.exe" Target="[#dvrscanapp.exe]" Description="Find and extract motion events from videos." Hotkey="0" Icon_="dvrscanapp.exe" IconIndex="0" ShowCmd="1" WkDir="APPDIR"/>
     <ROW Shortcut="DVRScan_2" Directory_="StartMenuFolder" Name="DVR-Scan" Component_="dvrscanapp.exe" Target="[#dvrscanapp.exe]" Description="Find and extract motion events from videos." Hotkey="0" Icon_="dvrscanapp.exe" IconIndex="0" ShowCmd="1" WkDir="APPDIR"/>
   </COMPONENT>

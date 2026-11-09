@@ -87,7 +87,9 @@ jobs:
         run: |
           python dist/pre_release.py
           python -m build
-          echo "dvr_scan_version=`python -c \"import dvr_scan; print(dvr_scan.__version__.replace('-', '.'))\"`" >> "$GITHUB_ENV"
+          # Normalize to the PEP 440 form setuptools uses in sdist/wheel filenames (2.0-rc1 -> 2.0rc1,
+          # 2.1-dev0 -> 2.1.dev0). `packaging` is installed as a dependency of `build`.
+          echo "dvr_scan_version=`python -c \"import dvr_scan; from packaging.version import Version; print(Version(dvr_scan.__version__))\"`" >> "$GITHUB_ENV"
 
       - name: Build Package (Headless)
         shell: bash
@@ -96,26 +98,39 @@ jobs:
           python -m build
           git reset --hard HEAD
 
+        # *NOTE*: Both OpenCV packages share the same on-disk cv2 package, and the install order is
+        # not deterministic. Put the contrib modules back so the CNT smoke test passes.
+        # TODO(https://github.com/Breakthrough/PySceneDetect/issues/601): Coordinate a resolution
+        # for this issue.
+
       - name: Smoke Test (Source)
         run: |
           uv pip install dist/dvr_scan-${{ env.dvr_scan_version }}.tar.gz
+          uv pip install --reinstall --no-deps opencv-contrib-python
           python -m dvr_scan --version
           python -m dvr_scan -i tests/resources/simple_movement.mp4 -so -df 4 -et 100
+          python -m dvr_scan -i tests/resources/simple_movement.mp4 -so -df 4 -et 100 -b CNT
           uv pip uninstall dvr-scan
           uv pip install dist/dvr_scan_headless-${{ env.dvr_scan_version }}.tar.gz
+          uv pip install --reinstall --no-deps opencv-contrib-python-headless
           python -m dvr_scan --version
           python -m dvr_scan -i tests/resources/simple_movement.mp4 -so -df 4 -et 100
+          python -m dvr_scan -i tests/resources/simple_movement.mp4 -so -df 4 -et 100 -b CNT
           uv pip uninstall dvr-scan-headless
 
       - name: Smoke Test (Wheel)
         run: |
           uv pip install dist/dvr_scan-${{ env.dvr_scan_version }}-py3-none-any.whl
+          uv pip install --reinstall --no-deps opencv-contrib-python
           python -m dvr_scan --version
           python -m dvr_scan -i tests/resources/simple_movement.mp4 -so -df 4 -et 100
+          python -m dvr_scan -i tests/resources/simple_movement.mp4 -so -df 4 -et 100 -b CNT
           uv pip uninstall dvr-scan
           uv pip install dist/dvr_scan_headless-${{ env.dvr_scan_version }}-py3-none-any.whl
+          uv pip install --reinstall --no-deps opencv-contrib-python-headless
           python -m dvr_scan --version
           python -m dvr_scan -i tests/resources/simple_movement.mp4 -so -df 4 -et 100
+          python -m dvr_scan -i tests/resources/simple_movement.mp4 -so -df 4 -et 100 -b CNT
           uv pip uninstall dvr-scan-headless
 
       - name: Upload Package

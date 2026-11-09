@@ -272,6 +272,72 @@ jobs:
               }
               Write-Host 'Verified clean removal.'
           }
+
+          function Get-StartMenuShortcutDir {
+              # SHORTCUTDIR resolves to [ProgramMenuFolder][ProductName]; the
+              # MSI installs per-machine on the elevated runner, but check the
+              # per-user Programs folder too so a misplaced install fails loudly.
+              foreach ($folder in 'CommonPrograms', 'Programs') {
+                  $dir = Join-Path ([Environment]::GetFolderPath($folder)) 'DVR-Scan'
+                  if (Test-Path $dir) { return $dir }
+              }
+              return $null
+          }
+
+          # Start Menu entries (DVR-Scan.aip MsiShortsComponent): the plain
+          # "DVR-Scan" entry existed before 2.0; the two mode-specific entries
+          # launch dvr-scan-app.exe with --startup-mode wizard / advanced.
+          $StartMenuShortcuts = @('DVR-Scan.lnk', 'DVR-Scan Wizard.lnk', 'DVR-Scan Advanced Mode.lnk')
+
+          function Assert-StartMenuShortcuts {
+              param([Parameter(Mandatory)][bool]$Installed)
+              $dir = Get-StartMenuShortcutDir
+              if ($Installed) {
+                  if (-not $dir) { throw 'Start Menu folder DVR-Scan not found after install' }
+                  $present = @(Get-ChildItem $dir -Filter '*.lnk' | Select-Object -ExpandProperty Name)
+                  Write-Host "Start Menu entries in ${dir}: $($present -join ', ')"
+                  foreach ($name in $StartMenuShortcuts) {
+                      if ($present -notcontains $name) { throw "Start Menu shortcut '$name' missing from $dir" }
+                  }
+                  $shell = New-Object -ComObject WScript.Shell
+                  $expected = @{ 'DVR-Scan Wizard.lnk' = '--startup-mode wizard'; 'DVR-Scan Advanced Mode.lnk' = '--startup-mode advanced' }
+                  foreach ($name in $expected.Keys) {
+                      $lnk = $shell.CreateShortcut((Join-Path $dir $name))
+                      if ((Split-Path $lnk.TargetPath -Leaf) -ne 'dvr-scan-app.exe') {
+                          throw "$name targets '$($lnk.TargetPath)', expected dvr-scan-app.exe"
+                      }
+                      if ($lnk.Arguments.Trim() -ne $expected[$name]) {
+                          throw "$name has arguments '$($lnk.Arguments)', expected '$($expected[$name])'"
+                      }
+                  }
+              } elseif ($dir) {
+                  $left = @(Get-ChildItem $dir -Filter '*.lnk' | Select-Object -ExpandProperty Name)
+                  if ($left.Count -ne 0) { throw "Start Menu shortcuts remain after uninstall: $($left -join ', ')" }
+              }
+          }
+
+          function Get-UserConfigPath {
+              # The MSI installs the config template (component dvrscan.cfg, marked
+              # Permanent + NeverOverwrite) to LocalAppDataFolder\DVR-Scan.
+              Join-Path $env:LOCALAPPDATA 'DVR-Scan\dvr-scan.cfg'
+          }
+
+          function Get-UserConfigHash {
+              $cfg = Get-UserConfigPath
+              if (-not (Test-Path $cfg)) { throw "user config template not installed at $cfg" }
+              (Get-FileHash $cfg -Algorithm SHA256).Hash
+          }
+
+          function Assert-UserConfigTemplate {
+              # A fresh install ships a template that starts the GUI in the Scan Wizard.
+              $cfg = Get-UserConfigPath
+              if (-not (Test-Path $cfg)) { throw "user config template not installed at $cfg" }
+              $active = @(Get-Content $cfg | Where-Object { $_ -match '^\s*startup-mode\s*=\s*(\S+)' } | ForEach-Object { $Matches[1].ToLower() })
+              if (($active -join ',') -ne 'wizard') {
+                  throw "expected exactly one active 'startup-mode = wizard' line in $cfg, found: $($active -join ',')"
+              }
+              Write-Host "Config template at $cfg sets startup-mode = wizard."
+          }
           '@
           $dest = Join-Path $env:RUNNER_TEMP 'installer-helpers.ps1'
           Set-Content -LiteralPath $dest -Value $helpers
@@ -348,6 +414,8 @@ jobs:
           if (-not (Test-DirOnRegistryPath -Directory $entry.InstallLocation)) {
             throw "$($entry.InstallLocation) was not added to any PATH registry value"
           }
+          Assert-StartMenuShortcuts -Installed $true
+          Assert-UserConfigTemplate
           Write-Host 'Install verified.'
 
       - name: Functional smoke test
@@ -370,6 +438,9 @@ jobs:
         run: |
           . (Join-Path $env:RUNNER_TEMP 'installer-helpers.ps1')
           Assert-CleanRemoval -InstallDir $env:INSTALL_DIR
+          Assert-StartMenuShortcuts -Installed $false
+          # The config component is Permanent: user settings survive an uninstall.
+          if (-not (Test-Path (Get-UserConfigPath))) { throw 'user config was removed by uninstall' }
 
       - name: Upload msiexec logs
         if: failure()
@@ -538,6 +609,72 @@ jobs:
               }
               Write-Host 'Verified clean removal.'
           }
+
+          function Get-StartMenuShortcutDir {
+              # SHORTCUTDIR resolves to [ProgramMenuFolder][ProductName]; the
+              # MSI installs per-machine on the elevated runner, but check the
+              # per-user Programs folder too so a misplaced install fails loudly.
+              foreach ($folder in 'CommonPrograms', 'Programs') {
+                  $dir = Join-Path ([Environment]::GetFolderPath($folder)) 'DVR-Scan'
+                  if (Test-Path $dir) { return $dir }
+              }
+              return $null
+          }
+
+          # Start Menu entries (DVR-Scan.aip MsiShortsComponent): the plain
+          # "DVR-Scan" entry existed before 2.0; the two mode-specific entries
+          # launch dvr-scan-app.exe with --startup-mode wizard / advanced.
+          $StartMenuShortcuts = @('DVR-Scan.lnk', 'DVR-Scan Wizard.lnk', 'DVR-Scan Advanced Mode.lnk')
+
+          function Assert-StartMenuShortcuts {
+              param([Parameter(Mandatory)][bool]$Installed)
+              $dir = Get-StartMenuShortcutDir
+              if ($Installed) {
+                  if (-not $dir) { throw 'Start Menu folder DVR-Scan not found after install' }
+                  $present = @(Get-ChildItem $dir -Filter '*.lnk' | Select-Object -ExpandProperty Name)
+                  Write-Host "Start Menu entries in ${dir}: $($present -join ', ')"
+                  foreach ($name in $StartMenuShortcuts) {
+                      if ($present -notcontains $name) { throw "Start Menu shortcut '$name' missing from $dir" }
+                  }
+                  $shell = New-Object -ComObject WScript.Shell
+                  $expected = @{ 'DVR-Scan Wizard.lnk' = '--startup-mode wizard'; 'DVR-Scan Advanced Mode.lnk' = '--startup-mode advanced' }
+                  foreach ($name in $expected.Keys) {
+                      $lnk = $shell.CreateShortcut((Join-Path $dir $name))
+                      if ((Split-Path $lnk.TargetPath -Leaf) -ne 'dvr-scan-app.exe') {
+                          throw "$name targets '$($lnk.TargetPath)', expected dvr-scan-app.exe"
+                      }
+                      if ($lnk.Arguments.Trim() -ne $expected[$name]) {
+                          throw "$name has arguments '$($lnk.Arguments)', expected '$($expected[$name])'"
+                      }
+                  }
+              } elseif ($dir) {
+                  $left = @(Get-ChildItem $dir -Filter '*.lnk' | Select-Object -ExpandProperty Name)
+                  if ($left.Count -ne 0) { throw "Start Menu shortcuts remain after uninstall: $($left -join ', ')" }
+              }
+          }
+
+          function Get-UserConfigPath {
+              # The MSI installs the config template (component dvrscan.cfg, marked
+              # Permanent + NeverOverwrite) to LocalAppDataFolder\DVR-Scan.
+              Join-Path $env:LOCALAPPDATA 'DVR-Scan\dvr-scan.cfg'
+          }
+
+          function Get-UserConfigHash {
+              $cfg = Get-UserConfigPath
+              if (-not (Test-Path $cfg)) { throw "user config template not installed at $cfg" }
+              (Get-FileHash $cfg -Algorithm SHA256).Hash
+          }
+
+          function Assert-UserConfigTemplate {
+              # A fresh install ships a template that starts the GUI in the Scan Wizard.
+              $cfg = Get-UserConfigPath
+              if (-not (Test-Path $cfg)) { throw "user config template not installed at $cfg" }
+              $active = @(Get-Content $cfg | Where-Object { $_ -match '^\s*startup-mode\s*=\s*(\S+)' } | ForEach-Object { $Matches[1].ToLower() })
+              if (($active -join ',') -ne 'wizard') {
+                  throw "expected exactly one active 'startup-mode = wizard' line in $cfg, found: $($active -join ',')"
+              }
+              Write-Host "Config template at $cfg sets startup-mode = wizard."
+          }
           '@
           $dest = Join-Path $env:RUNNER_TEMP 'installer-helpers.ps1'
           Set-Content -LiteralPath $dest -Value $helpers
@@ -578,6 +715,15 @@ jobs:
           & $exe --version
           if ($LASTEXITCODE -ne 0) { throw "baseline dvr-scan --version exited with $LASTEXITCODE" }
           Add-Content $env:GITHUB_ENV "OLD_INSTALL_DIR=$($visible[0].InstallLocation)"
+          # The previous release's config template, untouched. The new template
+          # differs (2.0 sets startup-mode = wizard), so the upgrade must leave
+          # this file alone (dvrscan.cfg component is NeverOverwrite) or existing
+          # users would be switched to the wizard. Hashing the UNMODIFIED template
+          # is the strict check: MSI would otherwise overwrite an unmodified file.
+          $cfg = Get-UserConfigPath
+          if (-not (Test-Path $cfg)) { throw "baseline install did not create $cfg" }
+          Add-Content $env:GITHUB_ENV "PREV_CFG_HASH=$(Get-UserConfigHash)"
+          Write-Host "Baseline config hash: $(Get-UserConfigHash)"
 
       - name: Download new release assets
         env:
@@ -660,6 +806,13 @@ jobs:
               throw "Old install at $env:OLD_INSTALL_DIR still present after relocating upgrade"
             }
           }
+          $hash = Get-UserConfigHash
+          if ($hash -ne $env:PREV_CFG_HASH) {
+            Get-Content (Get-UserConfigPath) | Select-Object -First 40 | Out-String | Write-Host
+            throw "upgrade replaced the existing user config (hash $hash, expected $env:PREV_CFG_HASH)"
+          }
+          Write-Host 'Existing user config preserved across upgrade.'
+          Assert-StartMenuShortcuts -Installed $true
           Add-Content $env:GITHUB_ENV "INSTALL_DIR=$($entry.InstallLocation)"
           Write-Host 'Upgrade verified.'
 
@@ -673,6 +826,9 @@ jobs:
         run: |
           . (Join-Path $env:RUNNER_TEMP 'installer-helpers.ps1')
           Assert-CleanRemoval -InstallDir $env:INSTALL_DIR
+          Assert-StartMenuShortcuts -Installed $false
+          # The config component is Permanent: user settings survive an uninstall.
+          if (-not (Test-Path (Get-UserConfigPath))) { throw 'user config was removed by uninstall' }
 
       - name: Upload msiexec logs
         if: failure()

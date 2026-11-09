@@ -14,10 +14,41 @@ Defines an interface to background subtraction (`Subtractor`), and provides seve
 All current subtractors use algorithms backed by OpenCV, but this is not a requirement.
 """
 
+import importlib.metadata
 from abc import ABC, abstractmethod
 
 import cv2
 import numpy
+
+
+def cnt_unavailable_message() -> str:
+    """Explain why the CNT subtractor (`cv2.bgsegm`) is missing and how to fix it.
+
+    `opencv-contrib-python` and `opencv-python` unpack into the same `cv2` package. When we install
+    dependencies that depend on either (e.g. `scenedetect`), the last package installed will
+    overwrite the one already on disk."""
+    installed = set()
+    for name in ("opencv-contrib-python", "opencv-contrib-python-headless"):
+        try:
+            importlib.metadata.version(name)
+            installed.add(name)
+        except importlib.metadata.PackageNotFoundError:
+            pass
+    if not installed:
+        return (
+            "Method CNT requires the contrib OpenCV build, you may need to run: "
+            "`pip install opencv-contrib-python`"
+        )
+    package = (
+        "opencv-contrib-python-headless"
+        if installed == {"opencv-contrib-python-headless"}
+        else "opencv-contrib-python"
+    )
+    return (
+        f"Method CNT is not available: `{package}` is installed, but the regular OpenCV "
+        "package was installed over it and replaced the contrib modules (cv2.bgsegm). "
+        f"To restore them, run: `pip install --force-reinstall --no-deps {package}`"
+    )
 
 
 class Subtractor(ABC):

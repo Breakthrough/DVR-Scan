@@ -16,10 +16,16 @@ Validates functionality of the motion scanning context using various parameters.
 import logging
 import platform
 import re
+import threading
 import typing as ty
+from pathlib import Path
 
 import pytest
+from scenedetect import FrameTimecode
 
+import dvr_scan.scanner as scanner_module
+from dvr_scan.encoder import EventContext, EventEncoder, OutputMode
+from dvr_scan.platform import is_ffmpeg_available
 from dvr_scan.region import Point
 from dvr_scan.scanner import DetectorType, MotionScanner
 from dvr_scan.subtractor import SubtractorCNT, SubtractorCudaMOG2
@@ -641,3 +647,166 @@ def test_scan_logs_detection_parameters(traffic_camera_video, caplog: pytest.Log
 
     assert "Detection parameters: threshold = 0.25," in caplog.text
     assert "downscale_factor = 2, frame_skip = 1" in caplog.text
+
+
+class _RecordingEncoder(EventEncoder):
+    """Encoder recording the timecodes of the frames it receives for each event."""
+
+    STREAMS_FRAMES = True
+
+    def __init__(self, fail_on_close: bool = False):
+        self.events: ty.List[ty.Tuple[FrameTimecode, FrameTimecode, ty.List[FrameTimecode]]] = []
+        self.orphan_frames: ty.List[FrameTimecode] = []
+        self.closed = False
+        self._fail_on_close = fail_on_close
+
+    def write_frame(self, frame_bgr, timecode: FrameTimecode):
+        self.orphan_frames.append(timecode)
+
+    def finish_event(self, context: EventContext):
+        self.events.append((context.start, context.end, self.orphan_frames))
+        self.orphan_frames = []
+
+    def close(self):
+        self.closed = True
+        if self._fail_on_close:
+            raise RuntimeError("close failed")
+
+
+def _scan_recording_frames(
+    scanner: MotionScanner, monkeypatch
+) -> ty.Tuple[_RecordingEncoder, ty.List[FrameTimecode]]:
+    """Scan with a recording encoder. Returns it and the timecodes of all processed frames."""
+    processed: ty.List[FrameTimecode] = []
+
+    decode_event = scanner_module.DecodeEvent
+
+    def recording_decode_event(*args, **kwargs):
+        event = decode_event(*args, **kwargs)
+        processed.append(event.timecode)
+        return event
+
+    monkeypatch.setattr(scanner_module, "DecodeEvent", recording_decode_event)
+    scanner.set_output(output_mode=OutputMode.OPENCV)
+    encoder = _RecordingEncoder()
+    monkeypatch.setattr(scanner, "_create_encoder", lambda: encoder)
+    scanner.scan()
+    return encoder, processed
+
+
+def _check_event_frames(encoder: _RecordingEncoder, processed: ty.List[FrameTimecode]):
+    """Each clip must contain exactly the processed frames within its event's [start, end)."""
+    assert not encoder.orphan_frames
+    for start, end, frames in encoder.events:
+        assert end.seconds >= start.seconds
+        expected = [tc for tc in processed if start <= tc < end]
+        assert [tc.seconds for tc in frames] == [tc.seconds for tc in expected], (
+            f"frames sent for event {start}-{end} don't match its span"
+        )
+
+
+@pytest.mark.parametrize("frame_skip", [0, 2])
+def test_event_frames_match_span(traffic_camera_video, monkeypatch, frame_skip):
+    """Frames sent to the encoder must match each event's span, including the frame on
+    which the merge window ends the event when it starts before the event end."""
+    scanner = MotionScanner([traffic_camera_video], frame_skip=frame_skip)
+    scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
+    scanner.set_event_params(min_event_len=4, time_pre_event=0)
+    encoder, processed = _scan_recording_frames(scanner, monkeypatch)
+    assert len(encoder.events) == 3
+    _check_event_frames(encoder, processed)
+
+
+@pytest.mark.parametrize("frame_skip", [0, 1])
+def test_max_event_length(traffic_camera_video, monkeypatch, frame_skip):
+    """-Y/--max-event-length must split events at the limit in seconds regardless of
+    frame skip, without post-event padding, so clips match the reported spans and
+    no event ends before it starts."""
+    scanner = MotionScanner([traffic_camera_video], frame_skip=frame_skip)
+    scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
+    scanner.set_event_params(min_event_len=4, time_pre_event=0, max_event_len="3s")
+    encoder, processed = _scan_recording_frames(scanner, monkeypatch)
+    events = [(start, end) for start, end, _ in encoder.events]
+    # The first two of the 3 baseline events (5.6s and 5.3s long) are split once each.
+    assert len(events) == 5
+    for start, end in events:
+        assert 0 < end.seconds - start.seconds <= 3.0 + 1e-6
+    # Motion continues past the split in the second event, so the next event starts
+    # exactly where the previous one ended.
+    assert events[3][0] == events[2][1]
+    assert abs(events[2][1].seconds - events[2][0].seconds - 3.0) < 1e-6
+    _check_event_frames(encoder, processed)
+
+
+@pytest.mark.parametrize("frame_skip", [0, 1])
+def test_max_event_length_bounds_pre_roll(traffic_camera_video, monkeypatch, frame_skip):
+    """A pre-event window (-tb) at least as long as -Y must not make the first event of a
+    motion group longer than the limit; the pre-roll is trimmed to fit instead."""
+    scanner = MotionScanner([traffic_camera_video], frame_skip=frame_skip)
+    scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
+    scanner.set_event_params(min_event_len=4, time_pre_event="3s", max_event_len="1s")
+    encoder, processed = _scan_recording_frames(scanner, monkeypatch)
+    events = [(start, end) for start, end, _ in encoder.events]
+    assert len(events) > 3
+    for start, end in events:
+        assert 0 < end.seconds - start.seconds <= 1.0 + 1e-6
+    _check_event_frames(encoder, processed)
+
+
+def _failing(method, fail_after: int):
+    calls = [0]
+
+    def wrapper(*args, **kwargs):
+        calls[0] += 1
+        if calls[0] > fail_after:
+            raise RuntimeError("injected failure")
+        return method(*args, **kwargs)
+
+    return wrapper
+
+
+@pytest.mark.skipif(not is_ffmpeg_available(), reason="ffmpeg not available")
+@pytest.mark.parametrize("failure", ["main", "decode"])
+def test_scan_failure_stops_threads(traffic_camera_video, tmp_path, monkeypatch, failure):
+    """An exception in the main loop or the decode thread must stop and join both worker
+    threads and finalize ffmpeg (unlocking the output file) before it is re-raised."""
+    threads_before = set(threading.enumerate())
+    scanner = MotionScanner([traffic_camera_video])
+    scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
+    scanner.set_event_params(min_event_len=4, time_pre_event=0)
+    scanner.set_output(output_dir=tmp_path, output_mode=OutputMode.ENCODE)
+    # Fail partway through the first event (frames ~9-149).
+    if failure == "main":
+        monkeypatch.setattr(
+            scanner_module.MotionDetector,
+            "update",
+            _failing(scanner_module.MotionDetector.update, 60),
+        )
+    else:
+        monkeypatch.setattr(scanner._input, "read", _failing(scanner._input.read, 60))
+    with pytest.raises(RuntimeError, match="injected failure"):
+        scanner.scan()
+    assert set(threading.enumerate()) <= threads_before
+    assert scanner._encoder._process is None
+    # The partial clip must be finalized and not held open.
+    clips = list(tmp_path.glob("*.mp4"))
+    assert len(clips) == 1
+    clips[0].rename(tmp_path / "renamed.mp4")
+
+
+def test_encoder_close_failure_raised(traffic_camera_video, tmp_path, monkeypatch):
+    """An exception closing the encoder must be raised from scan(), and must not prevent
+    the mask writer from being closed."""
+    scanner = MotionScanner([traffic_camera_video])
+    scanner.set_regions(regions=[TRAFFIC_CAMERA_ROI])
+    scanner.set_video_time(end_time="2s")
+    scanner.set_output(
+        output_dir=tmp_path, mask_file=Path("mask.avi"), output_mode=OutputMode.OPENCV
+    )
+    encoder = _RecordingEncoder(fail_on_close=True)
+    monkeypatch.setattr(scanner, "_create_encoder", lambda: encoder)
+    with pytest.raises(RuntimeError, match="close failed"):
+        scanner.scan()
+    assert encoder.closed
+    assert scanner._mask_writer._writer is None
+    assert (tmp_path / "mask.avi").exists()

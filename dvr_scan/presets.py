@@ -19,15 +19,27 @@ packaged data files. The special ``Default`` preset maps to the user config file
 itself (USER_CONFIG_FILE_PATH).
 """
 
+import io
 import logging
 import re
 import typing as ty
 from collections import OrderedDict
+from configparser import DEFAULTSECT, ConfigParser
+from configparser import Error as ConfigParserError
 from dataclasses import dataclass
 from pathlib import Path
-from tempfile import NamedTemporaryFile
 
-from dvr_scan.config import USER_CONFIG_FILE_PATH, ConfigLoadFailure, ConfigRegistry
+from dvr_scan.config import (
+    APP_ONLY_OPTIONS,
+    CONFIG_MAP,
+    DEPRECATED_CONFIG_OPTION,
+    MIGRATED_CONFIG_OPTION,
+    USER_CONFIG_FILE_PATH,
+    ConfigLoadFailure,
+    ConfigRegistry,
+    atomic_write_text,
+    read_config_file,
+)
 
 if ty.TYPE_CHECKING:
     from dvr_scan.shared.settings import ScanSettings
@@ -175,7 +187,7 @@ def scan_user_presets(base_dir: ty.Optional[Path] = None) -> ty.List[Preset]:
             # Fully load the file: this enforces the CONFIG_MAP schema, which a bare
             # ConfigParser parse would not catch.
             ConfigRegistry().load(path)
-        except ConfigLoadFailure:
+        except (ConfigLoadFailure, OSError, UnicodeError):
             logger.warning("Skipping invalid preset file: %s", path)
             _PRESET_VALIDATION_CACHE[path] = (*cache_key, False)
             continue
@@ -218,7 +230,8 @@ def save_user_preset(
     name: str, settings: "ScanSettings", base_dir: ty.Optional[Path] = None
 ) -> Path:
     """Write the app settings in `settings` as a preset named `name`, atomically
-    (temp file + replace). Saving over `Default` updates the user config file.
+    (temp file + replace). Saving over `Default` updates the user config file, preserving
+    options the UI does not manage (e.g. `startup-mode`, `verbosity`).
 
     Returns:
         Path the preset was written to.
@@ -230,13 +243,35 @@ def save_user_preset(
     if not is_valid_preset_name(name):
         raise ValueError(f"invalid preset name: {name!r}")
     path = preset_path(name, base_dir)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = NamedTemporaryFile(mode="w", dir=path.parent, suffix=".tmp", delete=False)
-    try:
-        with tmp:
-            settings.write_to_file(tmp)
-        Path(tmp.name).replace(path)
-    except BaseException:
-        Path(tmp.name).unlink(missing_ok=True)
-        raise
+    if name == DEFAULT_PRESET_NAME:
+        _preserve_unmanaged_options(settings, path)
+    buffer = io.StringIO()
+    settings.write_to_file(buffer)
+    atomic_write_text(path, buffer.getvalue())
     return path
+
+
+def _preserve_unmanaged_options(settings: "ScanSettings", path: Path):
+    """Carry options from the existing config file at `path` which the GUI has no widget
+    for (`APP_ONLY_OPTIONS`, e.g. `startup-mode`, `verbosity`), plus options unknown to
+    this version (written by a newer DVR-Scan and tolerated on load, #242), into
+    `settings` as their raw text, so saving over the user config does not drop them.
+    Options the GUI manages are written from the UI state only, so clearing one (e.g.
+    `output-dir`) sticks. A missing, unreadable or unparsable file is ignored."""
+    if not path.exists():
+        return
+    parser = ConfigParser(interpolation=None)
+    try:
+        text, _ = read_config_file(path)
+        parser.read_string("[%s]\n%s" % (DEFAULTSECT, text), source=str(path))
+    except (OSError, UnicodeError, ConfigParserError):
+        logger.debug("Not preserving options from unreadable config file: %s", path)
+        return
+    for option, raw in parser[DEFAULTSECT].items():
+        if option in settings.app_settings:
+            continue
+        if option in DEPRECATED_CONFIG_OPTION or option in MIGRATED_CONFIG_OPTION:
+            continue
+        if option in CONFIG_MAP and option not in APP_ONLY_OPTIONS:
+            continue
+        settings.set(option, raw.replace("\n", " ").strip())

@@ -50,6 +50,8 @@ FILMSTRIP_FRAMES = 4
 # Gap (px) and its color between adjacent frames in the strip.
 FILMSTRIP_GAP = 2
 FILMSTRIP_GAP_COLOR = (20, 20, 20)
+# Space (px) between a filmstrip and the text in the same cell (classic input list).
+THUMBNAIL_TEXT_GAP = 8
 # Nominal per-frame width (16:9), used to size the placeholder and column before any
 # real frame (whose true aspect ratio may differ) has been decoded.
 _NOMINAL_FRAME_WIDTH = round(THUMBNAIL_HEIGHT * 16 / 9)
@@ -97,9 +99,21 @@ def filmstrip_placeholder(height: int = THUMBNAIL_HEIGHT) -> PIL.Image.Image:
     return PIL.Image.new("RGB", (FILMSTRIP_WIDTH, height), PLACEHOLDER_COLOR)
 
 
-def to_photo(image: PIL.Image.Image) -> PIL.ImageTk.PhotoImage:
-    """Wrap a `PIL.Image` as a Tk image. Must be called on the UI thread."""
-    return PIL.ImageTk.PhotoImage(image)
+def pad_right(image: PIL.Image.Image, margin: int) -> PIL.Image.Image:
+    """Return `image` with `margin` transparent pixels appended on the right. Used to put
+    space between a thumbnail and the text that follows it in the same treeview cell,
+    which ttk offers no option for. Returns `image` unchanged when `margin` is 0."""
+    if margin <= 0:
+        return image
+    padded = PIL.Image.new("RGBA", (image.width + margin, image.height), (0, 0, 0, 0))
+    padded.paste(image, (0, 0))
+    return padded
+
+
+def to_photo(image: PIL.Image.Image, margin_right: int = 0) -> PIL.ImageTk.PhotoImage:
+    """Wrap a `PIL.Image` as a Tk image, optionally with a transparent right margin (see
+    `pad_right`). Must be called on the UI thread."""
+    return PIL.ImageTk.PhotoImage(pad_right(image, margin_right))
 
 
 def configure_thumbnail_rows(style_name: str = THUMBNAIL_STYLE) -> str:
@@ -128,7 +142,11 @@ class ThumbnailLoader:
     they are displayed.
 
     By default it drives `ttk.Treeview` rows (setting each row's `image`), but any widget
-    that lays out rows by `iid` can be targeted by passing a custom `apply_image`."""
+    that lays out rows by `iid` can be targeted by passing a custom `apply_image`.
+
+    The UI poll loop is scheduled on the (long-lived) Tk root rather than on `widget`, so a
+    pending poll never targets a destroyed widget (which raises Tk's "invalid command name"
+    error dialog); `cancel` also cancels it."""
 
     def __init__(
         self,
@@ -137,24 +155,36 @@ class ThumbnailLoader:
         height: int = THUMBNAIL_HEIGHT,
         poll_interval_ms: int = POLL_INTERVAL_MS,
         apply_image: ty.Optional[ApplyImage] = None,
+        text_gap: int = 0,
+        on_exit: ty.Optional[ty.Callable[[], None]] = None,
     ):
+        """`text_gap` adds a transparent right margin to each thumbnail, for cells where
+        text follows the image (see `pad_right`). `on_exit` runs once the worker stops (after
+        `finish` or `cancel`), on the worker thread, e.g. to close a video the providers
+        share; it runs on the calling thread if no job was ever submitted."""
         self._widget = widget
         self._apply_image = apply_image if apply_image is not None else self._apply_to_tree
         self._height = height
         self._poll_interval_ms = poll_interval_ms
+        self._text_gap = text_gap
+        self._on_exit = on_exit
         self._jobs: "queue.Queue[ty.Optional[ty.Tuple[str, FrameProvider]]]" = queue.Queue()
         self._results: "queue.Queue[ty.Tuple[str, ty.Optional[PIL.Image.Image]]]" = queue.Queue()
         self._photos: ty.Dict[str, PIL.ImageTk.PhotoImage] = {}
         self._thread: ty.Optional[threading.Thread] = None
         self._cancelled = False
+        self._finished = False
         self._poller_active = False
         self._pending = 0
+        # Widget the pending poll was scheduled on, and its `after` id.
+        self._scheduler: ty.Optional[tk.Misc] = None
+        self._after_id: ty.Optional[str] = None
 
     def submit(self, iid: str, provider: FrameProvider):
         """Queue a thumbnail to be decoded for row `iid`. Safe to call repeatedly as
-        rows are added; starts the worker and UI poller on first use. A cancelled loader
-        cannot be reused; construct a fresh instance instead."""
-        if self._cancelled:
+        rows are added; starts the worker and UI poller on first use. A cancelled or
+        finished loader cannot be reused; construct a fresh instance instead."""
+        if self._cancelled or self._finished:
             return
         self._pending += 1
         self._jobs.put((iid, provider))
@@ -163,7 +193,15 @@ class ThumbnailLoader:
             self._thread.start()
         if not self._poller_active:
             self._poller_active = True
-            self._widget.after(self._poll_interval_ms, self._drain)
+            self._schedule_drain()
+
+    def finish(self):
+        """Signal that no more jobs will be submitted: the worker thread exits (running
+        `on_exit`) once the queued jobs are done, instead of waiting for more."""
+        if self._cancelled or self._finished:
+            return
+        self._finished = True
+        self._stop_worker()
 
     def cancel(self):
         """Stop loading and drop references. Call when the rows are cleared or the
@@ -174,22 +212,61 @@ class ThumbnailLoader:
             return
         self._cancelled = True
         self._photos.clear()
-        self._jobs.put(None)
+        self._cancel_drain()
+        if not self._finished:
+            self._stop_worker()
+
+    def _stop_worker(self):
+        """Wake the worker with the exit sentinel, or run `on_exit` now if it never ran."""
+        if self._thread is not None:
+            self._jobs.put(None)
+        else:
+            self._run_on_exit()
+
+    def _run_on_exit(self):
+        if self._on_exit is None:
+            return
+        on_exit, self._on_exit = self._on_exit, None
+        try:
+            on_exit()
+        except Exception as ex:  # noqa: BLE001 - cleanup must not raise.
+            logger.debug(f"thumbnail loader cleanup failed: {ex}")
 
     def _work(self):
-        while True:
-            job = self._jobs.get()
-            if job is None or self._cancelled:
-                return
-            iid, provider = job
-            image: ty.Optional[PIL.Image.Image] = None
+        try:
+            while True:
+                job = self._jobs.get()
+                if job is None or self._cancelled:
+                    return
+                iid, provider = job
+                image: ty.Optional[PIL.Image.Image] = None
+                frames = None
+                try:
+                    frames = provider()
+                    if frames:
+                        image = filmstrip_image(frames, self._height)
+                except Exception as ex:  # noqa: BLE001 - a bad frame must not kill the worker.
+                    logger.debug(f"failed to generate thumbnail for {iid}: {ex}")
+                # Drop references before blocking on the next job, so an idle worker does not
+                # keep the last provider (and anything it holds open, e.g. a video) alive.
+                job = provider = frames = None
+                self._results.put((iid, image))
+        finally:
+            self._run_on_exit()
+
+    def _schedule_drain(self):
+        if self._scheduler is None:
+            self._scheduler = self._widget.nametowidget(".")
+        self._after_id = self._scheduler.after(self._poll_interval_ms, self._drain)
+
+    def _cancel_drain(self):
+        if self._after_id is not None and self._scheduler is not None:
             try:
-                frames = provider()
-                if frames:
-                    image = filmstrip_image(frames, self._height)
-            except Exception as ex:  # noqa: BLE001 - a bad frame must not kill the worker.
-                logger.debug(f"failed to generate thumbnail for {iid}: {ex}")
-            self._results.put((iid, image))
+                self._scheduler.after_cancel(self._after_id)
+            except tk.TclError:
+                pass  # The root is already gone.
+        self._after_id = None
+        self._poller_active = False
 
     def _apply_to_tree(self, iid: str, photo: PIL.ImageTk.PhotoImage) -> bool:
         """Default `apply_image`: set the image on a `ttk.Treeview` row, skipping rows that
@@ -201,6 +278,7 @@ class ThumbnailLoader:
         return True
 
     def _drain(self):
+        self._after_id = None
         if self._cancelled or not self._widget.winfo_exists():
             self._poller_active = False
             return
@@ -209,12 +287,12 @@ class ThumbnailLoader:
                 iid, image = self._results.get_nowait()
                 self._pending -= 1
                 if image is not None:
-                    photo = to_photo(image)
+                    photo = to_photo(image, margin_right=self._text_gap)
                     if self._apply_image(iid, photo):
                         self._photos[iid] = photo
         except queue.Empty:
             pass
         if self._pending > 0:
-            self._widget.after(self._poll_interval_ms, self._drain)
+            self._schedule_drain()
         else:
             self._poller_active = False

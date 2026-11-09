@@ -9,6 +9,7 @@
 # LICENSE file, or visit one of the above pages for details.
 #
 
+import argparse
 import copy
 import dataclasses
 import os
@@ -17,6 +18,7 @@ import tkinter.filedialog
 import tkinter.messagebox
 import tkinter.simpledialog
 import tkinter.ttk as ttk
+import traceback
 import typing as ty
 import webbrowser
 from datetime import datetime
@@ -33,13 +35,20 @@ from tkinterdnd2 import DND_FILES, TkinterDnD
 
 import dvr_scan.presets as presets
 from dvr_scan.app.about_window import AboutWindow
-from dvr_scan.app.common import MenuBar, register_icon
+from dvr_scan.app.common import (
+    MenuBar,
+    add_startup_mode_menu,
+    fit_window_to_screen,
+    register_icon,
+)
 from dvr_scan.app.region_editor import ACCELERATOR_KEY, RegionEditor
 from dvr_scan.app.scan_window import ScanWindow, launch_scan
+from dvr_scan.app.startup import CLASSIC, WIZARD, normalize_startup_mode, save_startup_mode
 from dvr_scan.app.thumbnails import (
     FILMSTRIP_FRAMES,
     FILMSTRIP_WIDTH,
     THUMBNAIL_STYLE,
+    THUMBNAIL_TEXT_GAP,
     ThumbnailLoader,
     configure_thumbnail_rows,
     filmstrip_placeholder,
@@ -56,7 +65,7 @@ from dvr_scan.encoder import get_encoder_type
 from dvr_scan.platform import is_ffmpeg_available, open_path
 from dvr_scan.scanner import OutputMode, Point
 from dvr_scan.shared import ScanSettings, logfile_path
-from dvr_scan.subtractor import SubtractorCudaMOG2
+from dvr_scan.subtractor import SubtractorCNT, SubtractorCudaMOG2
 
 WINDOW_TITLE = "DVR-Scan"
 PADDING = 8
@@ -73,6 +82,8 @@ LARGE_BUTTON_WIDTH = 40
 MAX_THRESHOLD = 255.0
 MAX_DOWNSCALE_FACTOR = 128
 NO_REGIONS_SPECIFIED_TEXT = "No Region(s) Specified"
+# Value of an unset start/end time entry.
+ZERO_TIMECODE = "00:00:00.000"
 EXPAND_HORIZONTAL = tk.EW
 
 # Fields the input list can be sorted by, used to build the File > Sort menu.
@@ -141,6 +152,15 @@ class VideoInfo:
     date: str
 
 
+def parse_resolution(text: str) -> ty.Optional[ty.Tuple[int, int]]:
+    """Parse a `VideoInfo.resolution` string ("W x H") into (w, h), or None if invalid."""
+    try:
+        width, height = str(text).split("x")
+        return (int(width), int(height))
+    except ValueError:
+        return None
+
+
 def probe_video(path: str) -> ty.Optional[VideoInfo]:
     """Open `path` and extract display metadata (duration, framerate, resolution, creation
     date), returning a `VideoInfo` or None if the video could not be opened. Errors are
@@ -207,8 +227,9 @@ class InputArea:
         )
         # Each row gets a filmstrip preview (frames sampled across the video) decoded off
         # the UI thread; a shared placeholder is shown until the real strip is ready.
-        self._thumbnails = ThumbnailLoader(self._videos)
-        self._placeholder = to_photo(filmstrip_placeholder())
+        # The filename follows the filmstrip in the same cell, so pad the image.
+        self._thumbnails = ThumbnailLoader(self._videos, text_gap=THUMBNAIL_TEXT_GAP)
+        self._placeholder = to_photo(filmstrip_placeholder(), margin_right=THUMBNAIL_TEXT_GAP)
 
         scroll_horizontal = ttk.Scrollbar(frame, orient=tk.HORIZONTAL, command=self._videos.xview)
         scroll_vertical = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=self._videos.yview)
@@ -341,9 +362,9 @@ class InputArea:
         settings.set("input", videos)
         if self.start_end_time:
             (start, end) = self.start_end_time
-            if start != "00:00:00.000":
+            if start != ZERO_TIMECODE:
                 settings.set("start-time", start)
-            if end != "00:00:00.000":
+            if end != ZERO_TIMECODE:
                 settings.set("end-time", end)
             start_frame = FrameTimecode(start, 1000.0).frame_num
             end_frame = FrameTimecode(end, 1000.0).frame_num
@@ -420,7 +441,7 @@ class InputArea:
         self._videos.delete(*self._videos.get_children())
         # Drop pending thumbnail jobs so they don't target deleted rows, then start fresh.
         self._thumbnails.cancel()
-        self._thumbnails = ThumbnailLoader(self._videos)
+        self._thumbnails = ThumbnailLoader(self._videos, text_gap=THUMBNAIL_TEXT_GAP)
         self._refresh_remove_state()
 
     def _refresh_remove_state(self):
@@ -504,10 +525,45 @@ class InputArea:
         if not children:
             return None
         try:
-            width, height = str(self._videos.item(children[0])["values"][2]).split("x")
-            return (int(width), int(height))
-        except (IndexError, ValueError):
+            return parse_resolution(self._videos.item(children[0])["values"][2])
+        except IndexError:
             return None
+
+    def scan_overrides(
+        self, first_video: str, resolution: ty.Optional[ty.Tuple[int, int]]
+    ) -> ty.Dict[str, ty.Any]:
+        """Start/end time and regions set here, as settings to apply to a scan of another
+        input list (the Scan Wizard's, which has no controls for them) so they are not
+        silently ignored there. Regions are pixel coordinates, so they are left out if the
+        wizard's first input (`first_video`, of size `resolution` if known) differs from the
+        video they were drawn on and has another resolution. Unlike `update`, an end time
+        before the start time is dropped (with a warning) rather than failing the scan."""
+        overrides: ty.Dict[str, ty.Any] = {}
+        if self.start_end_time:
+            (start, end) = self.start_end_time
+            if start != ZERO_TIMECODE:
+                overrides["start-time"] = start
+            if end != ZERO_TIMECODE:
+                if FrameTimecode(end, 1000.0).frame_num <= FrameTimecode(start, 1000.0).frame_num:
+                    logger.warning("Ignoring end time %s (not after start time %s).", end, start)
+                else:
+                    overrides["end-time"] = end
+        if self._set_region.get() and self._regions:
+            if (
+                self._region_editor_video == self._normalize_path(first_video)
+                or resolution is None
+                or self._region_editor_size is None
+                or resolution == self._region_editor_size
+            ):
+                overrides["regions"] = self._regions
+            else:
+                logger.warning(
+                    "Regions were drawn on a %dx%d video but the first input is %dx%d, "
+                    "ignoring regions.",
+                    *self._region_editor_size,
+                    *resolution,
+                )
+        return overrides
 
     def _reset_regions(self):
         self._regions = []
@@ -542,7 +598,7 @@ class InputArea:
         video_path = videos[0]
         normalized_path = self._normalize_path(video_path)
         start_time = self.start_end_time[0] if self.start_end_time else None
-        if start_time == "00:00:00.000":
+        if start_time == ZERO_TIMECODE:
             start_time = None
         # Reuse the existing editor (and its regions) as long as the first input and start time
         # are unchanged. Otherwise rebuild the editor so it shows a matching frame (#248, #274).
@@ -551,11 +607,16 @@ class InputArea:
             or self._region_editor_video != normalized_path
             or getattr(self, "_region_editor_start_time", None) != start_time
         ):
+            # Frame the editor opens on, so frame stepping continues from the start time
+            # rather than jumping back to the beginning of the video.
+            initial_frame_num = 0
             try:
                 video = open_video(video_path, backend="opencv")
                 if start_time is not None:
                     try:
-                        video.seek(FrameTimecode(start_time, video.frame_rate))
+                        target = FrameTimecode(start_time, video.frame_rate)
+                        video.seek(target)
+                        initial_frame_num = target.frame_num
                     except ValueError:
                         pass
                 frame = video.read()
@@ -599,6 +660,7 @@ class InputArea:
                 debug_mode=False,  # TODO: Wire up debug mode.
                 save_path=None,
                 on_close=self._on_region_editor_close,
+                initial_frame_num=initial_frame_num,
             )
             if persisted_state is not None:
                 self._region_editor.set_persisted(*persisted_state)
@@ -755,11 +817,14 @@ class MotionSettingsWindow:
         self._bg_subtractor = tk.StringVar()
         combo = ttk.Combobox(frame, textvariable=self._bg_subtractor, width=SETTING_INPUT_WIDTH)
         combo.state(["readonly"])
+        # CNT needs the contrib OpenCV build; it can be missing from pip installs where the
+        # regular opencv-python package was installed over opencv-contrib-python.
+        subtractors = ["MOG2"] + (["CNT"] if SubtractorCNT.is_available() else [])
         if SubtractorCudaMOG2.is_available():
-            combo["values"] = ("MOG2_CUDA", "MOG2", "CNT")
+            combo["values"] = tuple(["MOG2_CUDA"] + subtractors)
             self._bg_subtractor.set("MOG2_CUDA")
         else:
-            combo["values"] = ("MOG2", "CNT")
+            combo["values"] = tuple(subtractors)
             self._bg_subtractor.set("MOG2")
 
         combo.grid(row=0, column=1, sticky=EXPAND_HORIZONTAL)
@@ -1748,20 +1813,47 @@ class ScanArea:
         self.open_on_completion = settings.get("open-output-dir")
 
 
+def loaded_config_is_default_preset(args: ty.Optional[argparse.Namespace]) -> bool:
+    """True if the settings the app started with come from the user config file (or
+    program defaults when no user config exists), i.e. match the `Default` preset. False
+    when a config file was given with `-c` or the user config was ignored."""
+    if args is None:
+        return True
+    return not hasattr(args, "config") and not getattr(args, "ignore_user_config", False)
+
+
 class Application:
     def run(self):
         logger.debug("starting main loop")
-        if str(self._settings.get("startup-mode")).lower() == "wizard":
+        if self._startup_mode == WIZARD:
             self._open_wizard(initial=True)
         else:
             self._root.deiconify()
             self._root.focus()
         self._root.mainloop()
 
-    def __init__(self, settings: ScanSettings, initial_videos: ty.List[str]):
+    def __init__(
+        self,
+        settings: ScanSettings,
+        initial_videos: ty.List[str],
+        startup_mode: str = CLASSIC,
+        default_startup_mode: str = CLASSIC,
+    ):
+        """Arguments:
+        settings: Settings to initialize the UI from.
+        initial_videos: Videos to add to the input list.
+        startup_mode: Mode to show when `run()` is called ("wizard" or "advanced"; the
+            legacy alias "classic" is accepted for "advanced").
+        default_startup_mode: The value persisted in the user config file, shown (and
+            edited) by the File > Startup Mode menu. Differs from `startup_mode` when
+            `--startup-mode`, `-c` or `--ignore-user-config` was given.
+        """
         self._root = TkinterDnD.Tk()
         self._root.withdraw()
         self._settings: ScanSettings = None
+        self._startup_mode = normalize_startup_mode(startup_mode)
+        self._saved_startup_mode = normalize_startup_mode(default_startup_mode)
+        self._startup_mode_var = tk.StringVar(self._root, value=self._saved_startup_mode)
 
         self._root.option_add("*tearOff", False)
         self._root.title(WINDOW_TITLE)
@@ -1809,20 +1901,54 @@ class Application:
         self._root.drop_target_register(DND_FILES)
         self._root.dnd_bind("<<Drop>>", self._on_drop)
 
-        # Make sure we don't suppress exceptions in debug mode.
-        # TODO: This should probably use the logger in release mode rather than the default from Tk.
+        # Make sure we don't suppress exceptions in debug mode. In release mode, log them
+        # and tell the user: Tk's default handler prints to stderr, which the frozen app
+        # does not have, so a failing button would otherwise silently do nothing. Callbacks
+        # of every window (including the wizard's Toplevel) are reported via the root.
         if settings.get("debug"):
 
             def error_handler(*args):
                 raise
 
             self._root.report_callback_exception = error_handler
+        else:
+            self._root.report_callback_exception = self._report_callback_exception
 
         # Initialize UI state from config.
         self._initialize(settings)
         self._preset_area.refresh(presets.list_presets())
+        # The user config *is* the Default preset, so show it as active until a setting is
+        # changed. Settings from `-c` or program defaults (`--ignore-user-config`) are not.
+        if loaded_config_is_default_preset(settings.args):
+            self._mark_preset_applied(presets.DEFAULT_PRESET_NAME)
         for path in initial_videos:
             self._input_area.add_video(path)
+        # The window is still withdrawn; the geometry applies once it is shown.
+        if fit_window_to_screen(self._root):
+            logger.debug("shrunk main window to fit screen: %s", self._root.geometry())
+
+    def _report_callback_exception(self, exc_type, exc_value, exc_traceback):
+        """Release-mode handler for exceptions raised in Tk callbacks: log the traceback
+        and show an error dialog instead of printing to a (possibly absent) stderr."""
+        formatted = "".join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+        logger.critical(f"Unhandled error in UI callback:\n{formatted}")
+        try:
+            tkinter.messagebox.showerror(
+                title="DVR-Scan Error",
+                message=f"An unexpected error occurred:\n\n{exc_value}\n\n"
+                "See the log for details (Help > Open Logs).",
+                parent=self._dialog_parent(),
+            )
+        except Exception as ex:  # noqa: BLE001 - never raise from the error handler.
+            logger.debug(f"Failed to show error dialog: {ex}")
+
+    def _dialog_parent(self) -> tk.Misc:
+        """The window message boxes should be parented to: the Scan Wizard while it is
+        shown, otherwise the Advanced Mode (root) window."""
+        wizard = getattr(self, "_wizard", None)
+        if wizard is not None and wizard.is_visible:
+            return wizard.window
+        return self._root
 
     def _create_menubar(self):
         self._menubar = MenuBar(self._root)
@@ -1831,10 +1957,11 @@ class Application:
 
         file_menu = self._menubar.add_menu("File", underline=0)
         file_menu.add_command(
-            label="Wizard",
-            underline=0,
+            label="Scan Wizard",
+            underline=5,
             command=self._open_wizard,
         )
+        add_startup_mode_menu(file_menu, self._startup_mode_var, self._on_startup_mode_changed)
         file_menu.add_command(
             label="Start Scan",
             underline=0,
@@ -1919,6 +2046,9 @@ class Application:
         # Imported here to avoid a circular import (the wizard reuses InputArea).
         from dvr_scan.app.wizard import ScanWizard
 
+        if not initial:
+            # Settings may have been edited in Advanced Mode since the preset was applied.
+            self._refresh_active_preset()
         if self._wizard is None:
             self._wizard = ScanWizard(
                 self._root,
@@ -1926,6 +2056,11 @@ class Application:
                 on_close=self._destroy,
                 on_switch_to_classic=self._on_switch_to_classic,
                 on_preset_applied=self._on_preset_applied,
+                startup_mode_var=self._startup_mode_var,
+                on_startup_mode_changed=self._on_startup_mode_changed,
+                active_preset=self._active_preset,
+                on_load_config=self._load_config_into_wizard,
+                get_scan_overrides=self._input_area.scan_overrides,
             )
         if not initial:
             self._wizard.sync_from_settings(
@@ -1935,8 +2070,41 @@ class Application:
         self._root.withdraw()
         self._wizard.show()
 
+    def _load_config_into_wizard(self, path: str) -> bool:
+        """Load a config file dropped onto the Scan Wizard: reinitialize the Advanced Mode
+        UI from it (the source of truth for settings), then sync the wizard from that."""
+        config = self._load_config_file(path)
+        if config is None:
+            return False
+        if self._wizard is not None:
+            # Pass the config itself too: it may set options with no Advanced Mode control.
+            self._wizard.sync_from_settings(
+                self._get_config_settings(), active_preset=None, config=config
+            )
+        return True
+
+    def _on_startup_mode_changed(self):
+        """Persist the default startup mode selected from a File > Startup Mode menu.
+        Always written, even if it matches the value this instance last saved: another
+        running instance may have changed the config file since."""
+        mode = self._startup_mode_var.get()
+        try:
+            path = save_startup_mode(mode)
+        except (OSError, UnicodeError) as ex:
+            logger.error(f"Failed to save startup mode: {ex}")
+            self._startup_mode_var.set(self._saved_startup_mode)
+            tkinter.messagebox.showerror(
+                title="Startup Mode",
+                message="Failed to save startup mode to the config file. "
+                "See log messages for details.",
+                parent=self._dialog_parent(),
+            )
+            return
+        self._saved_startup_mode = mode
+        logger.debug(f"saved startup-mode = {mode} to {path}")
+
     def _on_switch_to_classic(self, videos: ty.List[str]):
-        """Show the classic main window, syncing videos and settings from the wizard."""
+        """Show the Advanced Mode window, syncing videos and settings from the wizard."""
         if self._input_area.videos != videos:
             self._input_area.clear()
             for path in videos:
@@ -2009,6 +2177,10 @@ class Application:
     def _load_config_from_path(self, path: str) -> bool:
         """Load a config file and reinitialize the UI from it. Returns False and shows
         an error message if the file could not be loaded."""
+        return self._load_config_file(path) is not None
+
+    def _load_config_file(self, path: str) -> ty.Optional[ConfigRegistry]:
+        """`_load_config_from_path`, returning the loaded config (None on failure)."""
         try:
             config = ConfigRegistry()
             config.load(path)
@@ -2018,13 +2190,14 @@ class Application:
             tkinter.messagebox.showerror(
                 title="Config Load Failure",
                 message="Invalid config file. See log messages for details.",
+                parent=self._dialog_parent(),
             )
-            return False
+            return None
 
         for log_level, log_str in config.consume_init_log():
             logger.log(log_level, log_str)
         self._reload_config(config)
-        return True
+        return config
 
     def _reset_config(self, program_default: bool = False):
         if not tkinter.messagebox.askyesno(
@@ -2068,6 +2241,7 @@ class Application:
                 title="Regions Not Loaded",
                 message="Warning: region file from config was not loaded.\n\n"
                 "You can load it from the Region Editor.",
+                parent=self._dialog_parent(),
             )
         self._input_settings_window.set(settings)
         self._motion_settings_window.set(settings)
@@ -2115,6 +2289,10 @@ class Application:
         # TODO: This stats the presets directory on every dropdown open, which is fine
         # for a local folder but could be slow on a network drive. Cache on mtime if so.
         self._preset_area.refresh(presets.list_presets())
+        self._refresh_active_preset()
+
+    def _refresh_active_preset(self):
+        """Blank the active preset if any setting changed since it was applied."""
         if self._active_preset is not None and self._preset_snapshot != self._serialize_ui_state():
             self._active_preset = None
             self._preset_snapshot = None
@@ -2173,7 +2351,7 @@ class Application:
                 return
         try:
             path = presets.save_user_preset(name, self._get_config_settings())
-        except OSError as ex:
+        except (OSError, UnicodeError) as ex:
             logger.error(f"Failed to save preset: {ex}")
             tkinter.messagebox.showerror(
                 title="Preset Save Failure",

@@ -182,7 +182,10 @@ class RegionEditor:
         video_path: str,
         save_path: ty.Optional[str],
         on_close: ty.Optional[ty.Callable[[], None]] = None,
+        initial_frame_num: int = 0,
     ):
+        """`initial_frame_num` is the (0-based) frame number of `frame` in the video, so
+        frame stepping and the seek slider start from there (e.g. the scan start time)."""
         self._settings = EditorSettings(video_path=video_path, save_path=save_path)
         self._source_frame: np.ndarray = frame.copy()  # Frame before downscaling
         self._source_size: Size = Size(w=frame.shape[1], h=frame.shape[0])
@@ -224,7 +227,7 @@ class RegionEditor:
         self._updating_seek_widget: bool = False
         self._video = None
         self._total_frames: int = 0
-        self._current_frame_num: int = 0
+        self._current_frame_num: int = max(0, int(initial_frame_num))
         self._pan_enabled: bool = False
         self._panning: bool = False
         self._controls_window: tk.Toplevel = None

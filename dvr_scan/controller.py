@@ -28,6 +28,7 @@ from dvr_scan.config import ConfigLoadFailure, ConfigRegistry
 from dvr_scan.report import write_events_csv, write_events_json
 from dvr_scan.scanner import DetectionResult, DetectorType, MotionEvent, MotionScanner, OutputMode
 from dvr_scan.shared import ScanSettings, init_logging, init_scanner, logfile_path, setup_logger
+from dvr_scan.subtractor import cnt_unavailable_message
 
 logger = logging.getLogger("dvr_scan")
 
@@ -95,7 +96,7 @@ def parse_settings() -> ty.Optional[ScanSettings]:
         if args.ignore_user_config:
             config_load_error = None
             config = ConfigRegistry()
-        debug_mode = args.debug
+        debug_mode = getattr(args, "debug", False)
         init_logging(args=args, config=config)
         init_log += [(logging.INFO, "DVR-Scan %s" % dvr_scan.__version__)]
         if config_load_error and not hasattr(args, "config"):
@@ -153,14 +154,49 @@ def parse_settings() -> ty.Optional[ScanSettings]:
     if not bg_subtractor.value.is_available():
         if bg_subtractor == DetectorType.MOG2_CUDA:
             logger.error("MOG2_CUDA requires a CUDA-enabled build of the `opencv-python` package!")
+        elif bg_subtractor == DetectorType.CNT:
+            logger.error(cnt_unavailable_message())
         else:
-            logger.error(
-                f"Method {bg_subtractor.name} is not available, you may need to run: "
-                "`pip install opencv-contrib-python`"
-            )
+            logger.error("Method %s is not available.", bg_subtractor.name)
         return None
 
     return settings
+
+
+def _report_path(settings: ScanSettings) -> ty.Optional[Path]:
+    """Path of the --report file, if set. Relative paths are joined with the output
+    directory when one is set."""
+    report = settings.get_arg("report")
+    if not report:
+        return None
+    path = Path(report)
+    if not path.is_absolute():
+        output_dir = settings.get("output-dir")
+        if output_dir:
+            path = Path(output_dir) / path
+    return path
+
+
+def _check_report_path(settings: ScanSettings):
+    """Make sure the --report file (if set) can be written before scanning, so an invalid
+    path does not fail only after a long scan. The file is not left behind if it did not
+    already exist.
+
+    Raises:
+        ValueError: The report file cannot be created or written.
+    """
+    path = _report_path(settings)
+    if path is None:
+        return
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        existed = path.exists()
+        with open(path, "a"):
+            pass
+        if not existed:
+            path.unlink()
+    except OSError as ex:
+        raise ValueError("cannot write report file %s: %s" % (path, ex.strerror or ex)) from ex
 
 
 def _write_report(settings: ScanSettings, scanner: MotionScanner, result: DetectionResult):
@@ -168,14 +204,9 @@ def _write_report(settings: ScanSettings, scanner: MotionScanner, result: Detect
 
     The format is chosen by file extension (.csv or .json, validated at startup).
     Relative paths are joined with the output directory when one is set."""
-    report = settings.get_arg("report")
-    if not report:
+    path = _report_path(settings)
+    if path is None:
         return
-    path = Path(report)
-    if not path.is_absolute():
-        output_dir = settings.get("output-dir")
-        if output_dir:
-            path = Path(output_dir) / path
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.suffix.lower() == ".json":
         with open(path, "w") as file:
@@ -231,6 +262,7 @@ def run_dvr_scan(
 ) -> ty.List[ty.Tuple[FrameTimecode, FrameTimecode]]:
     """Run DVR-Scan scanning logic using validated `settings` from `parse_settings()`."""
 
+    _check_report_path(settings)
     scanner = init_scanner(settings)
 
     # Scan video for motion with specified parameters.

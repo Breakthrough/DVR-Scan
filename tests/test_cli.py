@@ -15,15 +15,21 @@ Tests high level usage of the DVR-Scan command line interface.
 
 import csv
 import json
+import logging
 import os
 import platform
 import re
 import shutil
 import subprocess
+import sys
 import typing as ty
 
 import pytest
 from scenedetect import is_ffmpeg_available
+
+from dvr_scan.cli import get_cli_parser
+from dvr_scan.config import ConfigRegistry
+from dvr_scan.shared.settings import ScanSettings
 
 # We need to import the OpenCV loader before PySceneDetect as the latter imports OpenCV.
 from dvr_scan.subtractor import SubtractorCNT, SubtractorCudaMOG2
@@ -32,7 +38,9 @@ MACHINE_ARCH = platform.machine().upper()
 
 # TODO: Open extracted motion events and validate the actual frames.
 
-DVR_SCAN_COMMAND: str = "python -m dvr_scan"
+# Run the CLI with the interpreter running the tests, not whichever `python` is on PATH
+# (they differ when pytest runs from a separate build venv).
+DVR_SCAN_COMMAND: str = f'"{sys.executable}" -m dvr_scan'
 BASE_OUTPUT_NAME: str = "traffic_camera"
 # Should yield 3 events with all detector types.
 BASE_COMMAND = [
@@ -572,3 +580,98 @@ def test_scan_haze_maxarea(tmp_path):
     )
 
     assert "No motion events detected in input." in output
+
+
+#
+# Option defaults, validation, and error reporting (2.0 release fixes)
+#
+
+
+def _parse_cli(args: ty.List[str], config_text: str = "") -> ScanSettings:
+    """Parse `args` in-process with a config containing `config_text`."""
+    config = ConfigRegistry()
+    if config_text:
+        config.load_from_string(config_text)
+    return ScanSettings(args=get_cli_parser(config).parse_args(args), config=config)
+
+
+def test_flags_do_not_override_config_when_absent():
+    """Flags not given on the command line must not shadow their config file values."""
+    settings = _parse_cli(["-i", "video.mp4"], "scan-only = yes\ndebug = yes\n")
+    assert settings.get("scan-only") is True
+    assert settings.get("debug") is True
+    settings = _parse_cli(["-i", "video.mp4"])
+    assert settings.get("scan-only") is False
+    assert settings.get("debug") is False
+    assert _parse_cli(["-i", "video.mp4", "-so"]).get("scan-only") is True
+
+
+def test_scan_only_from_config_file(tmp_path):
+    """`scan-only = yes` in a config file enables scan-only mode without -so."""
+    cfg_path = tmp_path / "config.cfg"
+    cfg_path.write_text("scan-only = yes\n")
+    output_dir = tmp_path / "output"
+    output = _run_dvr_scan(BASE_COMMAND + ["--config", cfg_path, "--output-dir", output_dir])
+    assert "Detected %d motion events in input." % (BASE_COMMAND_NUM_EVENTS) in output
+    assert not output_dir.exists() or not os.listdir(output_dir)
+
+
+def test_thumbnails_option_validation():
+    assert _parse_cli(["-i", "video.mp4", "--thumbnails", "HighScore"]).get("thumbnails") == (
+        "highscore"
+    )
+    assert _parse_cli(["-i", "video.mp4"]).get("thumbnails") is None
+    with pytest.raises(SystemExit):
+        _parse_cli(["-i", "video.mp4", "--thumbnails", "lowscore"])
+
+
+def test_report_unwritable_path_fails_before_scan(tmp_path):
+    """An unwritable --report path is rejected up front with a message, not a traceback."""
+    not_a_dir = tmp_path / "file.txt"
+    not_a_dir.write_text("")
+    result = subprocess.run(
+        " ".join(
+            [DVR_SCAN_COMMAND]
+            + BASE_COMMAND
+            + ["--scan-only", "--report", '"%s"' % (not_a_dir / "report.csv")]
+        ),
+        shell=True,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    assert result.returncode == 1
+    assert "cannot write report file" in result.stdout
+    assert "Traceback" not in result.stdout
+    assert "Detected" not in result.stdout, "Report path must be checked before scanning."
+
+
+def test_report_check_does_not_leave_file_behind(tmp_path):
+    from dvr_scan.controller import _check_report_path
+
+    report = tmp_path / "out" / "report.json"
+    _check_report_path(_parse_cli(["-i", "video.mp4", "--report", str(report)]))
+    assert report.parent.is_dir()
+    assert not report.exists()
+
+
+@pytest.mark.parametrize("error", [OSError("disk full"), RuntimeError("ffmpeg exited with code 1")])
+def test_main_logs_io_errors_without_traceback(monkeypatch, caplog, error):
+    """OSError/RuntimeError (e.g. ffmpeg failing to write output) are reported as a
+    message only, unless running with debug verbosity."""
+    import dvr_scan.__main__ as main_module
+
+    settings = _parse_cli(["-i", "video.mp4", "--quiet"])
+
+    def _raise(_settings):
+        raise error
+
+    monkeypatch.setattr(main_module, "parse_settings", lambda: settings)
+    monkeypatch.setattr(main_module, "run_dvr_scan", _raise)
+    with caplog.at_level(logging.DEBUG, logger="dvr_scan"):
+        with pytest.raises(SystemExit) as excinfo:
+            main_module.main()
+    assert excinfo.value.code == 1
+    (record,) = [record for record in caplog.records if record.levelno == logging.CRITICAL]
+    assert str(error) in record.getMessage()
+    assert not record.exc_info
