@@ -132,8 +132,8 @@ def get_cli_parser(user_config: ConfigRegistry):
         action="append",
         help=(
             "[REQUIRED] Path to input video. May specify multiple inputs with the same"
-            " resolution and framerate, or by specifying a wildcard/glob. Output"
-            " filenames are generated using the first video name only."
+            " resolution, or by specifying a wildcard/glob. Multiple inputs are scanned"
+            " as one continuous video, and each event is named after the video it starts in."
         ),
     )
 
@@ -191,10 +191,9 @@ def get_cli_parser(user_config: ConfigRegistry):
         "-so",
         "--scan-only",
         action="store_true",
-        default=False,
         help=(
             "Only perform motion detection (does not write any files to disk)."
-            " If set, -m/--output-mode is ignored."
+            " If set, -m/--output-mode is ignored.%s" % user_config.get_help_string("scan-only")
         ),
     )
 
@@ -315,8 +314,10 @@ def get_cli_parser(user_config: ConfigRegistry):
         metavar="time",
         type=timecode_type_check("time"),
         help=(
-            "Length of time that must contain motion before triggering a new event. "
-            "Footage beyond this limit goes to a new event. Can be"
+            "Maximum length of a single event, including padding. Longer events are split"
+            " into consecutive events of at most this length; no post-event padding is added"
+            " at a split, and"
+            " if motion continues the next event starts where the previous one ended. Can be"
             " specified as frames (123), seconds (12.3s), or timecode (00:00:01).%s"
             % user_config.get_help_string("max-event-length")
         ),
@@ -505,9 +506,12 @@ def get_cli_parser(user_config: ConfigRegistry):
     parser.add_argument(
         "--thumbnails",
         metavar="method",
-        type=str,
-        default=None,
-        help=("Produce event thumbnail(s)."),
+        type=string_type_check(CHOICE_MAP["thumbnails"], False, "method"),
+        help=(
+            "Save a thumbnail image for each event. Must be one of: highscore (frame with the"
+            " highest motion score).%s"
+            % user_config.get_help_string("thumbnails", show_default=False)
+        ),
     )
 
     parser.add_argument(
@@ -535,7 +539,6 @@ def get_cli_parser(user_config: ConfigRegistry):
         "--debug",
         action="store_true",
         help=argparse.SUPPRESS,
-        default=False,
     )
 
     # TODO: Support both input and output concatenation in ffmpeg mode. For concatenating events,

@@ -40,7 +40,7 @@ The installer is recommended for most users.  Windows builds include all require
 
 ## Servers
 
-For headless systems that do not require the UI,  you can install `dvr-scan-headless`.  This will make sure that [the headless version of OpenCV](https://pypi.org/project/opencv-python-headless/) is installed, which avoids any dependencies on X11 libraries or any other GUI components.  This allows DVR-Scan to run with less dependencies, and can result in smaller Docker images.
+For headless systems that do not require the UI,  you can install `dvr-scan-headless`.  This will make sure that [the headless version of OpenCV](https://pypi.org/project/opencv-python-headless/) is installed, which avoids any dependencies on X11 libraries or any other GUI components.  This allows DVR-Scan to run with fewer dependencies, and can result in smaller Docker images.
 
 -------------------------------
 
@@ -53,7 +53,7 @@ The source code for [DVR-Scan is available on Github](https://github.com/Breakth
 
 ## CUDA® Support
 
-DVR-Scan works with CUDA graphics cards *if* you are using the Python distribution, *and* you have a CUDA-enabled verison of the `opencv-python` package.
+DVR-Scan works with CUDA graphics cards *if* you are using the Python distribution, *and* you have a CUDA-enabled version of the `opencv-python` package.
 
 !!! warning "GPU support requires a development environment setup including the Nvidia CUDA® SDK."
 
@@ -62,7 +62,7 @@ It is recommended to build and install OpenCV with the CUDA module enabled (ther
  - [Breakthrough/opencv-python-cuda](https://github.com/Breakthrough/opencv-python-cuda/releases/tag/4.12.0-dev2)
  - [cudawarped/opencv-python-cuda-wheels](https://github.com/cudawarped/opencv-python-cuda-wheels/releases/tag/4.11.0.20250124)
 
-These can be downloaded and installed with . When available, you should see `cv2.cuda: Installed` under the features list when running `dvr-scan --version`. Make sure to set `-b MOG2_CUDA` when running DVR-Scan (e.g. `dvr-scan -i video.mp4 -b MOG2_CUDA`).  In the UI, under this can be found under Settings -> Motion -> Subtractor.
+These can be downloaded and installed with `pip install` followed by the path to the downloaded `.whl` file. When available, you should see `cv2.cuda: Installed` under the features list when running `dvr-scan --version`. Make sure to set `-b MOG2_CUDA` when running DVR-Scan (e.g. `dvr-scan -i video.mp4 -b MOG2_CUDA`).  In the UI, this can be found under Settings -> Motion -> Subtractor.
 
 -------------------------------
 

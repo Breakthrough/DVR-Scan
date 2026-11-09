@@ -6,7 +6,8 @@
 #
 # Copyright (C) 2024 Brandon Castellano <http://www.bcastell.com>.
 # DVR-Scan is licensed under the BSD 2-Clause License; see the included
-# LICENSE file, or visi
+# LICENSE file, or visit one of the above pages for details.
+#
 
 import importlib.resources as resources
 import os
@@ -19,6 +20,7 @@ import PIL.Image
 import PIL.ImageTk
 
 import dvr_scan
+from dvr_scan.app.startup import ADVANCED, WIZARD
 
 # Hover-darken factor for menubar headings: multiply each RGB channel of the bar background
 # to derive the `activebackground`. Below 1.0 darkens; ~0.85 reads clearly but stays subtle.
@@ -65,15 +67,16 @@ def fit_window_to_screen(
 def add_startup_mode_menu(
     parent: tk.Menu, variable: tk.StringVar, command: ty.Callable[[], None]
 ) -> tk.Menu:
-    """Add a `Startup Mode` cascade to `parent` with Wizard / Advanced Mode radio buttons
-    bound to `variable` ("wizard" or "classic"). `command` runs after each selection.
-    Shared by the classic window and the Scan Wizard so both menus stay in sync."""
+    """Add a `Startup Mode` cascade to `parent` with Scan Wizard / Advanced Mode radio
+    buttons bound to `variable` ("wizard" or "advanced"). `command` runs after each
+    selection. Shared by the Advanced Mode window and the Scan Wizard so both menus stay
+    in sync."""
     menu = tk.Menu(parent, tearoff=0)
     menu.add_radiobutton(
-        label="Wizard", underline=0, variable=variable, value="wizard", command=command
+        label="Scan Wizard", underline=5, variable=variable, value=WIZARD, command=command
     )
     menu.add_radiobutton(
-        label="Advanced Mode", underline=0, variable=variable, value="classic", command=command
+        label="Advanced Mode", underline=0, variable=variable, value=ADVANCED, command=command
     )
     # Underline "M": "S" collides with Start Scan / Sort in the File menus.
     parent.add_cascade(label="Startup Mode", underline=8, menu=menu)

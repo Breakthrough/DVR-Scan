@@ -11,11 +11,19 @@
 """DVR-Scan Preset Tests"""
 
 import logging
+import os
+import stat
 
 import pytest
 
 import dvr_scan.presets as presets_module
-from dvr_scan.config import USER_CONFIG_FILE_PATH, ConfigLoadFailure, ConfigRegistry
+from dvr_scan.config import (
+    USER_CONFIG_FILE_PATH,
+    ConfigLoadFailure,
+    ConfigRegistry,
+    atomic_write_text,
+    set_user_config_option,
+)
 from dvr_scan.presets import (
     BUILTIN_PRESETS,
     DEFAULT_PRESET_NAME,
@@ -160,11 +168,22 @@ def test_startup_mode_choices():
     config = ConfigRegistry()
     config.load_from_string("startup-mode = wizard\n")
     assert config.get("startup-mode") == "wizard"
-    # Code default is classic so existing installs keep the classic view; the shipped
-    # config template sets wizard for fresh installs.
-    assert ConfigRegistry().get("startup-mode") == "classic"
+    config = ConfigRegistry()
+    config.load_from_string("startup-mode = advanced\n")
+    assert config.get("startup-mode") == "advanced"
+    # Code default is Advanced Mode so existing installs keep the full settings view; the
+    # shipped config template sets wizard for fresh installs.
+    assert ConfigRegistry().get("startup-mode") == "advanced"
     with pytest.raises(ConfigLoadFailure):
         ConfigRegistry().load_from_string("startup-mode = invalid\n")
+
+
+@pytest.mark.parametrize("value", ["classic", "CLASSIC", "Classic"])
+def test_startup_mode_legacy_classic_alias(value):
+    """`classic` (the pre-release name of Advanced Mode) is accepted and normalized."""
+    config = ConfigRegistry()
+    config.load_from_string("startup-mode = %s\n" % value)
+    assert config.get("startup-mode") == "advanced"
 
 
 def test_save_default_preserves_unmanaged_options(tmp_path, monkeypatch):
@@ -261,3 +280,94 @@ def test_save_default_preserves_validated_unknown_and_raw_values(tmp_path, monke
     config = ConfigRegistry()
     config.load(user_config)
     assert config.get("max-event-length") == "30s"
+
+
+#
+# Config file encoding and atomic writes
+#
+
+# U+0441 CYRILLIC SMALL LETTER ES in UTF-8. The 0x81 byte is undefined in cp1252, so
+# decoding this file in the Windows locale encoding fails.
+CYRILLIC_UTF8 = b"\xd1\x81"
+
+
+def test_preset_with_non_ascii_utf8_text_loads(tmp_path):
+    (tmp_path / "Camera.cfg").write_bytes(b"# Front door " + CYRILLIC_UTF8 + b"\nthreshold = 0.3\n")
+    (preset,) = scan_user_presets(tmp_path)
+    assert load_preset(preset).get("threshold") == 0.3
+
+
+def test_config_with_utf8_bom_loads_first_option(tmp_path):
+    path = tmp_path / "bom.cfg"
+    path.write_bytes(b"\xef\xbb\xbfthreshold = 0.42\r\nmin-event-length = 3\r\n")
+    config = ConfigRegistry()
+    config.load(path)
+    assert config.get("threshold") == 0.42
+    assert config.get("min-event-length") == "3"
+
+
+def test_config_falls_back_to_locale_encoding(tmp_path, monkeypatch):
+    monkeypatch.setattr("locale.getpreferredencoding", lambda do_setlocale=True: "cp1252")
+    path = tmp_path / "legacy.cfg"
+    path.write_bytes(b"output-dir = C:/Users/Jos\xe9\n")
+    config = ConfigRegistry()
+    config.load(path)
+    assert config.get("output-dir") == "C:/Users/Jos\N{LATIN SMALL LETTER E WITH ACUTE}"
+
+
+def test_undecodable_config_is_a_load_failure(tmp_path, monkeypatch, caplog):
+    monkeypatch.setattr("locale.getpreferredencoding", lambda do_setlocale=True: "ascii")
+    path = tmp_path / "Broken.cfg"
+    path.write_bytes(b"threshold = 0.3\n# \x81\n")
+    with pytest.raises(ConfigLoadFailure):
+        ConfigRegistry().load(path)
+    # Presets that cannot be decoded are skipped with a warning instead of raising.
+    with caplog.at_level(logging.WARNING, logger="dvr_scan"):
+        assert scan_user_presets(tmp_path) == []
+    assert any("Broken.cfg" in record.getMessage() for record in caplog.records)
+
+
+def test_save_user_preset_writes_utf8(tmp_path):
+    settings = make_settings(output_dir="C:/Videos/" + CYRILLIC_UTF8.decode("utf-8"))
+    path = save_user_preset("Unicode", settings, base_dir=tmp_path)
+    assert CYRILLIC_UTF8 in path.read_bytes()
+    assert load_preset(scan_user_presets(tmp_path)[0]).get("output-dir") == (
+        "C:/Videos/" + CYRILLIC_UTF8.decode("utf-8")
+    )
+
+
+@pytest.mark.parametrize("newline", [b"\n", b"\r\n"])
+def test_atomic_write_keeps_newline_style(tmp_path, newline):
+    path = tmp_path / "dvr-scan.cfg"
+    path.write_bytes(b"threshold = 0.5" + newline)
+    atomic_write_text(path, "threshold = 0.6\nmin-event-length = 3\n")
+    assert path.read_bytes() == b"threshold = 0.6" + newline + b"min-event-length = 3" + newline
+
+
+def test_set_user_config_option_keeps_lf_file(tmp_path):
+    path = tmp_path / "dvr-scan.cfg"
+    path.write_bytes(b"threshold = 0.5\nstartup-mode = wizard\n")
+    set_user_config_option("startup-mode", "advanced", path)
+    assert path.read_bytes() == b"threshold = 0.5\nstartup-mode = advanced\n"
+
+
+def test_atomic_write_read_only_file(tmp_path):
+    """Replacing a read-only file must raise the real error and leave no temp file."""
+    path = tmp_path / "dvr-scan.cfg"
+    path.write_text("threshold = 0.5\n")
+    os.chmod(path, stat.S_IREAD)
+    try:
+        if os.name == "nt":
+            with pytest.raises(PermissionError) as excinfo:
+                atomic_write_text(path, "threshold = 0.6\n")
+            # The error is from replacing the file (tmp -> path), not the cleanup.
+            assert excinfo.value.filename2 == str(path)
+            assert path.read_text() == "threshold = 0.5\n"
+        else:
+            # POSIX allows replacing a read-only file; its mode bits are kept.
+            atomic_write_text(path, "threshold = 0.6\n")
+            assert path.read_text() == "threshold = 0.6\n"
+            assert stat.S_IMODE(path.stat().st_mode) == stat.S_IREAD
+        assert list(tmp_path.glob("*.tmp")) == []
+    finally:
+        os.chmod(path, stat.S_IREAD | stat.S_IWRITE)

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<DOCUMENT Type="Advanced Installer" CreateVersion="13.5" version="23.6" Modules="professional" RootPath="." Language="en" Id="{3919FEC9-E2C3-453E-81FD-9E8BABBE2CA4}">
+<DOCUMENT Type="Advanced Installer" CreateVersion="13.5" version="24.1" Modules="professional" RootPath="." Language="en" Id="{3919FEC9-E2C3-453E-81FD-9E8BABBE2CA4}">
   <COMPONENT cid="caphyon.advinst.msicomp.MsiPropsComponent">
     <ROW Property="AI_APP_FILE" Value="[#dvrscanapp.exe]"/>
     <ROW Property="AI_BITMAP_DISPLAY_MODE" Value="0"/>
@@ -242,7 +242,7 @@
     <ROW Component="core.pxd" ComponentId="{157B8E19-49ED-41CE-A96F-AC183025715C}" Directory_="container_Dir" Attributes="0" KeyPath="core.pxd" Type="0"/>
     <ROW Component="cs.msg" ComponentId="{F272B5C4-45E3-4492-AB70-0672D653C745}" Directory_="msgs_1_Dir" Attributes="0" KeyPath="cs.msg_1" Type="0"/>
     <ROW Component="dragon4_LICENSE.txt" ComponentId="{44839B10-F245-4DE3-A138-90116B9C295D}" Directory_="multiarray_Dir" Attributes="0" KeyPath="dragon4_LICENSE.txt" Type="0"/>
-    <ROW Component="dvrscan.cfg" ComponentId="{18A37A49-86C6-42DF-A130-DC5499CD6677}" Directory_="DVRScan_Dir" Attributes="16" KeyPath="dvrscan.cfg_1" Type="0"/>
+    <ROW Component="dvrscan.cfg" ComponentId="{18A37A49-86C6-42DF-A130-DC5499CD6677}" Directory_="DVRScan_Dir" Attributes="144" KeyPath="dvrscan.cfg_1" Type="0"/>
     <ROW Component="dvrscan.exe" ComponentId="{BFAC0A4B-76D6-4EF9-B2B5-DFB8B5AC8885}" Directory_="APPDIR" Attributes="256" KeyPath="dvrscan.exe"/>
     <ROW Component="dvrscanapp.exe" ComponentId="{A045E3AE-324D-423D-8B7C-1B428B3F619C}" Directory_="APPDIR" Attributes="256" KeyPath="dvrscanapp.exe"/>
     <ROW Component="dvrscanlogo.png" ComponentId="{1A521399-BE46-4639-A4CD-92BBB2F07C9A}" Directory_="dvr_scan_Dir" Attributes="0" KeyPath="dvrscanlogo.png_1" Type="0"/>
@@ -2132,6 +2132,8 @@
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiShortsComponent">
     <ROW Shortcut="DVRScan" Directory_="SHORTCUTDIR" Name="DVR-Scan" Component_="dvrscanapp.exe" Target="[#dvrscanapp.exe]" Description="Find and extract motion events from videos." Hotkey="0" Icon_="dvrscanapp.exe" IconIndex="0" ShowCmd="1" WkDir="APPDIR"/>
+    <ROW Shortcut="DVRScanAdvancedMode" Directory_="SHORTCUTDIR" Name="DVR-SC~2|DVR-Scan Advanced Mode" Component_="dvrscanapp.exe" Target="[#dvrscanapp.exe]" Arguments="--startup-mode advanced" Description="Find and extract motion events from videos in Advanced Mode." Hotkey="0" Icon_="dvrscanapp.exe" IconIndex="0" ShowCmd="1" WkDir="APPDIR"/>
+    <ROW Shortcut="DVRScanWizard" Directory_="SHORTCUTDIR" Name="DVR-SC~1|DVR-Scan Wizard" Component_="dvrscanapp.exe" Target="[#dvrscanapp.exe]" Arguments="--startup-mode wizard" Description="Find and extract motion events from videos using the Scan Wizard." Hotkey="0" Icon_="dvrscanapp.exe" IconIndex="0" ShowCmd="1" WkDir="APPDIR"/>
     <ROW Shortcut="DVRScan_1" Directory_="DesktopFolder" Name="DVR-Scan" Component_="dvrscanapp.exe" Target="[#dvrscanapp.exe]" Description="Find and extract motion events from videos." Hotkey="0" Icon_="dvrscanapp.exe" IconIndex="0" ShowCmd="1" WkDir="APPDIR"/>
     <ROW Shortcut="DVRScan_2" Directory_="StartMenuFolder" Name="DVR-Scan" Component_="dvrscanapp.exe" Target="[#dvrscanapp.exe]" Description="Find and extract motion events from videos." Hotkey="0" Icon_="dvrscanapp.exe" IconIndex="0" ShowCmd="1" WkDir="APPDIR"/>
   </COMPONENT>

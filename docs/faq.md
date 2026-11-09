@@ -63,11 +63,50 @@ done
 
 ### How can I improve scanning performance?
 
-Adjusting [motion detection settings](docs.md#motion-settings) can have a large effect on performance:
+Adjusting [motion detection settings](docs.md#motion) can have a large effect on performance:
 
  - Limiting detection to a specific region of the frame with the region editor will also improve performance
  - Setting the output mode to either `ffmpeg` or `copy` can also improve performance compared to the default (`encode`), since they avoid re-encoding every frame
  - Downscaling high resolution videos can also improve performance greatly, at the expense of accuracy
+
+
+----------------------------------------------------------
+
+
+### Why is some motion not detected (or why are there false detections)?
+
+For each frame, DVR-Scan calculates a *motion score* and compares it against the [`-t`/`--threshold`](docs.md#motion) setting (default `0.15`). The score is the average value of the motion mask (`0` for background, `255` for motion) over every pixel in the frame, or over the detection regions if any are set. For example, a moving object covering 1% of the frame scores about `2.5`, and the default threshold is reached when roughly 0.06% of the pixels are moving.
+
+Because the score is an average, the same object scores lower the larger the area it is averaged over. A small or distant subject (e.g. a person at the far end of a long hallway) can be picked up perfectly by the background subtractor and still score below the threshold. Limiting detection to a smaller region around where the motion happens raises its score.
+
+**If motion is missed**, try the following, in order:
+
+ 1. Lower the threshold (e.g. `-t 0.05`, or lower for very small or distant subjects).
+ 2. Set the noise reduction kernel size to `-k 3`, or disable it with `-k 0`. The default (`auto`) uses a larger kernel for high resolution videos (`7` for 1080p or higher), which removes moving objects smaller than the kernel.
+ 3. Do not downscale or skip frames: keep `-df`/`--downscale-factor` and `-fs`/`--frame-skip` at their defaults (no downscaling, no frame skipping).
+ 4. Limit detection to a smaller region around the area of interest (see [Regions](docs.md#regions) and the [region editor](guide.md#region-editor)).
+ 5. In the app, start from the <b>High Sensitivity</b> [preset](docs.md#presets).
+
+**If there are too many false detections** (e.g. from foliage, shadows, rain, or lighting changes):
+
+ - Raise the threshold.
+ - Raise `-l`/`--min-event-length` so short bursts of noise do not trigger an event.
+ - Raise the `variance-threshold` [config option](docs.md#config-file) (MOG2 only).
+ - Use a larger kernel size (e.g. `-k 5` or `-k 7`).
+ - Use regions to exclude areas with constant movement (trees, busy roads, screens).
+ - In the app, start from the <b>Low Sensitivity</b> [preset](docs.md#presets).
+
+**Use the motion mask to find the cause.** Generate a motion mask video without extracting any events:
+
+```
+dvr-scan -i video.mp4 -so -fm -mo mask.mp4
+```
+
+The mask shows what the detector sees after downscaling and noise reduction: moving pixels are white, the background is black, and areas outside the detection regions are gray. If the subject is visible in the mask but no event is detected, the threshold is too high for the size of the frame or region. If the subject is missing from the mask, reduce the kernel size or downscale factor. The `-fm`/`--frame-metrics` flag draws the motion score of each frame in the top right corner (of the mask, and of extracted events), which helps when choosing a threshold. The mask is encoded using ffmpeg when it is available; otherwise it is written with OpenCV, in which case use an `.avi` filename (e.g. `-mo mask.avi`).
+
+The detection parameters in use (threshold, kernel size, downscale factor, frame skip, etc.) are logged at the start of every scan, which is useful to include when asking for help.
+
+Subjects close to the camera produce much higher scores than distant ones, so a single threshold may not suit both. All regions in a scan are combined into a single area for scoring, so if both matter, run separate scans, each with its own region and threshold (e.g. a small region around the distant area with a lower threshold).
 
 
 ----------------------------------------------------------
@@ -89,7 +128,7 @@ dvr-scan -i video*.mp4
 
 ```
 
-Each video **must** have the same resolution and framerate. Videos are processed in the same order as they appear in the command, and extracted events will use the first video's filename as a template.
+Each video **must** have the same resolution (framerates do not need to match exactly). Videos are processed in the same order as they appear in the command (wildcard matches are sorted by filename), and each extracted event is named after the input video containing the start of the event.
 
 Multiple input videos are not supported when output mode `-m`/`--output-mode` is set to either `ffmpeg` or `copy`. As a workaround, you can [use ffmpeg to concatenate all input videos](https://trac.ffmpeg.org/wiki/Concatenate) before using DVR-Scan to process them.
 

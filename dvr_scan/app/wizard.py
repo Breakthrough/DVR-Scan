@@ -28,6 +28,7 @@ from pathlib import Path
 import PIL
 import PIL.Image
 import PIL.ImageTk
+from scenedetect import VideoOpenFailure
 from tkinterdnd2 import DND_FILES
 
 import dvr_scan
@@ -52,6 +53,7 @@ from dvr_scan.config import ConfigLoadFailure, ConfigRegistry
 from dvr_scan.platform import is_ffmpeg_available, open_path
 from dvr_scan.scanner import OutputMode
 from dvr_scan.shared import ScanSettings, logfile_path
+from dvr_scan.subtractor import SubtractorCNT
 from dvr_scan.video_input import BackendUnavailable
 
 WIZARD_TITLE = "DVR-Scan"
@@ -69,6 +71,10 @@ DROP_ZONE_TEXT_COLOR = "#474d57"
 DROP_ZONE_REFRESH_MS = 250
 MAX_THRESHOLD = 255.0
 MAX_SUMMARY_VIDEOS = 5
+# Output modes which run ffmpeg, and the label suffix shown for them when it is missing.
+FFMPEG_OUTPUT_MODES = frozenset({OutputMode.ENCODE, OutputMode.FFMPEG, OutputMode.COPY})
+FFMPEG_MISSING_SUFFIX = " - requires ffmpeg (not found)"
+RECOMMENDED_SUFFIX = " - Recommended"
 # Classes of focused widgets that handle Ctrl+A / Delete / BackSpace themselves; the video list
 # shortcuts are suppressed while one of these has keyboard focus.
 TEXT_ENTRY_CLASSES = frozenset({"Entry", "TEntry", "Spinbox", "TSpinbox", "TCombobox", "Text"})
@@ -115,7 +121,9 @@ class _VideosStep:
         on_state_changed: ty.Optional[ty.Callable[[], None]] = None,
         on_browse: ty.Optional[ty.Callable[[], None]] = None,
         can_accept_drop: ty.Optional[ty.Callable[[], bool]] = None,
+        on_load_config: ty.Optional[ty.Callable[[str], bool]] = None,
     ):
+        """`on_load_config` loads a dropped `.cfg` file, returning True on success."""
         self.frame = ttk.Frame(root)
         self.frame.rowconfigure(0, weight=1)
         self.frame.columnconfigure(0, weight=1)
@@ -124,11 +132,14 @@ class _VideosStep:
         self._on_state_changed = on_state_changed
         self._on_browse = on_browse
         self._can_accept_drop = can_accept_drop
+        self._on_load_config = on_load_config
         self._cta_logo = None
         self._drag_active = False
 
         self._input_frame = ttk.Frame(self.frame)
-        self.input_area = VideoList(self._input_frame)
+        # The list's "+" button goes through the same browse path as the drop zone and
+        # File > Open, so the dialog is parented to the wizard and navigation is locked.
+        self.input_area = VideoList(self._input_frame, on_add=on_browse)
         self._input_frame.grid(row=0, column=0, sticky=tk.NSEW)
 
         background = ttk.Style().lookup("TFrame", "background") or "white"
@@ -219,10 +230,19 @@ class _VideosStep:
         if self._can_accept_drop is not None and not self._can_accept_drop():
             return
         # Dropped paths are a Tcl list (paths with spaces are wrapped in braces).
+        config_loaded = False
         for path_str in self._drop_zone.tk.splitlist(event.data):
             path = Path(path_str)
             if not path.is_file():
                 logger.info(f"Ignoring dropped item (not a file): {path}")
+                continue
+            if path.suffix.lower() == ".cfg":
+                # Like the Advanced Mode window: a dropped config file is loaded as the
+                # active settings, and only the first one wins.
+                if self._on_load_config is None or config_loaded:
+                    logger.warning(f"Ignoring dropped config file: {path}")
+                    continue
+                config_loaded = self._on_load_config(str(path))
                 continue
             self.input_area.add_video(str(path), parent=self._window)
         self._refresh()
@@ -249,6 +269,23 @@ class _VideosStep:
         if not self.input_area.videos:
             return "Add at least one video to scan."
         return None
+
+
+def _available_presets() -> ty.List[presets.Preset]:
+    """Built-in and user presets, minus any whose background subtractor is not available
+    (e.g. Fast Scan uses CNT, which pip installs can lack when the regular OpenCV package
+    was installed over the contrib build)."""
+    available = []
+    for preset in presets.list_presets():
+        subtractor = (preset.overrides or {}).get("bg-subtractor", "").upper()
+        if subtractor == "CNT" and not SubtractorCNT.is_available():
+            logger.warning(
+                "Hiding preset %s: the CNT subtractor is not available in this install.",
+                preset.name,
+            )
+            continue
+        available.append(preset)
+    return available
 
 
 class _PresetStep:
@@ -362,6 +399,7 @@ class _PresetStep:
             tkinter.messagebox.showerror(
                 title="Preset Load Failure",
                 message=f"Failed to load preset: {preset.name}. See log messages for details.",
+                parent=self.frame.winfo_toplevel(),
             )
             self._combo.set(self._active_preset if self._active_preset else "")
             return
@@ -371,8 +409,17 @@ class _PresetStep:
         self._update_description()
         self._on_preset_applied(preset, config)
 
-    def sync_from_settings(self, settings: ScanSettings, active_preset: ty.Optional[str] = None):
-        self._presets = {preset.name: preset for preset in presets.list_presets()}
+    def sync_from_settings(
+        self,
+        settings: ScanSettings,
+        active_preset: ty.Optional[str] = None,
+        config: ty.Optional[ConfigRegistry] = None,
+    ):
+        """Sync from Advanced Mode `settings`. `config`, if given, replaces the base config
+        first (e.g. a config file that was just loaded)."""
+        if config is not None:
+            self.config = copy.deepcopy(config)
+        self._presets = {preset.name: preset for preset in _available_presets()}
         self._combo["values"] = list(self._presets)
         self._combo_initialized = True
         if active_preset and active_preset in self._presets:
@@ -389,7 +436,7 @@ class _PresetStep:
         self._update_description()
 
     def on_show(self):
-        self._presets = {preset.name: preset for preset in presets.list_presets()}
+        self._presets = {preset.name: preset for preset in _available_presets()}
         self._combo["values"] = list(self._presets)
         if not self._combo_initialized:
             self._combo_initialized = True
@@ -426,14 +473,18 @@ class _OutputStep:
         self.frame = ttk.Frame(root)
         self.frame.columnconfigure(1, weight=1)
         self._videos_step = videos_step
+        # Checked once: it spawns a process. A combobox can't disable single entries, so
+        # modes which need ffmpeg are labelled as unavailable and rejected by `validate`.
+        self._ffmpeg_available = is_ffmpeg_available()
+        self._modes = self.mode_choices(self._ffmpeg_available)
 
         tk.Label(self.frame, text="Mode").grid(
             row=0, column=0, sticky=tk.W, padx=PADDING, pady=PADDING
         )
         self._mode_combo = ttk.Combobox(self.frame, state="readonly")
-        self._mode_combo["values"] = [label for label, _ in self._MODES]
+        self._mode_combo["values"] = [label for label, _ in self._modes]
         # Default to MP4 output, unless ffmpeg is unavailable on this system.
-        self._mode_combo.current(0 if is_ffmpeg_available() else 1)
+        self._mode_combo.current(0 if self._ffmpeg_available else 1)
         self._mode_combo.bind("<<ComboboxSelected>>", lambda _: self._on_mode_changed())
         self._mode_combo.grid(row=0, column=1, columnspan=2, sticky=tk.EW, padx=PADDING)
 
@@ -455,6 +506,24 @@ class _OutputStep:
         else:
             self._on_mode_changed()
 
+    @classmethod
+    def mode_choices(
+        cls, ffmpeg_available: bool
+    ) -> ty.List[ty.Tuple[str, ty.Optional[OutputMode]]]:
+        """(label, mode) choices for the mode dropdown. Without ffmpeg, the modes that need
+        it are labelled as unavailable (and lose the "Recommended" tag)."""
+        if ffmpeg_available:
+            return list(cls._MODES)
+        return [
+            (
+                (label.removesuffix(RECOMMENDED_SUFFIX) + FFMPEG_MISSING_SUFFIX)
+                if mode in FFMPEG_OUTPUT_MODES
+                else label,
+                mode,
+            )
+            for label, mode in cls._MODES
+        ]
+
     def _on_mode_changed(self):
         self._mode_combo.selection_clear()
         if self.scan_only:
@@ -468,7 +537,11 @@ class _OutputStep:
 
     def _on_select(self):
         initial_dir = self._directory if self._directory else None
-        dialog_options = {"title": "Set Output Directory", "mustexist": True}
+        dialog_options = {
+            "title": "Set Output Directory",
+            "mustexist": True,
+            "parent": self.frame.winfo_toplevel(),
+        }
         if initial_dir:
             dialog_options["initialdir"] = initial_dir
         directory = tkinter.filedialog.askdirectory(**dialog_options)
@@ -495,18 +568,16 @@ class _OutputStep:
             if isinstance(raw_mode, OutputMode)
             else OutputMode[str(raw_mode).upper().replace("-", "_")]
         )
-        if (
-            output_mode in (OutputMode.ENCODE, OutputMode.FFMPEG, OutputMode.COPY)
-            and settings.config.is_default("output-mode")
-            and not is_ffmpeg_available()
-        ):
+        if output_mode in FFMPEG_OUTPUT_MODES and not self._ffmpeg_available:
+            # Even if set explicitly: the mode can't run, so start from one that can.
+            logger.info(f"ffmpeg not found, using OpenCV output instead of {output_mode.name}.")
             output_mode = OutputMode.OPENCV
         target_mode = (
             None
             if (settings.get("scan-only") or output_mode == OutputMode.SCAN_ONLY)
             else output_mode
         )
-        for index, (_label, mode) in enumerate(self._MODES):
+        for index, (_label, mode) in enumerate(self._modes):
             if mode == target_mode:
                 self._mode_combo.current(index)
                 break
@@ -525,11 +596,17 @@ class _OutputStep:
 
     @property
     def output_mode(self) -> ty.Optional[OutputMode]:
-        return dict(self._MODES)[self._mode_combo.get()]
+        return dict(self._modes)[self._mode_combo.get()]
 
     @property
     def directory(self) -> str:
         return self._directory
+
+    @property
+    def user_selected_directory(self) -> bool:
+        """True if `directory` was chosen by the user (or synced from Advanced Mode), False
+        if it is empty or was auto-filled from the first video's folder."""
+        return self._user_selected_dir
 
     def on_show(self):
         if (
@@ -543,6 +620,11 @@ class _OutputStep:
         self._on_mode_changed()
 
     def validate(self) -> ty.Optional[str]:
+        if self.output_mode in FFMPEG_OUTPUT_MODES and not self._ffmpeg_available:
+            return (
+                "The selected output mode requires ffmpeg, which was not found. "
+                "Install ffmpeg or choose another output mode."
+            )
         if not self.scan_only and not self._directory:
             return "Select an output directory, or choose Scan Only mode."
         return None
@@ -559,11 +641,15 @@ class _SummaryStep:
         videos_step: _VideosStep,
         preset_step: _PresetStep,
         output_step: _OutputStep,
+        get_overrides: ty.Optional[ty.Callable[[], ty.Dict[str, ty.Any]]] = None,
     ):
+        """`get_overrides` returns the settings from Advanced Mode (start/end time,
+        regions) that will be applied to the scan, so they can be listed here."""
         self.frame = ttk.Frame(root)
         self._videos_step = videos_step
         self._preset_step = preset_step
         self._output_step = output_step
+        self._get_overrides = get_overrides
         self._summary = tk.Label(self.frame, justify=tk.LEFT, anchor=tk.NW)
         self.frame.rowconfigure(0, weight=1)
         self.frame.columnconfigure(0, weight=1)
@@ -587,7 +673,21 @@ class _SummaryStep:
         ]
         if not self._output_step.scan_only:
             lines.append(f"Directory: {self._output_step.directory}")
+        lines += self._override_lines()
         self._summary["text"] = "\n".join(lines)
+
+    def _override_lines(self) -> ty.List[str]:
+        overrides = self._get_overrides() if self._get_overrides is not None else {}
+        if not overrides:
+            return []
+        lines = ["", "From Advanced Mode:"]
+        if "start-time" in overrides:
+            lines.append(f"    Start Time: {overrides['start-time']}")
+        if "end-time" in overrides:
+            lines.append(f"    End Time: {overrides['end-time']}")
+        if "regions" in overrides:
+            lines.append(f"    Regions: {len(overrides['regions'])}")
+        return lines
 
     def validate(self) -> ty.Optional[str]:
         return None
@@ -626,7 +726,7 @@ class _ScanStep:
 
 class ScanWizard:
     """Step-by-step scan workflow shown in place of the main window. Created by the
-    `Application`, which provides callbacks for switching back to classic mode. The
+    `Application`, which provides callbacks for switching back to Advanced Mode. The
     scan runs in-place on the final step rather than in a separate window."""
 
     def __init__(
@@ -639,12 +739,20 @@ class ScanWizard:
         startup_mode_var: tk.StringVar,
         on_startup_mode_changed: ty.Callable[[], None],
         active_preset: ty.Optional[str] = presets.DEFAULT_PRESET_NAME,
+        on_load_config: ty.Optional[ty.Callable[[str], bool]] = None,
+        get_scan_overrides: ty.Optional[
+            ty.Callable[[str, ty.Optional[ty.Tuple[int, int]]], ty.Dict[str, ty.Any]]
+        ] = None,
     ):
         """`active_preset` is the preset `settings` corresponds to, if any (see
-        `_PresetStep`)."""
+        `_PresetStep`). `on_load_config` loads a config file dropped onto the wizard and
+        syncs the wizard from it, returning True on success. `get_scan_overrides` returns
+        the settings made in Advanced Mode that the wizard has no controls for (start/end
+        time, regions), given the first input video and its resolution (w, h)."""
         self._settings = settings
         self._on_close = on_close
         self._on_switch_to_classic = on_switch_to_classic
+        self._get_scan_overrides = get_scan_overrides
         # Shared with the classic window so both Startup Mode menus stay in sync.
         self._startup_mode_var = startup_mode_var
         self._on_startup_mode_changed = on_startup_mode_changed
@@ -676,12 +784,15 @@ class ScanWizard:
             self._window,
             on_browse=self._browse_videos,
             can_accept_drop=self._can_modify_videos,
+            on_load_config=on_load_config,
         )
         preset_step = _PresetStep(
             content, on_preset_applied, base_config=settings.config, active_preset=active_preset
         )
         output_step = _OutputStep(content, videos_step=videos_step, settings=settings)
-        summary_step = _SummaryStep(content, videos_step, preset_step, output_step)
+        summary_step = _SummaryStep(
+            content, videos_step, preset_step, output_step, get_overrides=self._scan_overrides
+        )
         scan_step = _ScanStep(content)
         self._videos_step = videos_step
         self._preset_step = preset_step
@@ -730,6 +841,27 @@ class ScanWizard:
     @property
     def videos(self) -> ty.List[str]:
         return self._videos_step.input_area.videos
+
+    @property
+    def window(self) -> tk.Toplevel:
+        return self._window
+
+    @property
+    def is_visible(self) -> bool:
+        """True if the wizard window exists and is not withdrawn."""
+        try:
+            return bool(self._window.winfo_exists()) and self._window.state() != "withdrawn"
+        except tk.TclError:
+            return False
+
+    def _scan_overrides(self) -> ty.Dict[str, ty.Any]:
+        """Settings made in Advanced Mode (start/end time, regions) to apply to a scan of
+        the wizard's videos. Empty if there are no videos or no Advanced Mode settings."""
+        get_overrides = getattr(self, "_get_scan_overrides", None)
+        videos = self.videos
+        if get_overrides is None or not videos:
+            return {}
+        return get_overrides(videos[0], self._videos_step.input_area.first_video_resolution)
 
     def _can_modify_videos(self) -> bool:
         return not getattr(self, "_scanning", False) and self._step_index != getattr(
@@ -790,21 +922,30 @@ class ScanWizard:
                 self._videos_step.input_area.add_video(path)
         self._refresh_form_nav_state()
 
-    def sync_from_settings(self, settings: ScanSettings, active_preset: ty.Optional[str] = None):
-        """Sync wizard preset, threshold, and output choices from classic mode settings."""
-        self._preset_step.sync_from_settings(settings, active_preset=active_preset)
+    def sync_from_settings(
+        self,
+        settings: ScanSettings,
+        active_preset: ty.Optional[str] = None,
+        config: ty.Optional[ConfigRegistry] = None,
+    ):
+        """Sync wizard preset, threshold, and output choices from Advanced Mode settings.
+        `config`, if given, replaces the wizard's base config (see `_PresetStep`)."""
+        self._preset_step.sync_from_settings(settings, active_preset=active_preset, config=config)
         self._output_step.sync_from_settings(settings)
         if self._step_index == self._summary_index:
             self._steps[self._summary_index].on_show()
 
     def apply_to_classic(self, motion_window, output_area, scan_area):
-        """Copy the wizard's current threshold and output choices into the classic UI."""
+        """Copy the wizard's current threshold and output choices into Advanced Mode."""
         motion_window._threshold.set(str(self._preset_step.threshold))
         scan_area.scan_only = self._output_step.scan_only
         if self._output_step.output_mode is not None:
             output_area._output_mode = self._output_step.output_mode
             output_area._on_mode_combo_selected()
-        if self._output_step.directory:
+        # Only a folder the user chose: copying one auto-filled from the first video would
+        # come back via `sync_from_settings` as a sticky user choice, so it would no longer
+        # follow the input videos.
+        if self._output_step.directory and self._output_step.user_selected_directory:
             output_area._output_dir = self._output_step.directory
 
     def show(self):
@@ -1103,6 +1244,10 @@ class ScanWizard:
             self._last_output_dir = self._output_step.directory
         else:
             self._last_output_dir = None
+        # Start/end time and regions set in Advanced Mode (the wizard has no controls for
+        # them, and they are shown on the summary step).
+        for key, value in self._scan_overrides().items():
+            settings.set(key, value)
         finalize_output_names(settings, combine=False)
         logger.debug(f"wizard settings:\n{settings.app_settings}")
 
@@ -1113,6 +1258,17 @@ class ScanWizard:
                 title="Input Mode Unavailable",
                 message=f"The specified input mode ({settings.get('input-mode')}) "
                 "is not available on this system.",
+                parent=self._window,
+            )
+            return
+        except (VideoOpenFailure, ValueError, OSError) as ex:
+            # Setting up the scanner opens the inputs and the output, e.g. inputs with
+            # different resolutions, a deleted file, ffmpeg missing, a bad output folder.
+            logger.error(f"Failed to start scan: {ex}", exc_info=True)
+            tkinter.messagebox.showerror(
+                title="Scan Error",
+                message=f"Failed to start scan:\n\n{ex}\n\nSee the log for details "
+                "(Help > Open Logs).",
                 parent=self._window,
             )
             return

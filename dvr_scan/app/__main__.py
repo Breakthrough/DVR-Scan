@@ -22,7 +22,9 @@ import dvr_scan
 from dvr_scan import get_license_info
 from dvr_scan.app.application import Application
 from dvr_scan.app.startup import (
+    STARTUP_MODE_OPTION,
     has_prior_logs,
+    normalize_startup_mode,
     resolve_default_startup_mode,
     save_startup_mode,
 )
@@ -43,6 +45,13 @@ EXIT_SUCCESS: int = 0
 EXIT_ERROR: int = 1
 
 LOGFILE_PATH = logfile_path(name_prefix="dvr-scan-app")
+
+
+def _startup_mode_type(value: str) -> str:
+    """argparse type for `--startup-mode`: accepts the legacy alias "classic" (normalized
+    to "advanced") in addition to the values in CHOICE_MAP, any case."""
+    check = string_type_check(CHOICE_MAP[STARTUP_MODE_OPTION], False, "mode")
+    return check(normalize_startup_mode(value))
 
 
 def get_cli_parser():
@@ -109,7 +118,7 @@ def get_cli_parser():
     parser.add_argument(
         "--startup-mode",
         metavar="mode",
-        type=string_type_check(CHOICE_MAP["startup-mode"], False, "mode"),
+        type=_startup_mode_type,
         help=(
             "Mode to start the application in. Must be one of: %s. Overrides the startup-mode "
             "config option for this launch only." % (", ".join(CHOICE_MAP["startup-mode"]),)
@@ -204,7 +213,7 @@ def main():
     # TODO: Use Python __debug__ mode instead of hard-coding as config option.
     debug_mode = settings.get("debug")
 
-    # Resolve the default startup mode (wizard or classic). The first-run heuristic only
+    # Resolve the default startup mode (wizard or advanced). The first-run heuristic only
     # applies when the user config is in play and no file was given explicitly, since it
     # may write the result to the user config file.
     allow_heuristic = not args.ignore_user_config and not hasattr(args, "config")
@@ -221,7 +230,9 @@ def main():
         except (OSError, UnicodeError) as ex:
             logger.warning("Failed to save startup mode to user config file: %s", ex)
     startup_mode = (
-        args.startup_mode.lower() if hasattr(args, "startup_mode") else default_startup_mode
+        normalize_startup_mode(args.startup_mode)
+        if hasattr(args, "startup_mode")
+        else default_startup_mode
     )
     # The File > Startup Mode menu shows and edits the value in the user config file. With
     # -c or --ignore-user-config that is not the config we launched from, so read it here
@@ -231,9 +242,9 @@ def main():
         try:
             user_config = ConfigRegistry()
             user_config.load(log_level=logging.DEBUG)
-            menu_startup_mode = str(user_config.get("startup-mode")).lower()
+            menu_startup_mode = normalize_startup_mode(user_config.get(STARTUP_MODE_OPTION))
         except ConfigLoadFailure:
-            menu_startup_mode = str(ConfigRegistry().get("startup-mode")).lower()
+            menu_startup_mode = normalize_startup_mode(ConfigRegistry().get(STARTUP_MODE_OPTION))
     logger.debug(
         "startup mode: %s (default: %s, user config: %s)",
         startup_mode,

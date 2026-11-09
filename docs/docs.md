@@ -20,14 +20,14 @@ DVR-Scan should provide good results for most use cases, but can be fine tuned f
 Most program options can be set [using a config file](#config-file).  DVR-Scan also looks for a `dvr-scan.cfg` file in the following locations:
 
  * Windows: `C:/Users/%USERNAME%/AppData/Local/DVR-Scan/dvr-scan.cfg`
- * Linux: `~/.config/DVR-Scan/dvr-scan.cfg` or `$XDG_CONFIG_HOME/dvr-scan.cfg`
- * OSX: `~/Library/Preferences/DVR-Scan/dvr-scan.cfg`
+ * Linux: `~/.config/DVR-Scan/dvr-scan.cfg` (or `$XDG_CONFIG_HOME/DVR-Scan/dvr-scan.cfg` if `XDG_CONFIG_HOME` is set)
+ * macOS: `~/Library/Application Support/DVR-Scan/dvr-scan.cfg`
 
-These settings will be used by default each time you run DVR-Scan, unless you override them. Selecting the Settings -> Save As User Default option in the UI will overwrite this file.
+These settings will be used by default each time you run DVR-Scan, unless you override them. Run `dvr-scan --help` to see the exact path on your system (listed under `-c`/`--config`). In the app, saving settings to the `Default` [preset](#presets) overwrites this file.
 
 ### Multiple Videos
 
-You can specify multiple input videos as long as they have the same resolution and framerate:
+You can specify multiple input videos as long as they have the same resolution (framerates do not need to match exactly):
 
     dvr-scan -i video1.mp4 video2.mp4 video*.mp4
 
@@ -111,10 +111,13 @@ The following options control terminal output:
 ### Input
 
  * <b><pre>-i video.mp4, --input video.mp4</pre></b>
-    Path to input video. May specify multiple input videos so long as they have the same resolution and framerate. Wildcards/globs are supported (e.g. `-i folder/*.mp4`). Extracted motion events use the filename of the first video only as a prefix.
+    Path to input video. May specify multiple input videos so long as they have the same resolution. Wildcards/globs are supported (e.g. `-i folder/*.mp4`). Multiple inputs are scanned as one continuous video, and each extracted motion event is named after the input video containing the start of the event (e.g. `video2.DSME_0003.mp4`).
 
  * <b><pre>-c settings.cfg, --config settings.cfg</pre></b>
     Path to config file. If not set, tries to load one automatically from the user settings folder (run `dvr-scan --help` to see the exact path for your system). See the [config file documentation](#config-file) for what options can be specified.
+
+ * <b><pre>--ignore-user-config</pre></b>
+    Do not load the user config file. A config file given with `-c`/`--config` is still loaded.
 
 
 #### Regions
@@ -197,14 +200,14 @@ All time values can be given as a timecode (`HH:MM:SS` or `HH:MM:SS.nnn`), in se
  * <b><pre>-l time, --min-event-length time</pre></b> Amount of time/frames that must have a motion score above the threshold setting before triggering a new event.
 <span class="dvr-scan-default">
 ```
---min-event-length 2
+--min-event-length 0.1s
 ```
 </span>
 
- * <b><pre>-l time, --max-event-length time</pre></b> Maximum amount of time/frames allowed into a single event. Footage beyond this limit goes to a new event.
+ * <b><pre>-Y time, --max-event-length time</pre></b> Maximum length of a single event, including pre/post-event padding. Longer events are split into consecutive events of at most this length: no post-event padding is added at a split, and if motion continues the next event starts where the previous one ended. Padding or pre-roll that would exceed the limit is trimmed.
 <span class="dvr-scan-default">
 ```
---max-event-length 1000
+--max-event-length 999999s
 ```
 </span>
 
@@ -236,7 +239,7 @@ All time values can be given as a timecode (`HH:MM:SS` or `HH:MM:SS.nnn`), in se
 ```
 </span>
 
- * <b><pre>-t value, --threshold value</pre></b> Minimum amount of motion a frame must have to trigger an event. Lower values are more sensitive to motion, and require less movement to trigger an event. If too high, some movement may not be detected. Setting too low of a threshold can result in false detections. May require adjustment if other motion settings are changed.
+ * <b><pre>-t value, --threshold value</pre></b> Minimum amount of motion a frame must have to trigger an event. Lower values are more sensitive to motion, and require less movement to trigger an event. If too high, some movement may not be detected. Setting too low of a threshold can result in false detections. May require adjustment if other motion settings are changed. The motion score is the average of the motion mask (`0` for background, `255` for motion) over the whole frame, or over the detection regions if set, so small or distant objects in a large area produce low scores: use a lower threshold or a smaller region for them (see [the FAQ](faq.md#why-is-some-motion-not-detected-or-why-are-there-false-detections)).
 <span class="dvr-scan-default">
 ```
 --threshold 0.15
@@ -261,7 +264,7 @@ All time values can be given as a timecode (`HH:MM:SS` or `HH:MM:SS.nnn`), in se
     </span>
 
 
- * <b><pre>-k size, --kernel-size size</pre></b> Noise reduction kernel size, in pixels.  Kernel size can be increased to filter out smaller movements from a scene. Must be an *odd* integer at least `3` or greater. Can also be set to `0` to disable, or `-1` to select automatically based on input resolution. Auto sizes are `7` for 1080p or higher, `5` for 720p, and `3` for 480p or lower.
+ * <b><pre>-k size, --kernel-size size</pre></b> Noise reduction kernel size, in pixels.  Kernel size can be increased to filter out smaller movements from a scene. Must be an *odd* integer at least `3` or greater. Can also be set to `0` to disable, or `-1` to select automatically based on input resolution. Auto sizes are `7` for 1080p or higher, `5` for 720p, and `3` for 480p or lower. Larger auto sizes can remove small or distant moving objects; set `3` (or `0`) to keep them.
 <span class="dvr-scan-example">
 ```
 --kernel-size 5
@@ -271,7 +274,7 @@ All time values can be given as a timecode (`HH:MM:SS` or `HH:MM:SS.nnn`), in se
 
 ### Output
 
- * <b><pre>-so, --scan-only</pre></b> Do not save/extract events, only perform motion detection and display results.
+ * <b><pre>-so, --scan-only</pre></b> Do not save/extract events, only perform motion detection and display results. Can also be set with the `scan-only` config option.
 
  * <b><pre>-d path, --output-dir path</pre></b> Write all output files to `path`. If not specified, files are written in the working directory.
 
@@ -312,7 +315,7 @@ All time values can be given as a timecode (`HH:MM:SS` or `HH:MM:SS.nnn`), in se
 
 <img alt="overlay example" src="../assets/bounding-box.gif"/>
 
-!!! note "Overlays are only supported when output mode is set to OpenCV."
+!!! note "Overlays are supported with the `encode` (default) and `opencv` output modes, but not with `ffmpeg` or `copy`."
 
  * <b><pre>-bb, --bounding-box</pre></b> Draw a bounding box around the areas where motion is detected.
 <br/>An optional amount of time for temporal smoothing can also be specified (e.g. `-bb 0.1s`). The default smoothing amount is 0.1 seconds. If set to 0 (`-bb 0`), smoothing is disabled.
@@ -328,7 +331,7 @@ All time values can be given as a timecode (`HH:MM:SS` or `HH:MM:SS.nnn`), in se
 
 ## :fontawesome-regular-file:Config File
 
-Settings are specified one per line as `option = value`. Lines starting with `#` are ignored as comments. The [`dvr-scan.cfg` config template](https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/1.6/dvr-scan.cfg) can be saved and used as a starting point (it includes the information in this section as comments).
+Settings are specified one per line as `option = value`. Lines starting with `#` are ignored as comments. The [`dvr-scan.cfg` config template](https://raw.githubusercontent.com/Breakthrough/DVR-Scan/releases/2.0/dvr-scan.cfg) can be saved and used as a starting point (it includes the information in this section as comments).
 
 Configuration options are set as `option = value`, and lines starting with `#` are ignored as comments. For example:
 
@@ -361,7 +364,7 @@ bounding-box-color = 0xFF0000
     </span>
 
  * <b><pre>verbosity</pre></b>
-   Verbosity of console output (`debug`, `info`, `warning`, `error`). If set to `debug`, overrides `quiet-mode` unless set via command line.
+   Verbosity of log output (`debug`, `info`, `warning`, `error`). Applies to the console and to log files written with `--logfile`. When `quiet-mode` is enabled nothing except the final event list is printed to the console, regardless of verbosity.
     <span class="dvr-scan-example">
     ```
     verbosity = info
@@ -369,16 +372,26 @@ bounding-box-color = 0xFF0000
     </span>
 
  * <b><pre>startup-mode</pre></b>
-    Which mode the DVR-Scan app (`dvr-scan-app`) starts in (`wizard` or `classic`). The Scan Wizard provides a simplified step-by-step workflow, while classic mode (Advanced Mode) shows all settings at once. You can switch between modes at any time from the application, and change this option from <b>File -> Startup Mode</b>. New installs start in the wizard (the config file created by the installer sets `startup-mode = wizard`); existing installs keep the classic view. If no user config file exists at all (e.g. after `pip install`), the app starts in the wizard unless DVR-Scan has run before, and saves that choice to a new user config file. To force a mode for a single launch, run `dvr-scan-app --startup-mode wizard` or `dvr-scan-app --startup-mode classic`. Has no effect on the `dvr-scan` command line.
+    Which mode the DVR-Scan app (`dvr-scan-app`) starts in (`wizard` or `advanced`). The Scan Wizard provides a simplified step-by-step workflow, while Advanced Mode shows all settings at once. You can switch between modes at any time from the application, and change this option from <b>File -> Startup Mode</b>. New installs start in the wizard (the config file created by the installer sets `startup-mode = wizard`); existing installs keep Advanced Mode. If no user config file exists at all (e.g. after `pip install`) and the app is launched without `-c`/`--config` or `--ignore-user-config`, it starts in the wizard unless DVR-Scan has run before, and saves that choice to a new user config file. To force a mode for a single launch, run `dvr-scan-app --startup-mode wizard` or `dvr-scan-app --startup-mode advanced`. The value `classic` (used by pre-release versions) is accepted as an alias for `advanced`. Has no effect on the `dvr-scan` command line.
     <span class="dvr-scan-default">
     ```
-    startup-mode = classic
+    startup-mode = advanced
     ```
     </span>
 
 #### Presets
 
 The DVR-Scan app includes a preset dropdown for saving and restoring groups of settings. User presets are stored as regular config files in a `presets` folder next to the user config file (use `Settings -> Open Presets Folder` to view it); the filename is used as the preset name. The special `Default` preset is the user config file itself, and is loaded automatically on startup. Files which are not valid config files are ignored.
+
+The app also includes the following built-in presets. Each one only sets the options listed below; all other options are reset to the program defaults (not the values saved in your `Default` preset).
+
+| Preset | Options |
+|--------|---------|
+| <b>High Sensitivity</b> | `threshold = 0.075`, `kernel-size = 3`, `time-before-event = 2.0s`, `time-post-event = 3.0s` |
+| <b>Low Sensitivity</b> | `threshold = 0.5`, `min-event-length = 0.6s`, `variance-threshold = 32`, `time-post-event = 1.5s` |
+| <b>Fast Scan</b> | `bg-subtractor = CNT`, `frame-skip = 1`, `downscale-factor = 2`, `threshold = 0.2` |
+
+High Sensitivity catches faint or small motion, Low Sensitivity only triggers on sustained, significant motion, and Fast Scan trades accuracy for speed. See [this FAQ entry](faq.md#why-is-some-motion-not-detected-or-why-are-there-false-detections) for more on tuning motion detection.
 
 #### Logging
 
@@ -394,7 +407,7 @@ The DVR-Scan app includes a preset dropdown for saving and restoring groups of s
    Maximum number of log files to keep. Set to 0 to keep all log files.
     <span class="dvr-scan-default">
     ```
-    max-log-files = 4
+    max-log-files = 15
     ```
     </span>
 
@@ -411,7 +424,7 @@ The DVR-Scan app includes a preset dropdown for saving and restoring groups of s
     </span>
 
  * <b><pre>downscale-factor</pre></b>
-    Integer factor to shrink video before processing. Values <= 1 disable downscaling. Leave unset for auto.
+    Integer factor to shrink video before processing. Values <= 1 disable downscaling (the default, `0`, does not downscale).
     <span class="dvr-scan-example">
     ```
     downscale-factor = 2
@@ -423,6 +436,14 @@ The DVR-Scan app includes a preset dropdown for saving and restoring groups of s
     <span class="dvr-scan-default">
     ```
     frame-skip = 0
+    ```
+    </span>
+
+ * <b><pre>load-region</pre></b>
+    Load region data from a file (see `-R`/`--load-region`). Each line must be a list of points in the format specified by `-a`/`--add-region`, and each line is treated as a separate polygon.
+    <span class="dvr-scan-example">
+    ```
+    load-region = regions.txt
     ```
     </span>
 
@@ -443,6 +464,22 @@ The DVR-Scan app includes a preset dropdown for saving and restoring groups of s
     ```
     </span>
 
+ * <b><pre>open-output-dir</pre></b>
+    Open the output folder when a scan completes. Only applies to the app (`dvr-scan-app`).
+    <span class="dvr-scan-default">
+    ```
+    open-output-dir = yes
+    ```
+    </span>
+
+ * <b><pre>scan-only</pre></b>
+    Only perform motion detection without writing any files to disk (same as `-so`/`--scan-only`). If set, `output-mode` is ignored.
+    <span class="dvr-scan-default">
+    ```
+    scan-only = no
+    ```
+    </span>
+
  * <b><pre>output-mode</pre></b>
     Method of generating output videos: (`scan_only`, `opencv`, `encode`, `ffmpeg`, `copy`). Not all features are supported in all modes. The default (`encode`) requires ffmpeg; if ffmpeg is unavailable and no mode is set, `opencv` is used as a fallback.
     <span class="dvr-scan-default">
@@ -454,7 +491,7 @@ The DVR-Scan app includes a preset dropdown for saving and restoring groups of s
 !!! warning "Multiple input files are not supported when `-m`/`--output-mode` is set to `ffmpeg` or `copy` (they are supported with `opencv` and `encode`). You can use `ffmpeg` to [concatenate all input videos](https://trac.ffmpeg.org/wiki/Concatenate) *before* using DVR-Scan, or [run DVR-Scan in a for-loop](guide.md#multiple-videos)."
 
  * <b><pre>encode-args</pre></b>
-    Encoder parameters used when generating output files when *output-mode* is *encode*. Stream mappings (`-map`) are generated automatically based on the audio streams present in the input video(s) and must not be set here.
+    Encoder parameters used when generating output files when *output-mode* is *encode*. Stream mappings (`-map`) are generated automatically based on the audio streams present in the input video(s) and must not be set here. If no `-pix_fmt` is given, `-pix_fmt yuv420p` is added automatically for player compatibility, and a pad filter is appended so the output dimensions are even.
     <span class="dvr-scan-default">
     ```
     encode-args = -c:v libx264 -preset veryfast -crf 22 -c:a aac
@@ -473,7 +510,7 @@ The DVR-Scan app includes a preset dropdown for saving and restoring groups of s
     Encoder parameters used when generating output files when *output-mode* is *ffmpeg*. These arguments are added after the input and duration.
     <span class="dvr-scan-default">
     ```
-    ffmpeg-output-args = -map 0 -c:v libx264 -preset fast -crf 21 -c:a aac -sn
+    ffmpeg-output-args = -map 0:v:0 -map 0:a? -map 0:s? -c:v libx264 -preset veryfast -crf 22 -c:a aac
     ```
     </span>
 
@@ -482,6 +519,14 @@ The DVR-Scan app includes a preset dropdown for saving and restoring groups of s
     <span class="dvr-scan-default">
     ```
     opencv-codec = XVID
+    ```
+    </span>
+
+ * <b><pre>thumbnails</pre></b>
+    Save a thumbnail image for each event (same as `--thumbnails`). Must be `highscore` (saves the frame with the highest motion score). Thumbnails are not saved if unset.
+    <span class="dvr-scan-example">
+    ```
+    thumbnails = highscore
     ```
     </span>
 
@@ -515,15 +560,15 @@ All time values can be given as a timecode: (`HH:MM:SS` or `HH:MM:SS.nnn`), in s
     Amount of time which must have motion in each frame to trigger an event.
     <span class="dvr-scan-default">
     ```
-    min-event-length = 2
+    min-event-length = 0.1s
     ```
     </span>
 
  * <b><pre>max-event-length</pre></b>
-    Maximum mount of time of a single event. Footage beyond this limit goes to a new event.
+    Maximum length of a single event, including pre/post-event padding. Longer events are split into consecutive events of at most this length: no post-event padding is added at a split, and if motion continues the next event starts where the previous one ended. Padding or pre-roll that would exceed the limit is trimmed.
     <span class="dvr-scan-default">
     ```
-    max-event-length = 1000
+    max-event-length = 999999s
     ```
     </span>
 
@@ -553,7 +598,7 @@ All time values can be given as a timecode: (`HH:MM:SS` or `HH:MM:SS.nnn`), in s
 
 
  * <b><pre>threshold</pre></b>
-    Threshold representing amount of motion in a frame (or the ROI, if set) for a motion event to be triggered.
+    Threshold representing amount of motion in a frame (or in the detection regions, if set) for a motion event to be triggered. The motion score is the average of the motion mask (`0` for background, `255` for motion) over the whole frame, or over the detection regions if set, so small or distant objects in a large area produce low scores: use a lower threshold or a smaller region for them (see [the FAQ](faq.md#why-is-some-motion-not-detected-or-why-are-there-false-detections)).
     <span class="dvr-scan-default">
     ```
     threshold = 0.15
@@ -589,7 +634,7 @@ All time values can be given as a timecode: (`HH:MM:SS` or `HH:MM:SS.nnn`), in s
     </span>
 
  * <b><pre>kernel-size</pre></b>
-    Size (in pixels) of the noise reduction kernel. Size must be an odd number starting from 3, 0 to disable, or -1 to auto-set based on video resolution.
+    Size (in pixels) of the noise reduction kernel. Size must be an odd number starting from 3, 0 to disable, or -1 to auto-set based on video resolution. Larger auto sizes (used for high resolution videos) can remove small or distant moving objects; set `3` (or `0`) to keep them.
     <span class="dvr-scan-default">
     ```
     kernel-size = -1
@@ -637,7 +682,7 @@ Color values can be specified as either `(R,G,B)` or in hex as `0xFFFFFF`. Time 
 
 #### Bounding Box Overlays
 
-* <pre>bounding-box</pre></b>
+* <b><pre>bounding-box</pre></b>
     Enable bounding box: (`yes` or `no`).
     <span class="dvr-scan-example">
     ```
@@ -697,18 +742,18 @@ Color values can be specified as either `(R,G,B)` or in hex as `0xFFFFFF`. Time 
     </span>
 
  * <b><pre>text-border</pre></b>
-    Margin from edge in pixels.
+    Padding between the text and the edge of its background box, in pixels.
     <span class="dvr-scan-default">
     ```
-    text-margin = 5
+    text-border = 4
     ```
     </span>
 
  * <b><pre>text-margin</pre></b>
-    Margin from edge in pixels.
+    Margin between the background box and the edge of the frame, in pixels.
     <span class="dvr-scan-default">
     ```
-    text-margin = 5
+    text-margin = 4
     ```
     </span>
 
@@ -716,7 +761,7 @@ Color values can be specified as either `(R,G,B)` or in hex as `0xFFFFFF`. Time 
     Scale factor for text size.
     <span class="dvr-scan-default">
     ```
-    text-font-scale = 2.0
+    text-font-scale = 1.0
     ```
     </span>
 

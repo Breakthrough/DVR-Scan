@@ -38,6 +38,7 @@ Re-run standalone after fixing any failure:
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -349,8 +350,33 @@ def _output(result: subprocess.CompletedProcess) -> str:
     return f"  stdout: {result.stdout.strip()[:2000]}\n  stderr: {result.stderr.strip()[:2000]}"
 
 
+BUNDLED_CONFIG = "dvr-scan.cfg"
+STARTUP_MODE_LINE = re.compile(r"^\s*startup-mode\s*=\s*(\S+)\s*$", re.IGNORECASE | re.MULTILINE)
+
+
+def check_bundled_config(portable_zip: Path) -> None:
+    """Step 5: the bundled config template (installed to the user config folder by the MSI
+    and shipped at the root of the portable .zip) must contain an active
+    `startup-mode = wizard` line so fresh installs start in the Scan Wizard. The code
+    default is `advanced`, so a template without the line would silently change what
+    new users see."""
+    section("Bundled config template")
+    with zipfile.ZipFile(portable_zip) as zf:
+        names = set(zf.namelist())
+        if BUNDLED_CONFIG not in names:
+            fail(f"{BUNDLED_CONFIG} not found at root of {portable_zip.name}")
+        text = zf.read(BUNDLED_CONFIG).decode("utf-8-sig")
+    modes = [m.group(1).lower() for m in STARTUP_MODE_LINE.finditer(text)]
+    if modes != ["wizard"]:
+        fail(
+            f"{BUNDLED_CONFIG} must have exactly one active `startup-mode = wizard` line, "
+            f"found: {modes or 'none'}"
+        )
+    print(f"  {BUNDLED_CONFIG}: startup-mode = wizard")
+
+
 def check_frozen_exe(portable_zip: Path) -> None:
-    """Step 5: extract portable .zip, run both .exes, verify version, package and
+    """Step 6: extract portable .zip, run both .exes, verify version, package and
     feature detection, smoke scans, and clean error path."""
     section("Frozen .exe smoke tests")
     if sys.platform != "win32":
@@ -483,6 +509,7 @@ def run_all_checks(staging: Path, allow_unsigned: bool = False) -> None:
     check_signatures(portable_zip, msi, allow_unsigned=allow_unsigned)
     sevenz = find_7zip()
     check_msi_zip_parity(portable_zip, msi, sevenz)
+    check_bundled_config(portable_zip)
     check_frozen_exe(portable_zip)
 
     print()

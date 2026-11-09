@@ -553,3 +553,47 @@ def test_refresh_button_state_all_rows_selected():
         "down": "disabled",
         "sort": "normal",
     }
+
+
+# --- Add button and first video resolution ------------------------------------------------
+
+
+def test_add_button_uses_on_add_callback_when_given(monkeypatch):
+    """The Scan Wizard routes "+" through its own browse handler (parented dialog, locked
+    navigation) instead of an unparented dialog opened by the list."""
+    area = VideoList.__new__(VideoList)
+    calls = []
+    area._on_add = lambda: calls.append("wizard-browse")
+    monkeypatch.setattr(
+        "dvr_scan.app.video_list.tkinter.filedialog.askopenfilename",
+        lambda **kwargs: pytest.fail("list must not open its own dialog"),
+    )
+    area._on_add_clicked()
+    assert calls == ["wizard-browse"]
+
+
+def test_add_button_without_callback_parents_dialog_to_toplevel(monkeypatch):
+    area = VideoList.__new__(VideoList)
+    area._on_add = None
+    area._root = SimpleNamespace(winfo_toplevel=lambda: "list-toplevel")
+    seen = {}
+
+    def fake_askopenfilename(**kwargs):
+        seen.update(kwargs)
+        return ()
+
+    monkeypatch.setattr(
+        "dvr_scan.app.video_list.tkinter.filedialog.askopenfilename", fake_askopenfilename
+    )
+    area._on_add_clicked()
+    assert seen["parent"] == "list-toplevel"
+
+
+def test_first_video_resolution():
+    area = _list_with({"a": _row("a.mp4", "/tmp/a.mp4"), "b": _row("b.mp4", "/tmp/b.mp4")}, [])
+    assert area.first_video_resolution is None
+    area._order = ["b", "a"]
+    area._rows["b"].info.resolution = "1280 x 720"
+    assert area.first_video_resolution == (1280, 720)
+    area._rows["b"].info.resolution = "N/A"
+    assert area.first_video_resolution is None

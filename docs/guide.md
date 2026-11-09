@@ -11,13 +11,13 @@ After installation, you can run DVR-Scan by clicking on the application shortcut
 
 ### Scan Wizard and Advanced Mode
 
-DVR-Scan has two views. The <b>Scan Wizard</b> walks you through a scan step by step: add videos, pick a preset, choose an output folder, and scan. <b>Advanced Mode</b> (the classic view described below) shows all settings at once. You can switch between them at any time using <b>File -> Wizard</b> in Advanced Mode, or the <b>Advanced Mode</b> button in the wizard.
+DVR-Scan has two views. The <b>Scan Wizard</b> walks you through a scan step by step: add videos, pick a preset, choose an output folder, and scan. <b>Advanced Mode</b> (described below) shows all settings at once. You can switch between them at any time using <b>File -> Scan Wizard</b> in Advanced Mode, or the <b>Advanced Mode</b> button in the wizard.
 
 The wizard opens on the <b>Add Videos</b> step. Click the drop zone (or drag and drop files onto the window) to add one or more videos, then press <b>Next</b>:
 
 <img alt="[Scan Wizard: Add Videos]" src="../assets/app-wizard-videos.jpg"/>
 
-Next, pick a <b>Preset</b>. <b>Default</b> uses your saved settings; the other presets trade sensitivity for speed. You can also adjust the sensitivity threshold directly, where lower values detect smaller amounts of motion:
+Next, pick a <b>Preset</b>. <b>Default</b> uses your saved settings, <b>High Sensitivity</b> catches faint or small motion, <b>Low Sensitivity</b> reduces false detections, and <b>Fast Scan</b> trades accuracy for speed (see [Presets](docs.md#presets) for the settings each one changes). You can also adjust the sensitivity threshold directly, where lower values detect smaller amounts of motion (if motion you expect is not detected, see [this FAQ entry](faq.md#why-is-some-motion-not-detected-or-why-are-there-false-detections)):
 
 <img alt="[Scan Wizard: Choose Preset]" src="../assets/app-wizard-preset.jpg"/>
 
@@ -25,7 +25,7 @@ On the <b>Choose Output</b> step, select how events should be saved (or <b>Scan 
 
 <img alt="[Scan Wizard: Scan Results]" src="../assets/app-wizard-scan.jpg"/>
 
-New installs start in the wizard, while existing installs keep Advanced Mode. To change which view opens at startup, use <b>File -> Startup Mode</b> in either view (this sets the [`startup-mode`](docs.md#config-file) config option). To force a view for a single launch, run `dvr-scan-app --startup-mode wizard` or `dvr-scan-app --startup-mode classic`.
+New installs start in the wizard, while existing installs keep Advanced Mode. To change which view opens at startup, use <b>File -> Startup Mode</b> in either view (this sets the [`startup-mode`](docs.md#config-file) config option). To force a view for a single launch, run `dvr-scan-app --startup-mode wizard` or `dvr-scan-app --startup-mode advanced`.
 
 ### Advanced Mode
 

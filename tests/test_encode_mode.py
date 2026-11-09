@@ -15,6 +15,7 @@ of ffmpeg in the repository root when it is not on PATH)."""
 
 import shutil
 import subprocess
+import sys
 import typing as ty
 from pathlib import Path
 
@@ -25,7 +26,9 @@ from dvr_scan.platform import is_ffmpeg_available
 
 pytestmark = pytest.mark.skipif(not is_ffmpeg_available(), reason="ffmpeg not available")
 
-DVR_SCAN_COMMAND: str = "python -m dvr_scan"
+# Run the CLI with the interpreter running the tests, not whichever `python` is on PATH
+# (they differ when pytest runs from a separate build venv).
+DVR_SCAN_COMMAND: str = f'"{sys.executable}" -m dvr_scan'
 
 # Matches BASE_COMMAND in test_cli.py aside from output mode; yields 3 events.
 BASE_COMMAND = [
@@ -228,3 +231,37 @@ def test_encode_mode_with_mask_output(tmp_path):
     for name in files:
         if name != "mask.avi":
             assert _count_frames(tmp_path / name) > 0
+
+
+def _probe_pix_fmt_and_size(path: Path) -> ty.Tuple[str, int, int]:
+    import av
+
+    with av.open(str(path)) as container:
+        codec = container.streams.video[0].codec_context
+        return (codec.pix_fmt, codec.width, codec.height)
+
+
+def test_encode_mode_yuv420p_with_odd_mask(tmp_path):
+    """Default ENCODE output must be 4:2:0 (not the High 4:4:4 profile ffmpeg picks for
+    the BGR pipe), including MP4 mask output, whose size is odd with -df 3 (1280 / 3)."""
+    _run_dvr_scan(
+        BASE_COMMAND
+        + [
+            "--end-time",
+            "8s",
+            "--downscale-factor",
+            "3",
+            "--mask-output",
+            "mask.mp4",
+            "--output-dir",
+            tmp_path,
+        ]
+    )
+    clips = sorted(tmp_path.glob("traffic_camera.DSME_*.mp4"))
+    assert clips
+    for path in clips:
+        assert _probe_pix_fmt_and_size(path) == ("yuv420p", 1280, 720)
+    pix_fmt, width, height = _probe_pix_fmt_and_size(tmp_path / "mask.mp4")
+    assert pix_fmt == "yuv420p"
+    assert width % 2 == 0 and height % 2 == 0
+    assert _count_frames(tmp_path / "mask.mp4") > 0

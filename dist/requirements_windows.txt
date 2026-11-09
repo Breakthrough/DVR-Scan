@@ -11,7 +11,7 @@ pillow==13.0.0
 platformdirs==4.14.3
 pyinstaller>=6.0
 pytest==9.2.0
-scenedetect==0.7.2
+scenedetect==0.7.3
 screeninfo==0.8.1
 tkinterdnd2==0.7.0
 tqdm==4.70.1

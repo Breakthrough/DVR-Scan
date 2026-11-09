@@ -38,6 +38,7 @@ from dvr_scan.config import (
     ConfigLoadFailure,
     ConfigRegistry,
     atomic_write_text,
+    read_config_file,
 )
 
 if ty.TYPE_CHECKING:
@@ -186,7 +187,7 @@ def scan_user_presets(base_dir: ty.Optional[Path] = None) -> ty.List[Preset]:
             # Fully load the file: this enforces the CONFIG_MAP schema, which a bare
             # ConfigParser parse would not catch.
             ConfigRegistry().load(path)
-        except ConfigLoadFailure:
+        except (ConfigLoadFailure, OSError, UnicodeError):
             logger.warning("Skipping invalid preset file: %s", path)
             _PRESET_VALIDATION_CACHE[path] = (*cache_key, False)
             continue
@@ -261,9 +262,8 @@ def _preserve_unmanaged_options(settings: "ScanSettings", path: Path):
         return
     parser = ConfigParser(interpolation=None)
     try:
-        # Locale encoding, as in `ConfigRegistry.load`.
-        with open(path) as file:
-            parser.read_string("[%s]\n%s" % (DEFAULTSECT, file.read()), source=str(path))
+        text, _ = read_config_file(path)
+        parser.read_string("[%s]\n%s" % (DEFAULTSECT, text), source=str(path))
     except (OSError, UnicodeError, ConfigParserError):
         logger.debug("Not preserving options from unreadable config file: %s", path)
         return

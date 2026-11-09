@@ -47,6 +47,7 @@ from dvr_scan.app.application import (
     PADDING,
     SORT_FIELDS,
     VideoInfo,
+    parse_resolution,
     probe_video,
     sample_video_frames,
 )
@@ -130,8 +131,13 @@ class VideoList:
     """Scrollable list of input videos with stacked metadata rows and a vertical icon
     toolbar. Built into `root`, mirroring the `InputArea` API used by the Scan Wizard."""
 
-    def __init__(self, root: tk.Widget):
+    def __init__(self, root: tk.Widget, on_add: ty.Optional[ty.Callable[[], None]] = None):
+        """`on_add` handles the Add ("+") button. The Scan Wizard routes it through its own
+        browse handler, which parents the file dialog to the wizard and locks navigation
+        while it is open. Without it, the dialog is opened here (parented to this list's
+        window)."""
         self._root = root
+        self._on_add = on_add
         root.rowconfigure(0, weight=1)
         root.columnconfigure(0, weight=1)
 
@@ -172,7 +178,9 @@ class VideoList:
         # same direction the selected row moves.
         toolbar = ttk.Frame(root)
         toolbar.grid(row=0, column=2, sticky=tk.N, padx=(PADDING, 0))
-        self._add_button = self._toolbar_button(toolbar, 0, ADD_GLYPH, "Add videos", self.add_video)
+        self._add_button = self._toolbar_button(
+            toolbar, 0, ADD_GLYPH, "Add videos", self._on_add_clicked
+        )
         self._remove_button = self._toolbar_button(
             toolbar, 1, REMOVE_GLYPH, "Remove selected (Del)", self.remove_selected
         )
@@ -218,6 +226,13 @@ class VideoList:
         return [self._rows[iid].info.path for iid in self._order]
 
     @property
+    def first_video_resolution(self) -> ty.Optional[ty.Tuple[int, int]]:
+        """Resolution (w, h) of the first video in the list, or None if unknown/empty."""
+        if not self._order:
+            return None
+        return parse_resolution(self._rows[self._order[0]].info.resolution)
+
+    @property
     def selected_videos(self) -> ty.List[str]:
         """Paths of the selected videos, in display order."""
         return [self._rows[iid].info.path for iid in self._order if iid in self._selected]
@@ -254,6 +269,12 @@ class VideoList:
             self._selected = {self._anchor}
             self._paint_selection()
         self._refresh_button_state()
+
+    def _on_add_clicked(self):
+        if self._on_add is not None:
+            self._on_add()
+        else:
+            self.add_video(parent=self._root.winfo_toplevel())
 
     def add_video(self, path: str = "", parent: ty.Optional[tk.Widget] = None):
         """Add a video to the list by path, or open a file dialog if no path is given.

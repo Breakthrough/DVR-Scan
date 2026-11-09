@@ -9,41 +9,49 @@
 
 #### Release Notes
 
-DVR-Scan v2.0 overhauls how timestamps are handled and simplifies the desktop application with a new Scan Wizard, settings presets, and drag-and-drop support. Motion events are now tracked using presentation timestamps (PTS), which means variable framerate (VFR) videos are handled correctly with default parameters.
+DVR-Scan v2.0 is a major release that includes an improved new user experience, overhauls timestamp handling for VFR, adds settings presets, and brings drag-and-drop support. Under the hood, motion events are now tracked using presentation timestamps (PTS), which means variable framerate (VFR) videos are handled correctly with default parameters.  This release has a *huge* amount of bugfixes and features, and also improves the online documentation.
 
 #### Changelog
 
- * [general] DVR-Scan now requires PySceneDetect 0.7.2 or higher
- * [general] Minimum supported Python version is now 3.11 (Python 3.10 is [EOL](https://devguide.python.org/versions/))
- * [general] Modernize project branding and logos, improve legibility at smaller sizes
+ * [breaking] The default output mode is now `encode` (MP4/H.264 via ffmpeg) instead of `opencv` (.avi), so motion events now include audio and are saved as .mp4 by default. If ffmpeg is not installed and no output mode is set, DVR-Scan falls back to `opencv` with a warning. Set `output-mode = opencv` in a config file (or use `-m opencv`) to restore the previous behavior.
+ * [breaking] Remove the `-roi`/`--region-of-interest` option and the `region-of-interest` config option (deprecated since v1.6). Use the region editor (`-r`/`--region-editor`), `-a`/`--add-region`, or `-R`/`--load-region` instead.
+ * [breaking] Remove `--use-pts` option; presentation timestamps are now always used for event timing (the `use-pts` config option is deprecated and has no effect)
  * [feature] New Scan Wizard provides a simplified step-by-step workflow (add videos, pick a preset, choose output, scan) [#263](https://github.com/Breakthrough/DVR-Scan/issues/263)
-    * New installs start in the wizard; existing installs keep the classic view (now called Advanced Mode). You can switch between modes at any time
-    * Set the default with the new `File -> Startup Mode` menu or the `startup-mode` config option, or force a mode for a single launch with `dvr-scan-app --startup-mode wizard|classic`
-    * Installs without a user config file (e.g. `pip`) start in the wizard unless DVR-Scan has run before; the choice is saved to a new user config file. Downgrading to v1.x afterwards requires removing `startup-mode` from `dvr-scan.cfg`, as older versions reject unknown options
+    * New installs start in the wizard; existing installs keep the full settings view (now called Advanced Mode). You can switch between modes at any time
+    * Set the default with the new `File -> Startup Mode` menu or the `startup-mode` config option (`wizard` or `advanced`), or force a mode for a single launch with `dvr-scan-app --startup-mode wizard|advanced`
+    * Installs without a user config file (e.g. `pip`) start in the wizard unless DVR-Scan has run before (only when launched without `-c`/`--config` or `--ignore-user-config`); the choice is saved to a new user config file. Downgrading to v1.x afterwards requires removing `startup-mode` from `dvr-scan.cfg`, as older versions reject unknown options
+    * Start/end time and detection regions set in Advanced Mode also apply to wizard scans and are listed on the summary step
+    * Errors when starting a scan (e.g. an unreadable video) are shown in a dialog instead of failing silently, and output modes that need ffmpeg are marked unavailable when it is not installed
  * [feature] Settings presets: a new preset dropdown in the app allows applying built-in presets or saving your own [#263](https://github.com/Breakthrough/DVR-Scan/issues/263)
     * User presets are config files stored in a `presets` folder next to the user config file (`Settings -> Open Presets Folder`)
     * The `Default` preset is the user config file itself, replacing the `Save As User Default` and `Reset To User Default` menu items; saving it preserves config options the app has no setting for (e.g. `startup-mode`, `verbosity`)
  * [feature] Video files can now be dragged and dropped onto the app window to add them as inputs; dropping a `.cfg` file loads it as the active settings [#263](https://github.com/Breakthrough/DVR-Scan/issues/263)
  * [feature] Add select all with Ctrl+A (Command+A on Mac), multiple selection with Shift/Ctrl+click, and remove selection [#269](https://github.com/Breakthrough/DVR-Scan/issues/269)
- * [bugfix] The main window now shrinks to fit the screen on smaller displays instead of opening larger than the desktop
- * [feature] Variable framerate (VFR) videos are now handled correctly: event start/end times are always derived from presentation timestamps [#20](https://github.com/Breakthrough/DVR-Scan/issues/20)
- * [breaking] Remove the `-roi`/`--region-of-interest` option and the `region-of-interest` config option (deprecated since v1.6). Use the region editor (`-r`/`--region-editor`), `-a`/`--add-region`, or `-R`/`--load-region` instead.
- * [breaking] Remove `--use-pts` option; presentation timestamps are now always used for event timing (the `use-pts` config option is deprecated and has no effect)
+ * [feature] Add a `--max-events N` flag to allow stopping after detecting `N` motion events [#261](https://github.com/Breakthrough/DVR-Scan/issues/261)
+ * [feature] New `-Y`/`--max-event-length` option and `max-event-length` config option: events longer than the given length are split into consecutive events of at most that length (no post-event padding is added at a split; if motion continues, the next event starts where the previous one ended) [#271](https://github.com/Breakthrough/DVR-Scan/issues/271)
+ * [feature] New `--merge-window`/`merge-window` option controls how close two groups of motion must be for them to be merged into the same event; `-tb`/`-tp` are now pure padding added around each event and no longer affect merging. The default (`auto`) uses the same value as `time-post-event`, which matches the merging behavior of previous versions. Setting `time-post-event` larger than `merge-window` caps the post-event padding to the merge window with a warning. [#195](https://github.com/Breakthrough/DVR-Scan/issues/195) [#72](https://github.com/Breakthrough/DVR-Scan/issues/72)
+ * [feature] Motion mask output (`-mo`/`--mask-output`) now encodes high-quality MP4 (H.264) videos via ffmpeg by default when ffmpeg is available, respecting `encode-args` [#275](https://github.com/Breakthrough/DVR-Scan/issues/275)
+ * [feature] The Region Editor now supports seeking across the input video timeline via a frame slider and `,`/`.` frame-stepping shortcuts, and starts from the configured `start-time` in the GUI [#248](https://github.com/Breakthrough/DVR-Scan/issues/248)
+ * [feature] Add `timecode-list-format` config option to control the format of the event list printed at the end of a scan (and output in `-q`/`--quiet` mode): `parts` (`start-end,start-end,...`, syntax of `mkvmerge --split parts:`), `timecodes` (default, `start,end,start,end,...`, syntax of `mkvmerge --split timecodes:`), or `lines` (one `start-end` pair per line) [#78](https://github.com/Breakthrough/DVR-Scan/issues/78)
  * [general] Reported event timecodes are now exact rather than quantized to whole frames; formatted timecodes may differ by up to 1ms from previous versions. Frame numbers shown in reports and overlays are approximations on VFR inputs.
  * [general] When using `--frame-skip`, the post-event window now covers the exact amount of time specified rather than rounding down to a multiple of the skip interval, and back-to-back events share their boundary timecode instead of leaving a one-frame gap.
  * [feature] Frames are now decoded with PyAV by default (`input-mode = pyav`), which provides more accurate timing and stream metadata; set `input-mode = opencv` to restore the previous behavior
  * [feature] Multiple input videos are concatenated on a continuous PTS-based timeline with support for seeking across inputs; frame rates no longer need to match exactly
  * [general] Videos with a delayed start (nonzero stream start time) now report event timecodes relative to the start of the file with all input modes
  * [general] Reported event boundaries may shift by a frame or two compared to previous releases, as PyAV and OpenCV decode frames with slightly different color conversion
- * [feature] New output mode `encode` produces MP4 (H.264) files by piping decoded frames to ffmpeg, combining the quality of `ffmpeg` mode with support for overlays (`-bb`/`-tc`/`-fm`), multiple inputs, and combined output (`-o`, video-only); audio from the source video(s) is included and synchronized, including events spanning multiple inputs. Encoder settings can be customized with the new `encode-args` config option. [#197](https://github.com/Breakthrough/DVR-Scan/issues/197)
+ * [feature] New `--report` option writes detected events to a CSV or JSON file (format set by extension), including in scan-only mode; the GUI's Save Report dialog can also save JSON reports. CSV reports now include exact start/end times in seconds (frame numbers are approximations on variable framerate inputs). [#221](https://github.com/Breakthrough/DVR-Scan/issues/221)
+ * [feature] New output mode `encode` produces MP4 (H.264) files by piping decoded frames to ffmpeg, combining the quality of `ffmpeg` mode with support for overlays (`-bb`/`-tc`/`-fm`), multiple inputs, and combined output (`-o`, video-only); audio from the source video(s) is included, including for events spanning multiple inputs (on VFR inputs, see the note on playback speed below). Encoder settings can be customized with the new `encode-args` config option. [#197](https://github.com/Breakthrough/DVR-Scan/issues/197)
+ * [bugfix] Variable framerate (VFR) videos are now handled correctly: event start/end times are always derived from presentation timestamps [#20](https://github.com/Breakthrough/DVR-Scan/issues/20)
  * [bugfix] Motion events extracted from multiple input videos are now named after the source video containing the start of each event, instead of always using the first input's filename [#258](https://github.com/Breakthrough/DVR-Scan/issues/258)
- * [breaking] The default output mode is now `encode` (MP4/H.264 via ffmpeg) instead of `opencv` (.avi), so motion events now include audio and are saved as .mp4 by default. If ffmpeg is not installed and no output mode is set, DVR-Scan falls back to `opencv` with a warning. Set `output-mode = opencv` in a config file (or use `-m opencv`) to restore the previous behavior.
- * [feature] New `--report` option writes detected events to a CSV or JSON file (format set by extension), including in scan-only mode; the GUI's Save Report dialog can also
-   save JSON reports. CSV reports now include exact start/end times in seconds (frame numbers are approximations on variable framerate inputs). [#221](https://github.com/Breakthrough/DVR-Scan/issues/221)
  * [bugfix] Thumbnails (`--thumbnails highscore`) are now named after the source video containing each event when scanning multiple inputs, and are numbered correctly in scan-only mode (previously each event's thumbnail overwrote the last one)
  * [bugfix] Using `--thumbnails highscore` together with `-o`/`--output` no longer
    overwrites the combined output video with the thumbnail image; thumbnails are named after the combined output file instead
- * [general] On VFR inputs, clips produced by `encode` mode are written at the input's average framerate: all frames are preserved, but playback speed will deviate from real time in sections whose local framerate differs from the average (use `ffmpeg` or `copy` mode if exact playback timing is required)
+ * [bugfix] Fixed audio misalignment in `encode` mode for inputs with a nonzero container start time (e.g. DVR `.ts` recordings)
+ * [general] `encode` mode output uses the `yuv420p` pixel format (H.264 High profile) for compatibility with most players unless `-pix_fmt` is set in `encode-args`, and odd frame sizes (e.g. mask output with `-df 3`) are padded to even dimensions
+ * [general] The frames written for each event now exactly match the reported event span
+ * [general] On VFR inputs, clips produced by `encode` mode are written at the input's average framerate: all frames are preserved, but playback speed will deviate from real time in sections whose local framerate differs from the average, and audio is not re-timed to match, so it can drift out of sync with the video (use `ffmpeg` or `copy` mode if exact playback timing is required)
+ * [bugfix] `quiet-mode = yes` in a config file no longer breaks scans started from the app
+ * [bugfix] The main window now shrinks to fit the screen on smaller displays instead of opening larger than the desktop
  * [bugfix] Fix syntax error due to f-string usage under Python 3.10 [#262](https://github.com/Breakthrough/DVR-Scan/issues/262)
  * [bugfix] Ensure motion high score is reset when thumbnails are disabled [#267](https://github.com/Breakthrough/DVR-Scan/issues/267)
  * [bugfix] Fix "stale" frame references being used as thumbnails [#268](https://github.com/Breakthrough/DVR-Scan/issues/268)
@@ -53,24 +61,29 @@ DVR-Scan v2.0 overhauls how timestamps are handled and simplifies the desktop ap
  * [bugfix] Fix the Dockerfile working directory (`/videos/`) not matching the documented `docker run` command, add ffmpeg to the Docker image so the default output mode works, and update the Docker instructions [#133](https://github.com/Breakthrough/DVR-Scan/issues/133)
  * [bugfix] Input filenames containing `[` or `]` (or other wildcard characters) are no longer treated as patterns if the file exists. Wildcards are now also expanded in absolute paths, matches are sorted by filename so multiple inputs are concatenated in a predictable order, and nonexistent inputs are always rejected before scanning starts. [#171](https://github.com/Breakthrough/DVR-Scan/issues/171)
  * [bugfix] Fix region editor in the GUI showing the first frame of a previously removed video after changing the input list. Existing regions are kept when the new first video has the same resolution; otherwise they are reset (with a prompt to save any unsaved changes). [#274](https://github.com/Breakthrough/DVR-Scan/issues/274)
- * [feature] Add a `--max-events N` flag to allow stopping after detecting `N` motion events [#261](https://github.com/Breakthrough/DVR-Scan/issues/261)
- * [feature] New `--merge-window`/`merge-window` option controls how close two groups of motion must be for them to be merged into the same event; `-tb`/`-tp` are now pure padding added around each event and no longer affect merging. The default (`auto`) uses the same value as `time-post-event`, which matches the merging behavior of previous versions. Setting `time-post-event` larger than `merge-window` caps the post-event padding to the merge window with a warning. [#195](https://github.com/Breakthrough/DVR-Scan/issues/195) [#72](https://github.com/Breakthrough/DVR-Scan/issues/72)
- * [feature] Motion mask output (`-mo`/`--mask-output`) now encodes high-quality MP4 (H.264) videos via ffmpeg by default when ffmpeg is available, respecting `encode-args` [#275](https://github.com/Breakthrough/DVR-Scan/issues/275)
- * [feature] The Region Editor now supports seeking across the input video timeline via a frame slider and `,`/`.` frame-stepping shortcuts, and starts from the configured `start-time` in the GUI [#248](https://github.com/Breakthrough/DVR-Scan/issues/248)
  * [bugfix] Explicitly specified `-k`/`--kernel-size` values are no longer scaled down when `-df`/`--downscale-factor` is set (`auto` kernel size continues to scale with the downscaled resolution) [#194](https://github.com/Breakthrough/DVR-Scan/issues/194)
  * [bugfix] Log an explicit error message if OpenCV `VideoWriter` fails to open an output video file [#214](https://github.com/Breakthrough/DVR-Scan/issues/214)
  * [general] Log active motion detection and event parameters (`threshold`, `min_event_len`, `time_pre_event`, `time_post_event`, `merge_window`, `downscale_factor`, `frame_skip`) at the start of a scan [#186](https://github.com/Breakthrough/DVR-Scan/issues/186)
- * [feature] Add `timecode-list-format` config option to control the format of the event list printed at the end of a scan (and output in `-q`/`--quiet` mode): `parts` (`start-end,start-end,...`, syntax of `mkvmerge --split parts:`), `timecodes` (default, `start,end,start,end,...`, syntax of `mkvmerge --split timecodes:`), or `lines` (one `start-end` pair per line) [#78](https://github.com/Breakthrough/DVR-Scan/issues/78)
  * [general] Remove the OpenCV version cap (`<4.13`); DVR-Scan now installs with the latest OpenCV 4.x/5.x releases [#257](https://github.com/Breakthrough/DVR-Scan/issues/257)
+ * [bugfix] When the `CNT` subtractor is unavailable, the CLI now explains how to restore it, and the app hides the option (as well as the Fast Scan preset) instead of failing to load
+ * [general] The Python package depends on `opencv-python` again in addition to `opencv-contrib-python`, as it is required by some dependencies (this reverses the v1.8.2 change from [#251](https://github.com/Breakthrough/DVR-Scan/issues/251)); both packages must be the same version
+     * A fix for this will be coordinated as per https://scenedetect.com/issues/601 for a follow up release
+ * [general] The `dvr-scan-headless` package now depends on `scenedetect-headless` and `opencv-contrib-python-headless`, so it no longer installs the GUI builds of OpenCV
+ * [general] New dependency on `tkinterdnd2` for drag and drop support in the app
+ * [general] Minimum supported Python version is now 3.11 (Python 3.10 is [EOL](https://devguide.python.org/versions/))
  * [general] Updates to Windows distributions:
      - Python 3.12 -> Python 3.13
      - OpenCV 4.10.0.84 -> 5.0.0.93
-     - PyAV 18.0.0 -> 19.0.2
+     - PyAV 19.0.2 is now bundled [#255](https://github.com/Breakthrough/DVR-Scan/issues/255)
      - ffmpeg 8.0 -> 9.0.2
+
+#### Contributors
+
+Thanks to [@elvis-epx](https://github.com/elvis-epx) for contributing to this release.
 
 ### 1.8.2.1 (2026-05-09)
 
-Re-release of Python distribution that fixes dependency pinning.
+Re-release of Python distribution that fixes dependency pinning. Thanks to [@frafra](https://github.com/frafra) for migrating the package to `pyproject.toml` [#205](https://github.com/Breakthrough/DVR-Scan/pull/205).
 
 ### 1.8.2 (2026-01-18)
 

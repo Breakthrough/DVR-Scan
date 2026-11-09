@@ -16,7 +16,7 @@ hide:
 
 !!! success "Latest Version: 2.0 (November 8, 2026)"
 
-    <div class="buttongrid">[:fontawesome-solid-book: User Guide](guide.md){ .md-button #changelog-button }[:fontawesome-solid-bars: &nbsp; Documentation](docs.md){ .md-button #documentation-button }[:fontawesome-solid-gear: &nbsp; Resources](changelog.md){ .md-button #download-button }</div>
+    <div class="buttongrid">[:fontawesome-solid-book: User Guide](guide.md){ .md-button #changelog-button }[:fontawesome-solid-bars: &nbsp; Documentation](docs.md){ .md-button #documentation-button }[:fontawesome-solid-gear: &nbsp; Resources](resources.md){ .md-button #download-button }</div>
 
 ------------------------------------------------------
 

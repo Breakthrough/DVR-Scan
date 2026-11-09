@@ -65,6 +65,12 @@ def main():
             logger.critical("Error (Not Implemented): %s", str(ex), exc_info=show_traceback)
             if debug_mode:
                 raise
+        except (OSError, RuntimeError) as ex:
+            # I/O errors (e.g. an unwritable output path) and ffmpeg failures: the message
+            # is enough to act on, so only show the traceback in debug mode.
+            logger.critical("Error: %s", str(ex), exc_info=show_traceback)
+            if debug_mode:
+                raise
         except Exception as ex:
             logger.critical("Critical Error: %s", str(ex), exc_info=True)
             if debug_mode:

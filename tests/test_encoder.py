@@ -30,6 +30,7 @@ from dvr_scan.encoder import (
     MaskWriter,
     OpenCVEncoder,
     OutputMode,
+    _video_encode_args,
     build_pipe_command,
     get_encoder_type,
 )
@@ -163,6 +164,38 @@ def test_mask_writer_ffmpeg(tmp_path):
     assert _count_frames(mask_file) == 3
 
 
+def _probe_video(path: Path) -> ty.Tuple[str, int, int]:
+    """(pix_fmt, width, height) of the first video stream of `path`."""
+    import av
+
+    with av.open(str(path)) as container:
+        codec = container.streams.video[0].codec_context
+        return (codec.pix_fmt, codec.width, codec.height)
+
+
+def _require_ffmpeg():
+    from dvr_scan.platform import is_ffmpeg_available
+
+    if not is_ffmpeg_available():
+        pytest.skip("ffmpeg not available")
+
+
+def test_mask_writer_ffmpeg_odd_size(tmp_path):
+    """Mask frames with odd dimensions (e.g. from -df 3) must encode as 4:2:0 MP4, padded
+    to even dimensions."""
+    _require_ffmpeg()
+    writer = MaskWriter(
+        path=Path("mask.mp4"),
+        fourcc=FOURCC,
+        frame_rate=FRAME_RATE,
+        output_dir=tmp_path,
+    )
+    for i in range(3):
+        writer.write_frame(_make_frame(size=(63, 47)), _tc(i / FRAME_RATE))
+    writer.close()
+    assert _probe_video(tmp_path / "mask.mp4") == ("yuv420p", 64, 48)
+
+
 def test_get_encoder_type():
     assert get_encoder_type(OutputMode.SCAN_ONLY) is None
     assert get_encoder_type(OutputMode.OPENCV) is OpenCVEncoder
@@ -242,6 +275,101 @@ def test_build_pipe_command_multiple_audio_sources():
     assert "-shortest" in args
     # Both sources are inputs with their own seek positions.
     assert args.count("-ss") == 2 and args.count("-i") == 3
+
+
+def test_build_pipe_command_pix_fmt():
+    """Output defaults to 4:2:0 (players often can't decode the 4:4:4 that ffmpeg picks
+    for the bgr24 pipe), but a user-specified pixel format must be kept."""
+    args = build_pipe_command(Path("out.mp4"), (640, 480), 25.0, DEFAULT_ENCODE_ARGS)
+    assert args[args.index("-pix_fmt", args.index("pipe:0")) + 1] == "yuv420p"
+    # Even frame size and no user filters: no pad filter needed.
+    assert "-vf" not in args
+    args = build_pipe_command(Path("out.mp4"), (640, 480), 25.0, "-c:v libx264 -pix_fmt yuv444p")
+    output_args = args[args.index("pipe:0") :]
+    assert output_args.count("-pix_fmt") == 1
+    assert output_args[output_args.index("-pix_fmt") + 1] == "yuv444p"
+
+
+def test_build_pipe_command_odd_size_padded():
+    """Odd frame sizes (e.g. -df 3 or region crops) must be padded to even dimensions,
+    appending to any user-specified video filter (which may itself change the size)."""
+    args = build_pipe_command(Path("out.mp4"), (427, 241), 25.0, DEFAULT_ENCODE_ARGS)
+    assert args[args.index("-vf") + 1] == "pad=ceil(iw/2)*2:ceil(ih/2)*2"
+    args = build_pipe_command(Path("out.mp4"), (640, 480), 25.0, "-c:v libx264 -vf hflip")
+    assert args.count("-vf") == 1
+    assert args[args.index("-vf") + 1] == "hflip,pad=ceil(iw/2)*2:ceil(ih/2)*2"
+
+
+def test_pipe_encoder_yuv420p_odd_size(tmp_path):
+    """ENCODE output must be yuv420p, and odd-sized frames must still encode."""
+    _require_ffmpeg()
+    encoder = FFmpegPipeEncoder(
+        video_input=SimpleNamespace(sources=[], paths=[Path("odd.mp4")]),
+        frame_rate=FRAME_RATE,
+        output_dir=tmp_path,
+        comp_file=Path("events.mp4"),
+    )
+    for i in range(5):
+        encoder.write_frame(_make_frame(size=(65, 49)), _tc(i / FRAME_RATE))
+    encoder.finish_event(_event(1, 0.0, 0.5))
+    encoder.close()
+    assert _probe_video(tmp_path / "events.mp4") == ("yuv420p", 66, 50)
+    assert _count_frames(tmp_path / "events.mp4") == 5
+
+
+def _beep_onset(path: Path) -> float:
+    """Time in seconds (from the start of the output) where the first audio stream of
+    `path` first becomes loud."""
+    import av
+
+    with av.open(str(path)) as container:
+        stream = container.streams.audio[0]
+        sample_rate = stream.sample_rate
+        frames = list(container.decode(stream))
+        start = float(frames[0].pts * frames[0].time_base)
+        samples = np.concatenate([np.abs(frame.to_ndarray()).max(axis=0) for frame in frames])
+    loud = np.nonzero(samples > 0.5 * samples.max())[0]
+    return start + loud[0] / sample_rate
+
+
+def test_video_encode_args_filter_complex_skips_pad():
+    """A filter graph cannot be combined with -vf, so no pad filter is added for it."""
+    args = _video_encode_args("-c:v libx264 -filter_complex [0:v]hflip[v] -map [v]", (321, 241))
+    assert "-vf" not in args
+    assert args[:2] == ["-pix_fmt", "yuv420p"]
+
+
+def test_pipe_encoder_audio_container_start_offset(tmp_path):
+    """Audio must stay aligned for inputs with a nonzero container start time (e.g. DVR
+    .ts files). ffmpeg already offsets input seeks by the container start time, so it
+    must not be added again (it was, shifting audio by +2s here).
+
+    audio_start_offset.mp4: 4s of 64x48 video at 10 fps with a 1 kHz tone from 1.5s to
+    2.0s (otherwise silent), remuxed with -output_ts_offset 2 so the video starts at 2.0s
+    and the AAC audio (with its priming samples) at 1.936s. Generated with:
+
+        ffmpeg -f lavfi -i testsrc2=s=64x48:r=10:d=4 -f lavfi -i sine=f=1000:sample_rate=16000:d=4
+            -filter:a "volume='between(t,1.5,2.0)':eval=frame" -c:v libx264 -pix_fmt yuv420p
+            -g 10 -crf 30 -c:a aac -b:a 32k -ac 1 base.mp4
+        ffmpeg -i base.mp4 -c copy -output_ts_offset 2 audio_start_offset.mp4
+    """
+    _require_ffmpeg()
+    from dvr_scan.video_input import open_input
+
+    video = open_input([Path(__file__).parent / "resources" / "audio_start_offset.mp4"])
+    assert video.sources[0].start_time is not None
+    assert abs(float(video.sources[0].start_time) - 1.936) < 0.01
+    encoder = FFmpegPipeEncoder(
+        video_input=video, frame_rate=10.0, output_dir=tmp_path, comp_file=None
+    )
+    # Event covering 1.0s - 2.5s of the input: the tone should start 0.5s into the clip.
+    event_start = 1.0
+    for i in range(15):
+        encoder.write_frame(_make_frame(size=(64, 48)), _tc(event_start + i / 10.0))
+    encoder.finish_event(_event(1, event_start, event_start + 1.5))
+    encoder.close()
+    output = tmp_path / "audio_start_offset.DSME_0001.mp4"
+    assert abs(_beep_onset(output) - 0.5) < 0.05
 
 
 def _make_source_info(

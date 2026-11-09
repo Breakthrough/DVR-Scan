@@ -9,15 +9,18 @@
 # LICENSE file, or visit one of the above pages for details.
 #
 
-"""Startup mode selection for the DVR-Scan application (Scan Wizard vs. classic view).
+"""Startup mode selection for the DVR-Scan application (Scan Wizard vs. Advanced Mode).
 
 The ``startup-mode`` config option holds the user's default. The code default is
-``classic`` so existing installs keep the full settings view, while the config template
+``advanced`` so existing installs keep the full settings view, while the config template
 shipped with the installer sets ``wizard`` so fresh installs start in the Scan Wizard.
 Installs without any user config file (e.g. pip or portable) fall back to a one-time
 heuristic: if DVR-Scan has written log files before, the user is treated as an existing
-user (classic), otherwise as a new one (wizard). The result is persisted to the user
+user (Advanced Mode), otherwise as a new one (wizard). The result is persisted to the user
 config so later runs agree (the first run itself writes a log file).
+
+The legacy value ``classic`` (the name of Advanced Mode during 2.0 development) is still
+accepted wherever a startup mode is read, and is normalized to ``advanced``.
 
 The ``--startup-mode`` command line option overrides the default for a single launch.
 """
@@ -26,16 +29,30 @@ import logging
 import typing as ty
 from pathlib import Path
 
-from dvr_scan.config import CHOICE_MAP, CONFIG_MAP, ConfigRegistry, set_user_config_option
+from dvr_scan.config import (
+    CHOICE_MAP,
+    CONFIG_MAP,
+    ConfigRegistry,
+    normalize_choice,
+    set_user_config_option,
+)
 
 logger = logging.getLogger("dvr_scan")
 
 STARTUP_MODE_OPTION = "startup-mode"
 WIZARD = "wizard"
-CLASSIC = "classic"
+ADVANCED = "advanced"
+# Name used in code for Advanced Mode (the full settings window); the value is "advanced".
+CLASSIC = ADVANCED
 # Matches current (`dvr-scan-app.<random>.log`, `dvr-scan.<random>.log`) and legacy
 # (`dvr-scan-app.log`, `dvr-scan.log`) log file names.
 LOG_GLOB = "dvr-scan*.log"
+
+
+def normalize_startup_mode(mode: str) -> str:
+    """Lowercase `mode` and map the legacy alias "classic" to "advanced". Does not
+    validate; unknown values are returned lowercased."""
+    return normalize_choice(STARTUP_MODE_OPTION, str(mode)).strip().lower()
 
 
 def has_prior_logs(log_dir: Path, exclude: ty.Optional[Path] = None) -> bool:
@@ -68,25 +85,26 @@ def resolve_default_startup_mode(
             nothing should be written to the user config).
 
     Returns:
-        (mode, needs_persist): `mode` is "wizard" or "classic". `needs_persist` is True
+        (mode, needs_persist): `mode` is "wizard" or "advanced". `needs_persist` is True
         when the mode was chosen by the first-run heuristic and should be written to the
         user config so later runs agree.
     """
     if not config.is_default(STARTUP_MODE_OPTION):
-        return str(config.get(STARTUP_MODE_OPTION)).lower(), False
+        return normalize_startup_mode(config.get(STARTUP_MODE_OPTION)), False
     if allow_heuristic and not user_config_exists:
         return (CLASSIC if prior_logs else WIZARD), True
-    return str(CONFIG_MAP[STARTUP_MODE_OPTION]).lower(), False
+    return normalize_startup_mode(CONFIG_MAP[STARTUP_MODE_OPTION]), False
 
 
 def save_startup_mode(mode: str, path: ty.Optional[Path] = None) -> Path:
     """Persist `mode` as the default startup mode in the user config file (or `path`).
+    The legacy alias "classic" is written as "advanced".
 
     Raises:
         ValueError: `mode` is not a valid startup mode.
         OSError: The config file could not be written.
     """
-    mode = mode.lower()
+    mode = normalize_startup_mode(mode)
     if mode not in CHOICE_MAP[STARTUP_MODE_OPTION]:
         raise ValueError(f"invalid startup mode: {mode!r}")
     return set_user_config_option(STARTUP_MODE_OPTION, mode, path)

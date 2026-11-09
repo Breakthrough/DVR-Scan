@@ -92,6 +92,9 @@ class SourceInfo:
     has_subtitles: bool
     duration: Fraction
     """Duration of the video stream in seconds (exact rational value)."""
+    start_time: ty.Optional[Fraction] = None
+    """Container start time in seconds (the earliest start of any stream), or None if
+    unknown. ffmpeg offsets input seeks (-ss) by this value."""
 
 
 EventSpan = SourceSpan
@@ -167,6 +170,9 @@ def probe_source(path: ty.Union[str, Path]) -> SourceInfo:
             audio=audio_info,
             has_subtitles=len(container.streams.subtitles) > 0,
             duration=duration,
+            start_time=Fraction(container.start_time, av.time_base)
+            if container.start_time is not None
+            else None,
         )
     finally:
         container.close()

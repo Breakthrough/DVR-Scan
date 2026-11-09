@@ -18,9 +18,12 @@ the constants defined here for use by the CLI/config file may differ from their 
 in the `dvr_scan` module.
 """
 
+import locale
 import logging
+import os
 import re
 import shutil
+import stat
 import typing as ty
 from abc import ABC, abstractmethod
 from configparser import DEFAULTSECT, ConfigParser
@@ -313,31 +316,93 @@ USER_CONFIG_FILE_PATH: Path = _CONFIG_FILE_DIR / _CONFIG_FILE_NAME
 _UTF8_BOM = b"\xef\xbb\xbf"
 
 
-def atomic_write_text(path: Path, text: str, encoding: ty.Optional[str] = None):
+def decode_config_bytes(raw: bytes) -> ty.Tuple[str, str]:
+    """Decode the contents of a config file. Files are decoded as UTF-8 (with or without a
+    BOM), falling back to the locale encoding for files written by older versions or by
+    editors using the system code page. Line endings are normalized to LF.
+
+    Returns:
+        (text, encoding) where `encoding` is the codec to write the file back with:
+        `utf-8-sig` if the file starts with a UTF-8 BOM, `utf-8`, or the locale encoding.
+
+    Raises:
+        UnicodeDecodeError: The file is neither valid UTF-8 nor valid in the locale encoding.
+    """
+    try:
+        text = raw.decode("utf-8-sig")
+        encoding = "utf-8-sig" if raw.startswith(_UTF8_BOM) else "utf-8"
+    except UnicodeDecodeError:
+        encoding = locale.getpreferredencoding(False)
+        text = raw.decode(encoding)
+    return text.replace("\r\n", "\n").replace("\r", "\n"), encoding
+
+
+def read_config_file(path: Path) -> ty.Tuple[str, str]:
+    """Read the config file at `path`. See `decode_config_bytes` for the return value.
+
+    Raises:
+        OSError: The file could not be read.
+        UnicodeDecodeError: The file could not be decoded.
+    """
+    return decode_config_bytes(Path(path).read_bytes())
+
+
+def _existing_newline(path: Path) -> str:
+    """Line ending style of the existing file at `path` (CRLF if it has any CRLF line
+    endings, otherwise LF), or the platform default if it does not exist."""
+    try:
+        raw = path.read_bytes()
+    except OSError:
+        return os.linesep
+    return "\r\n" if b"\r\n" in raw else "\n"
+
+
+def atomic_write_text(
+    path: Path, text: str, encoding: str = "utf-8", newline: ty.Optional[str] = None
+):
     """Write `text` to `path` atomically (temp file in the same folder, then replace),
-    creating parent folders as required. `encoding` defaults to the locale encoding, which
-    is what `ConfigRegistry.load` reads config files with. An existing file's permission
-    bits are kept.
+    creating parent folders as required. `text` must use LF line endings, which are written
+    as `newline`: by default the style of the existing file at `path` is kept, and the
+    platform default is used for new files. On POSIX, an existing file's permission bits
+    are kept. The temporary file is removed if the write fails.
 
     Raises:
         OSError: The file could not be written.
         UnicodeError: `text` cannot be represented in `encoding`.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
+    if newline is None:
+        newline = _existing_newline(path)
     tmp = NamedTemporaryFile(
-        mode="w", dir=path.parent, suffix=".tmp", delete=False, encoding=encoding
+        mode="w",
+        dir=path.parent,
+        suffix=".tmp",
+        delete=False,
+        encoding=encoding,
+        newline=newline,
     )
+    tmp_path = Path(tmp.name)
     try:
         with tmp:
             tmp.write(text)
-        if path.exists():
+        # On Windows the only mode bit is read-only, and copying it would make both the
+        # replace and the cleanup below fail (leaving the temp file behind).
+        if os.name != "nt" and path.exists():
             try:
-                shutil.copymode(path, tmp.name)
+                shutil.copymode(path, tmp_path)
             except OSError:
                 pass
-        Path(tmp.name).replace(path)
+        tmp_path.replace(path)
     except BaseException:
-        Path(tmp.name).unlink(missing_ok=True)
+        # Never let a cleanup failure mask the original error.
+        try:
+            tmp_path.unlink(missing_ok=True)
+        except OSError:
+            try:
+                os.chmod(tmp_path, stat.S_IREAD | stat.S_IWRITE)
+                tmp_path.unlink(missing_ok=True)
+            except OSError:
+                pass
         raise
 
 
@@ -346,8 +411,9 @@ def set_user_config_option(option: str, value: str, path: ty.Optional[Path] = No
     every other line and comment. The first active line setting `option` (any case, as
     config keys are case-insensitive) is replaced along with any indented continuation
     lines; if there is none, the first commented-out one is; otherwise the option is
-    appended. The file is created if it does not exist. Files are read and written in the
-    locale encoding like `ConfigRegistry.load`, or as UTF-8 if they start with a BOM.
+    appended. The file is created if it does not exist. Existing files keep their encoding
+    (UTF-8 with or without a BOM, or the locale encoding for files that are not valid UTF-8;
+    see `decode_config_bytes`) and line ending style; new files are written as UTF-8.
 
     Returns:
         Path the option was written to.
@@ -360,14 +426,9 @@ def set_user_config_option(option: str, value: str, path: ty.Optional[Path] = No
     if path is None:
         path = USER_CONFIG_FILE_PATH
     new_line = f"{option} = {value}"
-    encoding = None
+    encoding = "utf-8"
     if path.exists():
-        raw = path.read_bytes()
-        if raw.startswith(_UTF8_BOM):
-            encoding = "utf-8-sig"
-        # Decode via text mode semantics (universal newlines) in the chosen encoding.
-        with open(path, encoding=encoding) as file:
-            text = file.read()
+        text, encoding = read_config_file(path)
         lines = text.split("\n")
         if lines and lines[-1] == "":
             lines.pop()
@@ -405,10 +466,11 @@ def set_user_config_option(option: str, value: str, path: ty.Optional[Path] = No
 CONFIG_MAP: ConfigDict = {
     # General Options
     "quiet-mode": False,
-    # Application (dvr-scan-app only). The code default is `classic` so existing installs
-    # keep the full settings view; the shipped config template sets `wizard`, so fresh
-    # installs (which receive the template) start in the Scan Wizard. See app/startup.py.
-    "startup-mode": "classic",
+    # Application (dvr-scan-app only). The code default is `advanced` so existing installs
+    # keep the full settings view (Advanced Mode); the shipped config template sets `wizard`,
+    # so fresh installs (which receive the template) start in the Scan Wizard. See
+    # app/startup.py.
+    "startup-mode": "advanced",
     # Input/Output
     "encode-args": DEFAULT_ENCODE_ARGS,
     "ffmpeg-input-args": DEFAULT_FFMPEG_INPUT_ARGS,
@@ -484,12 +546,26 @@ CHOICE_MAP: ty.Dict[str, ty.List[str]] = {
     "verbosity": ["debug", "info", "warning", "error"],
     "bg-subtractor": ["MOG2", "CNT", "MOG2_CUDA"],
     "thumbnails": ["highscore"],
-    "startup-mode": ["wizard", "classic"],
+    "startup-mode": ["wizard", "advanced"],
     "timecode-list-format": ["parts", "timecodes", "lines"],
 }
 """Mapping of string options which can only be of a particular set of values. We use a list instead
 of a set to preserve order when generating error contexts. Values are case-insensitive, and must be
 in lowercase in this map."""
+
+CHOICE_ALIASES: ty.Dict[str, ty.Dict[str, str]] = {
+    # `classic` was the name of Advanced Mode during 2.0 development.
+    "startup-mode": {"classic": "advanced"},
+}
+"""Legacy values still accepted for options in `CHOICE_MAP`, mapped to the value they are
+normalized to. Keys must be lowercase. Aliases are not listed in help text or error messages."""
+
+
+def normalize_choice(option: str, value: str) -> str:
+    """Map a legacy alias (any case) of a `CHOICE_MAP` value of `option` to its current
+    value. Other values are returned unchanged."""
+    return CHOICE_ALIASES.get(option, {}).get(value.strip().lower(), value)
+
 
 APP_ONLY_OPTIONS: ty.FrozenSet[str] = frozenset(
     {
@@ -570,9 +646,14 @@ class ConfigRegistry:
             self._log(log_level, "Loading user config file:\n  %s" % path)
         # Try to load and parse the config file at `path`.
         try:
-            with open(path) as config_file:
-                config_file_contents = config_file.read()
+            config_file_contents, _ = read_config_file(path)
         except OSError as ex:
+            raise ConfigLoadFailure(self._init_log, reason=ex) from ex
+        except UnicodeError as ex:
+            self._log(
+                logging.ERROR,
+                "Failed to decode config file %s: it must be saved as UTF-8 text." % path,
+            )
             raise ConfigLoadFailure(self._init_log, reason=ex) from ex
         self._load_string(config_file_contents, source=str(path))
 
@@ -682,6 +763,7 @@ class ConfigRegistry:
             # replace newlines with spaces, and strip any remaining leading/trailing whitespace.
             if value_type is None:
                 config_value = config.get(DEFAULTSECT, option).replace("\n", " ").strip()
+                config_value = normalize_choice(option, config_value)
                 if option in CHOICE_MAP:
                     if config_value.lower() not in [
                         choice.lower() for choice in CHOICE_MAP[option]

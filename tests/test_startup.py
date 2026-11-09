@@ -8,16 +8,18 @@
 # DVR-Scan is licensed under the BSD 2-Clause License; see the included
 # LICENSE file, or visit one of the above pages for details.
 #
-"""Tests for application startup mode selection (wizard vs. classic) and the config
+"""Tests for application startup mode selection (wizard vs. Advanced Mode) and the config
 file line editor behind it. All Tk-free."""
 
 import pytest
 
 from dvr_scan.app.__main__ import get_cli_parser
 from dvr_scan.app.startup import (
+    ADVANCED,
     CLASSIC,
     WIZARD,
     has_prior_logs,
+    normalize_startup_mode,
     resolve_default_startup_mode,
     save_startup_mode,
 )
@@ -48,9 +50,9 @@ def _config(contents: str = "") -> ConfigRegistry:
 def test_set_option_replaces_commented_line(tmp_path):
     path = tmp_path / "dvr-scan.cfg"
     path.write_text(TEMPLATE)
-    assert set_user_config_option("startup-mode", "classic", path) == path
+    assert set_user_config_option("startup-mode", "advanced", path) == path
     text = path.read_text()
-    assert "startup-mode = classic\n" in text
+    assert "startup-mode = advanced\n" in text
     assert "#startup-mode" not in text
     # Everything else is untouched.
     assert "# Some comment that must survive.\n" in text
@@ -60,14 +62,14 @@ def test_set_option_replaces_commented_line(tmp_path):
 
 def test_set_option_replaces_active_line(tmp_path):
     path = tmp_path / "dvr-scan.cfg"
-    path.write_text("startup-mode = classic\nthreshold = 0.5\n")
+    path.write_text("startup-mode = advanced\nthreshold = 0.5\n")
     set_user_config_option("startup-mode", "wizard", path)
     assert path.read_text() == "startup-mode = wizard\nthreshold = 0.5\n"
 
 
 def test_set_option_prefers_active_over_commented_line(tmp_path):
     path = tmp_path / "dvr-scan.cfg"
-    path.write_text("#startup-mode = WIZARD\nstartup-mode = classic\n")
+    path.write_text("#startup-mode = WIZARD\nstartup-mode = advanced\n")
     set_user_config_option("startup-mode", "wizard", path)
     assert path.read_text() == "#startup-mode = WIZARD\nstartup-mode = wizard\n"
 
@@ -92,10 +94,10 @@ def test_set_option_creates_missing_file_with_header(tmp_path):
 def test_set_option_result_loads_cleanly(tmp_path):
     path = tmp_path / "dvr-scan.cfg"
     path.write_text(TEMPLATE)
-    set_user_config_option("startup-mode", "classic", path)
+    set_user_config_option("startup-mode", "advanced", path)
     config = ConfigRegistry()
     config.load(path)
-    assert config.get("startup-mode") == "classic"
+    assert config.get("startup-mode") == "advanced"
     assert config.get("threshold") == 0.5
 
 
@@ -117,6 +119,35 @@ def test_save_startup_mode_lowercases_and_validates(tmp_path):
     assert "startup-mode = wizard" in path.read_text()
     with pytest.raises(ValueError):
         save_startup_mode("sideways", path)
+
+
+def test_save_startup_mode_writes_legacy_classic_as_advanced(tmp_path):
+    path = tmp_path / "dvr-scan.cfg"
+    save_startup_mode("Classic", path)
+    assert "startup-mode = advanced" in path.read_text()
+    config = ConfigRegistry()
+    config.load(path)
+    assert config.get("startup-mode") == ADVANCED
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        ("wizard", WIZARD),
+        (" Wizard ", WIZARD),
+        ("advanced", ADVANCED),
+        ("ADVANCED", ADVANCED),
+        ("classic", ADVANCED),
+        ("Classic", ADVANCED),
+        ("sideways", "sideways"),
+    ],
+)
+def test_normalize_startup_mode(value, expected):
+    assert normalize_startup_mode(value) == expected
+
+
+def test_classic_constant_is_advanced():
+    assert CLASSIC == ADVANCED == "advanced"
 
 
 #
@@ -167,7 +198,7 @@ def test_resolve_explicit_config_value_wins(value):
             ) == (WIZARD, False)
 
 
-def test_resolve_existing_config_without_option_is_classic():
+def test_resolve_existing_config_without_option_is_advanced():
     assert resolve_default_startup_mode(
         _config(), user_config_exists=True, prior_logs=False, allow_heuristic=True
     ) == (CLASSIC, False)
@@ -179,10 +210,18 @@ def test_resolve_heuristic_new_user_is_wizard_and_persists():
     ) == (WIZARD, True)
 
 
-def test_resolve_heuristic_existing_user_is_classic_and_persists():
+def test_resolve_heuristic_existing_user_is_advanced_and_persists():
     assert resolve_default_startup_mode(
         _config(), user_config_exists=False, prior_logs=True, allow_heuristic=True
     ) == (CLASSIC, True)
+
+
+@pytest.mark.parametrize("value", ["advanced", "Advanced", "classic", "CLASSIC"])
+def test_resolve_explicit_advanced_or_legacy_classic(value):
+    config = _config(f"startup-mode = {value}\n")
+    assert resolve_default_startup_mode(
+        config, user_config_exists=True, prior_logs=False, allow_heuristic=True
+    ) == (ADVANCED, False)
 
 
 def test_resolve_heuristic_disabled_falls_back_to_default():
@@ -196,11 +235,14 @@ def test_resolve_heuristic_disabled_falls_back_to_default():
 #
 
 
-def test_cli_startup_mode_option():
-    args = get_cli_parser().parse_args(["--startup-mode", "Classic"])
-    assert args.startup_mode == "classic"
-    args = get_cli_parser().parse_args(["--startup-mode", "wizard"])
-    assert args.startup_mode == "wizard"
+@pytest.mark.parametrize(
+    "value,expected",
+    [("wizard", WIZARD), ("Advanced", ADVANCED), ("advanced", ADVANCED), ("Classic", ADVANCED)],
+)
+def test_cli_startup_mode_option(value, expected):
+    # The legacy name "classic" is still accepted, as an alias of "advanced".
+    args = get_cli_parser().parse_args(["--startup-mode", value])
+    assert args.startup_mode == expected
 
 
 def test_cli_startup_mode_absent_by_default():
@@ -220,30 +262,30 @@ def test_cli_startup_mode_rejects_invalid():
 def test_set_option_matches_key_case_insensitively(tmp_path):
     path = tmp_path / "dvr-scan.cfg"
     path.write_text("STARTUP-MODE = WIZARD\nthreshold = 0.5\n")
-    set_user_config_option("startup-mode", "classic", path)
-    assert path.read_text() == "startup-mode = classic\nthreshold = 0.5\n"
+    set_user_config_option("startup-mode", "advanced", path)
+    assert path.read_text() == "startup-mode = advanced\nthreshold = 0.5\n"
     config = ConfigRegistry()
     config.load(path)
-    assert config.get("startup-mode") == "classic"
+    assert config.get("startup-mode") == "advanced"
 
 
 def test_set_option_replaces_multiline_value(tmp_path):
     path = tmp_path / "dvr-scan.cfg"
     path.write_text("startup-mode =\n    wizard\n\tmore\nthreshold = 0.5\n")
-    set_user_config_option("startup-mode", "classic", path)
-    assert path.read_text() == "startup-mode = classic\nthreshold = 0.5\n"
+    set_user_config_option("startup-mode", "advanced", path)
+    assert path.read_text() == "startup-mode = advanced\nthreshold = 0.5\n"
 
 
 def test_set_option_keeps_utf8_bom_file_as_utf8(tmp_path):
     path = tmp_path / "dvr-scan.cfg"
     path.write_bytes(b"\xef\xbb\xbfstartup-mode = wizard\noutput-dir = C:/caf\xc3\xa9\n")
-    set_user_config_option("startup-mode", "classic", path)
+    set_user_config_option("startup-mode", "advanced", path)
     raw = path.read_bytes()
     assert raw.startswith(b"\xef\xbb\xbf")
     assert raw.count(b"startup-mode") == 1
     # Text mode writes platform newlines (CRLF on Windows); compare on normalized text.
     text = raw.decode("utf-8-sig").replace("\r\n", "\n")
-    assert "startup-mode = classic\n" in text
+    assert "startup-mode = advanced\n" in text
     assert "output-dir = C:/caf\u00e9\n" in text
 
 
@@ -252,8 +294,8 @@ def test_set_option_round_trips_locale_encoded_text(tmp_path):
     values written by the app survive a startup-mode toggle."""
     path = tmp_path / "dvr-scan.cfg"
     path.write_text("output-dir = C:/Users/Jos\u00e9/Videos\n")
-    set_user_config_option("startup-mode", "classic", path)
-    assert path.read_text() == "output-dir = C:/Users/Jos\u00e9/Videos\n\nstartup-mode = classic\n"
+    set_user_config_option("startup-mode", "advanced", path)
+    assert path.read_text() == "output-dir = C:/Users/Jos\u00e9/Videos\n\nstartup-mode = advanced\n"
     config = ConfigRegistry()
     config.load(path)
     assert config.get("output-dir") == "C:/Users/Jos\u00e9/Videos"

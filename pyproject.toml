@@ -49,6 +49,9 @@ dependencies = [
     "numpy",
     "platformdirs",
     "scenedetect[pyav]~=0.7.2",
+    # video_input.py imports av directly (probing, audio stream info); keep it explicit
+    # even though scenedetect[pyav] also pulls it in.
+    "av",
     "tqdm",
     "pillow",
     "opencv-contrib-python",
