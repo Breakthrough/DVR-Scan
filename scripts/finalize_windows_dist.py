@@ -184,10 +184,13 @@ def write_manifests(staging: Path, portable_zip: Path, msi: Path) -> None:
 
     manifest_path = staging / manifest_name(VERSION)
     sums_path = staging / "SHA256SUMS"
-    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    # LF line endings regardless of host OS: `sha256sum -c SHA256SUMS` on Linux/macOS
+    # rejects CRLF lines ("<name>\r: No such file or directory").
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8", newline="\n")
     sums_path.write_text(
         f"{msi_digest}  {msi.name}\n{portable_digest}  {portable_zip.name}\n",
         encoding="utf-8",
+        newline="\n",
     )
     print(f"Wrote {manifest_path.name}")
     print(f"Wrote {sums_path.name}")

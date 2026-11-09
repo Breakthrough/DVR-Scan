@@ -6,6 +6,8 @@
 
 ### Latest Release: v2.0 (November 8, 2026)
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24071229.svg)](https://doi.org/10.5281/zenodo.24071229)
+
 **Website**: [dvr-scan.com](https://www.dvr-scan.com)
 
 **User Guide**: [dvr-scan.com/guide](https://www.dvr-scan.com/guide/)

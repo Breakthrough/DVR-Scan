@@ -10,3 +10,13 @@ repository-code: 'https://github.com/Breakthrough/DVR-Scan'
 url: 'https://www.dvr-scan.com'
 abstract: Video Motion Event Detection and Extraction Tool
 license: BSD-2-Clause
+version: '2.0'
+date-released: '2026-11-09'
+doi: 10.5281/zenodo.24071230
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.24071229
+    description: Concept DOI for all versions of DVR-Scan
+  - type: doi
+    value: 10.5281/zenodo.24071230
+    description: DOI for DVR-Scan v2.0
