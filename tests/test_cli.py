@@ -675,3 +675,23 @@ def test_main_logs_io_errors_without_traceback(monkeypatch, caplog, error):
     (record,) = [record for record in caplog.records if record.levelno == logging.CRITICAL]
     assert str(error) in record.getMessage()
     assert not record.exc_info
+
+
+@pytest.mark.parametrize("regions", [[], ["631 532 841 532 841 659 631 659"]])
+def test_save_region_writes_scanned_area(tmp_path, regions):
+    """`-s/--save-region` writes the regions that were scanned: the ones given with
+    `-a/--add-region`, or the full frame when no regions were set."""
+    from dvr_scan.region import Point, load_regions
+
+    region_file = tmp_path / "regions.txt"
+    args = ["--input", "tests/resources/traffic_camera.mp4", "--ignore-user-config"]
+    args += ["--scan-only", "--end-time", "00:00:01", "--save-region", region_file]
+    for region in regions:
+        args += ["--add-region", region]
+    _run_dvr_scan(args)
+
+    saved = load_regions(region_file)
+    if regions:
+        assert saved == [[Point(631, 532), Point(841, 532), Point(841, 659), Point(631, 659)]]
+    else:
+        assert saved == [[Point(0, 0), Point(1279, 0), Point(1279, 719), Point(0, 719)]]

@@ -16,7 +16,6 @@ import pytest
 from dvr_scan.app.__main__ import get_cli_parser
 from dvr_scan.app.startup import (
     ADVANCED,
-    CLASSIC,
     WIZARD,
     has_prior_logs,
     normalize_startup_mode,
@@ -146,10 +145,6 @@ def test_normalize_startup_mode(value, expected):
     assert normalize_startup_mode(value) == expected
 
 
-def test_classic_constant_is_advanced():
-    assert CLASSIC == ADVANCED == "advanced"
-
-
 #
 # has_prior_logs
 #
@@ -201,7 +196,7 @@ def test_resolve_explicit_config_value_wins(value):
 def test_resolve_existing_config_without_option_is_advanced():
     assert resolve_default_startup_mode(
         _config(), user_config_exists=True, prior_logs=False, allow_heuristic=True
-    ) == (CLASSIC, False)
+    ) == (ADVANCED, False)
 
 
 def test_resolve_heuristic_new_user_is_wizard_and_persists():
@@ -213,7 +208,7 @@ def test_resolve_heuristic_new_user_is_wizard_and_persists():
 def test_resolve_heuristic_existing_user_is_advanced_and_persists():
     assert resolve_default_startup_mode(
         _config(), user_config_exists=False, prior_logs=True, allow_heuristic=True
-    ) == (CLASSIC, True)
+    ) == (ADVANCED, True)
 
 
 @pytest.mark.parametrize("value", ["advanced", "Advanced", "classic", "CLASSIC"])
@@ -227,7 +222,7 @@ def test_resolve_explicit_advanced_or_legacy_classic(value):
 def test_resolve_heuristic_disabled_falls_back_to_default():
     assert resolve_default_startup_mode(
         _config(), user_config_exists=False, prior_logs=False, allow_heuristic=False
-    ) == (CLASSIC, False)
+    ) == (ADVANCED, False)
 
 
 #

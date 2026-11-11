@@ -19,42 +19,41 @@ import tkinter as tk
 import tkinter.filedialog
 import tkinter.messagebox
 import tkinter.ttk as ttk
-import traceback
 import typing as ty
-import webbrowser
 from logging import getLogger
 from pathlib import Path
 
 import PIL
 import PIL.Image
 import PIL.ImageTk
-from scenedetect import VideoOpenFailure
 from tkinterdnd2 import DND_FILES
 
 import dvr_scan
 import dvr_scan.presets as presets
-from dvr_scan.app.about_window import AboutWindow
-from dvr_scan.app.application import (
+from dvr_scan.app.common import (
+    MAX_THRESHOLD,
     PADDING,
-    SORT_FIELDS,
-    finalize_output_names,
+    MenuBar,
+    add_startup_mode_menu,
+    fill_help_menu,
+    register_icon,
 )
-from dvr_scan.app.common import MenuBar, add_startup_mode_menu, register_icon
+from dvr_scan.app.inputs import handle_drop
 from dvr_scan.app.region_editor import ACCELERATOR_KEY
 from dvr_scan.app.scan_window import (
+    SCAN_SETUP_ERRORS,
     ScanProgressView,
     build_event_table,
     prompt_stop_scan,
     save_report,
+    show_scan_setup_error,
 )
 from dvr_scan.app.video_list import VideoList
 from dvr_scan.app.widgets import Spinbox
 from dvr_scan.config import ConfigLoadFailure, ConfigRegistry
 from dvr_scan.platform import is_ffmpeg_available, open_path
 from dvr_scan.scanner import OutputMode
-from dvr_scan.shared import ScanSettings, logfile_path
-from dvr_scan.subtractor import SubtractorCNT
-from dvr_scan.video_input import BackendUnavailable
+from dvr_scan.shared import ScanSettings, finalize_output_names
 
 WIZARD_TITLE = "DVR-Scan"
 MIN_WIZARD_WIDTH = 780
@@ -67,9 +66,6 @@ DROP_ZONE_ACTIVE_OPACITY = 1.0
 # CTA text color (the logo's dominant slate-blue); blended toward the background to match the
 # logo's at-rest opacity.
 DROP_ZONE_TEXT_COLOR = "#474d57"
-# How often the videos step checks if the drop zone should be swapped for the list.
-DROP_ZONE_REFRESH_MS = 250
-MAX_THRESHOLD = 255.0
 MAX_SUMMARY_VIDEOS = 5
 # Output modes which run ffmpeg, and the label suffix shown for them when it is missing.
 FFMPEG_OUTPUT_MODES = frozenset({OutputMode.ENCODE, OutputMode.FFMPEG, OutputMode.COPY})
@@ -187,6 +183,7 @@ class _VideosStep:
         window.dnd_bind("<<DropLeave>>", self._on_drag_leave)
         window.dnd_bind("<<Drop>>", self._on_drop)
 
+        self.input_area.on_changed = self._refresh
         self._refresh()
 
     def _on_drop_zone_click(self, _event=None):
@@ -229,27 +226,17 @@ class _VideosStep:
         self._set_drag_active(False)
         if self._can_accept_drop is not None and not self._can_accept_drop():
             return
-        # Dropped paths are a Tcl list (paths with spaces are wrapped in braces).
-        config_loaded = False
-        for path_str in self._drop_zone.tk.splitlist(event.data):
-            path = Path(path_str)
-            if not path.is_file():
-                logger.info(f"Ignoring dropped item (not a file): {path}")
-                continue
-            if path.suffix.lower() == ".cfg":
-                # Like the Advanced Mode window: a dropped config file is loaded as the
-                # active settings, and only the first one wins.
-                if self._on_load_config is None or config_loaded:
-                    logger.warning(f"Ignoring dropped config file: {path}")
-                    continue
-                config_loaded = self._on_load_config(str(path))
-                continue
-            self.input_area.add_video(str(path), parent=self._window)
-        self._refresh()
+        # Like the Advanced Mode window, a dropped config file is loaded as the active settings.
+        handle_drop(
+            self._drop_zone,
+            event.data,
+            add_video=lambda path: self.input_area.add_video(path, parent=self._window),
+            load_config=self._on_load_config,
+        )
 
     def _refresh(self):
-        """Show the drop zone when the video list is empty, the list otherwise.
-        Re-checks periodically since the list can change via the Add/Remove buttons."""
+        """Show the drop zone when the video list is empty, the list otherwise, and notify
+        the wizard. Runs whenever the list changes (`VideoList.on_changed`)."""
         if not self.frame.winfo_exists():
             return
         if self.input_area.videos:
@@ -260,7 +247,6 @@ class _VideosStep:
             self._drop_zone.grid()
         if self._on_state_changed is not None:
             self._on_state_changed()
-        self.frame.after(DROP_ZONE_REFRESH_MS, self._refresh)
 
     def on_show(self):
         pass
@@ -269,23 +255,6 @@ class _VideosStep:
         if not self.input_area.videos:
             return "Add at least one video to scan."
         return None
-
-
-def _available_presets() -> ty.List[presets.Preset]:
-    """Built-in and user presets, minus any whose background subtractor is not available
-    (e.g. Fast Scan uses CNT, which pip installs can lack when the regular OpenCV package
-    was installed over the contrib build)."""
-    available = []
-    for preset in presets.list_presets():
-        subtractor = (preset.overrides or {}).get("bg-subtractor", "").upper()
-        if subtractor == "CNT" and not SubtractorCNT.is_available():
-            logger.warning(
-                "Hiding preset %s: the CNT subtractor is not available in this install.",
-                preset.name,
-            )
-            continue
-        available.append(preset)
-    return available
 
 
 class _PresetStep:
@@ -323,7 +292,7 @@ class _PresetStep:
         self._presets: ty.Dict[str, presets.Preset] = {}
         self._active_preset: ty.Optional[str] = active_preset
         # Set once the dropdown has been populated from `active_preset` or synced from
-        # classic mode, so a later `on_show` does not override the user's selection.
+        # Advanced Mode, so a later `on_show` does not override the user's selection.
         self._combo_initialized = False
         if base_config is not None:
             self.config = copy.deepcopy(base_config)
@@ -394,8 +363,7 @@ class _PresetStep:
         try:
             config = presets.load_preset(preset)
         except ConfigLoadFailure as ex:
-            for log_level, log_str in ex.init_log:
-                logger.log(log_level, log_str)
+            ex.log(logger)
             tkinter.messagebox.showerror(
                 title="Preset Load Failure",
                 message=f"Failed to load preset: {preset.name}. See log messages for details.",
@@ -419,7 +387,7 @@ class _PresetStep:
         first (e.g. a config file that was just loaded)."""
         if config is not None:
             self.config = copy.deepcopy(config)
-        self._presets = {preset.name: preset for preset in _available_presets()}
+        self._presets = {preset.name: preset for preset in presets.list_available_presets()}
         self._combo["values"] = list(self._presets)
         self._combo_initialized = True
         if active_preset and active_preset in self._presets:
@@ -430,13 +398,13 @@ class _PresetStep:
             self._combo.set("")
             self._active_preset = None
         for key, value in settings.app_settings.items():
-            if key in self.config.config_dict:
-                self.config._config[key] = value
+            if not self.config.is_default(key):
+                self.config.set(key, value)
         self._threshold.set(str(settings.get("threshold")))
         self._update_description()
 
     def on_show(self):
-        self._presets = {preset.name: preset for preset in _available_presets()}
+        self._presets = {preset.name: preset for preset in presets.list_available_presets()}
         self._combo["values"] = list(self._presets)
         if not self._combo_initialized:
             self._combo_initialized = True
@@ -562,12 +530,7 @@ class _OutputStep:
             self._directory_label.set("No Directory Selected")
 
     def sync_from_settings(self, settings: ScanSettings):
-        raw_mode = settings.get("output-mode")
-        output_mode = (
-            raw_mode
-            if isinstance(raw_mode, OutputMode)
-            else OutputMode[str(raw_mode).upper().replace("-", "_")]
-        )
+        output_mode = OutputMode.parse(settings.get("output-mode"))
         if output_mode in FFMPEG_OUTPUT_MODES and not self._ffmpeg_available:
             # Even if set explicitly: the mode can't run, so start from one that can.
             logger.info(f"ffmpeg not found, using OpenCV output instead of {output_mode.name}.")
@@ -729,12 +692,19 @@ class ScanWizard:
     `Application`, which provides callbacks for switching back to Advanced Mode. The
     scan runs in-place on the final step rather than in a separate window."""
 
+    # Defaults for state set in `__init__`. They exist for tests, which build bare instances
+    # with `__new__` and set only the attributes the method under test reads.
+    _scanning = False
+    _browse_in_progress = False
+    _scan_index = -1
+    _get_scan_overrides = None
+
     def __init__(
         self,
         root: tk.Tk,
         settings: ScanSettings,
         on_close: ty.Callable[[], None],
-        on_switch_to_classic: ty.Callable[[ty.List[str]], None],
+        on_switch_to_advanced: ty.Callable[[ty.List[str]], None],
         on_preset_applied: ty.Callable[[presets.Preset, ConfigRegistry], None],
         startup_mode_var: tk.StringVar,
         on_startup_mode_changed: ty.Callable[[], None],
@@ -751,9 +721,9 @@ class ScanWizard:
         time, regions), given the first input video and its resolution (w, h)."""
         self._settings = settings
         self._on_close = on_close
-        self._on_switch_to_classic = on_switch_to_classic
+        self._on_switch_to_advanced = on_switch_to_advanced
         self._get_scan_overrides = get_scan_overrides
-        # Shared with the classic window so both Startup Mode menus stay in sync.
+        # Shared with the Advanced Mode window so both Startup Mode menus stay in sync.
         self._startup_mode_var = startup_mode_var
         self._on_startup_mode_changed = on_startup_mode_changed
         self._scan_view: ty.Optional[ScanProgressView] = None
@@ -813,8 +783,8 @@ class ScanWizard:
         buttons.grid(row=3, column=0, sticky=tk.EW, padx=PADDING, pady=PADDING)
         buttons.columnconfigure(1, weight=1)
 
-        self._classic_button = ttk.Button(buttons, text="Advanced Mode", command=self._on_switch)
-        self._classic_button.grid(row=0, column=0, sticky=tk.W)
+        self._advanced_button = ttk.Button(buttons, text="Advanced Mode", command=self._on_switch)
+        self._advanced_button.grid(row=0, column=0, sticky=tk.W)
         self._back_button = ttk.Button(buttons, text="< Back", command=self._on_back)
         self._back_button.grid(row=0, column=2, padx=(PADDING, 0))
         self._open_dir_button = ttk.Button(
@@ -857,16 +827,14 @@ class ScanWizard:
     def _scan_overrides(self) -> ty.Dict[str, ty.Any]:
         """Settings made in Advanced Mode (start/end time, regions) to apply to a scan of
         the wizard's videos. Empty if there are no videos or no Advanced Mode settings."""
-        get_overrides = getattr(self, "_get_scan_overrides", None)
+        get_overrides = self._get_scan_overrides
         videos = self.videos
         if get_overrides is None or not videos:
             return {}
         return get_overrides(videos[0], self._videos_step.input_area.first_video_resolution)
 
     def _can_modify_videos(self) -> bool:
-        return not getattr(self, "_scanning", False) and self._step_index != getattr(
-            self, "_scan_index", -1
-        )
+        return not self._scanning and self._step_index != self._scan_index
 
     def _list_shortcuts_active(self) -> bool:
         """True if the Select All, Remove Selected keyboard shortcuts are active and should
@@ -874,7 +842,7 @@ class ScanWizard:
         has focus (so Ctrl+A / Delete keep their usual text-editing meaning there)."""
         if self._step_index != 0 or not self._can_modify_videos():
             return False
-        if getattr(self, "_browse_in_progress", False):
+        if self._browse_in_progress:
             return False
         try:
             widget = self._window.focus_get()
@@ -899,19 +867,15 @@ class ScanWizard:
         if not self._list_shortcuts_active():
             return None
         self._videos_step.input_area.remove_selected()
-        self._on_videos_state_changed()
         return "break"
 
     def _on_videos_state_changed(self):
         self._refresh_form_nav_state()
-        if hasattr(self, "_header") and self._step_index == 0:
+        if self._step_index == 0:
             self._update_header()
-        # Keep the summary or default output directory up to date if files were dropped
+        # Keep the summary or default output directory up to date if the video list changed
         # while viewing Step 3 or Step 4.
-        if hasattr(self, "_steps") and self._step_index in (
-            self._summary_index - 1,
-            self._summary_index,
-        ):
+        if self._step_index in (self._summary_index - 1, self._summary_index):
             self._steps[self._step_index].on_show()
 
     def set_videos(self, paths: ty.List[str]):
@@ -935,7 +899,7 @@ class ScanWizard:
         if self._step_index == self._summary_index:
             self._steps[self._summary_index].on_show()
 
-    def apply_to_classic(self, motion_window, output_area, scan_area):
+    def apply_to_advanced(self, motion_window, output_area, scan_area):
         """Copy the wizard's current threshold and output choices into Advanced Mode."""
         motion_window._threshold.set(str(self._preset_step.threshold))
         scan_area.scan_only = self._output_step.scan_only
@@ -999,13 +963,9 @@ class ScanWizard:
         self._refresh_form_nav_state()
 
     def _refresh_form_nav_state(self):
-        if (
-            getattr(self, "_scanning", False)
-            or getattr(self, "_browse_in_progress", False)
-            or self._step_index == getattr(self, "_scan_index", -1)
-        ):
+        if self._scanning or self._browse_in_progress or self._step_index == self._scan_index:
             return
-        self._classic_button["state"] = tk.NORMAL
+        self._advanced_button["state"] = tk.NORMAL
         self._back_button["state"] = tk.NORMAL if self._step_index > 0 else tk.DISABLED
         can_advance = self._step_index > 0 or bool(self.videos)
         self._next_button["state"] = tk.NORMAL if can_advance else tk.DISABLED
@@ -1016,7 +976,7 @@ class ScanWizard:
     def _set_form_nav_enabled(self, enabled: bool):
         state = tk.NORMAL if enabled else tk.DISABLED
         for button in (
-            self._classic_button,
+            self._advanced_button,
             self._back_button,
             self._next_button,
         ):
@@ -1029,13 +989,13 @@ class ScanWizard:
         self._new_scan_button.grid_remove()
         self._stop_button.grid()
         self._stop_button["state"] = tk.NORMAL
-        self._classic_button["state"] = tk.DISABLED
+        self._advanced_button["state"] = tk.DISABLED
         self._back_button["state"] = tk.DISABLED
 
     def _show_report_nav(self):
         self._stop_button.grid_remove()
         self._next_button.grid_remove()
-        self._classic_button["state"] = tk.NORMAL
+        self._advanced_button["state"] = tk.NORMAL
         self._back_button["state"] = tk.NORMAL
         view = self._scan_view
         completed = (
@@ -1086,7 +1046,7 @@ class ScanWizard:
         if self._browse_in_progress or self._scanning:
             return
         self.hide()
-        self._on_switch_to_classic(self.videos)
+        self._on_switch_to_advanced(self.videos)
 
     def _on_quit(self):
         if self._scanning:
@@ -1104,9 +1064,9 @@ class ScanWizard:
             self._scan_view.stop()
 
     def _browse_videos(self):
-        if self._browse_in_progress or getattr(self, "_scanning", False):
+        if self._browse_in_progress or self._scanning:
             return
-        if self._step_index == getattr(self, "_scan_index", -1):
+        if self._step_index == self._scan_index:
             return
         had_videos = bool(self.videos)
         self._browse_in_progress = True
@@ -1116,14 +1076,7 @@ class ScanWizard:
         finally:
             self._browse_in_progress = False
             if self._window.winfo_exists() and not self._scanning:
-                self._refresh_form_nav_state()
-                if hasattr(self, "_header") and self._step_index == 0:
-                    self._update_header()
-                if hasattr(self, "_steps") and self._step_index in (
-                    self._summary_index - 1,
-                    self._summary_index,
-                ):
-                    self._steps[self._step_index].on_show()
+                self._on_videos_state_changed()
                 if self._step_index == 0 and not had_videos and self.videos:
                     self._next_button.focus_set()
 
@@ -1148,7 +1101,11 @@ class ScanWizard:
             command=self._browse_videos,
             accelerator="Ctrl+O",
         )
-        file_menu.add_cascade(label="Sort", underline=0, menu=self._build_sort_menu(file_menu))
+        file_menu.add_cascade(
+            label="Sort",
+            underline=0,
+            menu=self._videos_step.input_area.build_sort_menu(file_menu),
+        )
         file_menu.add_command(label="Advanced Mode", underline=0, command=self._on_switch)
         add_startup_mode_menu(file_menu, self._startup_mode_var, self._on_startup_mode_changed)
         file_menu.add_command(label="Quit", underline=0, command=self._on_quit)
@@ -1167,65 +1124,7 @@ class ScanWizard:
             accelerator="Del",
         )
 
-        help_menu = self._menubar.add_menu("Help", underline=0)
-        help_menu.add_command(
-            label="Help Guide",
-            underline=0,
-            command=lambda: webbrowser.open_new_tab("www.dvr-scan.com/guide"),
-        )
-        help_menu.add_command(
-            label="Discord",
-            underline=0,
-            command=lambda: webbrowser.open_new_tab("https://discord.gg/69kf6f2Exb"),
-        )
-        help_menu.add_separator()
-        help_menu.add_command(
-            label="Open Logs",
-            underline=5,
-            command=lambda: open_path(logfile_path("dvr-scan.log").parent),
-        )
-        help_menu.add_command(
-            label="About DVR-Scan",
-            underline=0,
-            command=lambda: AboutWindow().show(root=self._window),
-        )
-
-    def _build_sort_menu(self, parent: tk.Menu) -> tk.Menu:
-        """Build the File > Sort submenu: a radio group of fields, then Ascending/
-        Descending. Picking a field applies that field's default direction."""
-        self._sort_field = tk.StringVar(value=SORT_FIELDS[0][1])
-        self._sort_descending = tk.BooleanVar(value=SORT_FIELDS[0][2])
-        menu = tk.Menu(parent, tearoff=0)
-        for label, column, _default in SORT_FIELDS:
-            menu.add_radiobutton(
-                label=label,
-                variable=self._sort_field,
-                value=column,
-                command=lambda c=column: self._on_sort_field(c),
-            )
-        menu.add_separator()
-        menu.add_radiobutton(
-            label="Ascending",
-            variable=self._sort_descending,
-            value=False,
-            command=self._apply_sort,
-        )
-        menu.add_radiobutton(
-            label="Descending",
-            variable=self._sort_descending,
-            value=True,
-            command=self._apply_sort,
-        )
-        return menu
-
-    def _on_sort_field(self, column: str):
-        # Switching field resets to that field's default direction (Name desc, Date asc).
-        default_descending = next(desc for _label, col, desc in SORT_FIELDS if col == column)
-        self._sort_descending.set(default_descending)
-        self._apply_sort()
-
-    def _apply_sort(self):
-        self._videos_step.input_area.sort_by(self._sort_field.get(), self._sort_descending.get())
+        fill_help_menu(self._menubar.add_menu("Help", underline=0), self._window)
 
     def _start_scan(self):
         settings = ScanSettings(args=self._settings.args, config=self._preset_step.config)
@@ -1252,25 +1151,9 @@ class ScanWizard:
         logger.debug(f"wizard settings:\n{settings.app_settings}")
 
         try:
-            view = ScanProgressView(self._scan_step.body, settings, self._on_scan_finished, PADDING)
-        except BackendUnavailable:
-            tkinter.messagebox.showerror(
-                title="Input Mode Unavailable",
-                message=f"The specified input mode ({settings.get('input-mode')}) "
-                "is not available on this system.",
-                parent=self._window,
-            )
-            return
-        except (VideoOpenFailure, ValueError, OSError) as ex:
-            # Setting up the scanner opens the inputs and the output, e.g. inputs with
-            # different resolutions, a deleted file, ffmpeg missing, a bad output folder.
-            logger.error(f"Failed to start scan: {ex}", exc_info=True)
-            tkinter.messagebox.showerror(
-                title="Scan Error",
-                message=f"Failed to start scan:\n\n{ex}\n\nSee the log for details "
-                "(Help > Open Logs).",
-                parent=self._window,
-            )
+            view = ScanProgressView(self._scan_step.body, settings, self._on_scan_finished)
+        except SCAN_SETUP_ERRORS as ex:
+            show_scan_setup_error(ex, settings, parent=self._window)
             return
         self._scan_view = view
         self._scan_step.set_content(view.frame)
@@ -1291,8 +1174,6 @@ class ScanWizard:
         self._scanning = False
         self._update_header()
         if view.error is not None:
-            formatted = "\n".join(traceback.format_exception(view.error))
-            logger.critical(f"error during scan:\n{formatted}")
             self._scan_step.set_content(self._build_error_panel(view.error))
         elif view.was_stopped or view.result is None:
             self._scan_step.set_content(self._build_stopped_panel(view))

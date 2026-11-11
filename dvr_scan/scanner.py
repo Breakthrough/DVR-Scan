@@ -54,7 +54,7 @@ from dvr_scan.platform import (
     get_min_screen_bounds,
     is_ffmpeg_available,
 )
-from dvr_scan.region import Point, Size, bound_point, load_regions
+from dvr_scan.region import Point, Size, bound_point, load_regions, save_regions
 from dvr_scan.subtractor import SubtractorCNT, SubtractorCudaMOG2, SubtractorMOG2
 from dvr_scan.video_input import VideoStreamConcat, open_input
 
@@ -280,8 +280,7 @@ class MotionScanner:
                 raise ValueError("mask file cannot be absolute path if output directory is set!")
         if len(opencv_fourcc) != 4:
             raise ValueError("codec must be exactly FOUR (4) characters")
-        if not isinstance(output_mode, OutputMode):
-            output_mode = OutputMode[output_mode.upper().replace("-", "_")]
+        output_mode = OutputMode.parse(output_mode)
         encoder_type = get_encoder_type(output_mode)
         multiple_inputs_ok = encoder_type is None or encoder_type.SUPPORTS_MULTIPLE_INPUTS
         if len(self._input.paths) > 1 and not multiple_inputs_ok:
@@ -495,25 +494,20 @@ class MotionScanner:
                 return False
             self._regions = list(region_editor.shapes)
         elif self._save_region:
-            region_editor = (
-                self._regions
-                if self._regions
-                else [
-                    [
-                        Point(0, 0),
-                        Point(self._input.resolution[0] - 1, 0),
-                        Point(self._input.resolution[0] - 1, self._input.resolution[1] - 1),
-                        Point(0, self._input.resolution[1] - 1),
-                    ]
+            # With no regions set, save the full frame so the file reflects what was scanned.
+            width, height = self._input.resolution
+            shapes = self._regions or [
+                [
+                    Point(0, 0),
+                    Point(width - 1, 0),
+                    Point(width - 1, height - 1),
+                    Point(0, height - 1),
                 ]
-            )
+            ]
             path = self._save_region
             if self._output_dir:
                 path = self._output_dir / path
-            with open(path, "w") as region_file:
-                for shape in self._regions:
-                    region_file.write(" ".join(f"{x} {y}" for x, y in shape))
-                    region_file.write("\n")
+            save_regions(path, shapes)
             logger.info(f"Saved region data to: {path}")
         if self._regions:
             logger.info(

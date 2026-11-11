@@ -63,5 +63,14 @@ def load_regions(path: ty.AnyStr) -> ty.Iterable[RegionValidator]:
     return []
 
 
+def save_regions(path: ty.AnyStr, regions: ty.Iterable[ty.Iterable[Point]]):
+    """Write `regions` to `path` in the format read by `load_regions`: one region per line
+    as space-separated `x y` pairs."""
+    with open(path, "w") as file:
+        for shape in regions:
+            file.write(" ".join(f"{x} {y}" for x, y in shape))
+            file.write("\n")
+
+
 def bound_point(point: Point, size: Size) -> Point:
     return Point(min(max(0, point.x), size.w), min(max(0, point.y), size.h))

@@ -15,7 +15,6 @@ import tkinter as tk
 import tkinter.filedialog
 import tkinter.messagebox as messagebox
 import tkinter.ttk as ttk
-import traceback
 import typing as ty
 from logging import getLogger
 from pathlib import Path
@@ -23,6 +22,7 @@ from pathlib import Path
 from scenedetect import FrameTimecode, VideoOpenFailure
 from tqdm import tqdm
 
+from dvr_scan.app.common import PADDING
 from dvr_scan.app.thumbnails import (
     FILMSTRIP_FRAMES,
     FILMSTRIP_WIDTH,
@@ -60,33 +60,42 @@ EVENT_TABLE_COLUMNS = (
 PREVIEW_COLUMN_WIDTH = FILMSTRIP_WIDTH + 12
 
 
-def launch_scan(
-    root: tk.Tk,
-    settings: ScanSettings,
-    on_closed: ty.Callable[[], None],
-    padding: int,
-) -> ty.Optional["ScanWindow"]:
-    """Create a `ScanWindow` for `settings`. Shows an error message and returns None
-    if the scan cannot be set up (input mode unavailable on this system, inputs that can't
-    be opened or combined, output that can't be created). The caller must call `show()`
-    on the returned window to start the scan."""
-    try:
-        return ScanWindow(root, settings, on_closed, padding)
-    except BackendUnavailable:
+# Raised when a scan cannot be set up (by creating a `ScanProgressView` or `ScanWindow`):
+# the input mode is unavailable on this system, the inputs can't be opened or combined (e.g.
+# different resolutions, a deleted file), or the output can't be created (e.g. ffmpeg
+# missing, a bad output folder).
+SCAN_SETUP_ERRORS = (BackendUnavailable, VideoOpenFailure, ValueError, OSError)
+
+
+def show_scan_setup_error(ex: Exception, settings: ScanSettings, parent: tk.Misc):
+    """Show an error message over `parent` saying why a scan could not be set up. `ex` is
+    one of `SCAN_SETUP_ERRORS`."""
+    if isinstance(ex, BackendUnavailable):
         messagebox.showerror(
             title="Input Mode Unavailable",
             message=f"The specified input mode ({settings.get('input-mode')}) "
             "is not available on this system.",
-            parent=root,
+            parent=parent,
         )
-        return None
-    except (VideoOpenFailure, ValueError, OSError) as ex:
-        logger.error(f"Failed to start scan: {ex}", exc_info=True)
-        messagebox.showerror(
-            title="Scan Error",
-            message=f"Failed to start scan:\n\n{ex}\n\nSee the log for details (Help > Open Logs).",
-            parent=root,
-        )
+        return
+    logger.error(f"Failed to start scan: {ex}", exc_info=ex)
+    messagebox.showerror(
+        title="Scan Error",
+        message=f"Failed to start scan:\n\n{ex}\n\nSee the log for details (Help > Open Logs).",
+        parent=parent,
+    )
+
+
+def launch_scan(
+    root: tk.Tk, settings: ScanSettings, on_closed: ty.Callable[[], None]
+) -> ty.Optional["ScanWindow"]:
+    """Create a `ScanWindow` for `settings`, or show an error message and return None if
+    the scan cannot be set up. The caller must call `show()` on the returned window to
+    start the scan."""
+    try:
+        return ScanWindow(root, settings, on_closed)
+    except SCAN_SETUP_ERRORS as ex:
+        show_scan_setup_error(ex, settings, parent=root)
         return None
 
 
@@ -99,11 +108,7 @@ class ScanProgressView:
     view shows no dialogs."""
 
     def __init__(
-        self,
-        parent: tk.Widget,
-        settings: ScanSettings,
-        on_finished: ty.Callable[[], None],
-        padding: int,
+        self, parent: tk.Widget, settings: ScanSettings, on_finished: ty.Callable[[], None]
     ):
         # The UI stats are read from the scanner's tqdm progress bar, which quiet mode
         # replaces with a stub, so always enable it (it only affects console output).
@@ -136,7 +141,7 @@ class ScanProgressView:
 
         # Widgets
         self._progress = tk.IntVar(self.frame, value=0)
-        self._progress_bar = ttk.Progressbar(self.frame, variable=self._progress, maximum=10)
+        self._progress_bar = ttk.Progressbar(self.frame, variable=self._progress)
         self._events_label = tk.Label(self.frame)
         self._elapsed_label = tk.Label(self.frame)
         self._remaining_label = tk.Label(self.frame)
@@ -153,20 +158,18 @@ class ScanProgressView:
         self.frame.rowconfigure(3, weight=32)
         self.frame.rowconfigure(4, weight=1)
         self.frame.rowconfigure(5, weight=1)
-        self._events_label.grid(row=0, column=0, columnspan=2, sticky=tk.NSEW, pady=(padding, 0))
-        self._progress_bar.grid(sticky=tk.NSEW, row=1, columnspan=2, pady=padding, padx=padding)
+        self._events_label.grid(row=0, column=0, columnspan=2, sticky=tk.NSEW, pady=(PADDING, 0))
+        self._progress_bar.grid(sticky=tk.NSEW, row=1, columnspan=2, pady=PADDING, padx=PADDING)
         self._remaining_label.grid(row=2, column=0, columnspan=2, sticky=tk.NSEW)
-        self._processed_label.grid(row=4, column=0, sticky=tk.NW, padx=padding)
-        self._speed_label.grid(row=4, column=1, sticky=tk.NE, padx=padding)
-        self._total_label.grid(row=5, column=0, sticky=tk.NW, padx=padding)
-        self._elapsed_label.grid(row=5, column=1, sticky=tk.NE, padx=padding)
+        self._processed_label.grid(row=4, column=0, sticky=tk.NW, padx=PADDING)
+        self._speed_label.grid(row=4, column=1, sticky=tk.NE, padx=PADDING)
+        self._total_label.grid(row=5, column=0, sticky=tk.NW, padx=PADDING)
+        self._elapsed_label.grid(row=5, column=1, sticky=tk.NE, padx=PADDING)
 
-        self._scan_started = threading.Event()
         self._scan_finished = threading.Event()
         self._start_time = 0.0
         self._last_stats_update_ns = 0
         self._expected_num_frames = 0
-        self._padding = padding
 
         # Summary stats, also used to populate the owner's report.
         self.num_events = 0
@@ -206,21 +209,9 @@ class ScanProgressView:
                 self._on_finished()
             return False
 
-        if self._scan_started.is_set():
-            self._progress_bar = ttk.Progressbar(
-                self.frame,
-                variable=self._progress,
-                maximum=self._expected_num_frames,
-            )
-            self._progress_bar.grid(
-                sticky=tk.NSEW,
-                row=1,
-                columnspan=2,
-                padx=self._padding,
-                pady=self._padding,
-            )
-            self._scan_started.clear()
-
+        # The frame estimate arrives from the worker thread once the scan starts (after
+        # seeking); until then the bar shows an indeterminate 0 of 1.
+        self._progress_bar.configure(maximum=max(self._expected_num_frames, 1))
         # Frames processed is updated from the worker thread, but we don't care about stale values.
         self._progress.set(self.frames_processed)
         self._events_label["text"] = f"Events Found: {self.num_events}"
@@ -248,7 +239,6 @@ class ScanProgressView:
         # We've now seeked to the start of the motion detection area and are processing frames.
         # We also have an *estimate* of how many frames we'll be processing.
         self._expected_num_frames = num_frames
-        self._scan_started.set()
         # We set start time here to avoid including seek time in the overall FPS calculation.
         self._start_time = time.time()
 
@@ -259,14 +249,16 @@ class ScanProgressView:
         # Update internal state used for UI labels using the progress bar in the scanner.
         if (curr - self._last_stats_update_ns) > STATS_UPDATE_RATE_NS:
             self._last_stats_update_ns = curr
-            format_dict = progress_bar.format_dict
-            format_dict.update(bar_format="{elapsed} {remaining} {rate_fmt}")
-            values = tqdm.format_meter(**format_dict).strip().split(" ")
-            # We have to filter out empty entries after we split by spaces because the meter format
-            # adds padding spaces to align numbers.
-            values = list(filter(bool, values))
-            if len(values) == 4:
-                (self.elapsed, self._remaining, self.rate, _unit) = values
+            stats = progress_bar.format_dict
+            elapsed, processed, total = stats["elapsed"], stats["n"], stats["total"]
+            rate = stats["rate"] or (processed / elapsed if elapsed else None)
+            self.elapsed = tqdm.format_interval(elapsed)
+            if rate:
+                self.rate = f"{rate:.2f}"
+                remaining = (total - processed) / rate if total else None
+                self._remaining = tqdm.format_interval(remaining) if remaining is not None else "?"
+            else:
+                self.rate, self._remaining = "N/A", "?"
 
     def _do_scan(self):
         # We'll handle any errors in the main Tkinter thread via the on_finished callback.
@@ -276,6 +268,7 @@ class ScanProgressView:
                 self.frames_processed = self.result.num_frames
         except Exception as ex:  # noqa: BLE001
             self.error = ex
+            logger.critical("error during scan:", exc_info=True)
         finally:
             try:
                 self._finalize_stats()
@@ -309,18 +302,15 @@ class ScanWindow:
     """Modal window that runs a scan from the Advanced Mode UI, showing progress
     and then a Stop/Close control. On a successful scan a report can be saved to disk."""
 
-    def __init__(
-        self, root: tk.Tk, settings: ScanSettings, on_destroyed: ty.Callable[[], None], padding: int
-    ):
+    def __init__(self, root: tk.Tk, settings: ScanSettings, on_destroyed: ty.Callable[[], None]):
         self._root = tk.Toplevel(master=root)
         self._root.withdraw()
         self._root.title(TITLE)
         self._root.resizable(True, True)
         self._on_destroyed = on_destroyed
-        self._padding = padding
         self._results_table: ty.Optional[ttk.Frame] = None
         try:
-            self._view = ScanProgressView(self._root, settings, self._on_finished, padding)
+            self._view = ScanProgressView(self._root, settings, self._on_finished)
         except BaseException:
             # Don't leave the (hidden) window behind if the scan can't be set up.
             self._root.destroy()
@@ -345,15 +335,13 @@ class ScanWindow:
         self._close_button = tk.Button(
             buttons, text="Close", command=self._destroy, state=tk.DISABLED
         )
-        self._stop_button.grid(row=0, column=0, pady=padding, sticky=tk.NSEW, padx=padding)
-        self._save_button.grid(row=0, column=1, pady=padding, sticky=tk.NSEW, padx=padding)
-        self._close_button.grid(row=0, column=2, pady=padding, sticky=tk.NSEW, padx=padding)
+        self._stop_button.grid(row=0, column=0, pady=PADDING, sticky=tk.NSEW, padx=PADDING)
+        self._save_button.grid(row=0, column=1, pady=PADDING, sticky=tk.NSEW, padx=PADDING)
+        self._close_button.grid(row=0, column=2, pady=PADDING, sticky=tk.NSEW, padx=PADDING)
         buttons.grid(row=1, column=0, sticky=tk.NSEW)
 
     def _on_finished(self):
         if self._view.error is not None:
-            formatted_exception = "\n".join(traceback.format_exception(self._view.error))
-            logger.critical(f"error during scan:\n{formatted_exception}")
             messagebox.showerror(
                 "Scan Error",
                 "Error during scanning. See log messages for more info."
@@ -376,7 +364,7 @@ class ScanWindow:
         """Swap the progress view for a table of detected events with thumbnails."""
         self._view.frame.grid_remove()
         table = build_event_table(self._root, self._view.input_paths, event_list)
-        table.grid(row=0, column=0, sticky=tk.NSEW, padx=self._padding, pady=(self._padding, 0))
+        table.grid(row=0, column=0, sticky=tk.NSEW, padx=PADDING, pady=(PADDING, 0))
         self._results_table = table
         self._root.minsize(width=780, height=360)
 

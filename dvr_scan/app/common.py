@@ -14,13 +14,23 @@ import os
 import tkinter as tk
 import tkinter.ttk as ttk
 import typing as ty
+import webbrowser
 
 import PIL
 import PIL.Image
 import PIL.ImageTk
 
 import dvr_scan
+from dvr_scan.app.about_window import show_about
 from dvr_scan.app.startup import ADVANCED, WIZARD
+from dvr_scan.platform import log_folder, open_path
+
+PADDING = 8
+SETTING_INPUT_WIDTH = 12
+MAX_THRESHOLD = 255.0
+
+HELP_GUIDE_URL = "www.dvr-scan.com/guide"
+DISCORD_URL = "https://discord.gg/69kf6f2Exb"
 
 # Hover-darken factor for menubar headings: multiply each RGB channel of the bar background
 # to derive the `activebackground`. Below 1.0 darkens; ~0.85 reads clearly but stays subtle.
@@ -50,7 +60,7 @@ def fit_window_to_screen(
     window: ty.Union[tk.Tk, tk.Toplevel], margin_x: int = 40, margin_y: int = 120
 ) -> bool:
     """Shrink `window`'s initial size so it fits on screen when the size its contents request
-    is larger (e.g. the classic window's thumbnail list on a small laptop display). Resizable
+    is larger (e.g. the Advanced Mode window's thumbnail list on a small laptop display). Resizable
     content with a grid weight absorbs the difference. The margins leave room for window
     decorations and the taskbar, which Tk cannot query portably. Returns True if the window
     geometry was changed."""
@@ -81,6 +91,39 @@ def add_startup_mode_menu(
     # Underline "M": "S" collides with Start Scan / Sort in the File menus.
     parent.add_cascade(label="Startup Mode", underline=8, menu=menu)
     return menu
+
+
+def fill_help_menu(menu: tk.Menu, root: tk.Misc):
+    """Append the Help entries shared by every window (guide, Discord, logs, About) to
+    `menu`. `root` is the window the About dialog is shown over."""
+    menu.add_command(
+        label="Help Guide", underline=0, command=lambda: webbrowser.open_new_tab(HELP_GUIDE_URL)
+    )
+    menu.add_command(
+        label="Discord", underline=0, command=lambda: webbrowser.open_new_tab(DISCORD_URL)
+    )
+    menu.add_separator()
+    menu.add_command(label="Open Logs", underline=5, command=lambda: open_path(log_folder()))
+    menu.add_command(label="About DVR-Scan", underline=0, command=lambda: show_about(root))
+
+
+def show_modal(window: tk.Toplevel, parent: tk.Misc):
+    """Show `window` as a modal dialog over `parent` (the grab blocks input to other
+    windows until `hide_modal`). Returns immediately: `wait_window` only returns once the
+    window is destroyed, so waiting here would leave a nested event loop running for each
+    time a reusable dialog is opened."""
+    window.transient(parent)
+    window.deiconify()
+    window.focus()
+    window.grab_set()
+
+
+def hide_modal(window: tk.Toplevel, focus: tk.Misc):
+    """Hide a dialog shown with `show_modal` (keeping it for reuse), returning focus to
+    `focus`."""
+    window.withdraw()
+    window.grab_release()
+    focus.focus()
 
 
 class MenuBar:

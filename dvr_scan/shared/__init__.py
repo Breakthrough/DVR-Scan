@@ -22,7 +22,6 @@ from logging import FileHandler
 from pathlib import Path
 
 import tqdm
-from platformdirs import user_log_path
 from scenedetect import FrameTimecode
 
 # TODO: This is a hack and will break eventually, but this is the only way to handle this
@@ -36,7 +35,12 @@ from tqdm.contrib.logging import (
 
 from dvr_scan.encoder import get_encoder_type
 from dvr_scan.overlays import BoundingBoxOverlay, TextOverlay
-from dvr_scan.platform import LOG_FORMAT_ROLLING_LOGS, attach_log_handler, is_ffmpeg_available
+from dvr_scan.platform import (
+    LOG_FORMAT_ROLLING_LOGS,
+    attach_log_handler,
+    is_ffmpeg_available,
+    log_folder,
+)
 from dvr_scan.platform import init_logger as _init_logger
 from dvr_scan.scanner import DetectorType, MotionScanner, OutputMode
 from dvr_scan.shared.settings import ScanSettings
@@ -69,8 +73,7 @@ def init_logging(
 
 def logfile_path(name_prefix: str) -> Path:
     """Get path to log file, creating the folder if it does not exist."""
-    folder = user_log_path("DVR-Scan", False)
-    folder.mkdir(parents=True, exist_ok=True)
+    folder = log_folder()
     # Generate a random suffix so multiple instances of dvr-scan don't try to write to the same
     # log file.
     random_suffix = "".join(random.choices(string.ascii_lowercase + string.digits, k=12))
@@ -113,6 +116,44 @@ def setup_logger(logfile_path: Path, max_log_files: int, name_prefix: str):
     attach_log_handler(handler)
 
 
+def output_extension(output_mode: OutputMode) -> str:
+    """Default extension (without the dot) of event output files in `output_mode`."""
+    encoder_type = get_encoder_type(output_mode)
+    return encoder_type.EXTENSION if encoder_type is not None else "avi"
+
+
+def mask_extension(output_mode: OutputMode) -> str:
+    """Default extension (without the dot) of the motion mask output: MP4 when ffmpeg can
+    write it, otherwise AVI via OpenCV."""
+    return "mp4" if output_mode != OutputMode.OPENCV and is_ffmpeg_available() else "avi"
+
+
+def resolve_output_mode(settings: ScanSettings) -> OutputMode:
+    """The `output-mode` setting as an `OutputMode`, except that the default mode (ENCODE)
+    needs ffmpeg: if the mode was not set explicitly (by the UI, command line, or config
+    file) and ffmpeg is unavailable, this is OPENCV instead. A mode that was set explicitly
+    is kept, and fails later if it needs ffmpeg."""
+    output_mode = OutputMode.parse(settings.get("output-mode"))
+    is_default = settings.get_arg("output-mode") is None and settings.config.is_default(
+        "output-mode"
+    )
+    if output_mode == OutputMode.ENCODE and is_default and not is_ffmpeg_available():
+        return OutputMode.OPENCV
+    return output_mode
+
+
+def finalize_output_names(settings: ScanSettings, combine: bool):
+    """Set output filenames based on the first input video, where applicable.
+    Must be called after the `input` setting has been populated."""
+    video_name = Path(settings.get("input")[0]).stem
+    output_mode = resolve_output_mode(settings)
+    if combine:
+        settings.set("output", f"{video_name}-events.{output_extension(output_mode)}")
+    # NOTE: mask-output is CLI-only (not in CONFIG_MAP), so we must use get_arg here.
+    if settings.get_arg("mask-output"):
+        settings.set("mask-output", f"{video_name}-mask.{mask_extension(output_mode)}")
+
+
 def init_scanner(
     settings: ScanSettings,
 ) -> MotionScanner:
@@ -130,28 +171,20 @@ def init_scanner(
         "output",
     )
     mask_file = settings.get_arg("mask-output")
-    output_mode = OutputMode.SCAN_ONLY if settings.get("scan-only") else settings.get("output-mode")
-    if not isinstance(output_mode, OutputMode):
-        output_mode = OutputMode[str(output_mode).upper().replace("-", "_")]
-    # The default output mode (ENCODE) requires ffmpeg. If the user did not set an output
-    # mode explicitly and ffmpeg is unavailable, fall back to OpenCV output rather than
-    # failing (explicitly-set modes which require ffmpeg still raise an error).
-    output_mode_is_default = settings.get_arg("output-mode") is None and settings.config.is_default(
-        "output-mode"
-    )
-    if output_mode == OutputMode.ENCODE and output_mode_is_default and not is_ffmpeg_available():
-        logger.warning(
-            "ffmpeg was not found - falling back to OpenCV (.avi) for output. Install ffmpeg"
-            " to write MP4 files, or set output-mode explicitly to remove this warning."
-        )
-        output_mode = OutputMode.OPENCV
+    if settings.get("scan-only"):
+        output_mode = OutputMode.SCAN_ONLY
+    else:
+        output_mode = resolve_output_mode(settings)
+        if output_mode != OutputMode.parse(settings.get("output-mode")):
+            logger.warning(
+                "ffmpeg was not found - falling back to OpenCV (.avi) for output. Install ffmpeg"
+                " to write MP4 files, or set output-mode explicitly to remove this warning."
+            )
     # If an output file was given without an extension, use the output mode's extension.
     if comp_file and not Path(comp_file).suffix:
-        encoder_type = get_encoder_type(output_mode)
-        comp_file = "%s.%s" % (comp_file, encoder_type.EXTENSION if encoder_type else "avi")
+        comp_file = f"{comp_file}.{output_extension(output_mode)}"
     if mask_file and not Path(mask_file).suffix:
-        mask_ext = "mp4" if output_mode != OutputMode.OPENCV and is_ffmpeg_available() else "avi"
-        mask_file = "%s.%s" % (mask_file, mask_ext)
+        mask_file = f"{mask_file}.{mask_extension(output_mode)}"
 
     scanner.set_output(
         comp_file=Path(comp_file) if comp_file else None,

@@ -40,6 +40,7 @@ from dvr_scan.config import (
     atomic_write_text,
     read_config_file,
 )
+from dvr_scan.subtractor import SubtractorCNT
 
 if ty.TYPE_CHECKING:
     from dvr_scan.shared.settings import ScanSettings
@@ -206,6 +207,24 @@ def list_presets(base_dir: ty.Optional[Path] = None) -> ty.List[Preset]:
     ]
     presets += scan_user_presets(base_dir)
     return presets
+
+
+def list_available_presets(base_dir: ty.Optional[Path] = None) -> ty.List[Preset]:
+    """`list_presets` minus any preset whose background subtractor is not available in
+    this install (e.g. Fast Scan uses CNT, which pip installs can lack when the regular
+    OpenCV package was installed over the contrib build)."""
+    available = []
+    for preset in list_presets(base_dir):
+        subtractor = (preset.overrides or {}).get("bg-subtractor", "").upper()
+        if subtractor == "CNT" and not SubtractorCNT.is_available():
+            # Debug, not a warning: this runs each time a preset list is shown.
+            logger.debug(
+                "Hiding preset %s: the CNT subtractor is not available in this install.",
+                preset.name,
+            )
+            continue
+        available.append(preset)
+    return available
 
 
 def load_preset(preset: Preset) -> ConfigRegistry:

@@ -42,8 +42,6 @@ logger = logging.getLogger("dvr_scan")
 STARTUP_MODE_OPTION = "startup-mode"
 WIZARD = "wizard"
 ADVANCED = "advanced"
-# Name used in code for Advanced Mode (the full settings window); the value is "advanced".
-CLASSIC = ADVANCED
 # Matches current (`dvr-scan-app.<random>.log`, `dvr-scan.<random>.log`) and legacy
 # (`dvr-scan-app.log`, `dvr-scan.log`) log file names.
 LOG_GLOB = "dvr-scan*.log"
@@ -92,7 +90,7 @@ def resolve_default_startup_mode(
     if not config.is_default(STARTUP_MODE_OPTION):
         return normalize_startup_mode(config.get(STARTUP_MODE_OPTION)), False
     if allow_heuristic and not user_config_exists:
-        return (CLASSIC if prior_logs else WIZARD), True
+        return (ADVANCED if prior_logs else WIZARD), True
     return normalize_startup_mode(CONFIG_MAP[STARTUP_MODE_OPTION]), False
 
 

@@ -16,10 +16,8 @@ import sys
 import tkinter as tk
 import tkinter.filedialog
 import tkinter.messagebox
-import tkinter.scrolledtext
 import tkinter.ttk as ttk
 import typing as ty
-import webbrowser
 from copy import deepcopy
 from dataclasses import dataclass
 from logging import getLogger
@@ -31,10 +29,8 @@ import PIL.Image
 import PIL.ImageTk
 from scenedetect import FrameTimecode, VideoOpenFailure, open_video
 
-import dvr_scan
-from dvr_scan.app.about_window import AboutWindow
-from dvr_scan.app.common import MenuBar, register_icon
-from dvr_scan.region import Point, Size, bound_point, load_regions
+from dvr_scan.app.common import MenuBar, fill_help_menu, register_icon
+from dvr_scan.region import Point, Size, bound_point, load_regions, save_regions
 
 WINDOW_TITLE = "DVR-Scan Region Editor"
 OWNED_WINDOW_TITLE = "Region Editor"
@@ -44,14 +40,8 @@ SAVE_TITLE = "Save Region File"
 LOAD_TITLE = "Load Region File"
 SAVE_REGIONS = "Save Regions"
 SAVE_REGIONS_PROMPT = "Save Regions..."
-ABOUT_WINDOW_COPYRIGHT = (
-    f"DVR-Scan {dvr_scan.__version__}\n\n"
-    "Copyright \N{COPYRIGHT SIGN} Brandon Castellano.\nAll rights reserved."
-)
 
 # TODO: Need to figure out DPI scaling for *everything*. Lots of magic numbers for sizes right now.
-MIN_SIZE = 16
-"""Minimum height/width for a ROI created using the mouse."""
 
 logger = getLogger("dvr_scan")
 
@@ -67,7 +57,7 @@ class Snapshot:
 class EditorSettings:
     video_path: str
     """The first input video path specified by -i/--input."""
-    save_path: ty.Optional[str] = False
+    save_path: ty.Optional[str] = None
     """The path specified by the -s/--save-regions option if set."""
     use_aa: bool = True
     mask_source: bool = False
@@ -92,9 +82,6 @@ MIN_NUM_POINTS = 3
 MAX_HISTORY_SIZE = 1024
 MIN_DOWNSCALE_FACTOR = 1
 MAX_DOWNSCALE_FACTOR = 10
-MAX_UPDATE_RATE_NORMAL = 20
-MAX_UPDATE_RATE_DRAGGING = 5
-HOVER_DISPLAY_DISTANCE = 260**2
 MAX_DOWNSCALE_AA_LEVEL = 4
 
 ACCELERATOR_KEY = "Command" if sys.platform == "darwin" else "Ctrl"
@@ -218,7 +205,6 @@ class RegionEditor:
         self._on_close: ty.Optional[ty.Callable[[], None]] = on_close
         self._root: ty.Union[tk.Tk, tk.Toplevel] = None
         self._edit_menu: tk.Menu = None
-        self._editor_window: tk.Toplevel = None
         self._editor_canvas: tk.Canvas = None
         self._editor_scroll: ty.Tuple[tk.Scrollbar, tk.Scrollbar] = None
         self._should_scan: bool = False
@@ -239,10 +225,6 @@ class RegionEditor:
         self._context_curr_mouse_pos: Point = None
         self._context_hover_point: ty.Optional[int] = None
         self._context_nearest_points: ty.Optional[ty.Tuple[int, int]] = None
-
-        self._log_stats = False
-        self._redraws = 0
-        self._recalculates = 0
 
         self._commit(persisted=True)  # Add initial history for undo.
 
@@ -351,27 +333,23 @@ class RegionEditor:
 
     def _undo(self):
         if self._history_pos < (len(self._history) - 1):
-            self._history_pos += 1
-            snapshot = deepcopy(self._history[self._history_pos])
-            self._regions = snapshot.regions
-            self._active_shape = snapshot.active_shape
-            self._recalculate = True
-            self._redraw = True
-            self._draw()
-            logger.debug("Undo: [%d/%d]", self._history_pos, len(self._history) - 1)
+            self._restore_snapshot(self._history_pos + 1, "Undo")
         self._update_ui_state()
 
     def _redo(self):
         if self._history_pos > 0:
-            self._history_pos -= 1
-            snapshot = deepcopy(self._history[self._history_pos])
-            self._regions = snapshot.regions
-            self._active_shape = snapshot.active_shape
-            self._recalculate = True
-            self._redraw = True
-            self._draw()
-            logger.debug("Redo: [%d/%d]", self._history_pos, len(self._history) - 1)
+            self._restore_snapshot(self._history_pos - 1, "Redo")
         self._update_ui_state()
+
+    def _restore_snapshot(self, history_pos: int, action: str):
+        self._history_pos = history_pos
+        snapshot = deepcopy(self._history[history_pos])
+        self._regions = snapshot.regions
+        self._active_shape = snapshot.active_shape
+        self._recalculate = True
+        self._redraw = True
+        self._draw()
+        logger.debug("%s: [%d/%d]", action, history_pos, len(self._history) - 1)
 
     def _commit(self, persisted=False):
         # Take a copy of the current state and put it in the history buffer.
@@ -393,18 +371,12 @@ class RegionEditor:
         self._edit_menu.entryconfigure("Undo", state=tk.ACTIVE if can_undo else tk.DISABLED)
         can_redo = self._history_pos > 0
         self._edit_menu.entryconfigure("Redo", state=tk.ACTIVE if can_redo else tk.DISABLED)
-        if self._regions:
-            self._region_selector["values"] = tuple(
-                f"Shape {i + 1}" for i in range(len(self._regions))
-            )
-            assert self._active_shape is not None
-            self._region_selector.current(self._active_shape)
-            self._region_selector.config(state="readonly")
-        else:
-            self._region_selector["values"] = ("",)
-            assert self._active_shape is not None
-            self._region_selector.current(self._active_shape)
-            self._region_selector.config(state="disabled")
+        self._region_selector["values"] = tuple(
+            f"Shape {i + 1}" for i in range(len(self._regions))
+        ) or ("",)
+        assert self._active_shape is not None
+        self._region_selector.current(self._active_shape)
+        self._region_selector.config(state="readonly" if self._regions else "disabled")
         self._region_selector.selection_clear()
 
     def _copy_scan_command_to_clipboard(self):
@@ -432,10 +404,6 @@ class RegionEditor:
             self._recalculate_data()
         if not self._redraw:
             return
-        if self._log_stats:
-            self._redraws += 1
-            logger.debug(f"redraw {self._redraws}")
-
         curr_aa = (
             cv2.LINE_AA
             if self._settings.use_aa and self._scale <= MAX_DOWNSCALE_AA_LEVEL
@@ -886,21 +854,7 @@ class RegionEditor:
         # TODO: Link to local copy of documentation included with distributions instead where
         # possible. This isn't always possible with how Python manages package resources, so we
         # might need to probe the directory the application was run from.
-        help_menu.add_command(
-            label="Online Manual",
-            command=lambda: webbrowser.open_new_tab("www.dvr-scan.com/guide"),
-            underline=0,
-        )
-        help_menu.add_command(
-            label="Join Discord Chat",
-            command=lambda: webbrowser.open_new_tab("https://discord.gg/69kf6f2Exb"),
-            underline=5,
-        )
-        help_menu.add_separator()
-
-        help_menu.add_command(
-            label="About DVR-Scan", command=lambda: AboutWindow().show(root=self._root), underline=0
-        )
+        fill_help_menu(help_menu, self._root)
 
         self._edit_menu = edit_menu
         self._update_ui_state()
@@ -1037,15 +991,19 @@ class RegionEditor:
         """Save region data, prompting the user if a save path wasn't specified by command line."""
         if self._save():
             return
-        save_path = tkinter.filedialog.asksaveasfilename(
+        save_path = self._ask_save_path()
+        if save_path:
+            self._save(save_path)
+
+    def _ask_save_path(self, parent: ty.Optional[tk.Widget] = None) -> str:
+        """Prompt for a region file to save to; empty if cancelled."""
+        return tkinter.filedialog.asksaveasfilename(
             title=SAVE_TITLE,
             filetypes=[("Region File", "*.txt")],
             defaultextension=".txt",
             confirmoverwrite=True,
-            parent=self._root,
+            parent=parent if parent else self._root,
         )
-        if save_path:
-            self._save(save_path)
 
     def prompt_save_on_scan(self, root: ty.Optional[tk.Widget] = None):
         """Saves any changes that weren't persisted, prompting the user if a path wasn't specified.
@@ -1066,13 +1024,7 @@ class RegionEditor:
         if should_save is None:
             return False
         if should_save and not self._save():
-            save_path = tkinter.filedialog.asksaveasfilename(
-                title=SAVE_TITLE,
-                filetypes=[("Region File", "*.txt")],
-                defaultextension=".txt",
-                confirmoverwrite=True,
-                parent=root if root else self._root,
-            )
+            save_path = self._ask_save_path(parent=root)
             if not save_path:
                 return False
             self._save(save_path)
@@ -1085,10 +1037,7 @@ class RegionEditor:
             if not self._settings.save_path:
                 return False
             path = self._settings.save_path
-        with open(path, "w") as region_file:
-            for shape in self._regions:
-                region_file.write(" ".join(f"{x} {y}" for x, y in shape))
-                region_file.write("\n")
+        save_regions(path, self._regions)
         logger.info("Saved region data to: %s", path)
         self._persisted = True
         self._persisted_path = path
@@ -1192,9 +1141,6 @@ class RegionEditor:
         return False
 
     def _recalculate_data(self):
-        if self._log_stats:
-            self._recalculates += 1
-            logger.debug(f"recalculation {self._recalculates}")
         # TODO: Optimize further, only need to do a lot of work below if certain things changed
         # from the last calculation point.
         if self._curr_mouse_pos is None:
@@ -1303,7 +1249,7 @@ class RegionEditor:
             self._redraw = True
             self._draw()
 
-    def _cancel_active_action(self) -> bool:
+    def _cancel_active_action(self):
         logger.debug("cancelling active action")
         if self._dragging:
             assert self._hover_point is not None
@@ -1435,14 +1381,6 @@ class RegionEditor:
         )
         self._context_menu.post(e.x_root, e.y_root)
 
-    def _on_pan(self):
-        shift_x, shift_y = (
-            (self._curr_mouse_pos.x - self._drag_start.x) / float(self._frame.shape[1]),
-            (self._curr_mouse_pos.y - self._drag_start.y) / float(self._frame.shape[0]),
-        )
-        self._editor_canvas.xview_moveto(shift_x / self._scale)
-        self._editor_canvas.yview_moveto(shift_y / self._scale)
-
     def _add_region(self):
         if self._dragging:
             return
@@ -1493,21 +1431,9 @@ class RegionEditor:
             self._draw()
 
     def _next_region(self):
-        if self._dragging:
-            return
         if self._regions:
-            self._active_shape = (self._active_shape + 1) % len(self._regions)
-            self._region_selector.current(self._active_shape)
-            self._recalculate = True
-            self._redraw = True
-            self._draw()
+            self._select_region((self._active_shape + 1) % len(self._regions))
 
     def _prev_region(self):
-        if self._dragging:
-            return
         if self._regions:
-            self._active_shape = (self._active_shape - 1) % len(self._regions)
-            self._region_selector.current(self._active_shape)
-            self._recalculate = True
-            self._redraw = True
-            self._draw()
+            self._select_region((self._active_shape - 1) % len(self._regions))

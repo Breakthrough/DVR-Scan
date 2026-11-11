@@ -89,16 +89,15 @@ class OutputMode(Enum):
     """Output by piping decoded frames (including overlays) to ffmpeg for encoding."""
 
     def __str__(self):
-        if self == OutputMode.SCAN_ONLY:
-            return "SCAN_ONLY"
-        if self == OutputMode.OPENCV:
-            return "OPENCV"
-        if self == OutputMode.COPY:
-            return "COPY"
-        if self == OutputMode.FFMPEG:
-            return "FFMPEG"
-        if self == OutputMode.ENCODE:
-            return "ENCODE"
+        return self.name
+
+    @classmethod
+    def parse(cls, value: ty.Union["OutputMode", str]) -> "OutputMode":
+        """`value` as an `OutputMode`: either one already, or its name in any case with
+        `-` or `_` (e.g. "scan-only", "SCAN_ONLY"). Raises KeyError for unknown names."""
+        if isinstance(value, OutputMode):
+            return value
+        return cls[str(value).upper().replace("-", "_")]
 
 
 def _extract_event_ffmpeg(

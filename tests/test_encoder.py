@@ -455,10 +455,11 @@ def test_output_mode_reexported_from_scanner():
 
 
 def _patch_ffmpeg_available(monkeypatch, available: bool):
-    """Patch the ffmpeg check in every module that imported it by name. init_scanner()
-    decides the fallback in dvr_scan.shared, but MotionScanner.set_output() and the
-    encoders re-check through their own imports, so patching only one module makes the
-    outcome depend on whether the machine running the tests has ffmpeg on PATH."""
+    """Patch the ffmpeg check in every module that imported it by name. The default-mode
+    fallback is decided in dvr_scan.shared (resolve_output_mode), but
+    MotionScanner.set_output() and the encoders re-check through their own imports, so
+    patching only one module makes the outcome depend on whether the machine running the
+    tests has ffmpeg on PATH."""
     import dvr_scan.encoder as encoder_module
     import dvr_scan.scanner as scanner_module
     import dvr_scan.shared as shared

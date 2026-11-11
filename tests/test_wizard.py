@@ -74,7 +74,7 @@ def test_input_area_videos_reads_path_from_new_column_order():
 
 def test_wizard_browse_videos_disables_navigation_until_dialog_returns():
     wizard = ScanWizard.__new__(ScanWizard)
-    wizard._classic_button = _FakeButton()
+    wizard._advanced_button = _FakeButton()
     wizard._back_button = _FakeButton()
     wizard._next_button = _FakeButton()
     wizard._window = SimpleNamespace(winfo_exists=lambda: True)
@@ -82,13 +82,14 @@ def test_wizard_browse_videos_disables_navigation_until_dialog_returns():
     wizard._summary_index = 3
     wizard._scanning = False
     wizard._browse_in_progress = False
+    wizard._update_header = lambda: None
 
     states_during_dialog = {}
     videos = []
 
     def fake_add_video(parent=None):
         states_during_dialog["parent"] = parent
-        states_during_dialog["classic"] = wizard._classic_button["state"]
+        states_during_dialog["advanced"] = wizard._advanced_button["state"]
         states_during_dialog["back"] = wizard._back_button["state"]
         states_during_dialog["next"] = wizard._next_button["state"]
         videos.append("sample.mp4")
@@ -100,11 +101,11 @@ def test_wizard_browse_videos_disables_navigation_until_dialog_returns():
     wizard._browse_videos()
 
     assert states_during_dialog["parent"] == wizard._window
-    assert states_during_dialog["classic"] == "disabled"
+    assert states_during_dialog["advanced"] == "disabled"
     assert states_during_dialog["back"] == "disabled"
     assert states_during_dialog["next"] == "disabled"
     assert wizard._browse_in_progress is False
-    assert wizard._classic_button["state"] == "normal"
+    assert wizard._advanced_button["state"] == "normal"
     assert wizard._back_button["state"] == "disabled"
     assert wizard._next_button["state"] == "normal"
     assert wizard._next_button["text"] == "Next >"
@@ -113,7 +114,7 @@ def test_wizard_browse_videos_disables_navigation_until_dialog_returns():
 
 def test_wizard_next_is_disabled_until_videos_exist():
     wizard = ScanWizard.__new__(ScanWizard)
-    wizard._classic_button = _FakeButton()
+    wizard._advanced_button = _FakeButton()
     wizard._back_button = _FakeButton()
     wizard._next_button = _FakeButton()
     wizard._step_index = 0
@@ -132,10 +133,10 @@ def test_wizard_next_is_disabled_until_videos_exist():
 
 def test_wizard_refresh_form_nav_state_noop_during_scan_or_on_scan_step():
     wizard = ScanWizard.__new__(ScanWizard)
-    wizard._classic_button = _FakeButton()
+    wizard._advanced_button = _FakeButton()
     wizard._back_button = _FakeButton()
     wizard._next_button = _FakeButton()
-    wizard._classic_button["state"] = "disabled"
+    wizard._advanced_button["state"] = "disabled"
     wizard._back_button["state"] = "disabled"
     wizard._next_button["state"] = "disabled"
     wizard._summary_index = 3
@@ -148,14 +149,14 @@ def test_wizard_refresh_form_nav_state_noop_during_scan_or_on_scan_step():
     wizard._scanning = True
     wizard._browse_in_progress = False
     wizard._refresh_form_nav_state()
-    assert wizard._classic_button["state"] == "disabled"
+    assert wizard._advanced_button["state"] == "disabled"
     assert wizard._back_button["state"] == "disabled"
     assert wizard._next_button["state"] == "disabled"
 
     # Should not re-enable buttons on _scan_index even after scan finishes
     wizard._scanning = False
     wizard._refresh_form_nav_state()
-    assert wizard._classic_button["state"] == "disabled"
+    assert wizard._advanced_button["state"] == "disabled"
     assert wizard._back_button["state"] == "disabled"
     assert wizard._next_button["state"] == "disabled"
 
@@ -165,7 +166,7 @@ def test_wizard_on_switch_ignored_while_scanning():
     wizard._browse_in_progress = False
     wizard._scanning = True
     switched = []
-    wizard._on_switch_to_classic = lambda videos: switched.append(videos)
+    wizard._on_switch_to_advanced = lambda videos: switched.append(videos)
 
     wizard._on_switch()
 
@@ -196,7 +197,7 @@ def test_wizard_set_videos_replaces_when_changed():
     wizard._scan_index = 4
     wizard._scanning = False
     wizard._browse_in_progress = False
-    wizard._classic_button = _FakeButton()
+    wizard._advanced_button = _FakeButton()
     wizard._back_button = _FakeButton()
     wizard._next_button = _FakeButton()
 
@@ -306,7 +307,8 @@ class _FocusWidget:
 
 def _shortcut_wizard(focus=None, focus_error=None):
     """A Tk-free wizard on the videos step with recording list-shortcut stubs. `calls`
-    records the order of select_all / remove_selected / state-changed callbacks."""
+    records the order of select_all / remove_selected calls. (The list itself notifies the
+    wizard of changes through `VideoList.on_changed`.)"""
     wizard = ScanWizard.__new__(ScanWizard)
     wizard._step_index = 0
     wizard._scan_index = 4
@@ -328,7 +330,6 @@ def _shortcut_wizard(focus=None, focus_error=None):
             videos=["a.mp4"],
         )
     )
-    wizard._on_videos_state_changed = lambda: calls.append("state_changed")
     wizard.calls = calls
     return wizard
 
@@ -394,7 +395,7 @@ def test_wizard_list_shortcuts_active_when_focus_get_raises_key_error():
 
     assert wizard._on_select_all() == "break"
     assert wizard._on_remove_selected() == "break"
-    assert wizard.calls == ["select_all", "remove_selected", "state_changed"]
+    assert wizard.calls == ["select_all", "remove_selected"]
 
 
 def test_wizard_select_all_calls_input_area_and_breaks():
@@ -404,11 +405,11 @@ def test_wizard_select_all_calls_input_area_and_breaks():
     assert wizard.calls == ["select_all"]
 
 
-def test_wizard_remove_selected_removes_then_refreshes_state_and_breaks():
+def test_wizard_remove_selected_calls_input_area_and_breaks():
     wizard = _shortcut_wizard()
 
     assert wizard._on_remove_selected(object()) == "break"
-    assert wizard.calls == ["remove_selected", "state_changed"]
+    assert wizard.calls == ["remove_selected"]
 
 
 # --- Preset step initial selection --------------------------------------------------------
@@ -610,7 +611,6 @@ def _videos_step_for_drop(on_load_config):
     step._can_accept_drop = None
     step._on_load_config = on_load_config
     step._set_drag_active = lambda _active: None
-    step._refresh = lambda: None
     step._drop_zone = SimpleNamespace(tk=SimpleNamespace(splitlist=lambda data: data))
     added = []
     step.input_area = SimpleNamespace(add_video=lambda path, parent: added.append(path))
@@ -664,15 +664,15 @@ def _wizard_for_apply(directory: str, user_selected: bool):
     return wizard, motion, output, scan
 
 
-def test_apply_to_classic_skips_auto_filled_output_dir():
+def test_apply_to_advanced_skips_auto_filled_output_dir():
     wizard, motion, output, scan = _wizard_for_apply("/videos", user_selected=False)
-    wizard.apply_to_classic(motion, output, scan)
+    wizard.apply_to_advanced(motion, output, scan)
     assert output._output_dir == ""
 
 
-def test_apply_to_classic_copies_user_selected_output_dir():
+def test_apply_to_advanced_copies_user_selected_output_dir():
     wizard, motion, output, scan = _wizard_for_apply("/chosen", user_selected=True)
-    wizard.apply_to_classic(motion, output, scan)
+    wizard.apply_to_advanced(motion, output, scan)
     assert output._output_dir == "/chosen"
 
 
@@ -823,11 +823,11 @@ def test_preset_step_sync_replaces_config_with_loaded_config():
 def test_fast_scan_preset_hidden_without_cnt(monkeypatch, cnt_available):
     """The Fast Scan preset uses CNT, which pip installs can lack (the regular OpenCV
     package overwrites the contrib build), so it is only offered when CNT works."""
-    from dvr_scan.app import wizard as wizard_module
+    import dvr_scan.presets as presets_module
 
     monkeypatch.setattr(
-        wizard_module.SubtractorCNT, "is_available", staticmethod(lambda: cnt_available)
+        presets_module.SubtractorCNT, "is_available", staticmethod(lambda: cnt_available)
     )
-    names = [preset.name for preset in wizard_module._available_presets()]
+    names = [preset.name for preset in presets_module.list_available_presets()]
     assert ("Fast Scan" in names) == cnt_available
     assert "High Sensitivity" in names and "Low Sensitivity" in names

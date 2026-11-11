@@ -9,7 +9,7 @@
 # LICENSE file, or visit one of the above pages for details.
 #
 
-"""Tests for the classic application window's input area (Tk-free logic only)."""
+"""Tests for the Advanced Mode window's input area (Tk-free logic only)."""
 
 import typing as ty
 
@@ -932,7 +932,7 @@ def test_scan_progress_view_forces_progress_bar_on_in_quiet_mode(monkeypatch):
     assert settings.get("quiet-mode") is True
     with pytest.raises(ValueError):
         # No Tk needed: the parent is never touched if the scanner can't be set up.
-        scan_window.ScanProgressView(object(), settings, lambda: None, 4)
+        scan_window.ScanProgressView(object(), settings, lambda: None)
     assert seen == [False]
 
 
@@ -949,7 +949,7 @@ def test_launch_scan_shows_error_when_scan_setup_fails(monkeypatch, error):
     shown = []
     monkeypatch.setattr(scan_window, "ScanWindow", failing_window)
     monkeypatch.setattr(scan_window.messagebox, "showerror", lambda **kwargs: shown.append(kwargs))
-    assert scan_window.launch_scan("root", _scan_settings(), lambda: None, 4) is None
+    assert scan_window.launch_scan("root", _scan_settings(), lambda: None) is None
     assert len(shown) == 1
     assert shown[0]["parent"] == "root"
     assert str(error) in shown[0]["message"]
@@ -963,7 +963,7 @@ def test_scan_window_setup_failure_leaves_no_window(tk_root, monkeypatch):
 
     monkeypatch.setattr(scan_window, "init_scanner", failing_init_scanner)
     monkeypatch.setattr(scan_window.messagebox, "showerror", lambda **kwargs: None)
-    assert scan_window.launch_scan(tk_root, _scan_settings(), lambda: None, 4) is None
+    assert scan_window.launch_scan(tk_root, _scan_settings(), lambda: None) is None
     assert tk_root.winfo_children() == []
 
 
@@ -974,7 +974,7 @@ def test_scan_progress_view_cancels_update_loop_when_destroyed(tk_root, monkeypa
 
     scanner = _FakeScanner(blocking=True)
     monkeypatch.setattr(scan_window, "init_scanner", lambda _settings: scanner)
-    view = scan_window.ScanProgressView(tk_root, _scan_settings(), lambda: None, 4)
+    view = scan_window.ScanProgressView(tk_root, _scan_settings(), lambda: None)
     view.start()
     assert view._after_id is not None
     view.frame.destroy()
@@ -990,7 +990,7 @@ def test_scan_window_close_after_scan_does_not_prompt(tk_root, monkeypatch):
 
     monkeypatch.setattr(scan_window, "init_scanner", lambda _settings: _FakeScanner())
     closed = []
-    window = scan_window.ScanWindow(tk_root, _scan_settings(), lambda: closed.append(1), 4)
+    window = scan_window.ScanWindow(tk_root, _scan_settings(), lambda: closed.append(1))
     assert window._root.protocol("WM_DELETE_WINDOW").endswith("prompt_stop")
     window._view._scan_thread.start()
     window._view._scan_thread.join(timeout=10.0)

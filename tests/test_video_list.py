@@ -15,7 +15,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from dvr_scan.app.application import VideoInfo
+from dvr_scan.app.inputs import VideoInfo
 from dvr_scan.app.video_list import VideoList
 
 
@@ -52,6 +52,7 @@ def test_sort_by_name_reorders_case_insensitively():
     }
     area = _list_with(rows, ["x", "y"])
     area._regrid = lambda: None
+    area._refresh_button_state = lambda: None
 
     area.sort_by("#0", descending=False)
     assert area.videos == ["/tmp/apple.mp4", "/tmp/banana.mp4"]
@@ -67,9 +68,26 @@ def test_sort_by_date_sorts_chronologically():
     }
     area = _list_with(rows, ["x", "y"])
     area._regrid = lambda: None
+    area._refresh_button_state = lambda: None
 
     area.sort_by("date", descending=False)
     assert area.videos == ["/tmp/b.mp4", "/tmp/a.mp4"]
+
+
+def test_sort_by_refreshes_buttons_and_notifies_owner():
+    """Sorting moves the selected row, so Up/Down must be re-evaluated, and the owner is
+    told the order changed (the wizard's summary lists the videos in order)."""
+    area = _with_buttons(_selectable_list(3))
+    area._selected = {"r0"}
+    changed = []
+    area.on_changed = lambda: changed.append(True)
+
+    area.sort_by("#0", descending=True)
+
+    assert area._order == ["r2", "r1", "r0"]
+    assert _button_states(area)["up"] == "normal"
+    assert _button_states(area)["down"] == "disabled"
+    assert changed == [True]
 
 
 def test_sort_by_rejects_unknown_column():
@@ -102,7 +120,7 @@ def test_add_video_forwards_parent_to_dialog(monkeypatch):
         return ()
 
     monkeypatch.setattr(
-        "dvr_scan.app.video_list.tkinter.filedialog.askopenfilename", fake_askopenfilename
+        "dvr_scan.app.inputs.tkinter.filedialog.askopenfilename", fake_askopenfilename
     )
 
     # Empty dialog result returns before any Tk widget work.
@@ -123,11 +141,11 @@ def test_add_video_missing_path_warns_and_continues_loading_remaining(monkeypatc
     area._refresh_button_state = lambda: None
 
     monkeypatch.setattr(
-        "dvr_scan.app.video_list.tkinter.filedialog.askopenfilename",
+        "dvr_scan.app.inputs.tkinter.filedialog.askopenfilename",
         lambda **_kwargs: (str(missing_file), str(valid_file)),
     )
     monkeypatch.setattr(
-        "dvr_scan.app.video_list.probe_video",
+        "dvr_scan.app.inputs.probe_video",
         lambda p: VideoInfo(
             path=str(p),
             name="valid.mp4",
@@ -140,7 +158,7 @@ def test_add_video_missing_path_warns_and_continues_loading_remaining(monkeypatc
 
     warnings = []
     monkeypatch.setattr(
-        "dvr_scan.app.video_list.tkinter.messagebox.showwarning",
+        "dvr_scan.app.inputs.tkinter.messagebox.showwarning",
         lambda *_args, **kwargs: warnings.append(kwargs),
     )
 
@@ -214,21 +232,13 @@ def _button_states(area: VideoList) -> dict:
     }
 
 
-def test_select_all_selects_every_row_and_selected_videos_in_display_order():
+def test_select_all_selects_every_row():
     area = _selectable_list(3)
     area._order = ["r2", "r0", "r1"]
 
     area.select_all()
 
     assert area._selected == {"r0", "r1", "r2"}
-    assert area.selected_videos == ["/tmp/v2.mp4", "/tmp/v0.mp4", "/tmp/v1.mp4"]
-
-
-def test_selected_videos_lists_only_selected_rows_in_display_order():
-    area = _selectable_list(4)
-    area._selected = {"r3", "r1"}
-
-    assert area.selected_videos == ["/tmp/v1.mp4", "/tmp/v3.mp4"]
 
 
 def test_clear_selection_empties_selection():
@@ -238,7 +248,6 @@ def test_clear_selection_empties_selection():
     area.clear_selection(object())
 
     assert area._selected == set()
-    assert area.selected_videos == []
 
 
 def test_plain_click_resets_to_single_row_and_sets_anchor():
@@ -565,7 +574,7 @@ def test_add_button_uses_on_add_callback_when_given(monkeypatch):
     calls = []
     area._on_add = lambda: calls.append("wizard-browse")
     monkeypatch.setattr(
-        "dvr_scan.app.video_list.tkinter.filedialog.askopenfilename",
+        "dvr_scan.app.inputs.tkinter.filedialog.askopenfilename",
         lambda **kwargs: pytest.fail("list must not open its own dialog"),
     )
     area._on_add_clicked()
@@ -583,7 +592,7 @@ def test_add_button_without_callback_parents_dialog_to_toplevel(monkeypatch):
         return ()
 
     monkeypatch.setattr(
-        "dvr_scan.app.video_list.tkinter.filedialog.askopenfilename", fake_askopenfilename
+        "dvr_scan.app.inputs.tkinter.filedialog.askopenfilename", fake_askopenfilename
     )
     area._on_add_clicked()
     assert seen["parent"] == "list-toplevel"

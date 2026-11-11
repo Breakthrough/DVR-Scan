@@ -596,6 +596,11 @@ class ConfigLoadFailure(Exception):
         self.init_log = init_log
         self.reason = reason
 
+    def log(self, logger: logging.Logger):
+        """Replay the messages recorded while loading the config to `logger`."""
+        for level, message in self.init_log:
+            logger.log(level, message)
+
 
 class ConfigRegistry:
     """Provides application option values based on either user-specified configuration, or
@@ -615,6 +620,11 @@ class ConfigRegistry:
         init_log = self._init_log
         self._init_log = []
         return init_log
+
+    def flush_init_log(self, logger: logging.Logger):
+        """Replay the messages recorded while loading to `logger`, then clear them."""
+        for level, message in self.consume_init_log():
+            logger.log(level, message)
 
     def _log(self, level: int, message: str):
         self._init_log.append((level, message))
@@ -784,6 +794,12 @@ class ConfigRegistry:
     def is_default(self, option: str) -> bool:
         """True if the option is default, i.e. is NOT set by the user."""
         return option not in self._config
+
+    def set(self, option: str, value: ConfigValue):
+        """Set `option` to an already-typed `value` (e.g. one read back from the UI), as if
+        it had been set in a config file: it is then no longer `is_default`."""
+        assert option in CONFIG_MAP
+        self._config[option] = value
 
     def get(
         self,

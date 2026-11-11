@@ -11,7 +11,6 @@
 
 import argparse
 import copy
-import dataclasses
 import os
 import tkinter as tk
 import tkinter.filedialog
@@ -20,32 +19,35 @@ import tkinter.simpledialog
 import tkinter.ttk as ttk
 import traceback
 import typing as ty
-import webbrowser
-from datetime import datetime
 from logging import getLogger
-from pathlib import Path
-
-if ty.TYPE_CHECKING:
-    # Only used for the `_wizard` type annotation; imported at runtime in `_open_wizard`
-    # to avoid a circular import (wizard.py imports from this module).
-    from dvr_scan.app.wizard import ScanWizard  # noqa: F401
 
 from scenedetect import AVAILABLE_BACKENDS, FrameTimecode, VideoOpenFailure, open_video
 from tkinterdnd2 import DND_FILES, TkinterDnD
 
 import dvr_scan.presets as presets
-from dvr_scan.app.about_window import AboutWindow
 from dvr_scan.app.common import (
+    MAX_THRESHOLD,
+    PADDING,
+    SETTING_INPUT_WIDTH,
     MenuBar,
     add_startup_mode_menu,
+    fill_help_menu,
     fit_window_to_screen,
+    hide_modal,
     register_icon,
+    show_modal,
+)
+from dvr_scan.app.inputs import (
+    ask_video_paths,
+    handle_drop,
+    parse_resolution,
+    probe_videos,
+    sample_video_frames,
 )
 from dvr_scan.app.region_editor import ACCELERATOR_KEY, RegionEditor
 from dvr_scan.app.scan_window import ScanWindow, launch_scan
-from dvr_scan.app.startup import CLASSIC, WIZARD, normalize_startup_mode, save_startup_mode
+from dvr_scan.app.startup import ADVANCED, WIZARD, normalize_startup_mode, save_startup_mode
 from dvr_scan.app.thumbnails import (
-    FILMSTRIP_FRAMES,
     FILMSTRIP_WIDTH,
     THUMBNAIL_STYLE,
     THUMBNAIL_TEXT_GAP,
@@ -55,144 +57,49 @@ from dvr_scan.app.thumbnails import (
     to_photo,
 )
 from dvr_scan.app.widgets import ColorPicker, Spinbox, TimecodeEntry
+from dvr_scan.app.wizard import ScanWizard
 from dvr_scan.config import (
     CHOICE_MAP,
     CONFIG_MAP,
     ConfigLoadFailure,
     ConfigRegistry,
 )
-from dvr_scan.encoder import get_encoder_type
 from dvr_scan.platform import is_ffmpeg_available, open_path
 from dvr_scan.scanner import OutputMode, Point
-from dvr_scan.shared import ScanSettings, logfile_path
+from dvr_scan.shared import ScanSettings, finalize_output_names, resolve_output_mode
 from dvr_scan.subtractor import SubtractorCNT, SubtractorCudaMOG2
 
 WINDOW_TITLE = "DVR-Scan"
-PADDING = 8
-SETTING_INPUT_WIDTH = 12
 LONG_SETTING_INPUT_WIDTH = 72
 PATH_INPUT_WIDTH = 32
 MAX_KERNEL_SIZE = 21
+# Kernel Size dropdown entries in order: Off, Auto, then 3x3, 5x5, ... up to MAX_KERNEL_SIZE.
+KERNEL_SIZES = (0, -1, *range(3, MAX_KERNEL_SIZE + 1, 2))
+# Output Mode dropdown entries in order. Scan only is a separate checkbox, so it is not here.
+OUTPUT_MODES = (
+    ("OpenCV (.avi)", OutputMode.OPENCV),
+    ("ffmpeg", OutputMode.FFMPEG),
+    ("ffmpeg (copy)", OutputMode.COPY),
+    ("Encode (MP4) - Recommended", OutputMode.ENCODE),
+)
 MAX_DURATION = 120.0
 DURATION_INCREMENT = 0.1
-DURATION_FORMAT = "%.1fs"
 MIN_WINDOW_WIDTH = 128
 MIN_WINDOW_HEIGHT = 128
 LARGE_BUTTON_WIDTH = 40
-MAX_THRESHOLD = 255.0
 MAX_DOWNSCALE_FACTOR = 128
 NO_REGIONS_SPECIFIED_TEXT = "No Region(s) Specified"
 # Value of an unset start/end time entry.
 ZERO_TIMECODE = "00:00:00.000"
 EXPAND_HORIZONTAL = tk.EW
 
-# Fields the input list can be sorted by, used to build the File > Sort menu.
-# Each entry is (label, treeview column id, default descending). "#0" is the name column.
-SORT_FIELDS: ty.Tuple[ty.Tuple[str, str, bool], ...] = (
-    ("Name", "#0", True),
-    ("Date", "date", False),
-)
-
 logger = getLogger("dvr_scan")
-
-
-def finalize_output_names(settings: ScanSettings, combine: bool):
-    """Set output filenames based on the first input video, where applicable.
-    Must be called after the `input` setting has been populated."""
-    video_name = Path(settings.get("input")[0]).stem
-    output_mode = settings.get("output-mode")
-    if not isinstance(output_mode, OutputMode):
-        output_mode = OutputMode[str(output_mode).upper().replace("-", "_")]
-    if combine:
-        encoder_type = get_encoder_type(output_mode)
-        extension = encoder_type.EXTENSION if encoder_type is not None else "avi"
-        settings.set("output", f"{video_name}-events.{extension}")
-    # NOTE: mask-output is CLI-only (not in CONFIG_MAP), so we must use get_arg here.
-    if settings.get_arg("mask-output"):
-        mask_ext = "mp4" if output_mode != OutputMode.OPENCV and is_ffmpeg_available() else "avi"
-        settings.set("mask-output", f"{video_name}-mask.{mask_ext}")
-
-
-def sample_video_frames(path: str, count: int = FILMSTRIP_FRAMES) -> ty.Optional[list]:
-    """Open `path` and decode `count` frames spread evenly across its duration, returning
-    them as a list of BGR arrays (for a filmstrip preview), or None on failure. Runs on a
-    `ThumbnailLoader` worker thread, so it must not touch Tk. The transient VideoStream is
-    released by GC once sampling is done (a short-lived handle, not a retained one)."""
-    try:
-        video = open_video(path, backend="opencv")
-    except VideoOpenFailure:
-        return None
-    total_frames = video.duration.frame_num
-    frames = []
-    for index in range(count):
-        # Sample at evenly spaced midpoints; the last avoids the exact final frame, which
-        # can fail to decode. For an unknown/zero-length duration, fall back to frame 0.
-        if total_frames > 0:
-            target = int(total_frames * (index + 0.5) / count)
-            video.seek(FrameTimecode(target, video.frame_rate))
-        frame = video.read()
-        # VideoStream.read() returns False (not None) when no frame is available.
-        if frame is not False:
-            frames.append(frame)
-        if total_frames <= 0:
-            break
-    return frames or None
-
-
-@dataclasses.dataclass
-class VideoInfo:
-    """Display metadata for one input video, shared by the classic input list and the
-    wizard's `VideoList`. Strings are pre-formatted for direct display."""
-
-    path: str
-    name: str
-    duration: str
-    framerate: str
-    resolution: str
-    date: str
-
-
-def parse_resolution(text: str) -> ty.Optional[ty.Tuple[int, int]]:
-    """Parse a `VideoInfo.resolution` string ("W x H") into (w, h), or None if invalid."""
-    try:
-        width, height = str(text).split("x")
-        return (int(width), int(height))
-    except ValueError:
-        return None
-
-
-def probe_video(path: str) -> ty.Optional[VideoInfo]:
-    """Open `path` and extract display metadata (duration, framerate, resolution, creation
-    date), returning a `VideoInfo` or None if the video could not be opened. Errors are
-    logged by `open_video`; callers decide how to surface a failure to the user."""
-    try:
-        video = open_video(path, backend="opencv")  # logs errors on failure
-    except VideoOpenFailure:
-        return None
-    try:
-        # On Windows, ctime is creation time. On other systems, it may be the last
-        # metadata change time.
-        create_time = datetime.fromtimestamp(Path(path).stat().st_ctime)
-        create_time_str = create_time.strftime("%Y-%m-%d %H:%M:%S")
-    except OSError as ex:
-        logger.debug(f"Failed to stat {path}: {ex}")
-        create_time_str = "N/A"
-    return VideoInfo(
-        path=str(Path(video.path).absolute()),
-        name=Path(video.path).name,
-        duration=video.duration.get_timecode(),
-        framerate=f"{float(video.frame_rate):g}",
-        resolution=f"{video.frame_size[0]} x {video.frame_size[1]}",
-        date=create_time_str,
-    )
 
 
 # TODO: Allow this to be sorted by columns.
 # TODO: Should we have a default sort method when bulk adding videos?
 class InputArea:
-    def __init__(self, root: tk.Widget, simple: bool = False):
-        """If `simple` is True, only the video list and add/remove/reorder buttons are
-        shown (no time, region, or concatenation controls). Used by the Scan Wizard."""
+    def __init__(self, root: tk.Widget):
         self._root = root
         self._region_editor: ty.Optional[RegionEditor] = None
         # Normalized path and frame size (w, h) of the video the region editor was built for,
@@ -206,12 +113,10 @@ class InputArea:
         root.rowconfigure(2, pad=PADDING)
         root.rowconfigure(3, pad=PADDING)
         root.rowconfigure(4, pad=PADDING)
-        root.columnconfigure(0, weight=1)
-        root.columnconfigure(1, weight=1)
-        root.columnconfigure(2, weight=1)
-        root.columnconfigure(3, weight=1)
-        root.columnconfigure(4, weight=1)
-        root.columnconfigure(5, weight=1)
+        # Equal-width columns keep the button row in place when the Set Time controls
+        # (which share these columns) are shown or hidden.
+        for column in range(6):
+            root.columnconfigure(column, weight=1, uniform="controls")
         root.columnconfigure(6, weight=12, minsize=0)
 
         frame = tk.Frame(root)
@@ -290,22 +195,9 @@ class InputArea:
             command=self._on_move_down,
         ).grid(row=2, column=3, sticky=EXPAND_HORIZONTAL, padx=PADDING)
 
-        self._concatenate = tk.BooleanVar(root, value=True)
         self._set_time = tk.BooleanVar(root, value=False)
         self._set_region = tk.BooleanVar(root, value=False)
         self._regions: ty.List[ty.List[Point]] = []
-        if simple:
-            return
-
-        ttk.Checkbutton(
-            root,
-            text="Concatenate",
-            variable=self._concatenate,
-            onvalue=True,
-            offvalue=False,
-            command=self._on_set_time,
-            state=tk.DISABLED,  # TODO: Enable when implemented.
-        ).grid(row=2, column=4, padx=PADDING, sticky=EXPAND_HORIZONTAL)
 
         # TODO: Need to prevent start_time >= end_time.
         self._set_time_button = ttk.Checkbutton(
@@ -317,10 +209,11 @@ class InputArea:
             command=self._on_set_time,
         )
         self._set_time_button.grid(row=3, column=0, padx=PADDING, sticky=tk.W)
-        self._start_time_label = tk.Label(root, text="Start Time", state=tk.DISABLED)
+        # The start/end time controls are shown only while Set Time is checked.
+        self._start_time_label = tk.Label(root, text="Start Time")
         self._start_time = TimecodeEntry(root, value="00:00:00.000")
 
-        self._end_time_label = tk.Label(root, text="End Time", state=tk.DISABLED)
+        self._end_time_label = tk.Label(root, text="End Time")
         self._end_time = TimecodeEntry(root, "00:00:00.000")
 
         ttk.Checkbutton(
@@ -362,19 +255,17 @@ class InputArea:
         settings.set("input", videos)
         if self.start_end_time:
             (start, end) = self.start_end_time
-            if start != ZERO_TIMECODE:
-                settings.set("start-time", start)
-            if end != ZERO_TIMECODE:
-                settings.set("end-time", end)
-            start_frame = FrameTimecode(start, 1000.0).frame_num
             end_frame = FrameTimecode(end, 1000.0).frame_num
-            if end_frame and end_frame <= start_frame:
-                logger.error("No frames to process (start time must be less than than end time)")
+            if end_frame and end_frame <= FrameTimecode(start, 1000.0).frame_num:
+                logger.error("No frames to process (start time must be before end time)")
                 return None
-        if self._set_region.get():
-            regions = self._regions_for_scan(videos[0])
-            if regions:
-                settings.set("regions", regions)
+        overrides = self.scan_overrides(videos[0], self._first_video_resolution())
+        if self._set_region.get() and self._regions and "regions" not in overrides:
+            # Drawn on a video of another resolution (`scan_overrides` logs it), so they
+            # no longer apply to this input list: forget them (#274).
+            self._reset_regions()
+        for key, value in overrides.items():
+            settings.set(key, value)
         return settings
 
     def sort_by(self, col: str, descending: bool):
@@ -397,31 +288,10 @@ class InputArea:
     def add_video(self, path: str = "", parent: ty.Optional[tk.Widget] = None):
         """Add a video to the list by path, or open a file dialog if no path is given.
         Called from the Add button, drag-and-drop, and the Scan Wizard."""
-        paths = []
-        if not path:
-            dialog_options = {
-                "title": "Open video(s)...",
-                # TODO: More extensions.
-                "filetypes": [("Video", "*.mp4"), ("Video", "*.avi"), ("Other", "*")],
-                "multiple": True,
-            }
-            if parent is not None:
-                dialog_options["parent"] = parent
-            paths = tkinter.filedialog.askopenfilename(**dialog_options)
-            if not paths:
-                return
-        else:
-            paths = [path]
-        failed_to_load = False
-        for path in paths:
-            if not Path(path).exists():
-                logger.error(f"File does not exist: {path}")
-                failed_to_load = True
-                continue
-            info = probe_video(path)
-            if info is None:
-                failed_to_load = True
-                continue
+        paths = [path] if path else ask_video_paths(parent)
+        if not paths:
+            return
+        for info in probe_videos(paths, parent):
             item = self._videos.insert(
                 "",
                 tk.END,
@@ -430,10 +300,6 @@ class InputArea:
                 values=(info.duration, info.framerate, info.resolution, info.date, info.path),
             )
             self._thumbnails.submit(item, lambda path=info.path: sample_video_frames(path))
-        if failed_to_load:
-            tkinter.messagebox.showwarning(
-                "Video Open Failure", "Failed to open one or more videos."
-            )
         self._refresh_remove_state()
 
     def clear(self):
@@ -446,10 +312,6 @@ class InputArea:
 
     def _refresh_remove_state(self):
         self._remove_button["state"] = tk.NORMAL if self._videos.get_children() else tk.DISABLED
-
-    @property
-    def concatenate(self) -> bool:
-        return self._concatenate.get()
 
     def select_all(self):
         """Select every video in the list."""
@@ -488,13 +350,7 @@ class InputArea:
 
     def _on_set_time(self):
         # TODO: When disabled, set start time 0 and end time duration of video.
-        state = tk.NORMAL if self._set_time.get() else tk.DISABLED
-        self._set_time_button["state"] = tk.NORMAL if self.concatenate else tk.DISABLED
-        self._start_time_label["state"] = state
-        self._start_time["state"] = state
-        self._end_time_label["state"] = state
-        self._end_time["state"] = state
-        if state == tk.NORMAL and self.concatenate:
+        if self._set_time.get():
             self._start_time_label.grid(row=3, column=1, sticky=EXPAND_HORIZONTAL)
             self._start_time.grid(row=3, column=2, padx=PADDING, sticky=EXPAND_HORIZONTAL)
             self._end_time.grid(row=3, column=4, padx=PADDING, sticky=EXPAND_HORIZONTAL)
@@ -532,12 +388,12 @@ class InputArea:
     def scan_overrides(
         self, first_video: str, resolution: ty.Optional[ty.Tuple[int, int]]
     ) -> ty.Dict[str, ty.Any]:
-        """Start/end time and regions set here, as settings to apply to a scan of another
-        input list (the Scan Wizard's, which has no controls for them) so they are not
-        silently ignored there. Regions are pixel coordinates, so they are left out if the
-        wizard's first input (`first_video`, of size `resolution` if known) differs from the
-        video they were drawn on and has another resolution. Unlike `update`, an end time
-        before the start time is dropped (with a warning) rather than failing the scan."""
+        """Start/end time and regions set here, as settings for a scan whose first input is
+        `first_video` (of size `resolution`, if known): this window's own scans (see
+        `update`), or the Scan Wizard's, which has no controls for them. Regions are pixel
+        coordinates, so they are left out if `first_video` differs from the video they were
+        drawn on and has another resolution (#274). An end time that is not after the start
+        time is left out with a warning."""
         overrides: ty.Dict[str, ty.Any] = {}
         if self.start_end_time:
             (start, end) = self.start_end_time
@@ -569,28 +425,6 @@ class InputArea:
         self._regions = []
         self._current_region.set(NO_REGIONS_SPECIFIED_TEXT)
 
-    def _regions_for_scan(self, first_video: str) -> ty.List[ty.List[Point]]:
-        """Regions to scan with. If the first input changed since the regions were drawn and
-        its resolution differs, the regions no longer apply and are discarded (#274)."""
-        if not self._regions:
-            return []
-        if self._region_editor_video != self._normalize_path(first_video):
-            resolution = self._first_video_resolution()
-            if (
-                resolution is not None
-                and self._region_editor_size is not None
-                and resolution != self._region_editor_size
-            ):
-                logger.warning(
-                    "Regions were drawn on a %dx%d video but the first input is now %dx%d, "
-                    "ignoring regions.",
-                    *self._region_editor_size,
-                    *resolution,
-                )
-                self._reset_regions()
-                return []
-        return self._regions
-
     def _on_edit_regions(self):
         videos = self.videos
         if not videos:
@@ -605,7 +439,7 @@ class InputArea:
         if (
             self._region_editor is None
             or self._region_editor_video != normalized_path
-            or getattr(self, "_region_editor_start_time", None) != start_time
+            or self._region_editor_start_time != start_time
         ):
             # Frame the editor opens on, so frame stepping continues from the start time
             # rather than jumping back to the beginning of the video.
@@ -733,7 +567,6 @@ class InputSettingsWindow:
         self._frame_skip.grid(
             row=2, column=4, padx=PADDING, sticky=tk.N + EXPAND_HORIZONTAL, pady=PADDING
         )
-        self._downscale_factor = tk.StringVar(value=1)
         tk.Label(frame, text="Downscale Factor").grid(
             row=0, column=3, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
         )
@@ -756,22 +589,15 @@ class InputSettingsWindow:
         combo["values"] = ["opencv"] + [
             backend for backend in AVAILABLE_BACKENDS if backend != "opencv"
         ]
-        self._input_mode.set("opencv")
         combo.grid(row=0, column=1, sticky=EXPAND_HORIZONTAL)
 
     def show(self):
         logger.debug("showing input settings window")
-        self._window.transient(self._root)
-        self._window.deiconify()
-        self._window.focus()
-        self._window.grab_set()
-        self._window.wait_window()
+        show_modal(self._window, self._root)
 
     def _dismiss(self):
         logger.debug("closing input settings window")
-        self._window.withdraw()
-        self._window.grab_release()
-        self._root.focus()
+        hide_modal(self._window, focus=self._root)
 
     def set(self, settings: ScanSettings):
         self._downscale_factor.set(settings.get("downscale-factor"))
@@ -834,16 +660,8 @@ class MotionSettingsWindow:
         self._kernel_size_combobox = ttk.Combobox(
             frame, width=SETTING_INPUT_WIDTH, state="readonly"
         )
-        # 0: Auto
-        # 1: Off
-        # 2: 3x3
-        # 3: 5x5
-        # 4: 7x7
-        # 5: 9x9...
-        self._kernel_size_combobox["values"] = (
-            "Off",
-            "Auto",
-            *tuple(f"{n}x{n}" for n in range(3, MAX_KERNEL_SIZE + 1, 2)),
+        self._kernel_size_combobox["values"] = tuple(
+            {0: "Off", -1: "Auto"}.get(size, f"{size}x{size}") for size in KERNEL_SIZES
         )
         self._kernel_size_combobox.grid(row=1, column=1, sticky=EXPAND_HORIZONTAL)
         self._kernel_size_combobox.current(1)
@@ -915,8 +733,8 @@ class MotionSettingsWindow:
 
         frame = ttk.LabelFrame(self._window, text="Advanced", padding=PADDING)
         frame.grid(row=1, sticky=tk.NSEW, padx=PADDING, pady=PADDING)
-        frame.rowconfigure(0, pad=PADDING, weight=1)
-        frame.rowconfigure(1, pad=PADDING, weight=1)
+        for row in range(4):
+            frame.rowconfigure(row, pad=PADDING, weight=1)
         frame.columnconfigure(0, weight=1)
         frame.columnconfigure(1, weight=1)
         frame.columnconfigure(2, weight=2)
@@ -932,7 +750,7 @@ class MotionSettingsWindow:
             variable=self._mask_output,
             onvalue=True,
             offvalue=False,
-        ).grid(row=1, column=0, columnspan=2, sticky=tk.W, padx=PADDING, pady=PADDING)
+        ).grid(row=3, column=0, columnspan=2, sticky=tk.W, padx=PADDING, pady=PADDING)
 
         self._learning_rate_auto = tk.BooleanVar(value=True)
         tk.Label(frame, text="Learning Rate").grid(
@@ -977,7 +795,7 @@ class MotionSettingsWindow:
         )
         self._variance_threshold = Spinbox(
             frame,
-            value=str(CONFIG_MAP["threshold"]),
+            value=str(CONFIG_MAP["variance-threshold"]),
             from_=0.0,
             to=255.0,
             increment=0.01,
@@ -987,7 +805,7 @@ class MotionSettingsWindow:
         )
 
         tk.Label(frame, text="Max Area").grid(
-            row=0, column=0, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING
+            row=1, column=0, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING
         )
         self._max_area = Spinbox(
             frame,
@@ -996,10 +814,10 @@ class MotionSettingsWindow:
             to=1.0,
             increment=0.01,
         )
-        self._max_area.grid(row=0, column=1, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING)
+        self._max_area.grid(row=1, column=1, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING)
 
         tk.Label(frame, text="Max Width").grid(
-            row=0, column=0, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING
+            row=2, column=0, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING
         )
         self._max_width = Spinbox(
             frame,
@@ -1008,10 +826,10 @@ class MotionSettingsWindow:
             to=1.0,
             increment=0.01,
         )
-        self._max_width.grid(row=0, column=1, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING)
+        self._max_width.grid(row=2, column=1, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING)
 
         tk.Label(frame, text="Max Height").grid(
-            row=0, column=0, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING
+            row=2, column=3, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING
         )
         self._max_height = Spinbox(
             frame,
@@ -1020,7 +838,7 @@ class MotionSettingsWindow:
             to=1.0,
             increment=0.01,
         )
-        self._max_height.grid(row=0, column=1, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING)
+        self._max_height.grid(row=2, column=4, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING)
 
         tk.Button(self._window, text="Close", command=self._dismiss).grid(
             row=2, column=0, sticky=tk.E, padx=PADDING, pady=PADDING
@@ -1038,39 +856,23 @@ class MotionSettingsWindow:
 
     def show(self):
         logger.debug("showing motion settings window")
-        self._window.transient(self._root)
-        self._window.deiconify()
-        self._window.focus()
-        self._window.grab_set()
-        self._window.wait_window()
+        show_modal(self._window, self._root)
 
     def _dismiss(self):
         logger.debug("closing motion settings window")
-        self._window.withdraw()
-        self._window.grab_release()
-        self._root.focus()
+        hide_modal(self._window, focus=self._root)
 
     @property
     def _kernel_size(self) -> int:
-        index = self._kernel_size_combobox.current()
-        if index == 0:
-            return 0
-        elif index == 1:
-            return -1
-        else:
-            assert index > 0
-            return (index * 2) - 1
+        return KERNEL_SIZES[self._kernel_size_combobox.current()]
 
     @_kernel_size.setter
-    def _kernel_size(self, size):
+    def _kernel_size(self, size: int):
+        # The config only accepts sizes in KERNEL_SIZES (see `KernelSizeValue`), or larger.
         # TODO: Handle this discrepency properly, we're clipping the user config right now.
         if size > MAX_KERNEL_SIZE:
             logger.warning("Kernel sizes above 21 are not supported by the UI, clipping to 21.")
-        kernel_size = min(size, MAX_KERNEL_SIZE)
-        auto_kernel = bool(kernel_size < 0)
-        none_kernel = bool(kernel_size == 0)
-        index = 0 if none_kernel else 1 if auto_kernel else (1 + (kernel_size // 2))
-        self._kernel_size_combobox.current(index)
+        self._kernel_size_combobox.current(KERNEL_SIZES.index(min(size, MAX_KERNEL_SIZE)))
 
     @property
     def _learning_rate(self) -> float:
@@ -1139,7 +941,6 @@ class MotionSettingsWindow:
 class OutputArea:
     def __init__(self, root: tk.Widget):
         self._root = root
-        self._last_value: ty.Optional[str] = None
         self._options_window = tk.Toplevel(master=root)
         self._options_window.withdraw()
 
@@ -1174,14 +975,9 @@ class OutputArea:
         )
         self._combine_button.grid(row=0, column=3, sticky=tk.W, padx=PADDING)
 
-        self._output_mode_combo["values"] = (
-            "OpenCV (.avi)",
-            "ffmpeg",
-            "ffmpeg (copy)",
-            "Encode (MP4) - Recommended",
-        )
+        self._output_mode_combo["values"] = tuple(label for label, _mode in OUTPUT_MODES)
         # Default to encoded MP4 output, unless ffmpeg is unavailable on this system.
-        self._output_mode_combo.current(3 if is_ffmpeg_available() else 0)
+        self._output_mode = OutputMode.ENCODE if is_ffmpeg_available() else OutputMode.OPENCV
 
         self._output_dir_str = ""
         self._output_dir_label = tk.StringVar(root, value="Ask Me")
@@ -1479,27 +1275,6 @@ class OutputArea:
         self._on_bounding_box()
         self._on_mode_combo_selected()
 
-    def _on_duration_focus_in(self, var: tk.StringVar):
-        def callback(_: tk.Event):
-            self._last_value = var.get()
-
-        return callback
-
-    def _validate_duration(self, var: tk.StringVar):
-        def callback(_: tk.Event):
-            validated = 0.0
-            try:
-                validated = float(var.get().removesuffix("s"))
-            except ValueError:
-                try:
-                    validated = float(self._last_value.removesuffix("s"))
-                except ValueError:
-                    validated = 0.0
-            var.set(DURATION_FORMAT % validated)
-            self._on_duration_focus_in(var)(None)
-
-        return callback
-
     def _show_options(self):
         if self._output_mode in (OutputMode.OPENCV, OutputMode.ENCODE):
             # The overlay/bounding-box options are shared, but the codec selector only
@@ -1524,16 +1299,10 @@ class OutputArea:
 
         self._on_text_overlay()
         self._on_bounding_box()
-        self._options_window.transient(self._root)
-        self._options_window.deiconify()
-        self._options_window.focus()
-        self._options_window.grab_set()
-        self._options_window.wait_window()
+        show_modal(self._options_window, self._root)
 
     def _dismiss_options(self):
-        self._options_window.withdraw()
-        self._options_window.grab_release()
-        self._options_button.focus()
+        hide_modal(self._options_window, focus=self._options_button)
 
     def _on_select(self):
         output_path = tkinter.filedialog.askdirectory(title="Set Output Directory", mustexist=True)
@@ -1542,14 +1311,7 @@ class OutputArea:
             self._output_dir_str = output_path
             self._clear_button["state"] = tk.NORMAL
 
-    def _clear_output_directory(self):
-        self._output_dir_label.set("Ask Me")
-        self._output_dir_str = ""
-        self._clear_button["state"] = tk.DISABLED
-
     def _on_text_overlay(self):
-        self._timecode_checkbutton["state"] = tk.NORMAL
-        self._frame_metrics_checkbutton["state"] = tk.NORMAL
         state = tk.NORMAL if (self._frame_metrics.get() or self._timecode.get()) else tk.DISABLED
         self._text_border["state"] = state
         self._text_font_scale["state"] = state
@@ -1559,7 +1321,6 @@ class OutputArea:
         self._text_font_color["state"] = state
 
     def _on_bounding_box(self):
-        self._bounding_box_button["state"] = tk.NORMAL
         state = tk.NORMAL if self._bounding_box.get() else tk.DISABLED
         self._bounding_box_color["state"] = state
         self._bounding_box_thickness["state"] = state
@@ -1579,27 +1340,12 @@ class OutputArea:
 
     @property
     def _output_mode(self) -> OutputMode:
-        index = self._output_mode_combo.current()
-        if index == 0:
-            return OutputMode.OPENCV
-        elif index == 1:
-            return OutputMode.FFMPEG
-        elif index == 2:
-            return OutputMode.COPY
-        else:
-            return OutputMode.ENCODE
+        return OUTPUT_MODES[self._output_mode_combo.current()][1]
 
     @_output_mode.setter
     def _output_mode(self, newval: OutputMode):
-        assert newval is not OutputMode.SCAN_ONLY  # Scan only is a separate checkbox in the UI.
-        if newval is OutputMode.OPENCV:
-            self._output_mode_combo.current(0)
-        elif newval is OutputMode.FFMPEG:
-            self._output_mode_combo.current(1)
-        elif newval is OutputMode.COPY:
-            self._output_mode_combo.current(2)
-        elif newval is OutputMode.ENCODE:
-            self._output_mode_combo.current(3)
+        modes = [mode for _label, mode in OUTPUT_MODES]
+        self._output_mode_combo.current(modes.index(newval))
 
     @property
     def _output_dir(self) -> str:
@@ -1617,15 +1363,7 @@ class OutputArea:
             self._clear_button["state"] = tk.DISABLED
 
     def load(self, settings: ScanSettings):
-        output_mode = OutputMode[settings.get("output-mode").upper()]
-        # If the default output mode requires ffmpeg but it is unavailable, fall back to
-        # OpenCV output (modes explicitly set by the user are kept, and error on scan).
-        if (
-            output_mode in (OutputMode.ENCODE, OutputMode.FFMPEG, OutputMode.COPY)
-            and settings.config.is_default("output-mode")
-            and not is_ffmpeg_available()
-        ):
-            output_mode = OutputMode.OPENCV
+        output_mode = resolve_output_mode(settings)
         if output_mode is not OutputMode.SCAN_ONLY:
             self._output_mode = output_mode
         output_dir = settings.get("output-dir")
@@ -1807,8 +1545,10 @@ class ScanArea:
         return settings
 
     def load(self, settings: ScanSettings):
-        output_mode = OutputMode[settings.get("output-mode").upper()]
-        if settings.get("scan-only") or output_mode == OutputMode.SCAN_ONLY:
+        if (
+            settings.get("scan-only")
+            or OutputMode.parse(settings.get("output-mode")) == OutputMode.SCAN_ONLY
+        ):
             self.scan_only = True
         self.open_on_completion = settings.get("open-output-dir")
 
@@ -1836,8 +1576,8 @@ class Application:
         self,
         settings: ScanSettings,
         initial_videos: ty.List[str],
-        startup_mode: str = CLASSIC,
-        default_startup_mode: str = CLASSIC,
+        startup_mode: str = ADVANCED,
+        default_startup_mode: str = ADVANCED,
     ):
         """Arguments:
         settings: Settings to initialize the UI from.
@@ -1916,7 +1656,7 @@ class Application:
 
         # Initialize UI state from config.
         self._initialize(settings)
-        self._preset_area.refresh(presets.list_presets())
+        self._preset_area.refresh(presets.list_available_presets())
         # The user config *is* the Default preset, so show it as active until a setting is
         # changed. Settings from `-c` or program defaults (`--ignore-user-config`) are not.
         if loaded_config_is_default_preset(settings.args):
@@ -1945,7 +1685,7 @@ class Application:
     def _dialog_parent(self) -> tk.Misc:
         """The window message boxes should be parented to: the Scan Wizard while it is
         shown, otherwise the Advanced Mode (root) window."""
-        wizard = getattr(self, "_wizard", None)
+        wizard = self._wizard
         if wizard is not None and wizard.is_visible:
             return wizard.window
         return self._root
@@ -2013,39 +1753,12 @@ class Application:
         settings_menu.add_command(
             label="Reset To Program Default",
             underline=0,
-            command=lambda: self._reset_config(program_default=True),
+            command=self._reset_config,
         )
 
-        help_menu = self._menubar.add_menu("Help", underline=0)
-        help_menu.add_command(
-            label="Help Guide",
-            command=lambda: webbrowser.open_new_tab("www.dvr-scan.com/guide"),
-            underline=0,
-        )
-        help_menu.add_command(
-            label="Open Discord",
-            command=lambda: webbrowser.open_new_tab("https://discord.gg/69kf6f2Exb"),
-            underline=5,
-        )
-        help_menu.add_separator()
-        help_menu.add_command(
-            label="Open Logs",
-            command=lambda: open_path(logfile_path("dvr-scan.log").parent),
-            underline=5,
-        )
-        # TODO: Add window to show log messages and copy them to clipboard or save to a logfile.
-        # help_menu.add_command(label="Debug Log", underline=0, state=tk.DISABLED)
-
-        help_menu.add_command(
-            label="About DVR-Scan",
-            command=lambda: AboutWindow().show(root=self._root),
-            underline=0,
-        )
+        fill_help_menu(self._menubar.add_menu("Help", underline=0), self._root)
 
     def _open_wizard(self, initial: bool = False):
-        # Imported here to avoid a circular import (the wizard reuses InputArea).
-        from dvr_scan.app.wizard import ScanWizard
-
         if not initial:
             # Settings may have been edited in Advanced Mode since the preset was applied.
             self._refresh_active_preset()
@@ -2054,7 +1767,7 @@ class Application:
                 self._root,
                 self._settings,
                 on_close=self._destroy,
-                on_switch_to_classic=self._on_switch_to_classic,
+                on_switch_to_advanced=self._on_switch_to_advanced,
                 on_preset_applied=self._on_preset_applied,
                 startup_mode_var=self._startup_mode_var,
                 on_startup_mode_changed=self._on_startup_mode_changed,
@@ -2103,7 +1816,7 @@ class Application:
         self._saved_startup_mode = mode
         logger.debug(f"saved startup-mode = {mode} to {path}")
 
-    def _on_switch_to_classic(self, videos: ty.List[str]):
+    def _on_switch_to_advanced(self, videos: ty.List[str]):
         """Show the Advanced Mode window, syncing videos and settings from the wizard."""
         if self._input_area.videos != videos:
             self._input_area.clear()
@@ -2111,7 +1824,7 @@ class Application:
                 self._input_area.add_video(path)
 
         if self._wizard is not None:
-            self._wizard.apply_to_classic(
+            self._wizard.apply_to_advanced(
                 self._motion_settings_window, self._output_area, self._scan_area
             )
             self._on_preset_dropdown_opened()
@@ -2156,7 +1869,7 @@ class Application:
             self._root.deiconify()
             self._root.focus()
 
-        self._scan_window = launch_scan(self._root, settings, on_closed, PADDING)
+        self._scan_window = launch_scan(self._root, settings, on_closed)
         if self._scan_window is None:
             return
 
@@ -2172,21 +1885,16 @@ class Application:
         )
         if not load_path:
             return
-        self._load_config_from_path(load_path)
-
-    def _load_config_from_path(self, path: str) -> bool:
-        """Load a config file and reinitialize the UI from it. Returns False and shows
-        an error message if the file could not be loaded."""
-        return self._load_config_file(path) is not None
+        self._load_config_file(load_path)
 
     def _load_config_file(self, path: str) -> ty.Optional[ConfigRegistry]:
-        """`_load_config_from_path`, returning the loaded config (None on failure)."""
+        """Load a config file and reinitialize the UI from it. Returns the loaded config, or
+        None (after showing an error message) if the file could not be loaded."""
         try:
             config = ConfigRegistry()
             config.load(path)
         except ConfigLoadFailure as ex:
-            for log_level, log_str in ex.init_log:
-                logger.log(log_level, log_str)
+            ex.log(logger)
             tkinter.messagebox.showerror(
                 title="Config Load Failure",
                 message="Invalid config file. See log messages for details.",
@@ -2194,34 +1902,19 @@ class Application:
             )
             return None
 
-        for log_level, log_str in config.consume_init_log():
-            logger.log(log_level, log_str)
+        config.flush_init_log(logger)
         self._reload_config(config)
         return config
 
-    def _reset_config(self, program_default: bool = False):
+    def _reset_config(self):
+        """Reset all settings to the program defaults, after confirmation."""
         if not tkinter.messagebox.askyesno(
             title="Reset Settings",
             message="All settings will be reset. Do you want to continue?",
             icon=tkinter.messagebox.WARNING,
         ):
             return
-        try:
-            config = ConfigRegistry()
-            if not program_default:
-                config.load()
-        except ConfigLoadFailure as ex:
-            for log_level, log_str in ex.init_log:
-                logger.log(log_level, log_str)
-            tkinter.messagebox.showerror(
-                title="Config Load Failure",
-                message="Failed to load specified config file. See log messages for details.",
-            )
-            return
-
-        for log_level, log_str in config.consume_init_log():
-            logger.log(log_level, log_str)
-        self._reload_config(config)
+        self._reload_config(ConfigRegistry())
 
     def _reload_config(self, config: ConfigRegistry):
         """Reinitialize UI from another config. Clears the active preset; callers
@@ -2278,8 +1971,7 @@ class Application:
         """Apply an already-loaded preset config to the UI. Shared by the preset
         dropdown and the Scan Wizard (which loads the config itself)."""
         logger.debug(f"Applying preset: {preset.name}")
-        for log_level, log_str in config.consume_init_log():
-            logger.log(log_level, log_str)
+        config.flush_init_log(logger)
         self._reload_config(config)
         self._mark_preset_applied(preset.name)
 
@@ -2288,7 +1980,7 @@ class Application:
         been changed since it was applied. Runs when the dropdown is opened."""
         # TODO: This stats the presets directory on every dropdown open, which is fine
         # for a local folder but could be slow on a network drive. Cache on mtime if so.
-        self._preset_area.refresh(presets.list_presets())
+        self._preset_area.refresh(presets.list_available_presets())
         self._refresh_active_preset()
 
     def _refresh_active_preset(self):
@@ -2307,8 +1999,7 @@ class Application:
         try:
             config = presets.load_preset(preset)
         except ConfigLoadFailure as ex:
-            for log_level, log_str in ex.init_log:
-                logger.log(log_level, log_str)
+            ex.log(logger)
             tkinter.messagebox.showerror(
                 title="Preset Load Failure",
                 message=f"Failed to load preset: {preset.name}. See log messages for details.",
@@ -2359,7 +2050,7 @@ class Application:
             )
             return
         logger.debug(f"saved preset to {path}")
-        self._preset_area.refresh(presets.list_presets())
+        self._preset_area.refresh(presets.list_available_presets())
         self._mark_preset_applied(name)
 
     def _open_presets_folder(self):
@@ -2369,21 +2060,12 @@ class Application:
     def _on_drop(self, event):
         """Handle files dropped onto the main window. Videos are added to the input
         list; a single config file is loaded as the active settings."""
-        # Dropped paths are a Tcl list (paths with spaces are wrapped in braces).
-        config_loaded = False
-        for path_str in self._root.tk.splitlist(event.data):
-            path = Path(path_str)
-            if not path.is_file():
-                logger.info(f"Ignoring dropped item (not a file): {path}")
-                continue
-            if path.suffix.lower() == ".cfg":
-                # Loading a config reinitializes the whole UI, so only the first wins.
-                if config_loaded:
-                    logger.warning(f"Ignoring additional dropped config file: {path}")
-                    continue
-                config_loaded = self._load_config_from_path(str(path))
-            else:
-                self._input_area.add_video(str(path))
+        handle_drop(
+            self._root,
+            event.data,
+            add_video=self._input_area.add_video,
+            load_config=lambda path: self._load_config_file(path) is not None,
+        )
 
     def _get_config_settings(self) -> ScanSettings:
         """Get current UI state for writing a config file."""
@@ -2423,9 +2105,5 @@ class Application:
             settings.set("output-dir", output_dir)
 
         finalize_output_names(settings, combine=self._output_area.combine)
-
-        if not self._input_area.concatenate and len(settings.get_arg("input")) > 1:
-            logger.error("ERROR - TODO: Handle non-concatenated inputs.")
-            return None
 
         return settings

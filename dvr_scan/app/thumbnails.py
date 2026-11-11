@@ -14,9 +14,7 @@
 Decoding a frame is too slow to do on the UI thread, so rows are shown with a placeholder
 image and the real thumbnail is produced on a background worker thread (`ThumbnailLoader`).
 Results are handed back to the UI thread via a queue that is drained from a Tk `after`
-loop, so no Tk call is ever made off the UI thread. By default the loader drives
-`ttk.Treeview` rows, but any widget that addresses rows by id can be targeted via a custom
-`apply_image` callback (see `VideoList` in `video_list.py`).
+loop, so no Tk call is ever made off the UI thread.
 """
 
 import queue
@@ -50,7 +48,7 @@ FILMSTRIP_FRAMES = 4
 # Gap (px) and its color between adjacent frames in the strip.
 FILMSTRIP_GAP = 2
 FILMSTRIP_GAP_COLOR = (20, 20, 20)
-# Space (px) between a filmstrip and the text in the same cell (classic input list).
+# Space (px) between a filmstrip and the text in the same cell (Advanced Mode input list).
 THUMBNAIL_TEXT_GAP = 8
 # Nominal per-frame width (16:9), used to size the placeholder and column before any
 # real frame (whose true aspect ratio may differ) has been decoded.

@@ -13,6 +13,7 @@
 Provides logging and platform/operating system compatibility.
 """
 
+import functools
 import importlib
 import logging
 import logging.handlers
@@ -21,6 +22,7 @@ import platform
 import subprocess
 import sys
 import typing as ty
+from pathlib import Path
 
 try:
     import PIL
@@ -32,6 +34,7 @@ try:
 except ImportError:
     screeninfo = None
 
+from platformdirs import user_log_path
 from scenedetect import AVAILABLE_BACKENDS
 from scenedetect.platform import get_and_create_path, get_ffmpeg_version
 
@@ -61,6 +64,13 @@ LOG_FORMAT_ROLLING_LOGS = (
 )
 
 
+def log_folder() -> Path:
+    """Folder DVR-Scan writes its log files to, created if it does not exist."""
+    folder = user_log_path("DVR-Scan", False)
+    folder.mkdir(parents=True, exist_ok=True)
+    return folder
+
+
 def open_path(path: str):
     """Open a path in the default file explorer."""
     if platform.system() == "Windows":
@@ -88,8 +98,10 @@ def get_min_screen_bounds():
     return None
 
 
+@functools.lru_cache(maxsize=None)
 def is_ffmpeg_available(ffmpeg_path: ty.AnyStr = "ffmpeg"):
-    """Is ffmpeg Available: Gracefully checks if ffmpeg command is available.
+    """Is ffmpeg Available: Gracefully checks if ffmpeg command is available. The result
+    is cached, as it spawns a process and does not change while DVR-Scan runs.
 
     Returns:
         True if `ffmpeg` can be invoked, False otherwise.

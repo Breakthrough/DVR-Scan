@@ -11,7 +11,7 @@
 
 """Custom scrollable video list used by the Scan Wizard.
 
-Unlike the classic `InputArea` (a `ttk.Treeview` with columns), each row here shows the
+Unlike the Advanced Mode `InputArea` (a `ttk.Treeview` with columns), each row here shows the
 filmstrip preview on the left with the file's metadata stacked beside it:
 
     [     ][ Filename ]
@@ -36,19 +36,15 @@ surrounding `ScanWizard` code."""
 import dataclasses
 import sys
 import tkinter as tk
-import tkinter.filedialog
-import tkinter.messagebox
 import tkinter.ttk as ttk
 import typing as ty
-from logging import getLogger
-from pathlib import Path
 
-from dvr_scan.app.application import (
-    PADDING,
-    SORT_FIELDS,
+from dvr_scan.app.common import PADDING
+from dvr_scan.app.inputs import (
     VideoInfo,
+    ask_video_paths,
     parse_resolution,
-    probe_video,
+    probe_videos,
     sample_video_frames,
 )
 from dvr_scan.app.thumbnails import (
@@ -58,8 +54,6 @@ from dvr_scan.app.thumbnails import (
 )
 from dvr_scan.shared import ScanSettings
 
-logger = getLogger("dvr_scan")
-
 # Toolbar button glyphs. Kept as `\N{...}` escapes so the source stays ASCII (see the
 # project ASCII policy); all are BMP characters that render in the default Windows font.
 ADD_GLYPH = "+"
@@ -67,6 +61,13 @@ REMOVE_GLYPH = "\N{MULTIPLICATION SIGN}"
 UP_GLYPH = "\N{BLACK UP-POINTING TRIANGLE}"
 DOWN_GLYPH = "\N{BLACK DOWN-POINTING TRIANGLE}"
 SORT_GLYPH = "\N{UP DOWN ARROW}"
+
+# Fields the list can be sorted by, used to build the Sort menus. Each entry is
+# (label, column id for `VideoList.sort_by`, default descending).
+SORT_FIELDS: ty.Tuple[ty.Tuple[str, str, bool], ...] = (
+    ("Name", "#0", True),
+    ("Date", "date", False),
+)
 
 # Horizontal gap between the filmstrip and the stacked text, and vertical padding per row.
 TEXT_PADX = 8
@@ -131,6 +132,9 @@ class VideoList:
     """Scrollable list of input videos with stacked metadata rows and a vertical icon
     toolbar. Built into `root`, mirroring the `InputArea` API used by the Scan Wizard."""
 
+    on_changed: ty.Optional[ty.Callable[[], None]] = None
+    """Called after the list's contents or selection change (set by the owner)."""
+
     def __init__(self, root: tk.Widget, on_add: ty.Optional[ty.Callable[[], None]] = None):
         """`on_add` handles the Add ("+") button. The Scan Wizard routes it through its own
         browse handler, which parents the file dialog to the wizard and locks navigation
@@ -189,7 +193,7 @@ class VideoList:
             toolbar, 3, DOWN_GLYPH, "Move down", self._on_move_down
         )
         self._sort_button = self._toolbar_button(toolbar, 4, SORT_GLYPH, "Sort...", self._open_sort)
-        self._sort_menu = self._build_sort_menu(toolbar)
+        self._sort_menu = self.build_sort_menu(toolbar)
 
         self._placeholder = to_photo(filmstrip_placeholder())
         self._thumbnails = ThumbnailLoader(self._canvas, apply_image=self._apply_thumbnail)
@@ -231,11 +235,6 @@ class VideoList:
         if not self._order:
             return None
         return parse_resolution(self._rows[self._order[0]].info.resolution)
-
-    @property
-    def selected_videos(self) -> ty.List[str]:
-        """Paths of the selected videos, in display order."""
-        return [self._rows[iid].info.path for iid in self._order if iid in self._selected]
 
     def select_all(self):
         """Select every row in the list."""
@@ -279,35 +278,11 @@ class VideoList:
     def add_video(self, path: str = "", parent: ty.Optional[tk.Widget] = None):
         """Add a video to the list by path, or open a file dialog if no path is given.
         Called from the Add button, drag-and-drop, and the Scan Wizard."""
-        if not path:
-            dialog_options = {
-                "title": "Open video(s)...",
-                "filetypes": [("Video", "*.mp4"), ("Video", "*.avi"), ("Other", "*")],
-                "multiple": True,
-            }
-            if parent is not None:
-                dialog_options["parent"] = parent
-            paths = tkinter.filedialog.askopenfilename(**dialog_options)
-            if not paths:
-                return
-        else:
-            paths = [path]
-        failed_to_load = False
-        for path in paths:
-            if not Path(path).exists():
-                logger.error(f"File does not exist: {path}")
-                failed_to_load = True
-                continue
-            info = probe_video(path)
-            if info is None:
-                failed_to_load = True
-                continue
+        paths = [path] if path else ask_video_paths(parent)
+        if not paths:
+            return
+        for info in probe_videos(paths, parent):
             self._add_row(info)
-        if failed_to_load:
-            warning_options = {"parent": parent} if parent is not None else {}
-            tkinter.messagebox.showwarning(
-                "Video Open Failure", "Failed to open one or more videos.", **warning_options
-            )
         self._refresh_button_state()
 
     def update(self, settings: ScanSettings) -> ty.Optional[ScanSettings]:
@@ -332,6 +307,7 @@ class VideoList:
 
         self._order.sort(key=key, reverse=descending)
         self._regrid()
+        self._refresh_button_state()
 
     def clear(self):
         """Remove all videos from the list."""
@@ -497,42 +473,32 @@ class VideoList:
         y = self._sort_button.winfo_rooty() + self._sort_button.winfo_height()
         self._sort_menu.tk_popup(x, y)
 
-    def _build_sort_menu(self, parent: tk.Widget) -> tk.Menu:
-        """Build the Sort popup: a radio group of fields, then Ascending/Descending.
-        Mirrors the wizard's File > Sort menu, reusing SORT_FIELDS."""
-        self._sort_field = tk.StringVar(value=SORT_FIELDS[0][1])
-        self._sort_descending = tk.BooleanVar(value=SORT_FIELDS[0][2])
+    def build_sort_menu(self, parent: tk.Misc) -> tk.Menu:
+        """Build a menu that sorts this list: a radio group of `SORT_FIELDS`, then
+        Ascending/Descending. Picking a field applies that field's default direction.
+        Used for the toolbar's Sort popup and the Scan Wizard's File > Sort menu."""
+        field = tk.StringVar(parent, value=SORT_FIELDS[0][1])
+        descending = tk.BooleanVar(parent, value=SORT_FIELDS[0][2])
+
+        def apply():
+            self.sort_by(field.get(), descending.get())
+
+        def select_field(column: str):
+            descending.set(next(desc for _label, col, desc in SORT_FIELDS if col == column))
+            apply()
+
         menu = tk.Menu(parent, tearoff=0)
         for label, column, _default in SORT_FIELDS:
             menu.add_radiobutton(
                 label=label,
-                variable=self._sort_field,
+                variable=field,
                 value=column,
-                command=lambda c=column: self._on_sort_field(c),
+                command=lambda c=column: select_field(c),
             )
         menu.add_separator()
-        menu.add_radiobutton(
-            label="Ascending",
-            variable=self._sort_descending,
-            value=False,
-            command=self._apply_sort,
-        )
-        menu.add_radiobutton(
-            label="Descending",
-            variable=self._sort_descending,
-            value=True,
-            command=self._apply_sort,
-        )
+        menu.add_radiobutton(label="Ascending", variable=descending, value=False, command=apply)
+        menu.add_radiobutton(label="Descending", variable=descending, value=True, command=apply)
         return menu
-
-    def _on_sort_field(self, column: str):
-        # Switching field resets to that field's default direction (Name desc, Date asc).
-        default_descending = next(desc for _label, col, desc in SORT_FIELDS if col == column)
-        self._sort_descending.set(default_descending)
-        self._apply_sort()
-
-    def _apply_sort(self):
-        self.sort_by(self._sort_field.get(), self._sort_descending.get())
 
     def _refresh_button_state(self):
         indices = self._selected_indices()
@@ -543,3 +509,5 @@ class VideoList:
         can_move_down = bool(indices) and indices[-1] < len(self._order) - 1
         self._down_button["state"] = tk.NORMAL if can_move_down else tk.DISABLED
         self._sort_button["state"] = tk.NORMAL if self._order else tk.DISABLED
+        if self.on_changed is not None:
+            self.on_changed()
