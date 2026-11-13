@@ -11,6 +11,10 @@ on:
       - dvr_scan/**
       - tests/**
 
+# The workflow token is read-only. No job writes to the repository.
+permissions:
+  contents: read
+
 env:
   UV_SYSTEM_PYTHON: 1
 
@@ -20,9 +24,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
       - name: Set up Python 3.x
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@v7.1.0
         with:
           python-version: "3.13"
 

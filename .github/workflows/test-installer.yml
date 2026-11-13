@@ -119,9 +119,10 @@ jobs:
     steps:
       # Test videos are tracked in the repo under tests/resources/; check out
       # the release tag itself so the smoke clip matches the release.
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         with:
           ref: ${{ inputs.tag }}
+          persist-credentials: false
 
       - name: Write helper functions
         # Each `run:` step is a fresh pwsh process, so shared functions go into
@@ -444,7 +445,7 @@ jobs:
 
       - name: Upload msiexec logs
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: fresh-install-logs
           path: '*.log'
@@ -832,7 +833,7 @@ jobs:
 
       - name: Upload msiexec logs
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: upgrade-logs
           path: '*.log'

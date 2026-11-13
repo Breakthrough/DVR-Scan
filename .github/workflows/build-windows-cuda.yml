@@ -12,6 +12,10 @@ name: Build OpenCV (Windows, CUDA)
 on:
   workflow_dispatch:
 
+# The workflow token is read-only. No job writes to the repository.
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: windows-latest
@@ -22,7 +26,9 @@ jobs:
 
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
 
       #- name: 🏗️ Install Build Dependencies
       #  run: |
@@ -30,7 +36,7 @@ jobs:
       #    choco install -y cmake ninja
 
       - name: 🐍 Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@v7.1.0
         with:
           python-version: '3.12'
 
@@ -40,14 +46,14 @@ jobs:
           pip install numpy wheel
 
       - name: Setup MSBuild.exe
-        uses: microsoft/setup-msbuild@v3
+        uses: microsoft/setup-msbuild@v3.0.0
 
       - name: Setup NASM
-        uses: ilammy/setup-nasm@v1
+        uses: ilammy/setup-nasm@v1.5.2
 
       - name: Cache CUDA Toolkit Installer
         id: cache-cuda-installer
-        uses: actions/cache@v6
+        uses: actions/cache@v6.1.0
         with:
           path: ./.cache/cuda_installer.exe
           key: cuda-installer-12.0.0
@@ -78,7 +84,7 @@ jobs:
 
       - name: Cache CuDNN Installer
         id: cache-cudnn-installer
-        uses: actions/cache@v6
+        uses: actions/cache@v6.1.0
         with:
           path: ./.cache/cudnn_installer.exe
           key: cudnn-installer-8.8.0.121-windows
@@ -106,7 +112,7 @@ jobs:
 
       - name: Cache opencv-python repository
         id: cache-opencv-python
-        uses: actions/cache@v6
+        uses: actions/cache@v6.1.0
       # TODO: Need to pin this to a version.
         with:
           path: opencv-python
@@ -173,7 +179,7 @@ jobs:
         shell: pwsh
 
       - name: 📤 Upload Artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: opencv-python-cuda
           path: opencv-python/dist/opencv_python*.whl

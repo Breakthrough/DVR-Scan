@@ -1,0 +1,46 @@
+# Verify that .github/workflows/actions.lock agrees with the workflows.
+#
+# The lockfile records the exact commit of each action that the workflows use.
+# This check fails when the lockfile is out of date, or when GitHub would reject
+# a locked commit. To repair the lockfile, run this command in the repository
+# root and commit the result:
+#
+#   gh actions-lock
+#
+# Do not edit actions.lock by hand.
+name: Verify Actions Lockfile
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/**
+      - .github/actions/**
+  push:
+    branches:
+      - main
+      - 'releases/**'
+    paths:
+      - .github/workflows/**
+      - .github/actions/**
+  workflow_dispatch:
+
+# The workflow token is read-only. No job writes to the repository.
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      # Update the pinned version by hand. Dependabot does not manage it.
+      - name: Install gh-actions-lock
+        run: gh extension install github/gh-actions-lock --pin v0.4.1
+
+      - name: Verify lockfile
+        run: gh actions-lock --verify

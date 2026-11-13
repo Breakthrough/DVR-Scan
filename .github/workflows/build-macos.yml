@@ -19,6 +19,10 @@ on:
 #      - v*-release
   workflow_dispatch:
 
+# The workflow token is read-only. No job writes to the repository.
+permissions:
+  contents: read
+
 env:
   ffmpeg_version: "9.0.2"
   UV_SYSTEM_PYTHON: 1
@@ -33,10 +37,12 @@ jobs:
         python-version: ["3.13"]
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@v7.1.0
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
@@ -64,7 +70,7 @@ jobs:
           python dist/post_release.py
 
       - name: Upload
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: DVR-Scan-macos
           path: dist/dvr-scan
@@ -73,9 +79,11 @@ jobs:
     runs-on: macos-latest
     needs: build
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
 
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@v8.0.2
         with:
           name: DVR-Scan-macos
           path: build

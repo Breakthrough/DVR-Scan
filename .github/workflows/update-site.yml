@@ -8,6 +8,10 @@ on:
       - 'v*-release'
   workflow_dispatch:
 
+# The workflow token is read-only by default. The update_site job adds write access.
+permissions:
+  contents: read
+
 env:
   UV_SYSTEM_PYTHON: 1
 
@@ -15,6 +19,8 @@ env:
 jobs:
   update_site:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Push the generated site to the gh-pages branch.
     # Skip rehearsal tags (e.g. v2.0-rc1-release, v2.0-dev1-release) so only real
     # releases and manual dispatches republish the website.
     if: >-
@@ -23,10 +29,13 @@ jobs:
        (!contains(github.ref_name, '-rc') && !contains(github.ref_name, '-dev')))
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
+        with:
+          # Keep the credentials. The "Update Website" step pushes to gh-pages with them.
+          persist-credentials: true
 
       - name: Set up Python 3.13
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@v7.1.0
         with:
           python-version: "3.13"
           cache: "pip"
@@ -64,7 +73,7 @@ jobs:
           if git diff --quiet && git diff --cached --quiet; then
             echo "Generated website is identical to gh-pages; nothing to publish."
           else
-            git commit -a -m "[docs] @${{ github.triggering_actor }}: Generate Website" \
-              -m "Commit: ${{ github.sha }}"
+            git commit -a -m "[docs] @${GITHUB_TRIGGERING_ACTOR}: Generate Website" \
+              -m "Commit: ${GITHUB_SHA}"
             git push
           fi

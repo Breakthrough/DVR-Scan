@@ -6,6 +6,9 @@ updates:
       - "/.github/actions/*"
     schedule:
       interval: monthly
+    # Wait 7 days after a release before Dependabot proposes it.
+    cooldown:
+      default-days: 7
     groups:
       actions:
         patterns: ["*"]

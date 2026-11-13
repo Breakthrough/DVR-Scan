@@ -34,6 +34,10 @@ on:
       - v*-release
   workflow_dispatch:
 
+# The workflow token is read-only. No job writes to the repository.
+permissions:
+  contents: read
+
 jobs:
   build:
     # Skip scheduled runs in forks: GitHub attributes cron runs to the upstream
@@ -52,10 +56,12 @@ jobs:
         python-version: ["3.11", "3.12", "3.13"]
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@v7.1.0
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
@@ -75,8 +81,11 @@ jobs:
           uv pip uninstall opencv-python opencv-contrib-python
           uv pip install opencv-contrib-python-headless --only-binary :all:
 
+      # `$/` runs this repository's copy of the action at the commit of the workflow.
+      # The lockfile can then cover the actions that the local action uses. A `./`
+      # path runs the copy in the workspace, and the lockfile cannot cover that.
       - name: Setup FFmpeg
-        uses: ./.github/actions/setup-ffmpeg
+        uses: $/.github/actions/setup-ffmpeg
 
       - name: Unit Test
         run: |
@@ -135,7 +144,7 @@ jobs:
 
       - name: Upload Package
         if: ${{ matrix.python-version == '3.13' && matrix.os == 'ubuntu-latest' }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: dvr-scan-dist
           path: |

@@ -9,13 +9,19 @@ on:
     tags:
       - 'v*-release'
 
+# The workflow token is read-only. No job writes to the repository.
+permissions:
+  contents: read
+
 jobs:
   static:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@v7.1.0
         with:
           python-version: '3.11'
           cache: 'pip'
