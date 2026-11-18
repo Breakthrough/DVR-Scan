@@ -30,6 +30,7 @@ from dvr_scan.app.common import (
     PADDING,
     SETTING_INPUT_WIDTH,
     MenuBar,
+    Tooltip,
     add_startup_mode_menu,
     fill_help_menu,
     fit_window_to_screen,
@@ -68,6 +69,7 @@ from dvr_scan.platform import is_ffmpeg_available, open_path
 from dvr_scan.scanner import OutputMode, Point
 from dvr_scan.shared import ScanSettings, finalize_output_names, resolve_output_mode
 from dvr_scan.subtractor import SubtractorCNT, SubtractorCudaMOG2
+from dvr_scan.wallclock import TIME_CODE_START_CHOICES
 
 WINDOW_TITLE = "DVR-Scan"
 LONG_SETTING_INPUT_WIDTH = 72
@@ -215,6 +217,9 @@ class InputArea:
 
         self._end_time_label = tk.Label(root, text="End Time")
         self._end_time = TimecodeEntry(root, "00:00:00.000")
+        # Times are positions in the video, not times of day (#285).
+        Tooltip(self._start_time_label, "Position in the video to start the scan.")
+        Tooltip(self._end_time_label, "Position in the video to end the scan (0 = end of video).")
 
         ttk.Checkbutton(
             root,
@@ -1136,6 +1141,20 @@ class OutputArea:
             row=1, column=1, sticky=tk.W, padx=PADDING, pady=(PADDING, 0)
         )
 
+        # Start time of the timecode: a choice, or a date and time that the user types.
+        tk.Label(self._opencv_options, text="Timecode Start").grid(
+            row=1, column=2, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0)
+        )
+        self._time_code_start = tk.StringVar(value=str(CONFIG_MAP["time-code-start"]))
+        self._time_code_start_combo = ttk.Combobox(
+            self._opencv_options,
+            textvariable=self._time_code_start,
+            values=list(TIME_CODE_START_CHOICES),
+        )
+        self._time_code_start_combo.grid(
+            row=1, column=3, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0)
+        )
+
         tk.Label(self._opencv_options, text="Text Color").grid(
             row=2, column=0, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0)
         )
@@ -1319,6 +1338,7 @@ class OutputArea:
         self._text_margin["state"] = state
         self._text_bg_color["state"] = state
         self._text_font_color["state"] = state
+        self._time_code_start_combo["state"] = tk.NORMAL if self._timecode.get() else tk.DISABLED
 
     def _on_bounding_box(self):
         state = tk.NORMAL if self._bounding_box.get() else tk.DISABLED
@@ -1375,6 +1395,7 @@ class OutputArea:
         self._encode_args.set(settings.get("encode-args"))
         # Text Overlays
         self._timecode.set(settings.get("time-code"))
+        self._time_code_start.set(settings.get("time-code-start"))
         self._frame_metrics.set(settings.get("frame-metrics"))
         self._text_font_color.set(settings.get("text-font-color"))
         self._text_bg_color.set(settings.get("text-bg-color"))
@@ -1404,6 +1425,7 @@ class OutputArea:
                 settings.set("encode-args", self._encode_args.get())
             # Text Overlays
             settings.set("time-code", self._timecode.get())
+            settings.set("time-code-start", self._time_code_start.get().strip() or "none")
             settings.set("frame-metrics", self._frame_metrics.get())
             settings.set("text-font-color", self._text_font_color.get())
             settings.set("text-bg-color", self._text_bg_color.get())

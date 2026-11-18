@@ -57,6 +57,7 @@ from dvr_scan.platform import (
 from dvr_scan.region import Point, Size, bound_point, load_regions, save_regions
 from dvr_scan.subtractor import SubtractorCNT, SubtractorCudaMOG2, SubtractorMOG2
 from dvr_scan.video_input import VideoStreamConcat, open_input
+from dvr_scan.wallclock import WallClock
 
 if HAS_TKINTER and HAS_PILLOW:
     from dvr_scan.app.region_editor import RegionEditor
@@ -164,6 +165,7 @@ class MotionScanner:
 
         # Overlay Parameters (set_overlays)
         self._timecode_overlay = None  # -tc/--time-code, None or TextOverlay
+        self._wall_clock = None  # --time-code-start, None or WallClock
         self._metrics_overlay = None  # -fm/--frame-metrics, None or TextOverlay
         self._bounding_box = None  # -bb/--bounding-box, None or BoundingBoxOverlay
 
@@ -312,15 +314,23 @@ class MotionScanner:
         timecode_overlay: ty.Optional[TextOverlay] = None,
         metrics_overlay: ty.Optional[TextOverlay] = None,
         bounding_box: ty.Optional[BoundingBoxOverlay] = None,
+        time_code_start: str = "none",
     ):
         """Sets options to use if/when drawing overlays on the resulting frames.
 
         Arguments:
-            draw_timecode: If True, draw a timecode (presentation time) on each frame.
-            bounding_box_smoothing: Value to use for temporal smoothing (in time) for drawing a
-                bounding box containing all detected motion in each frame. If None, no box will
-                be drawn. If <= 1, smoothing will be disabled.
+            timecode_overlay: If set, draw a timecode (presentation time) on each frame.
+            metrics_overlay: If set, draw the frame number and motion score on each frame.
+            bounding_box: If set, draw a box around the area with motion in each frame.
+            time_code_start: Start time for the timecode overlay (see `dvr_scan.wallclock`).
+                If not `none`, the timecode shows the date and time of recording.
+
+        Raises:
+            ValueError: `time_code_start` is not a valid value.
         """
+        self._wall_clock = (
+            WallClock.create(self._input, time_code_start) if timecode_overlay else None
+        )
         self._timecode_overlay = timecode_overlay
         self._metrics_overlay = metrics_overlay
         self._bounding_box = bounding_box
@@ -518,6 +528,30 @@ class MotionScanner:
             logger.debug("no regions selected")
         return True
 
+    def _check_time_range(self):
+        """Raise ValueError if the start/end time selects no frames of the input.
+
+        Without this check, the scan reads 0 frames and reports no events, with no error.
+        Users can then think that the start time is a schedule that the scan waits for (#285).
+        """
+        # Use the exact per-source durations. The concat duration can be wrong for VFR inputs.
+        input_duration = float(sum(source.duration for source in self._input.sources))
+        if self._start_time is not None and self._start_time.seconds >= input_duration:
+            raise ValueError(
+                f"Start time {self._start_time.get_timecode()} is not before the end of the"
+                f" input ({FrameTimecode(input_duration, 1000.0).get_timecode()}). The start"
+                " time is a position in the video, not a time of day."
+            )
+        if (
+            self._start_time is not None
+            and self._end_time is not None
+            and self._end_time.seconds <= self._start_time.seconds
+        ):
+            raise ValueError(
+                f"End time {self._end_time.get_timecode()} is not after start time"
+                f" {self._start_time.get_timecode()}."
+            )
+
     @property
     def frames_remaining(self) -> int:
         num_frames = self._input.total_frames
@@ -571,6 +605,8 @@ class MotionScanner:
 
         in_motion_event = False
         frames_processed = 0
+
+        self._check_time_range()
 
         # Seek to starting position if required. When a start time is set, use it directly
         # as the scan start: after a seek, the backend's reported position lags the first
@@ -1257,7 +1293,8 @@ class MotionScanner:
         use_shift=True,
     ):
         if self._timecode_overlay is not None:
-            self._timecode_overlay.draw(frame, text=timecode.get_timecode())
+            text = self._wall_clock.get_text(timecode) if self._wall_clock else None
+            self._timecode_overlay.draw(frame, text=text or timecode.get_timecode())
         if self._metrics_overlay is not None:
             to_display = "Frame: %04d\nScore: %3.2f" % (
                 timecode.frame_num,

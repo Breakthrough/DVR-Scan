@@ -7,7 +7,11 @@
 
 ### 2.1 (In Development)
 
- * No changes yet.
+ * [feature] New `time-code-start` config option and `--time-code-start` flag show the date and time of recording in the timecode overlay (`-tc`) [#285](https://github.com/Breakthrough/DVR-Scan/issues/285)
+    * `filename` reads the start time of each input from its file name (e.g. `20261116233730.avi`), `modified` uses the file modified time minus the duration, or give the start time of the first input as `YYYY-MM-DD HH:MM:SS`
+    * In the app, set it with Timecode Start in the output options
+ * [bugfix] A start time at or after the end of the input, or an end time that is not after the start time, now gives an error. Before, the scan read 0 frames and found no events with no warning [#285](https://github.com/Breakthrough/DVR-Scan/issues/285)
+ * [bugfix] The Date column of the app input list now shows the file modified time instead of the creation time. On Windows, a copy (e.g. from an SD card) sets the creation time to the time of the copy [#285](https://github.com/Breakthrough/DVR-Scan/issues/285)
 
 ### 2.0 (2026-11-08)
 

@@ -486,6 +486,24 @@ def test_start_duration(traffic_camera_video):
     compare_event_lists(event_list, TRAFFIC_CAMERA_EVENTS_AFTER_SEEK, AFTER_SEEK_FRAME_TOLERANCE)
 
 
+@pytest.mark.parametrize(
+    "start_time,end_time,message",
+    [
+        # traffic_camera.mp4 is 23.04 seconds long.
+        ("01:00:00", None, "not before the end of the input"),
+        ("00:00:23.040", None, "not before the end of the input"),
+        ("00:00:05", "00:00:02", "not after start time"),
+        ("00:00:05", "00:00:05", "not after start time"),
+    ],
+)
+def test_time_range_selects_no_frames(traffic_camera_video, start_time, end_time, message):
+    """A start/end time that selects no frames must raise an error, not scan 0 frames (#285)."""
+    scanner = MotionScanner([traffic_camera_video])
+    scanner.set_video_time(start_time=start_time, end_time=end_time)
+    with pytest.raises(ValueError, match=message):
+        scanner.scan()
+
+
 def test_max_events(traffic_camera_video):
     """Setting max_events must end the scan as soon as that many events are found (#261)."""
     scanner = MotionScanner([traffic_camera_video])

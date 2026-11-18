@@ -324,6 +324,10 @@ All time values can be given as a timecode (`HH:MM:SS` or `HH:MM:SS.nnn`), in se
  * <b><pre>-tc, --time-code</pre></b>  Draw time code of each frame on the top left corner.
 <br/>Text properties (e.g. color, font size, margin) can be set with a [config file](#overlays_1).
 
+ * <b><pre>--time-code-start</pre></b>  Show the date and time of recording in the time code (`-tc`) instead of the position in the video.
+<br/>`filename`: read the start time of each input from its file name (e.g. `20261116233730.avi` or `VID_20261116_233730.mp4`). `modified`: use the file modified time minus the duration of the video. Or give the start time of the first input, e.g. `--time-code-start "2026-11-16 23:37:30"`; later inputs continue from it.
+<br/>See the [`time-code-start`](#text-overlays) config option for details.
+
  * <b><pre>-fm, --frame-metrics</pre></b>  Draw frame metrics, including motion score, on the top right corner.
 <br/>Text properties (e.g. color, font size, margin) can be set with a [config file](#config-file).
 
@@ -730,6 +734,25 @@ Color values can be specified as either `(R,G,B)` or in hex as `0xFFFFFF`. Time 
     <span class="dvr-scan-example">
     ```
     time-code = yes
+    ```
+    </span>
+
+ * <b><pre>time-code-start</pre></b>
+    Start time of the timecode overlay. If set, the timecode shows the date and time of recording instead of the position in the video. The time of each frame is the start time of its input video plus the position of the frame in that video. Times are local times, as the camera wrote them.
+     * `none`: show the position in the video.
+     * `filename`: read the start time of each input from its file name. The name must contain the date and time as `YYYYMMDDhhmmss`, with optional separators between the parts (e.g. `20261116233730.avi`, `VID_20261116_233730.mp4`, `2026-11-16_23-37-30.mp4`). If a file name has no date and time, the timecode shows the position in the video for that input.
+     * `modified`: use the file modified time minus the duration of the video. Most cameras set the modified time when a clip ends. A copy of the file usually keeps the modified time.
+     * A date and time as `YYYY-MM-DD HH:MM:SS`: the start time of the first input. Later inputs continue from it, so this is correct only if the recording was continuous. Cameras that record only clips with motion have gaps between files.
+
+    The time can be wrong if the frame rate in the file is not the rate at which the camera recorded.
+    <span class="dvr-scan-default">
+    ```
+    time-code-start = none
+    ```
+    </span>
+    <span class="dvr-scan-example">
+    ```
+    time-code-start = filename
     ```
     </span>
 
