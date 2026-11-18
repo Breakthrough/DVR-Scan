@@ -695,3 +695,29 @@ def test_save_region_writes_scanned_area(tmp_path, regions):
         assert saved == [[Point(631, 532), Point(841, 532), Point(841, 659), Point(631, 659)]]
     else:
         assert saved == [[Point(0, 0), Point(1279, 0), Point(1279, 719), Point(0, 719)]]
+
+
+def test_cli_time_code_start_warning_and_validation(traffic_camera_video, caplog):
+    """--time-code-start warns when passed on the CLI without -tc (unless set to none),
+    and rejects invalid values."""
+    from dvr_scan.shared import init_scanner
+
+    settings = _parse_cli(["-i", traffic_camera_video, "-so", "--time-code-start", "FILENAME"])
+    settings.set("input", [traffic_camera_video])
+    assert settings.get("time-code-start") == "filename"
+    caplog.clear()
+    with caplog.at_level(logging.WARNING, logger="dvr_scan"):
+        init_scanner(settings)
+    assert any("--time-code-start has no effect" in r.message for r in caplog.records)
+
+    # Passing `--time-code-start none` without -tc must not warn.
+    settings_none = _parse_cli(["-i", traffic_camera_video, "-so", "--time-code-start", "none"])
+    settings_none.set("input", [traffic_camera_video])
+    caplog.clear()
+    with caplog.at_level(logging.WARNING, logger="dvr_scan"):
+        init_scanner(settings_none)
+    assert not any("--time-code-start has no effect" in r.message for r in caplog.records)
+
+    # Invalid value fails CLI parsing.
+    with pytest.raises(SystemExit):
+        _parse_cli(["-i", traffic_camera_video, "--time-code-start", "not-a-date"])

@@ -39,7 +39,7 @@ import tkinter as tk
 import tkinter.ttk as ttk
 import typing as ty
 
-from dvr_scan.app.common import PADDING
+from dvr_scan.app.common import PADDING, Tooltip
 from dvr_scan.app.inputs import (
     VideoInfo,
     ask_video_paths,
@@ -88,44 +88,6 @@ class _Row:
     image_label: tk.Label
     selectable: ty.List[tk.Widget]
     text_labels: ty.List[tk.Label]
-
-
-class _Tooltip:
-    """A minimal hover tooltip, used to label the icon-only toolbar buttons."""
-
-    def __init__(self, widget: tk.Widget, text: str):
-        self._widget = widget
-        self._text = text
-        self._tip: ty.Optional[tk.Toplevel] = None
-        widget.bind("<Enter>", self._show, add="+")
-        widget.bind("<Leave>", self._hide, add="+")
-        widget.bind("<ButtonPress>", self._hide, add="+")
-        # Tear down a visible tip if the button is destroyed while hovered.
-        widget.bind("<Destroy>", self._hide, add="+")
-
-    def _show(self, _event=None):
-        if self._tip is not None or not self._widget.winfo_exists():
-            return
-        x = self._widget.winfo_rootx() + self._widget.winfo_width() // 2
-        y = self._widget.winfo_rooty() + self._widget.winfo_height() + 2
-        self._tip = tk.Toplevel(self._widget)
-        self._tip.wm_overrideredirect(True)
-        self._tip.wm_geometry(f"+{x}+{y}")
-        tk.Label(
-            self._tip,
-            text=self._text,
-            justify=tk.LEFT,
-            background="#ffffe0",
-            relief=tk.SOLID,
-            borderwidth=1,
-            padx=4,
-            pady=1,
-        ).pack()
-
-    def _hide(self, _event=None):
-        if self._tip is not None:
-            self._tip.destroy()
-            self._tip = None
 
 
 class VideoList:
@@ -213,7 +175,7 @@ class VideoList:
     ) -> ttk.Button:
         button = ttk.Button(parent, text=glyph, width=TOOLBAR_BUTTON_WIDTH, command=command)
         button.grid(row=row, column=0, pady=(0, PADDING))
-        _Tooltip(button, tip)
+        Tooltip(button, tip)
         return button
 
     def _bind_mousewheel(self, widget: tk.Widget):
@@ -294,7 +256,7 @@ class VideoList:
 
     def sort_by(self, col: str, descending: bool):
         """Reorder the list by metadata field `col` (one of the SORT_FIELDS column ids:
-        "#0" is the name, "date" is the creation date). Names sort case-insensitively;
+        "#0" is the name, "date" is the modified date). Names sort case-insensitively;
         date strings (YYYY-MM-DD HH:MM:SS) sort lexicographically, which is chronological."""
 
         def key(iid: str) -> str:

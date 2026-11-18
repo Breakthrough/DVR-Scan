@@ -30,6 +30,7 @@ from dvr_scan.app.common import (
     PADDING,
     SETTING_INPUT_WIDTH,
     MenuBar,
+    Tooltip,
     add_startup_mode_menu,
     fill_help_menu,
     fit_window_to_screen,
@@ -68,6 +69,7 @@ from dvr_scan.platform import is_ffmpeg_available, open_path
 from dvr_scan.scanner import OutputMode, Point
 from dvr_scan.shared import ScanSettings, finalize_output_names, resolve_output_mode
 from dvr_scan.subtractor import SubtractorCNT, SubtractorCudaMOG2
+from dvr_scan.wallclock import TIME_CODE_START_CHOICES, normalize_time_code_start
 
 WINDOW_TITLE = "DVR-Scan"
 LONG_SETTING_INPUT_WIDTH = 72
@@ -215,6 +217,13 @@ class InputArea:
 
         self._end_time_label = tk.Label(root, text="End Time")
         self._end_time = TimecodeEntry(root, "00:00:00.000")
+        # Times are positions in the video, not times of day (#285).
+        start_time_tip = "Position in the video to start the scan."
+        end_time_tip = "Position in the video to end the scan (0 = end of video)."
+        Tooltip(self._start_time_label, start_time_tip)
+        Tooltip(self._start_time.widget, start_time_tip)
+        Tooltip(self._end_time_label, end_time_tip)
+        Tooltip(self._end_time.widget, end_time_tip)
 
         ttk.Checkbutton(
             root,
@@ -1136,6 +1145,28 @@ class OutputArea:
             row=1, column=1, sticky=tk.W, padx=PADDING, pady=(PADDING, 0)
         )
 
+        # Start time of the timecode: a choice, or a date and time that the user types.
+        time_code_start_tip = (
+            "Show recording date and time in the timecode: choose none, filename, or modified,"
+            " or type YYYY-MM-DD HH:MM:SS."
+        )
+        time_code_start_label = tk.Label(self._opencv_options, text="Timecode Start")
+        time_code_start_label.grid(
+            row=1, column=2, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0)
+        )
+        self._last_valid_time_code_start = str(CONFIG_MAP["time-code-start"])
+        self._time_code_start = tk.StringVar(value=self._last_valid_time_code_start)
+        self._time_code_start_combo = ttk.Combobox(
+            self._opencv_options,
+            textvariable=self._time_code_start,
+            values=list(TIME_CODE_START_CHOICES),
+        )
+        self._time_code_start_combo.grid(
+            row=1, column=3, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0)
+        )
+        Tooltip(time_code_start_label, time_code_start_tip)
+        Tooltip(self._time_code_start_combo, time_code_start_tip)
+
         tk.Label(self._opencv_options, text="Text Color").grid(
             row=2, column=0, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0)
         )
@@ -1319,6 +1350,7 @@ class OutputArea:
         self._text_margin["state"] = state
         self._text_bg_color["state"] = state
         self._text_font_color["state"] = state
+        self._time_code_start_combo["state"] = tk.NORMAL if self._timecode.get() else tk.DISABLED
 
     def _on_bounding_box(self):
         state = tk.NORMAL if self._bounding_box.get() else tk.DISABLED
@@ -1375,6 +1407,9 @@ class OutputArea:
         self._encode_args.set(settings.get("encode-args"))
         # Text Overlays
         self._timecode.set(settings.get("time-code"))
+        time_code_start = str(settings.get("time-code-start"))
+        self._time_code_start.set(time_code_start)
+        self._last_valid_time_code_start = time_code_start
         self._frame_metrics.set(settings.get("frame-metrics"))
         self._text_font_color.set(settings.get("text-font-color"))
         self._text_bg_color.set(settings.get("text-bg-color"))
@@ -1390,6 +1425,23 @@ class OutputArea:
         self._bounding_box_thickness.set(settings.get("bounding-box-thickness"))
         self._on_mode_combo_selected()
 
+    def validate_time_code_start(self) -> str:
+        """Validate and normalize the Timecode Start field when active.
+
+        Raises:
+            ValueError: Timecode overlay is enabled and the entered value is not valid.
+        """
+        if (
+            self._output_mode not in (OutputMode.OPENCV, OutputMode.ENCODE)
+            or not self._timecode.get()
+        ):
+            return self._last_valid_time_code_start
+        raw = self._time_code_start.get().strip() or "none"
+        normalized = normalize_time_code_start(raw)
+        self._last_valid_time_code_start = normalized
+        self._time_code_start.set(normalized)
+        return normalized
+
     def save(self, settings: ScanSettings) -> ScanSettings:
         settings.set("output-mode", self._output_mode)
         if self._output_dir:
@@ -1404,6 +1456,19 @@ class OutputArea:
                 settings.set("encode-args", self._encode_args.get())
             # Text Overlays
             settings.set("time-code", self._timecode.get())
+            raw_start = self._time_code_start.get().strip() or "none"
+            try:
+                normalized_start = normalize_time_code_start(raw_start)
+                self._last_valid_time_code_start = normalized_start
+                settings.set("time-code-start", normalized_start)
+            except ValueError:
+                # Keep the last valid value when the field is disabled so saved configs
+                # cannot be corrupted; keep the raw value when active so UI state diffs
+                # detect unsaved edits without throwing.
+                settings.set(
+                    "time-code-start",
+                    raw_start if self._timecode.get() else self._last_valid_time_code_start,
+                )
             settings.set("frame-metrics", self._frame_metrics.get())
             settings.set("text-font-color", self._text_font_color.get())
             settings.set("text-bg-color", self._text_bg_color.get())
@@ -1776,6 +1841,8 @@ class Application:
                 get_scan_overrides=self._input_area.scan_overrides,
             )
         if not initial:
+            if not self._validate_ui_settings():
+                return
             self._wizard.sync_from_settings(
                 self._get_config_settings(), active_preset=self._active_preset
             )
@@ -1848,10 +1915,27 @@ class Application:
         self._root.after(0, lambda: self._root.destroy())
         self._root.withdraw()
 
+    def _validate_ui_settings(self) -> bool:
+        """Validate editable UI fields before scanning, saving configs/presets, or switching
+        to Scan Wizard. Shows an error dialog and returns False on failure."""
+        try:
+            self._output_area.validate_time_code_start()
+        except ValueError as ex:
+            tkinter.messagebox.showerror(
+                title="Invalid Setting",
+                message=str(ex),
+                parent=self._root,
+            )
+            return False
+        return True
+
     def _start_scan(self):
         # It should not be possible to start two scans in parallel with the current UI.
         # Once we start a scan, the scan window should grab input focus until it is closed.
         assert self._scan_window is None
+
+        if not self._validate_ui_settings():
+            return
 
         # TODO: Instead of just returning None below if the settings are invalid or we can't start
         # the scan (e.g. no input videos selected), we should throw an exception and catch it here.
@@ -1942,6 +2026,8 @@ class Application:
         self._scan_area.load(settings)
 
     def _on_save_config(self):
+        if not self._validate_ui_settings():
+            return
         save_path = tkinter.filedialog.asksaveasfilename(
             title="Save Config File...",
             filetypes=[("Config File", "*.cfg")],
@@ -2009,6 +2095,8 @@ class Application:
         self._on_preset_applied(preset, config)
 
     def _on_save_preset(self):
+        if not self._validate_ui_settings():
+            return
         name = tkinter.simpledialog.askstring(
             title="Save Preset",
             prompt="Preset name:",

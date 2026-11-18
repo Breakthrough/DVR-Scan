@@ -241,10 +241,18 @@ def init_scanner(
             smoothing=smoothing,
         )
 
+    cli_time_code_start = getattr(settings.args, "time_code_start", None)
+    if (
+        timecode_overlay is None
+        and cli_time_code_start is not None
+        and str(cli_time_code_start).strip().lower() != "none"
+    ):
+        logger.warning("--time-code-start has no effect without -tc/--time-code.")
     scanner.set_overlays(
         timecode_overlay=timecode_overlay,
         metrics_overlay=metrics_overlay,
         bounding_box=bounding_box,
+        time_code_start=settings.get("time-code-start"),
     )
 
     scanner.set_detection_params(

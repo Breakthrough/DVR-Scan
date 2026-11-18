@@ -1022,3 +1022,67 @@ def test_event_table_destroy_cancels_loader_and_releases_video(tk_root, traffic_
     assert not thread.is_alive()
     tk_root.after(100)
     assert _bgerrors(tk_root) == ""
+
+
+def test_output_area_time_code_start_validation_and_default_scan_no_warning(
+    tk_root, traffic_camera_video, caplog
+):
+    """OutputArea normalizes/validates time-code-start, never writes invalid values when
+    disabled, and default GUI settings do not trigger the CLI-only --time-code-start warning."""
+    import logging
+    import tkinter as tk
+
+    from dvr_scan.app.application import OutputArea
+    from dvr_scan.scanner import OutputMode
+    from dvr_scan.shared import init_scanner
+
+    frame = tk.Frame(tk_root)
+    area = OutputArea(frame)
+    defaults = _scan_settings()
+    area.load(defaults)
+
+    # Default GUI scan settings must not emit the CLI-only --time-code-start warning (#285).
+    saved = area.save(_scan_settings())
+    saved.set("input", [traffic_camera_video])
+    saved.set("output-mode", OutputMode.SCAN_ONLY)
+    caplog.clear()
+    with caplog.at_level(logging.WARNING, logger="dvr_scan"):
+        init_scanner(saved)
+    assert not any("--time-code-start has no effect" in r.message for r in caplog.records)
+
+    # Keyword case normalization and blank -> "none".
+    area._timecode.set(True)
+    area._time_code_start.set(" FILENAME ")
+    assert area.validate_time_code_start() == "filename"
+    assert area._time_code_start.get() == "filename"
+    area._time_code_start.set("   ")
+    assert area.validate_time_code_start() == "none"
+
+    # Invalid value raises while Timecode is enabled (blocks preset/config save and scan).
+    area._time_code_start.set("2026/11/16 23:37:30")
+    with pytest.raises(ValueError, match="Invalid time-code-start"):
+        area.validate_time_code_start()
+
+    # When Timecode is unchecked (combobox disabled), save() preserves the last valid value
+    # so saving Default / presets cannot corrupt dvr-scan.cfg.
+    area._timecode.set(False)
+    assert area.validate_time_code_start() == "none"
+    saved_disabled = area.save(_scan_settings())
+    assert saved_disabled.get("time-code-start") == "none"
+
+
+def test_probe_video_uses_mtime_not_ctime(traffic_camera_video, tmp_path):
+    """The GUI Date column uses st_mtime rather than st_ctime (copy time on Windows, #285)."""
+    import os
+    import shutil
+    from datetime import datetime
+
+    from dvr_scan.app.inputs import probe_video
+
+    copied = tmp_path / "clip.mp4"
+    shutil.copyfile(traffic_camera_video, copied)
+    mtime = datetime(2024, 6, 15, 10, 20, 30)
+    os.utime(copied, (mtime.timestamp(), mtime.timestamp()))
+    info = probe_video(str(copied))
+    assert info is not None
+    assert info.date == "2024-06-15 10:20:30"

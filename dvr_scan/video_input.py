@@ -20,13 +20,16 @@ describes audio streams for the encoder), the `BackendUnavailable` error, and a 
 convenience properties used by the scanner.
 """
 
+import bisect
 import logging
+import threading
 import typing as ty
 from dataclasses import dataclass
 from fractions import Fraction
 from pathlib import Path
 
 import av
+from scenedetect import FrameTimecode
 from scenedetect.backends import AVAILABLE_BACKENDS
 from scenedetect.backends.concat import SourceSpan
 from scenedetect.backends.concat import VideoStreamConcat as _VideoStreamConcat
@@ -234,6 +237,9 @@ class VideoStreamConcat(_VideoStreamConcat):
         # Enable frame threading for PyAV; other backends do not accept this option.
         kwargs = {"threading_mode": "AUTO"} if backend == "pyav" else {}
         super().__init__(paths, frame_rate=frame_rate, backend=backend, **kwargs)
+        # Coordinates `_offsets` and `_index` mutations in `read()`/`seek()`/`reset()`
+        # with cross-thread lookups in `locate()`.
+        self._offset_lock = threading.Lock()
         # WORKAROUND(scenedetect 0.7.2): the upstream constructor estimates where each input
         # starts on the global timeline from the child backend's declared duration, which
         # for PyAV is the frame count divided by the nominal rate. That is wrong for VFR
@@ -242,15 +248,64 @@ class VideoStreamConcat(_VideoStreamConcat):
         # Rebuild the estimates from the probed stream durations, which are time-based.
         # Depends on the private `_offsets` list; remove once upstream uses exact durations.
         offsets = [Fraction(0)]
-        for index, source in enumerate(self._source_info):
-            declared = source.duration if source.duration > 0 else self._sources[index].duration
-            offsets.append(offsets[-1] + declared)
+        for index in range(len(self._source_info)):
+            offsets.append(offsets[-1] + self.source_duration(index))
         self._offsets = offsets
 
     @property
     def sources(self) -> ty.List[SourceInfo]:
         """Stream metadata for each input video."""
         return self._source_info
+
+    def source_duration(self, index: int) -> Fraction:
+        """Declared duration of input `index` in seconds, falling back to the child
+        backend's duration if the container header reported 0."""
+        probed = self._source_info[index].duration
+        return probed if probed > 0 else self._sources[index].duration
+
+    def read(self, decode: bool = True):
+        """Read/decode the next frame, synchronizing source transitions with `locate`."""
+        while True:
+            result = self._cap.read(decode=decode)
+            if result is not False:
+                return result
+            with self._offset_lock:
+                if (self._index + 1) >= len(self._paths):
+                    logger.debug("No more input to process.")
+                    return False
+                self._finish_current_source()
+                self._index += 1
+                next_index = self._index
+            logger.debug("Processing complete, opening next video: %s", self._paths[next_index])
+            self._cap = self._open_source(next_index)
+
+    def seek(self, target):
+        with self._offset_lock:
+            super().seek(target)
+
+    def reset(self):
+        with self._offset_lock:
+            super().reset()
+
+    def locate(self, timecode: FrameTimecode) -> ty.Tuple[int, Fraction]:
+        """Find the input video that contains `timecode`, a time on the global timeline.
+        Returns the index of that video, and the time from its start in seconds.
+
+        Thread-safe with `read()` for frames that have already been decoded: `read()` updates
+        `_offsets` and `_index` atomically under `_offset_lock`, and only the finalized prefix
+        `0.._index` (whose start offsets no longer change) is searched.
+        """
+        # Timecodes from the scanner are rounded to 1 us, so the first frame of an input can
+        # be a little before its exact start time. Frames are much more than 1 us apart.
+        seconds = Fraction(timecode.pts) * timecode.time_base
+        with self._offset_lock:
+            limit = min(self._index, len(self._source_info) - 1)
+            index = (
+                bisect.bisect_right(self._offsets, seconds + Fraction(1, 1000000), 0, limit + 1) - 1
+            )
+            index = max(0, min(index, limit))
+            source_start = self._offsets[index]
+        return (index, max(Fraction(0), seconds - source_start))
 
     @property
     def resolution(self) -> ty.Tuple[int, int]:

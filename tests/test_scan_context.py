@@ -486,6 +486,41 @@ def test_start_duration(traffic_camera_video):
     compare_event_lists(event_list, TRAFFIC_CAMERA_EVENTS_AFTER_SEEK, AFTER_SEEK_FRAME_TOLERANCE)
 
 
+@pytest.mark.parametrize(
+    "start_time,end_time,duration,message",
+    [
+        # traffic_camera.mp4 is 23.04 seconds long.
+        ("01:00:00", None, None, "not before the end of the input"),
+        ("00:00:23.040", None, None, "not before the end of the input"),
+        ("00:00:05", "00:00:02", None, "not after start time"),
+        ("00:00:05", "00:00:05", None, "not after start time"),
+        (None, "00:00:00", None, "must be greater than 00:00:00.000"),
+        (None, None, 0, "must be greater than 00:00:00.000"),
+        ("00:00:05", None, 0, "not after start time"),
+    ],
+)
+def test_time_range_selects_no_frames(
+    traffic_camera_video, start_time, end_time, duration, message
+):
+    """A start/end time or duration that selects no frames must raise an error, not scan
+    0 frames (#285)."""
+    scanner = MotionScanner([traffic_camera_video])
+    scanner.set_video_time(start_time=start_time, end_time=end_time, duration=duration)
+    with pytest.raises(ValueError, match=message):
+        scanner.scan()
+
+
+def test_time_range_allows_unknown_duration_source(traffic_camera_video, monkeypatch):
+    """Streams whose container/backend report 0 duration must not fail the start-time check."""
+    from fractions import Fraction
+
+    scanner = MotionScanner([traffic_camera_video])
+    monkeypatch.setattr(scanner._input, "source_duration", lambda _index: Fraction(0))
+    scanner.set_video_time(start_time=0)
+    # _check_time_range must allow start_time=0 when duration is unknown.
+    scanner._check_time_range()
+
+
 def test_max_events(traffic_camera_video):
     """Setting max_events must end the scan as soon as that many events are found (#261)."""
     scanner = MotionScanner([traffic_camera_video])
