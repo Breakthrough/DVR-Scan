@@ -129,7 +129,6 @@ def get_cli_parser():
         "--debug",
         action="store_true",
         help=argparse.SUPPRESS,
-        default=False,
     )
 
     parser.add_argument(

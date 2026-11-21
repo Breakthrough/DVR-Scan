@@ -29,7 +29,7 @@ import PIL.Image
 import PIL.ImageTk
 from scenedetect import FrameTimecode, VideoOpenFailure, open_video
 
-from dvr_scan.app.common import MenuBar, fill_help_menu, register_icon
+from dvr_scan.app.common import MenuBar, Tooltip, fill_help_menu, register_icon
 from dvr_scan.region import Point, Size, bound_point, load_regions, save_regions
 
 WINDOW_TITLE = "DVR-Scan Region Editor"
@@ -218,6 +218,10 @@ class RegionEditor:
         self._panning: bool = False
         self._controls_window: tk.Toplevel = None
         self._region_selector: ttk.Combobox = None
+        self._delete_region_button: ty.Optional[ttk.Button] = None
+        self._frame_label: ty.Optional[ttk.Label] = None
+        self._mask_var: ty.Optional[tk.BooleanVar] = None
+        self._aa_var: ty.Optional[tk.BooleanVar] = None
 
         self._context_menu: tk.Menu = None
         # Clones of the normal state variables since sometimes we can still interact with the main
@@ -291,6 +295,8 @@ class RegionEditor:
                 self._seek_widget.set(target)
             finally:
                 self._updating_seek_widget = False
+        if self._frame_label is not None and self._total_frames > 0:
+            self._frame_label.configure(text=f"{target + 1} / {self._total_frames}")
         self._original_frame = self._source_frame[:: self._scale, :: self._scale, :].copy()
         self._frame = self._original_frame.copy()
         self._redraw = True
@@ -374,10 +380,16 @@ class RegionEditor:
         self._region_selector["values"] = tuple(
             f"Shape {i + 1}" for i in range(len(self._regions))
         ) or ("",)
-        assert self._active_shape is not None
-        self._region_selector.current(self._active_shape)
+        active_idx = (
+            self._active_shape
+            if (self._active_shape is not None and self._active_shape < len(self._regions))
+            else 0
+        )
+        self._region_selector.current(active_idx)
         self._region_selector.config(state="readonly" if self._regions else "disabled")
         self._region_selector.selection_clear()
+        if self._delete_region_button is not None:
+            self._delete_region_button.configure(state=tk.NORMAL if self._regions else tk.DISABLED)
 
     def _copy_scan_command_to_clipboard(self):
         region_info = []
@@ -385,6 +397,7 @@ class RegionEditor:
             region_info.append("-a %s" % " ".join(f"{x} {y}" for x, y in shape))
         data = " ".join(region_info)
         scan_command = f"dvr-scan -i {self._settings.video_path} {data}"
+        self._root.clipboard_clear()
         self._root.clipboard_append(scan_command)
         logger.info(
             f"Region data copied to clipboard. To scan via command-line, run:\n{scan_command}"
@@ -522,6 +535,13 @@ class RegionEditor:
                     end,
                     color,
                     thickness=cv2.FILLED,
+                )
+                cv2.rectangle(
+                    frame,
+                    start,
+                    end,
+                    (0, 0, 0),
+                    thickness=1,
                 )
 
         self._frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -705,35 +725,51 @@ class RegionEditor:
                 # Disable resize since we are probably using the mouse to control this widget.
                 self._rescale(allow_resize=False)
 
-        frame = tk.Frame(self._root)
+        self._mask_var = tk.BooleanVar(self._root, value=self._settings.mask_source)
+        self._aa_var = tk.BooleanVar(self._root, value=self._settings.use_aa)
+
+        frame = ttk.Frame(self._root, padding=(8, 4))
         frame.grid(row=4, column=0, sticky="ew", columnspan=2)
-        frame.columnconfigure(4, weight=1)
+        frame.columnconfigure(6, weight=1)
         frame.rowconfigure(0, weight=1)
         self._scale_widget = ttk.Scale(
             frame,
             orient=tk.HORIZONTAL,
-            length=200,
+            length=160,
             from_=MAX_DOWNSCALE_FACTOR,
             to=MIN_DOWNSCALE_FACTOR,
             command=set_scale,
             value=self._scale,
         )
-        tk.Label(frame, text="Active Region", anchor=tk.W).grid(
-            row=0, column=0, sticky=tk.W, padx=8.0
+        ttk.Label(frame, text="Active Region", anchor=tk.W).grid(
+            row=0, column=0, sticky=tk.W, padx=(0, 8.0)
         )
         self._region_selector = ttk.Combobox(
             frame,
             values=list(f"Shape {i + 1}" for i in range(len(self._regions))),
-            width=12,
+            width=11,
             justify=tk.CENTER,
         )
         self._region_selector.state(["readonly"])
         self._region_selector.grid(row=0, column=1, sticky="w")
         self._region_selector.current(0)
         self._region_selector.bind("<<ComboboxSelected>>", lambda _: self._on_shape_select())
-        # Looks weird when the widget takes focus, but still seems to work when we redirect focus to
-        # the root.
-        self._region_selector.bind("<FocusIn>", lambda _: self._root.focus())
+
+        add_region_button = ttk.Button(
+            frame, text="+ Add", width=6, command=lambda: self._add_region(use_mouse=False)
+        )
+        add_region_button.grid(row=0, column=2, padx=(6.0, 4.0))
+        Tooltip(add_region_button, f"Add a new detection region ({KEYBIND_REGION_ADD})")
+
+        self._delete_region_button = ttk.Button(
+            frame, text="Delete", width=7, command=self._delete_region
+        )
+        self._delete_region_button.grid(row=0, column=3, padx=(0.0, 8.0))
+        Tooltip(
+            self._delete_region_button,
+            f"Delete the active detection region ({KEYBIND_REGION_DELETE})",
+        )
+
         if self._ensure_video_open() and self._total_frames > 1:
 
             def set_frame(val: str):
@@ -747,24 +783,42 @@ class RegionEditor:
                     finally:
                         self._updating_seek_widget = False
 
-            tk.Label(frame, text="Frame", anchor=tk.W).grid(
-                row=0, column=2, sticky=tk.W, padx=(16.0, 8.0)
+            ttk.Label(frame, text="Frame", anchor=tk.W).grid(
+                row=0, column=4, sticky=tk.W, padx=(8.0, 6.0)
             )
             self._seek_widget = ttk.Scale(
                 frame,
                 orient=tk.HORIZONTAL,
-                length=160,
+                length=140,
                 from_=0,
                 to=max(1, self._total_frames - 1),
                 command=set_frame,
                 value=self._current_frame_num,
             )
-            self._seek_widget.grid(row=0, column=3, sticky="w", padx=(0, 8.0))
-        ttk.Button(frame, text="Toggle Mask", command=self._toggle_mask).grid(
-            row=0, column=10, padx=8.0
+            self._seek_widget.grid(row=0, column=5, sticky="w", padx=(0, 6.0))
+            Tooltip(self._seek_widget, "Seek video preview (, / . for +/-1 frame, < / > for +/-10)")
+            self._frame_label = ttk.Label(
+                frame,
+                text=f"{self._current_frame_num + 1} / {self._total_frames}",
+                anchor=tk.W,
+            )
+            self._frame_label.grid(row=0, column=6, sticky="w", padx=(0, 8.0))
+
+        ttk.Label(frame, text="Zoom", anchor=tk.E).grid(
+            row=0, column=8, sticky=tk.E, padx=(8.0, 6.0)
         )
-        self._scale_widget.grid(row=0, column=9, sticky="e", padx=8.0)
-        tk.Label(frame, text="Zoom", anchor=tk.E).grid(row=0, column=8, sticky=tk.E, padx=(0, 8.0))
+        self._scale_widget.grid(row=0, column=9, sticky="e", padx=(0, 8.0))
+        mask_check = ttk.Checkbutton(
+            frame,
+            text="Toggle Mask",
+            variable=self._mask_var,
+            command=self._on_mask_var_changed,
+        )
+        mask_check.grid(row=0, column=10, padx=6.0)
+        Tooltip(mask_check, f"Preview masked detection area ({KEYBIND_MASK})")
+        controls_button = ttk.Button(frame, text="Controls...", command=self._show_help)
+        controls_button.grid(row=0, column=11, padx=(4.0, 0.0))
+        Tooltip(controls_button, f"Show keyboard and mouse controls ({KEYBIND_HELP})")
 
         self._bind_mouse()
         self._bind_keyboard()
@@ -823,12 +877,17 @@ class RegionEditor:
         )
 
         view_menu = self._menubar.add_menu("View", underline=0)
-        view_menu.add_command(
-            label="Mask Mode", command=self._toggle_mask, accelerator=KEYBIND_MASK, underline=0
+        view_menu.add_checkbutton(
+            label="Mask Mode",
+            variable=self._mask_var,
+            command=self._on_mask_var_changed,
+            accelerator=KEYBIND_MASK,
+            underline=0,
         )
-        view_menu.add_command(
+        view_menu.add_checkbutton(
             label="Antialiasing",
-            command=self._toggle_antialiasing,
+            variable=self._aa_var,
+            command=self._on_aa_var_changed,
             accelerator=KEYBIND_TOGGLE_AA,
             underline=0,
         )
@@ -860,123 +919,145 @@ class RegionEditor:
         self._update_ui_state()
 
     def _show_help(self):
-        if self._controls_window is None:
-            self._controls_window = tk.Toplevel(master=self._root)
-            self._controls_window.withdraw()
-            self._controls_window.title("Controls")
-            self._controls_window.resizable(True, True)
-            self._controls_window.transient(self._root)
+        if self._controls_window is not None and self._controls_window.winfo_exists():
+            self._controls_window.deiconify()
+            self._controls_window.lift()
+            self._controls_window.focus_set()
+            return
 
-            def dismiss():
-                self._controls_window.destroy()
-                self._controls_window = None
+        self._controls_window = tk.Toplevel(master=self._root)
+        self._controls_window.withdraw()
+        self._controls_window.title("Region Editor Controls")
+        self._controls_window.resizable(True, True)
+        self._controls_window.transient(self._root)
+
+        def dismiss(_event=None):
+            win = self._controls_window
+            self._controls_window = None
+            if win is not None and win.winfo_exists():
+                win.destroy()
+            if self._root is not None and self._root.winfo_exists():
                 self._root.focus()
 
-            self._controls_window.protocol("WM_DELETE_WINDOW", dismiss)
-            self._controls_window.attributes("-topmost", True)
-            self._controls_window.bind("<Destroy>", lambda _: dismiss())
-            self._controls_window.bind("<FocusIn>", lambda _: self._root.focus())
+        self._controls_window.protocol("WM_DELETE_WINDOW", dismiss)
+        self._controls_window.bind("<Escape>", dismiss)
 
-            def handle_escape(_: tk.Event):
-                self._controls_window.destroy()
-                self._controls_window = None
+        regions = ttk.Labelframe(self._controls_window, text="Regions", padding=8.0)
+        regions.columnconfigure(0, weight=1)
+        regions.columnconfigure(1, weight=1)
 
-            self._controls_window.bind("<Escape>", handle_escape)
+        ttk.Label(regions, text="Add Point").grid(row=0, column=0, sticky="w", pady=2)
+        ttk.Label(regions, text="Left Click  |  Keyboard: +", justify=tk.RIGHT).grid(
+            row=0, column=1, sticky="e", padx=(16, 0), pady=2
+        )
 
-            regions = ttk.Labelframe(self._controls_window, text="Regions", padding=8.0)
-            regions.columnconfigure(0, weight=1)
-            regions.columnconfigure(1, weight=1)
+        ttk.Label(regions, text="Remove Point").grid(row=1, column=0, sticky="w", pady=2)
+        ttk.Label(regions, text="Right Click  |  Keyboard: -", justify=tk.RIGHT).grid(
+            row=1, column=1, sticky="e", padx=(16, 0), pady=2
+        )
 
-            ttk.Label(regions, text="Add Point").grid(row=0, column=0, sticky="w")
-            ttk.Label(regions, text="Left Click\nKeyboard: +", justify=tk.RIGHT).grid(
-                row=0, column=1, sticky="e"
+        ttk.Label(regions, text="Move Point").grid(row=2, column=0, sticky="w", pady=2)
+        ttk.Label(regions, text="Left Click + Drag").grid(
+            row=2, column=1, sticky="e", padx=(16, 0), pady=2
+        )
+
+        ttk.Label(regions, text="Add / Delete Shape").grid(row=3, column=0, sticky="w", pady=2)
+        ttk.Label(
+            regions,
+            text=f"Right Click  |  {KEYBIND_REGION_ADD} / {KEYBIND_REGION_DELETE}",
+            justify=tk.RIGHT,
+        ).grid(row=3, column=1, sticky="e", padx=(16, 0), pady=2)
+
+        ttk.Label(regions, text="Select Shape").grid(row=4, column=0, sticky="w", pady=2)
+        ttk.Label(
+            regions,
+            text=f"1-9  |  {KEYBIND_REGION_NEXT} / {KEYBIND_REGION_PREVIOUS}",
+            justify=tk.RIGHT,
+        ).grid(row=4, column=1, sticky="e", padx=(16, 0), pady=2)
+
+        viewport = ttk.Labelframe(self._controls_window, text="Viewport", padding=8.0)
+        viewport.columnconfigure(0, weight=1)
+        viewport.columnconfigure(1, weight=1)
+
+        ttk.Label(viewport, text="Zoom").grid(row=0, column=0, sticky="w", pady=2)
+        zoom_keys = f"{KEYBIND_DOWNSCALE_INC} / {KEYBIND_DOWNSCALE_DEC}"
+        ttk.Label(
+            viewport,
+            text=f"{ACCELERATOR_KEY} + Scroll  |  {zoom_keys}",
+            justify=tk.RIGHT,
+        ).grid(row=0, column=1, sticky="e", padx=(16, 0), pady=2)
+
+        ttk.Label(viewport, text="Move / Pan").grid(row=1, column=0, sticky="w", pady=2)
+        ttk.Label(viewport, text=f"{ACCELERATOR_KEY} + Left Click + Drag").grid(
+            row=1, column=1, sticky="e", padx=(16, 0), pady=2
+        )
+
+        ttk.Label(viewport, text="Step Frame (+/-1, +/-10)").grid(
+            row=2, column=0, sticky="w", pady=2
+        )
+        ttk.Label(viewport, text=", / .  |  < / >").grid(
+            row=2, column=1, sticky="e", padx=(16, 0), pady=2
+        )
+
+        ttk.Label(viewport, text="Toggle Mask Mode").grid(row=3, column=0, sticky="w", pady=2)
+        ttk.Label(viewport, text=KEYBIND_MASK).grid(
+            row=3, column=1, sticky="e", padx=(16, 0), pady=2
+        )
+
+        ttk.Label(viewport, text="Toggle Antialiasing").grid(row=4, column=0, sticky="w", pady=2)
+        ttk.Label(viewport, text=KEYBIND_TOGGLE_AA).grid(
+            row=4, column=1, sticky="e", padx=(16, 0), pady=2
+        )
+
+        general = ttk.Labelframe(self._controls_window, text="General", padding=8.0)
+        general.columnconfigure(0, weight=1)
+        general.columnconfigure(1, weight=1)
+
+        row_idx = 0
+        if not self._launched_from_app:
+            ttk.Label(general, text="Start Scan").grid(row=row_idx, column=0, sticky="w", pady=2)
+            ttk.Label(general, text=KEYBIND_START_SCAN).grid(
+                row=row_idx, column=1, sticky="e", padx=(16, 0), pady=2
             )
+            row_idx += 1
 
-            ttk.Label(regions, text="Remove Point").grid(row=1, column=0, sticky="w")
-            ttk.Label(regions, text="Right Click\nKeyboard: -", justify=tk.RIGHT).grid(
-                row=1, column=1, sticky="e"
-            )
+        close_label = "Close Editor" if self._launched_from_app else "Quit"
+        ttk.Label(general, text=close_label).grid(row=row_idx, column=0, sticky="w", pady=2)
+        ttk.Label(general, text=KEYBIND_QUIT).grid(
+            row=row_idx, column=1, sticky="e", padx=(16, 0), pady=2
+        )
+        row_idx += 1
 
-            ttk.Label(regions, text="Move Point").grid(row=2, column=0, sticky="w")
-            ttk.Label(regions, text="Left Click + Drag").grid(row=2, column=1, sticky="e")
+        ttk.Label(general, text="Undo / Redo").grid(row=row_idx, column=0, sticky="w", pady=2)
+        ttk.Label(general, text=f"{KEYBIND_UNDO} / {KEYBIND_REDO}").grid(
+            row=row_idx, column=1, sticky="e", padx=(16, 0), pady=2
+        )
+        row_idx += 1
 
-            ttk.Label(regions, text="").grid(row=4, column=0, sticky="w")
+        ttk.Label(general, text="Copy CLI Scan Command").grid(
+            row=row_idx, column=0, sticky="w", pady=2
+        )
+        ttk.Label(general, text=KEYBIND_COPY_COMMAND).grid(
+            row=row_idx, column=1, sticky="e", padx=(16, 0), pady=2
+        )
 
-            ttk.Label(regions, text="Add/Remove Shape").grid(row=5, column=0, sticky="w")
-            ttk.Label(
-                regions,
-                text=f"Mouse: Right Click\nKeyboard: {KEYBIND_REGION_ADD}",
-                justify=tk.RIGHT,
-            ).grid(row=5, column=1, sticky="e")
+        regions.grid(row=0, column=0, sticky="nsew", padx=8.0, pady=(8.0, 4.0))
+        viewport.grid(row=1, column=0, sticky="nsew", padx=8.0, pady=4.0)
+        general.grid(row=2, column=0, sticky="nsew", padx=8.0, pady=4.0)
+        close_btn = ttk.Button(self._controls_window, text="Close", command=dismiss)
+        close_btn.grid(row=3, column=0, sticky="e", padx=8.0, pady=8.0)
 
-            ttk.Label(regions, text="Active Shape").grid(row=6, column=0, sticky="w")
-            ttk.Label(
-                regions,
-                text="Mouse: Right Click\nKeyboard: "
-                f"{KEYBIND_REGION_NEXT}/{KEYBIND_REGION_PREVIOUS}",
-                justify=tk.RIGHT,
-            ).grid(row=6, column=1, sticky="e")
-
-            viewport = ttk.Labelframe(self._controls_window, text="Viewport", padding=8.0)
-            viewport.columnconfigure(0, weight=1)
-            viewport.columnconfigure(1, weight=1)
-
-            ttk.Label(viewport, text="Zoom").grid(row=0, column=0, sticky="w")
-            ttk.Label(
-                viewport,
-                text=f"Mouse: {ACCELERATOR_KEY} + Scroll\nKeyboard: "
-                f"{KEYBIND_DOWNSCALE_INC}/{KEYBIND_DOWNSCALE_DEC}",
-                justify=tk.RIGHT,
-            ).grid(row=0, column=1, sticky="e")
-
-            ttk.Label(viewport, text="Move/Pan").grid(row=3, column=0, sticky="w")
-            ttk.Label(viewport, text=f"{ACCELERATOR_KEY} + Left Click").grid(
-                row=3, column=1, sticky="e"
-            )
-
-            ttk.Label(viewport, text="Seek Frame").grid(row=4, column=0, sticky="w")
-            ttk.Label(viewport, text="Keyboard: , / .").grid(row=4, column=1, sticky="e")
-
-            ttk.Label(viewport, text="Toggle Mask Mode").grid(row=5, column=0, sticky="w")
-            ttk.Label(viewport, text=f"Keyboard: {KEYBIND_MASK}").grid(row=5, column=1, sticky="e")
-
-            ttk.Label(viewport, text="Toggle Antialiasing").grid(row=6, column=0, sticky="w")
-            ttk.Label(viewport, text=f"Keyboard: {KEYBIND_TOGGLE_AA}").grid(
-                row=6, column=1, sticky="e"
-            )
-
-            general = ttk.Labelframe(self._controls_window, text="General", padding=8.0)
-            general.columnconfigure(0, weight=1)
-            general.columnconfigure(1, weight=1)
-
-            ttk.Label(general, text="Start Scan").grid(row=0, column=0, sticky="w")
-            ttk.Label(general, text=f"Keyboard: {KEYBIND_START_SCAN}").grid(
-                row=0, column=1, sticky="e"
-            )
-
-            ttk.Label(general, text="Quit").grid(row=1, column=0, sticky="w")
-            ttk.Label(general, text=f"Keyboard: {KEYBIND_QUIT}").grid(row=1, column=1, sticky="e")
-
-            ttk.Label(general, text="Show Help").grid(row=2, column=0, sticky="w")
-            ttk.Label(general, text=f"Keyboard: {KEYBIND_HELP}").grid(row=2, column=1, sticky="e")
-
-            ttk.Label(general, text="Copy Scan Command").grid(row=3, column=0, sticky="w")
-            ttk.Label(general, text=f"Keyboard: {KEYBIND_COPY_COMMAND}").grid(
-                row=3, column=1, sticky="e"
-            )
-
-            regions.grid(row=0, sticky="nsew", padx=8.0, pady=8.0)
-            viewport.grid(row=1, sticky="nsew", padx=8.0, pady=8.0)
-            general.grid(row=2, sticky="nsew", padx=8.0, pady=8.0)
-
-            self._controls_window.columnconfigure(0, weight=1)
-            self._controls_window.rowconfigure(0, weight=1)
-            self._controls_window.rowconfigure(1, weight=1)
-            self._controls_window.rowconfigure(2, weight=1)
-            self._controls_window.update()
-
+        self._controls_window.columnconfigure(0, weight=1)
+        self._controls_window.rowconfigure(0, weight=1)
+        self._controls_window.rowconfigure(1, weight=1)
+        self._controls_window.rowconfigure(2, weight=1)
+        self._controls_window.update_idletasks()
+        self._controls_window.minsize(
+            width=self._controls_window.winfo_reqwidth(),
+            height=self._controls_window.winfo_reqheight(),
+        )
         self._controls_window.deiconify()
-        self._root.focus()
+        close_btn.focus_set()
 
     def _adjust_downscale(self, amount: int, allow_resize=True):
         # scale is clamped to MIN_DOWNSCALE_FACTOR/MAX_DOWNSCALE_FACTOR.
@@ -1057,6 +1138,11 @@ class RegionEditor:
             return
         if not os.path.exists(load_path):
             logger.error(f"File does not exist: {load_path}")
+            tkinter.messagebox.showerror(
+                "Region Load Failure",
+                f"Region file does not exist:\n{load_path}",
+                parent=self._root,
+            )
             return
         regions = []
         try:
@@ -1067,6 +1153,11 @@ class RegionEditor:
             if not reason:
                 reason = "Could not parse region file!"
             logger.error(f"Error loading region from {load_path}: {reason}")
+            tkinter.messagebox.showerror(
+                "Region Load Failure",
+                f"Failed to load region file:\n\n{reason}",
+                parent=self._root,
+            )
         else:
             logger.debug(
                 "Loaded %d region%s from region file:\n%s",
@@ -1101,22 +1192,36 @@ class RegionEditor:
 
     def _toggle_antialiasing(self):
         self._settings.use_aa = not self._settings.use_aa
+        if self._aa_var is not None:
+            self._aa_var.set(self._settings.use_aa)
         self._redraw = True
         logger.debug("AA: %s", "ON" if self._settings.use_aa else "OFF")
         if self._scale >= MAX_DOWNSCALE_AA_LEVEL:
             logger.warning("AA is disabled due to current scale factor.")
         self._draw()
 
+    def _on_aa_var_changed(self):
+        if self._aa_var is not None and self._settings.use_aa != self._aa_var.get():
+            self._toggle_antialiasing()
+
     def _toggle_mask(self):
         self._settings.mask_source = not self._settings.mask_source
+        if self._mask_var is not None:
+            self._mask_var.set(self._settings.mask_source)
         logger.debug("Masking: %s", "ON" if self._settings.mask_source else "OFF")
         self._redraw = True
         self._draw()
+
+    def _on_mask_var_changed(self):
+        if self._mask_var is not None and self._settings.mask_source != self._mask_var.get():
+            self._toggle_mask()
 
     def _on_shape_select(self):
         if self._regions:
             self._select_region(self._region_selector.current())
         self._region_selector.selection_clear()
+        if self._editor_canvas is not None:
+            self._editor_canvas.focus_set()
 
     def _add_point(self, drag: bool = False) -> bool:
         if self._nearest_points is not None:
@@ -1239,15 +1344,6 @@ class RegionEditor:
             self._set_cursor()  # Pan mode could have changed.
 
         self._draw()
-
-    def _on_mouse_leave(self):
-        logger.debug("mouse left window")
-        if not (self._dragging or self._panning):
-            self._curr_mouse_pos = None
-            self._hover_point = None
-            self._nearest_points = None
-            self._redraw = True
-            self._draw()
 
     def _cancel_active_action(self):
         logger.debug("cancelling active action")
@@ -1381,17 +1477,22 @@ class RegionEditor:
         )
         self._context_menu.post(e.x_root, e.y_root)
 
-    def _add_region(self):
+    def _add_region(self, use_mouse: bool = True):
         if self._dragging:
             return
 
-        # Add a box around the current mouse position that's roughly 20% of the frame.
+        # Add a box around the current mouse position (or frame center if invoked from the
+        # toolbar / keyboard while the pointer is outside the canvas) covering ~20% of the frame.
         width, height = (
             max(1, self._source_size.w // 10),
             max(1, self._source_size.h // 10),
         )
-
-        top_left = Point(x=self._curr_mouse_pos.x - width, y=self._curr_mouse_pos.y - height)
+        center = (
+            self._curr_mouse_pos
+            if (use_mouse and self._curr_mouse_pos is not None)
+            else Point(x=self._source_size.w // 2, y=self._source_size.h // 2)
+        )
+        top_left = Point(x=center.x - width, y=center.y - height)
         points = [
             top_left,
             Point(x=top_left.x + 2 * width, y=top_left.y),

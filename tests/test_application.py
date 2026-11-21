@@ -1024,6 +1024,218 @@ def test_event_table_destroy_cancels_loader_and_releases_video(tk_root, traffic_
     assert _bgerrors(tk_root) == ""
 
 
+# --- Usability & accessibility pass coverage ----------------------------------------------
+
+
+def test_format_progress_stats_clamps_remaining_and_handles_edge_cases():
+    from dvr_scan.app.scan_window import format_progress_stats
+
+    # Normal mid-scan
+    elapsed, rate, remaining = format_progress_stats(10.0, processed=250, total=500, rate=25.0)
+    assert elapsed == "00:10"
+    assert rate == "25.00"
+    assert remaining == "00:10"
+
+    # VFR / frame-skip overshoot: remaining clamps at 00:00 instead of going negative
+    elapsed, rate, remaining = format_progress_stats(10.0, processed=550, total=500, rate=55.0)
+    assert remaining == "00:00"
+
+    # Sub-1 FPS and unknown total
+    elapsed, rate, remaining = format_progress_stats(4.0, processed=2, total=None, rate=None)
+    assert rate == "0.50"
+    assert remaining == "?"
+
+    # Zero elapsed and no rate yet
+    elapsed, rate, remaining = format_progress_stats(0.0, processed=0, total=100, rate=None)
+    assert rate == "N/A"
+    assert remaining == "?"
+
+
+def test_scan_progress_view_tracks_skipped_frames(tk_root, monkeypatch):
+    from types import SimpleNamespace
+
+    import dvr_scan.app.scan_window as scan_window
+
+    monkeypatch.setattr(scan_window, "init_scanner", lambda _settings: _FakeScanner())
+    view = scan_window.ScanProgressView(tk_root, _scan_settings(), lambda: None)
+    fake_bar = SimpleNamespace(
+        n=10,
+        format_dict={"elapsed": 1.0, "n": 10, "total": 20, "rate": 10.0},
+    )
+    view._on_processed_frame(fake_bar, num_events=2)
+    assert view.frames_processed == 11
+    assert view.num_events == 2
+
+
+def test_input_area_refresh_remove_state_tracks_selection_and_bounds():
+    class _Btn:
+        def __init__(self):
+            self.state = "disabled"
+
+        def __setitem__(self, key, value):
+            assert key == "state"
+            self.state = value
+
+    area = InputArea.__new__(InputArea)
+    tree = _SelectableTree(["row-0", "row-1", "row-2"])
+    area._videos = tree
+    area._remove_button = _Btn()
+    area._up_button = _Btn()
+    area._down_button = _Btn()
+
+    # Rows present, none selected -> all disabled
+    area._refresh_remove_state()
+    assert (area._remove_button.state, area._up_button.state, area._down_button.state) == (
+        "disabled",
+        "disabled",
+        "disabled",
+    )
+
+    # First row selected -> Remove & Move Down enabled, Move Up disabled
+    tree.selection_set(["row-0"])
+    area._refresh_remove_state()
+    assert (area._remove_button.state, area._up_button.state, area._down_button.state) == (
+        "normal",
+        "disabled",
+        "normal",
+    )
+
+    # Middle row selected -> all enabled
+    tree.selection_set(["row-1"])
+    area._refresh_remove_state()
+    assert (area._remove_button.state, area._up_button.state, area._down_button.state) == (
+        "normal",
+        "normal",
+        "normal",
+    )
+
+    # Last row selected -> Move Down disabled
+    tree.selection_set(["row-2"])
+    area._refresh_remove_state()
+    assert (area._remove_button.state, area._up_button.state, area._down_button.state) == (
+        "normal",
+        "normal",
+        "disabled",
+    )
+
+
+def test_input_area_sort_by_framerate_sorts_numerically():
+    class _FpsTree:
+        def __init__(self):
+            self.order = ["a", "b", "c"]
+            self.fps = {"a": "120", "b": "4.98241", "c": "29.97"}
+
+        def get_children(self, _parent=""):
+            return list(self.order)
+
+        def selection(self):
+            return []
+
+        def set(self, iid, col):
+            assert col == "framerate"
+            return self.fps[iid]
+
+        def move(self, iid, _parent, index):
+            self.order.remove(iid)
+            self.order.insert(index, iid)
+
+    area = InputArea.__new__(InputArea)
+    area._videos = _FpsTree()
+    area.sort_by("framerate", descending=False)
+    assert area._videos.order == ["b", "c", "a"]
+    area.sort_by("framerate", descending=True)
+    assert area._videos.order == ["a", "c", "b"]
+
+
+def test_start_scan_shows_dialogs_for_empty_list_and_invalid_time_range(monkeypatch):
+    from types import SimpleNamespace
+
+    from dvr_scan.app.application import Application
+
+    app = Application.__new__(Application)
+    app._scan_window = None
+    app._root = "root-win"
+    warnings = []
+    errors = []
+    monkeypatch.setattr(
+        application.tkinter.messagebox, "showwarning", lambda **kw: warnings.append(kw)
+    )
+    monkeypatch.setattr(application.tkinter.messagebox, "showerror", lambda **kw: errors.append(kw))
+
+    app._input_area = SimpleNamespace(videos=[], start_end_time=None)
+    app._start_scan()
+    assert len(warnings) == 1 and warnings[0]["parent"] == "root-win"
+
+    app._input_area = SimpleNamespace(
+        videos=["a.mp4"], start_end_time=("00:00:05.000", "00:00:02.000")
+    )
+    app._start_scan()
+    assert len(errors) == 1 and errors[0]["parent"] == "root-win"
+
+
+def test_region_editor_add_region_without_mouse_pos_uses_frame_center():
+    from dvr_scan.app.region_editor import RegionEditor
+
+    editor = RegionEditor(
+        frame=_frame(100, 80, 0),
+        initial_shapes=SHAPES,
+        initial_scale=1,
+        debug_mode=False,
+        video_path="a.mp4",
+        save_path=None,
+    )
+    assert editor._curr_mouse_pos is None
+    editor._draw = lambda: None
+    editor._add_region()
+    assert len(list(editor.shapes)) == 2
+    added = list(editor.shapes)[-1]
+    assert added[0] == Point(40, 32)
+    assert added[2] == Point(60, 48)
+
+
+def test_tooltip_shows_on_focus_and_hides_cleanly(tk_root):
+    import tkinter as tk
+    import tkinter.ttk as ttk
+
+    from dvr_scan.app.common import Tooltip
+
+    win = tk.Toplevel(tk_root)
+    win.deiconify()
+    frame = ttk.Frame(win)
+    frame.grid()
+    btn = ttk.Button(frame, text="+")
+    btn.grid()
+    win.update()
+
+    tip = Tooltip(btn, "Add videos")
+    tip._on_focus_in()
+    assert tip._tip is not None and tip._tip.winfo_exists()
+
+    # Clicking while hovered hides the tip and does not re-open it on click `<FocusIn>`.
+    tip._on_enter()
+    tip._hide()
+    tip._on_focus_in()
+    assert tip._tip is None
+
+    # Unmapping a hovered/focused parent frame (`grid_remove`) tears down any open tooltip.
+    tip._on_enter()
+    assert tip._tip is not None and tip._tip.winfo_exists()
+    frame.grid_remove()
+    win.update()
+    assert tip._tip is None
+    assert tip._pointer_inside is False
+    assert _bgerrors(tk_root) == ""
+
+
+def test_gui_cli_parser_leaves_debug_suppressed():
+    from dvr_scan.app.__main__ import get_cli_parser
+
+    args = get_cli_parser().parse_args([])
+    assert not hasattr(args, "debug")
+    args_debug = get_cli_parser().parse_args(["--debug"])
+    assert args_debug.debug is True
+
+
 @pytest.mark.skipif(__import__("os").name != "nt", reason="Custom MenuBar is Windows-only")
 def test_menubar_switches_open_menu_on_hover(tk_root):
     import tkinter as tk
