@@ -30,7 +30,9 @@ from dvr_scan.app.common import (
     PADDING,
     SETTING_INPUT_WIDTH,
     MenuBar,
+    Tooltip,
     add_startup_mode_menu,
+    blend_color,
     fill_help_menu,
     fit_window_to_screen,
     hide_modal,
@@ -99,6 +101,12 @@ logger = getLogger("dvr_scan")
 # TODO: Allow this to be sorted by columns.
 # TODO: Should we have a default sort method when bulk adding videos?
 class InputArea:
+    _remove_button: ty.Optional[ttk.Button] = None
+    _up_button: ty.Optional[ttk.Button] = None
+    _down_button: ty.Optional[ttk.Button] = None
+    _empty_hint: ty.Optional[tk.Label] = None
+    _region_editor_button: ty.Optional[ttk.Button] = None
+
     def __init__(self, root: tk.Widget):
         self._root = root
         self._region_editor: ty.Optional[RegionEditor] = None
@@ -108,7 +116,7 @@ class InputArea:
         self._region_editor_video: ty.Optional[str] = None
         self._region_editor_size: ty.Optional[ty.Tuple[int, int]] = None
         self._region_editor_start_time: ty.Optional[str] = None
-        root.rowconfigure(0, pad=PADDING, weight=1)
+        root.rowconfigure(0, pad=PADDING, weight=1, minsize=150)
         root.rowconfigure(1, pad=PADDING)
         root.rowconfigure(2, pad=PADDING)
         root.rowconfigure(3, pad=PADDING)
@@ -119,16 +127,19 @@ class InputArea:
             root.columnconfigure(column, weight=1, uniform="controls")
         root.columnconfigure(6, weight=12, minsize=0)
 
-        frame = tk.Frame(root)
+        frame = ttk.Frame(root)
         frame.rowconfigure(0, weight=1)
         frame.columnconfigure(0, weight=1)
-        frame.columnconfigure(1, weight=1)
 
         configure_thumbnail_rows()
+        # Default `Treeview` height is 10 rows, which at 58px per filmstrip row requests ~580px
+        # for the table alone (pushing the window past 1080p displays). 4 rows (~232px) fits
+        # comfortably on laptop screens while expanding smoothly when the window is resized.
         self._videos = ttk.Treeview(
             frame,
             columns=("duration", "framerate", "resolution", "date", "path"),
             style=THUMBNAIL_STYLE,
+            height=4,
         )
         # Each row gets a filmstrip preview (frames sampled across the video) decoded off
         # the UI thread; a shared placeholder is shown until the real strip is ready.
@@ -138,19 +149,36 @@ class InputArea:
 
         scroll_horizontal = ttk.Scrollbar(frame, orient=tk.HORIZONTAL, command=self._videos.xview)
         scroll_vertical = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=self._videos.yview)
-        scroll_horizontal.grid(row=1, column=0, columnspan=6, sticky="NEW")
-        scroll_vertical.grid(row=0, column=6, rowspan=6, sticky="NSW")
+        scroll_horizontal.grid(row=1, column=0, sticky=tk.EW)
+        scroll_vertical.grid(row=0, column=1, sticky=tk.NS)
         self._videos.configure(
             xscrollcommand=scroll_horizontal.set, yscrollcommand=scroll_vertical.set
         )
 
         self._videos.grid(row=0, column=0, sticky=tk.NSEW)
-        frame.grid(row=0, column=0, rowspan=2, columnspan=6, sticky=tk.NSEW)
+        frame.grid(row=0, column=0, rowspan=2, columnspan=7, sticky=tk.NSEW)
+
+        style = ttk.Style()
+        tree_bg = (
+            style.lookup("Treeview", "fieldbackground")
+            or style.lookup("Treeview", "background")
+            or "#ffffff"
+        )
+        tree_fg = style.lookup("Treeview", "foreground") or "#000000"
+        hint_fg = blend_color(self._videos, tree_fg, tree_bg, 0.65)
+        self._empty_hint = tk.Label(
+            self._videos,
+            text="No videos added. Click Add or drag and drop video files here.",
+            background=tree_bg,
+            foreground=hint_fg,
+            cursor="hand2",
+        )
+        self._empty_hint.bind("<Button-1>", lambda _: self.add_video())
 
         self._videos.heading("#0", text="Name", command=lambda: self._sort_column("#0", False))
         # The #0 cell holds the filmstrip preview followed by the name; size it to fit both.
         self._videos.column(
-            "#0", width=FILMSTRIP_WIDTH + 160, minwidth=FILMSTRIP_WIDTH + 40, stretch=False
+            "#0", width=FILMSTRIP_WIDTH + 140, minwidth=FILMSTRIP_WIDTH + 40, stretch=False
         )
         self._videos.heading(
             "duration", text="Duration", command=lambda: self._sort_column("duration", False)
@@ -163,13 +191,13 @@ class InputArea:
         self._videos.heading(
             "resolution", text="Resolution", command=lambda: self._sort_column("resolution", False)
         )
-        self._videos.column("resolution", width=80, minwidth=80, stretch=False)
+        self._videos.column("resolution", width=85, minwidth=80, stretch=False)
         self._videos.heading("date", text="Date", command=lambda: self._sort_column("date", False))
         self._videos.column("date", width=140, minwidth=80, stretch=False)
         self._videos.heading("path", text="Path", command=lambda: self._sort_column("path", False))
-        self._videos.column("path", width=80, minwidth=80, stretch=False)
+        self._videos.column("path", width=140, minwidth=80, stretch=True)
 
-        self._videos.grid(row=0, column=0, columnspan=6, sticky=tk.NSEW)
+        self._videos.bind("<<TreeviewSelect>>", lambda _: self._refresh_remove_state())
         # The Treeview takes keyboard focus when clicked, so these widget-level bindings only
         # fire while the list is focused and never interfere with text entries elsewhere.
         for sequence in ("<<SelectAll>>", "<Control-a>", "<Control-A>"):
@@ -177,23 +205,28 @@ class InputArea:
         for sequence in ("<Delete>", "<BackSpace>"):
             self._videos.bind(sequence, self._on_remove_key)
 
-        ttk.Button(root, text="Add", command=self.add_video).grid(
-            row=2, column=0, sticky=EXPAND_HORIZONTAL, padx=PADDING
-        )
+        add_btn = ttk.Button(root, text="Add", command=self.add_video)
+        add_btn.grid(row=2, column=0, sticky=EXPAND_HORIZONTAL, padx=PADDING)
+        Tooltip(add_btn, f"Add input video files ({ACCELERATOR_KEY}+O)")
         self._remove_button = ttk.Button(
             root, text="Remove", state=tk.DISABLED, command=self.remove_selected
         )
         self._remove_button.grid(row=2, column=1, sticky=EXPAND_HORIZONTAL, padx=PADDING)
-        ttk.Button(
+        Tooltip(self._remove_button, "Remove selected videos (Del)")
+        self._up_button = ttk.Button(
             root,
             text="Move Up",
+            state=tk.DISABLED,
             command=self._on_move_up,
-        ).grid(row=2, column=2, sticky=EXPAND_HORIZONTAL, padx=PADDING)
-        ttk.Button(
+        )
+        self._up_button.grid(row=2, column=2, sticky=EXPAND_HORIZONTAL, padx=PADDING)
+        self._down_button = ttk.Button(
             root,
             text="Move Down",
+            state=tk.DISABLED,
             command=self._on_move_down,
-        ).grid(row=2, column=3, sticky=EXPAND_HORIZONTAL, padx=PADDING)
+        )
+        self._down_button.grid(row=2, column=3, sticky=EXPAND_HORIZONTAL, padx=PADDING)
 
         self._set_time = tk.BooleanVar(root, value=False)
         self._set_region = tk.BooleanVar(root, value=False)
@@ -209,36 +242,45 @@ class InputArea:
             command=self._on_set_time,
         )
         self._set_time_button.grid(row=3, column=0, padx=PADDING, sticky=tk.W)
+        Tooltip(self._set_time_button, "Scan only a specific time range within the input video.")
         # The start/end time controls are shown only while Set Time is checked.
-        self._start_time_label = tk.Label(root, text="Start Time")
+        self._start_time_label = ttk.Label(root, text="Start Time")
         self._start_time = TimecodeEntry(root, value="00:00:00.000")
+        Tooltip(self._start_time_label, "Position in the video to start the scan (HH:MM:SS.mmm).")
 
-        self._end_time_label = tk.Label(root, text="End Time")
+        self._end_time_label = ttk.Label(root, text="End Time")
         self._end_time = TimecodeEntry(root, "00:00:00.000")
+        Tooltip(
+            self._end_time_label,
+            "Position in the video to end the scan (00:00:00.000 = end of video).",
+        )
 
-        ttk.Checkbutton(
+        set_regions_check = ttk.Checkbutton(
             root,
             text="Set Regions",
             variable=self._set_region,
             onvalue=True,
             offvalue=False,
             command=self._on_use_regions,
-        ).grid(row=4, column=0, padx=PADDING, sticky=tk.W)
+        )
+        set_regions_check.grid(row=4, column=0, padx=PADDING, sticky=tk.W)
+        Tooltip(set_regions_check, "Limit motion detection to specific polygon regions.")
         self._region_editor_button = ttk.Button(
-            root, text="Region Editor", state=tk.DISABLED, command=self._on_edit_regions
+            root, text="Region Editor...", state=tk.DISABLED, command=self._on_edit_regions
         )
         self._current_region = tk.StringVar(value=NO_REGIONS_SPECIFIED_TEXT)
-        self._current_region_label = tk.Entry(
-            root, width=PATH_INPUT_WIDTH, state=tk.DISABLED, textvariable=self._current_region
+        self._current_region_label = ttk.Entry(
+            root, width=PATH_INPUT_WIDTH, state="readonly", textvariable=self._current_region
         )
         self._region_editor_button.grid(row=4, column=1, padx=PADDING, sticky=EXPAND_HORIZONTAL)
         self._current_region_label.grid(
-            row=4, column=3, sticky=EXPAND_HORIZONTAL, padx=PADDING, columnspan=2
+            row=4, column=2, sticky=EXPAND_HORIZONTAL, padx=PADDING, columnspan=2
         )
 
         # Update internal state
         self._on_set_time()
         self._on_use_regions()
+        self._refresh_remove_state()
 
     @property
     def videos(self) -> ty.List[str]:
@@ -270,15 +312,25 @@ class InputArea:
 
     def sort_by(self, col: str, descending: bool):
         """Reorder the video list by treeview column `col` ("#0" is the name). Sorting is
-        case-insensitive; date strings (YYYY-MM-DD ...) sort chronologically as text."""
+        case-insensitive; framerates sort numerically; date strings sort chronologically."""
         children = self._videos.get_children("")
         if col == "#0":
             items = [(self._videos.item(k, "text").casefold(), k) for k in children]
+        elif col == "framerate":
+
+            def _fps_key(item_id: str) -> float:
+                try:
+                    return float(self._videos.set(item_id, col))
+                except ValueError:
+                    return -1.0
+
+            items = [(_fps_key(k), k) for k in children]
         else:
             items = [(str(self._videos.set(k, col)).casefold(), k) for k in children]
-        items.sort(reverse=descending)
+        items.sort(key=lambda pair: pair[0], reverse=descending)
         for index, (_val, k) in enumerate(items):
             self._videos.move(k, "", index)
+        self._refresh_remove_state()
 
     def _sort_column(self, col, reverse):
         # Header-click sort: apply, then flip direction for the next click on this column.
@@ -288,10 +340,21 @@ class InputArea:
     def add_video(self, path: str = "", parent: ty.Optional[tk.Widget] = None):
         """Add a video to the list by path, or open a file dialog if no path is given.
         Called from the Add button, drag-and-drop, and the Scan Wizard."""
-        paths = [path] if path else ask_video_paths(parent)
+        dialog_parent = (
+            parent
+            if parent is not None
+            else (
+                self._root.winfo_toplevel()
+                if getattr(self, "_root", None) is not None
+                and hasattr(self._root, "winfo_toplevel")
+                else None
+            )
+        )
+        paths = [path] if path else ask_video_paths(dialog_parent)
         if not paths:
             return
-        for info in probe_videos(paths, parent):
+        added_first = None
+        for info in probe_videos(paths, dialog_parent):
             item = self._videos.insert(
                 "",
                 tk.END,
@@ -299,7 +362,11 @@ class InputArea:
                 image=self._placeholder,
                 values=(info.duration, info.framerate, info.resolution, info.date, info.path),
             )
+            if added_first is None:
+                added_first = item
             self._thumbnails.submit(item, lambda path=info.path: sample_video_frames(path))
+        if added_first is not None and not self._videos.selection():
+            self._videos.selection_set([added_first])
         self._refresh_remove_state()
 
     def clear(self):
@@ -311,16 +378,39 @@ class InputArea:
         self._refresh_remove_state()
 
     def _refresh_remove_state(self):
-        self._remove_button["state"] = tk.NORMAL if self._videos.get_children() else tk.DISABLED
+        children = list(self._videos.get_children())
+        selected = list(self._videos.selection())
+        indices = [idx for idx, iid in enumerate(children) if iid in selected]
+        if self._remove_button is not None:
+            self._remove_button["state"] = tk.NORMAL if indices else tk.DISABLED
+        if self._up_button is not None:
+            self._up_button["state"] = tk.NORMAL if (indices and indices[0] > 0) else tk.DISABLED
+        if self._down_button is not None:
+            can_down = bool(indices) and indices[-1] < len(children) - 1
+            self._down_button["state"] = tk.NORMAL if can_down else tk.DISABLED
+        if self._empty_hint is not None:
+            if children:
+                self._empty_hint.place_forget()
+            else:
+                self._empty_hint.place(relx=0.5, rely=0.55, anchor=tk.CENTER)
 
     def select_all(self):
         """Select every video in the list."""
         self._videos.selection_set(self._videos.get_children())
+        self._refresh_remove_state()
 
     def remove_selected(self):
         """Remove the selected videos from the list."""
-        for selection in self._videos.selection():
+        children = list(self._videos.get_children())
+        selected = list(self._videos.selection())
+        if not selected:
+            return
+        lowest = min((children.index(iid) for iid in selected if iid in children), default=0)
+        for selection in selected:
             self._videos.delete(selection)
+        remaining = list(self._videos.get_children())
+        if remaining:
+            self._videos.selection_set([remaining[min(lowest, len(remaining) - 1)]])
         self._refresh_remove_state()
 
     def _on_select_all_key(self, _event=None):
@@ -338,6 +428,7 @@ class InputArea:
                 self._videos.move(selection, "", index - 1)
             else:
                 break
+        self._refresh_remove_state()
 
     def _on_move_down(self):
         for selection in self._videos.selection()[::-1]:
@@ -347,14 +438,15 @@ class InputArea:
                 self._videos.move(next, "", index)
             else:
                 break
+        self._refresh_remove_state()
 
     def _on_set_time(self):
         # TODO: When disabled, set start time 0 and end time duration of video.
         if self._set_time.get():
-            self._start_time_label.grid(row=3, column=1, sticky=EXPAND_HORIZONTAL)
+            self._start_time_label.grid(row=3, column=1, padx=PADDING, sticky=tk.W)
             self._start_time.grid(row=3, column=2, padx=PADDING, sticky=EXPAND_HORIZONTAL)
+            self._end_time_label.grid(row=3, column=3, padx=PADDING, sticky=tk.W)
             self._end_time.grid(row=3, column=4, padx=PADDING, sticky=EXPAND_HORIZONTAL)
-            self._end_time_label.grid(row=3, column=3, sticky=EXPAND_HORIZONTAL)
         else:
             self._start_time_label.grid_remove()
             self._start_time.grid_remove()
@@ -365,7 +457,7 @@ class InputArea:
         if self._set_region.get():
             self._region_editor_button["state"] = tk.NORMAL
             self._current_region_label.grid(
-                row=4, column=3, sticky=EXPAND_HORIZONTAL, padx=PADDING, columnspan=2
+                row=4, column=2, sticky=EXPAND_HORIZONTAL, padx=PADDING, columnspan=2
             )
         else:
             self._region_editor_button["state"] = tk.DISABLED
@@ -428,6 +520,12 @@ class InputArea:
     def _on_edit_regions(self):
         videos = self.videos
         if not videos:
+            if hasattr(self._root, "winfo_toplevel"):
+                tkinter.messagebox.showinfo(
+                    "No Videos Added",
+                    "Add at least one video before opening the Region Editor.",
+                    parent=self._root.winfo_toplevel(),
+                )
             return
         video_path = videos[0]
         normalized_path = self._normalize_path(video_path)
@@ -534,41 +632,43 @@ class InputSettingsWindow:
         self._window.title("Input Settings")
         self._window.resizable(True, True)
         self._window.protocol("WM_DELETE_WINDOW", self._dismiss)
+        self._window.bind("<Escape>", lambda _: self._dismiss())
         self._window.rowconfigure(0, weight=1)
-        self._window.rowconfigure(1, weight=1)
         self._window.columnconfigure(0, weight=1)
 
         frame = ttk.LabelFrame(self._window, text="Video", padding=PADDING)
-        frame.grid(row=0, sticky=tk.NSEW, padx=PADDING, pady=PADDING)
+        frame.grid(row=0, column=0, sticky=tk.NSEW, padx=PADDING, pady=(PADDING, 0))
         frame.rowconfigure(0, pad=PADDING, weight=1)
         frame.rowconfigure(1, pad=PADDING, weight=1)
-        frame.rowconfigure(2, pad=PADDING, weight=1)
         frame.columnconfigure(0, pad=PADDING, weight=1)
         frame.columnconfigure(1, pad=PADDING, weight=1)
         frame.columnconfigure(2, pad=PADDING, weight=2)
         frame.columnconfigure(3, pad=PADDING, weight=1)
         frame.columnconfigure(4, pad=PADDING, weight=1)
-        frame.columnconfigure(5, pad=PADDING, weight=12, minsize=0)
+        frame.columnconfigure(5, pad=PADDING, weight=4, minsize=0)
 
-        tk.Button(self._window, text="Close", command=self._dismiss).grid(
-            row=2, column=0, sticky=tk.E, padx=PADDING, pady=PADDING
+        input_mode_label = ttk.Label(frame, text="Input Mode")
+        input_mode_label.grid(row=0, column=0, sticky=tk.W, padx=PADDING, pady=PADDING)
+        Tooltip(input_mode_label, "Video decoding backend (pyav is recommended for accuracy).")
+        self._input_mode = tk.StringVar()
+        self._input_mode_combo = ttk.Combobox(
+            frame, textvariable=self._input_mode, width=SETTING_INPUT_WIDTH
+        )
+        self._input_mode_combo.state(["readonly"])
+        # Put the default PyAV backend first when available, followed by OpenCV and others.
+        preferred = [b for b in ("pyav", "opencv") if b in AVAILABLE_BACKENDS]
+        self._input_mode_combo["values"] = preferred + [
+            backend for backend in AVAILABLE_BACKENDS if backend not in preferred
+        ]
+        self._input_mode_combo.grid(
+            row=0, column=1, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
         )
 
-        tk.Label(frame, text="Frame Skip").grid(
-            row=2, column=3, padx=PADDING, sticky=tk.N + EXPAND_HORIZONTAL, pady=PADDING
-        )
-        self._frame_skip = Spinbox(
-            frame,
-            value=str(CONFIG_MAP["frame-skip"]),
-            from_=0.0,
-            to=1000.0,
-            increment=1.0,
-        )
-        self._frame_skip.grid(
-            row=2, column=4, padx=PADDING, sticky=tk.N + EXPAND_HORIZONTAL, pady=PADDING
-        )
-        tk.Label(frame, text="Downscale Factor").grid(
-            row=0, column=3, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
+        downscale_label = ttk.Label(frame, text="Downscale Factor")
+        downscale_label.grid(row=0, column=3, sticky=tk.W, padx=PADDING, pady=PADDING)
+        Tooltip(
+            downscale_label,
+            "Integer factor to shrink frames during analysis for faster scanning (0 or 1 = off).",
         )
         self._downscale_factor = Spinbox(
             frame,
@@ -581,19 +681,29 @@ class InputSettingsWindow:
         self._downscale_factor.grid(
             row=0, column=4, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
         )
-        tk.Label(frame, text="Input Mode").grid(row=0, column=0, sticky=EXPAND_HORIZONTAL)
-        self._input_mode = tk.StringVar()
-        combo = ttk.Combobox(frame, textvariable=self._input_mode, width=SETTING_INPUT_WIDTH)
-        combo.state(["readonly"])
-        # Make sure OpenCV is always at the top.
-        combo["values"] = ["opencv"] + [
-            backend for backend in AVAILABLE_BACKENDS if backend != "opencv"
-        ]
-        combo.grid(row=0, column=1, sticky=EXPAND_HORIZONTAL)
+
+        frame_skip_label = ttk.Label(frame, text="Frame Skip")
+        frame_skip_label.grid(row=1, column=3, sticky=tk.W, padx=PADDING, pady=PADDING)
+        Tooltip(
+            frame_skip_label,
+            "Number of frames to skip between analyzed frames for faster scanning (0 = none).",
+        )
+        self._frame_skip = Spinbox(
+            frame,
+            value=str(CONFIG_MAP["frame-skip"]),
+            from_=0.0,
+            to=1000.0,
+            increment=1.0,
+        )
+        self._frame_skip.grid(row=1, column=4, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING)
+
+        ttk.Button(self._window, text="Close", command=self._dismiss).grid(
+            row=1, column=0, sticky=tk.E, padx=PADDING, pady=PADDING
+        )
 
     def show(self):
         logger.debug("showing input settings window")
-        show_modal(self._window, self._root)
+        show_modal(self._window, self._root, initial_focus=self._input_mode_combo)
 
     def _dismiss(self):
         logger.debug("closing input settings window")
@@ -621,12 +731,13 @@ class MotionSettingsWindow:
         self._window.title("Motion Settings")
         self._window.resizable(True, True)
         self._window.protocol("WM_DELETE_WINDOW", self._dismiss)
+        self._window.bind("<Escape>", lambda _: self._dismiss())
         self._window.rowconfigure(0, weight=1)
         self._window.rowconfigure(1, weight=1)
         self._window.columnconfigure(0, weight=1)
 
         frame = ttk.LabelFrame(self._window, text="Motion", padding=PADDING)
-        frame.grid(row=0, sticky=tk.NSEW, padx=PADDING, pady=PADDING)
+        frame.grid(row=0, sticky=tk.NSEW, padx=PADDING, pady=(PADDING, 0))
         frame.rowconfigure(0, pad=2 * PADDING, weight=1)
         frame.rowconfigure(1, pad=2 * PADDING, weight=1)
         frame.rowconfigure(2, pad=2 * PADDING, weight=1)
@@ -639,23 +750,33 @@ class MotionSettingsWindow:
         frame.columnconfigure(5, pad=PADDING, weight=1)
         frame.columnconfigure(6, pad=PADDING, weight=12, minsize=0)
 
-        tk.Label(frame, text="Subtractor").grid(row=0, column=0, sticky=EXPAND_HORIZONTAL)
+        subtractor_label = ttk.Label(frame, text="Subtractor")
+        subtractor_label.grid(row=0, column=0, sticky=tk.W, padx=PADDING)
+        Tooltip(
+            subtractor_label, "Background subtraction algorithm (MOG2 is accurate; CNT is faster)."
+        )
         self._bg_subtractor = tk.StringVar()
-        combo = ttk.Combobox(frame, textvariable=self._bg_subtractor, width=SETTING_INPUT_WIDTH)
-        combo.state(["readonly"])
+        self._subtractor_combo = ttk.Combobox(
+            frame, textvariable=self._bg_subtractor, width=SETTING_INPUT_WIDTH
+        )
+        self._subtractor_combo.state(["readonly"])
         # CNT needs the contrib OpenCV build; it can be missing from pip installs where the
         # regular opencv-python package was installed over opencv-contrib-python.
         subtractors = ["MOG2"] + (["CNT"] if SubtractorCNT.is_available() else [])
         if SubtractorCudaMOG2.is_available():
-            combo["values"] = tuple(["MOG2_CUDA"] + subtractors)
+            self._subtractor_combo["values"] = tuple(["MOG2_CUDA"] + subtractors)
             self._bg_subtractor.set("MOG2_CUDA")
         else:
-            combo["values"] = tuple(subtractors)
+            self._subtractor_combo["values"] = tuple(subtractors)
             self._bg_subtractor.set("MOG2")
 
-        combo.grid(row=0, column=1, sticky=EXPAND_HORIZONTAL)
+        self._subtractor_combo.grid(row=0, column=1, sticky=EXPAND_HORIZONTAL, padx=PADDING)
 
-        tk.Label(frame, text="Kernel Size").grid(row=1, column=0, sticky=EXPAND_HORIZONTAL)
+        kernel_label = ttk.Label(frame, text="Kernel Size")
+        kernel_label.grid(row=1, column=0, sticky=tk.W, padx=PADDING)
+        Tooltip(
+            kernel_label, "Noise reduction filter size in pixels (Auto scales with resolution)."
+        )
 
         self._kernel_size_combobox = ttk.Combobox(
             frame, width=SETTING_INPUT_WIDTH, state="readonly"
@@ -663,10 +784,14 @@ class MotionSettingsWindow:
         self._kernel_size_combobox["values"] = tuple(
             {0: "Off", -1: "Auto"}.get(size, f"{size}x{size}") for size in KERNEL_SIZES
         )
-        self._kernel_size_combobox.grid(row=1, column=1, sticky=EXPAND_HORIZONTAL)
+        self._kernel_size_combobox.grid(row=1, column=1, sticky=EXPAND_HORIZONTAL, padx=PADDING)
         self._kernel_size_combobox.current(1)
 
-        tk.Label(frame, text="Threshold").grid(row=2, column=0, sticky=EXPAND_HORIZONTAL)
+        threshold_label = ttk.Label(frame, text="Threshold")
+        threshold_label.grid(row=2, column=0, sticky=tk.W, padx=PADDING)
+        Tooltip(
+            threshold_label, "Minimum motion score to trigger an event (lower = more sensitive)."
+        )
         self._threshold = Spinbox(
             frame,
             value=str(CONFIG_MAP["threshold"]),
@@ -674,10 +799,12 @@ class MotionSettingsWindow:
             to=255.0,
             increment=0.01,
         )
-        self._threshold.grid(row=2, column=1, sticky=EXPAND_HORIZONTAL)
+        self._threshold.grid(row=2, column=1, sticky=EXPAND_HORIZONTAL, padx=PADDING)
 
         # Events
-        tk.Label(frame, text="Min. Event Length").grid(row=0, column=3, sticky=EXPAND_HORIZONTAL)
+        min_len_label = ttk.Label(frame, text="Min. Event Length")
+        min_len_label.grid(row=0, column=3, sticky=tk.W, padx=PADDING)
+        Tooltip(min_len_label, "Duration of sustained motion required to trigger an event.")
         self._min_event_length = Spinbox(
             frame,
             value=str(CONFIG_MAP["min-event-length"]),
@@ -686,9 +813,11 @@ class MotionSettingsWindow:
             increment=DURATION_INCREMENT,
             suffix="s",
         )
-        self._min_event_length.grid(row=0, column=4, sticky=EXPAND_HORIZONTAL)
+        self._min_event_length.grid(row=0, column=4, sticky=EXPAND_HORIZONTAL, padx=PADDING)
 
-        tk.Label(frame, text="Time Pre-Event").grid(row=1, column=3, sticky=EXPAND_HORIZONTAL)
+        pre_label = ttk.Label(frame, text="Time Pre-Event")
+        pre_label.grid(row=1, column=3, sticky=tk.W, padx=PADDING)
+        Tooltip(pre_label, "Extra video time included before motion starts.")
         self._time_before_event = Spinbox(
             frame,
             value=str(CONFIG_MAP["time-before-event"]),
@@ -697,9 +826,11 @@ class MotionSettingsWindow:
             increment=DURATION_INCREMENT,
             suffix="s",
         )
-        self._time_before_event.grid(row=1, column=4, sticky=EXPAND_HORIZONTAL)
+        self._time_before_event.grid(row=1, column=4, sticky=EXPAND_HORIZONTAL, padx=PADDING)
 
-        tk.Label(frame, text="Time Post-Event").grid(row=2, column=3, sticky=EXPAND_HORIZONTAL)
+        post_label = ttk.Label(frame, text="Time Post-Event")
+        post_label.grid(row=2, column=3, sticky=tk.W, padx=PADDING)
+        Tooltip(post_label, "Extra video time included after motion ends.")
         self._time_post_event = Spinbox(
             frame,
             value=str(CONFIG_MAP["time-post-event"]),
@@ -708,9 +839,14 @@ class MotionSettingsWindow:
             increment=DURATION_INCREMENT,
             suffix="s",
         )
-        self._time_post_event.grid(row=2, column=4, sticky=EXPAND_HORIZONTAL)
+        self._time_post_event.grid(row=2, column=4, sticky=EXPAND_HORIZONTAL, padx=PADDING)
 
-        tk.Label(frame, text="Merge Window").grid(row=3, column=3, sticky=EXPAND_HORIZONTAL)
+        merge_label = ttk.Label(frame, text="Merge Window")
+        merge_label.grid(row=3, column=3, sticky=tk.W, padx=PADDING)
+        Tooltip(
+            merge_label,
+            "Merge consecutive events separated by less than this gap (Auto uses Time Post-Event).",
+        )
         self._merge_window_auto = tk.BooleanVar(value=True)
         self._merge_window_value = Spinbox(
             frame,
@@ -721,7 +857,7 @@ class MotionSettingsWindow:
             suffix="s",
             state=tk.DISABLED,
         )
-        self._merge_window_value.grid(row=3, column=4, sticky=EXPAND_HORIZONTAL)
+        self._merge_window_value.grid(row=3, column=4, sticky=EXPAND_HORIZONTAL, padx=PADDING)
         ttk.Checkbutton(
             frame,
             text="Auto",
@@ -729,10 +865,10 @@ class MotionSettingsWindow:
             onvalue=True,
             offvalue=False,
             command=self._on_auto_merge_window,
-        ).grid(row=3, column=5, sticky=EXPAND_HORIZONTAL)
+        ).grid(row=3, column=5, sticky=tk.W, padx=PADDING)
 
         frame = ttk.LabelFrame(self._window, text="Advanced", padding=PADDING)
-        frame.grid(row=1, sticky=tk.NSEW, padx=PADDING, pady=PADDING)
+        frame.grid(row=1, sticky=tk.NSEW, padx=PADDING, pady=(PADDING, 0))
         for row in range(4):
             frame.rowconfigure(row, pad=PADDING, weight=1)
         frame.columnconfigure(0, weight=1)
@@ -744,18 +880,20 @@ class MotionSettingsWindow:
         frame.columnconfigure(6, weight=12)
 
         self._mask_output = tk.BooleanVar(value=False)
-        ttk.Checkbutton(
+        mask_check = ttk.Checkbutton(
             frame,
             text="Save Motion Mask",
             variable=self._mask_output,
             onvalue=True,
             offvalue=False,
-        ).grid(row=3, column=0, columnspan=2, sticky=tk.W, padx=PADDING, pady=PADDING)
+        )
+        mask_check.grid(row=3, column=0, columnspan=2, sticky=tk.W, padx=PADDING, pady=PADDING)
+        Tooltip(mask_check, "Write a grayscale motion-mask debug video alongside output.")
 
         self._learning_rate_auto = tk.BooleanVar(value=True)
-        tk.Label(frame, text="Learning Rate").grid(
-            row=0, column=3, padx=PADDING, sticky=EXPAND_HORIZONTAL
-        )
+        lr_label = ttk.Label(frame, text="Learning Rate")
+        lr_label.grid(row=0, column=3, padx=PADDING, sticky=tk.W, pady=PADDING)
+        Tooltip(lr_label, "How quickly the background model adapts to scene changes (0.0 to 1.0).")
         self._learning_rate_value = Spinbox(
             frame,
             value=0.5,
@@ -774,10 +912,13 @@ class MotionSettingsWindow:
             onvalue=True,
             offvalue=False,
             command=self._on_auto_learning_rate,
-        ).grid(row=0, column=5, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING)
+        ).grid(row=0, column=5, padx=PADDING, sticky=tk.W, pady=PADDING)
 
-        tk.Label(frame, text="Max Threshold").grid(
-            row=0, column=0, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING
+        max_thresh_label = ttk.Label(frame, text="Max Threshold")
+        max_thresh_label.grid(row=0, column=0, padx=PADDING, sticky=tk.W, pady=PADDING)
+        Tooltip(
+            max_thresh_label,
+            "Ignore frames with motion score at or above this value (255 = disabled).",
         )
         self._max_threshold = Spinbox(
             frame,
@@ -790,9 +931,9 @@ class MotionSettingsWindow:
             row=0, column=1, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING
         )
 
-        tk.Label(frame, text="Variance Threshold").grid(
-            row=1, column=3, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING
-        )
+        var_label = ttk.Label(frame, text="Variance Threshold")
+        var_label.grid(row=1, column=3, padx=PADDING, sticky=tk.W, pady=PADDING)
+        Tooltip(var_label, "Pixel-to-model distance threshold for MOG2 (unused by CNT).")
         self._variance_threshold = Spinbox(
             frame,
             value=str(CONFIG_MAP["variance-threshold"]),
@@ -804,8 +945,11 @@ class MotionSettingsWindow:
             row=1, column=4, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING
         )
 
-        tk.Label(frame, text="Max Area").grid(
-            row=1, column=0, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING
+        max_area_label = ttk.Label(frame, text="Max Area")
+        max_area_label.grid(row=1, column=0, padx=PADDING, sticky=tk.W, pady=PADDING)
+        Tooltip(
+            max_area_label,
+            "Ignore motion whose bounding box exceeds this fraction of frame area (1.0 = off).",
         )
         self._max_area = Spinbox(
             frame,
@@ -816,8 +960,11 @@ class MotionSettingsWindow:
         )
         self._max_area.grid(row=1, column=1, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING)
 
-        tk.Label(frame, text="Max Width").grid(
-            row=2, column=0, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING
+        max_width_label = ttk.Label(frame, text="Max Width")
+        max_width_label.grid(row=2, column=0, padx=PADDING, sticky=tk.W, pady=PADDING)
+        Tooltip(
+            max_width_label,
+            "Ignore motion whose bounding box exceeds this fraction of frame width (1.0 = off).",
         )
         self._max_width = Spinbox(
             frame,
@@ -828,8 +975,11 @@ class MotionSettingsWindow:
         )
         self._max_width.grid(row=2, column=1, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING)
 
-        tk.Label(frame, text="Max Height").grid(
-            row=2, column=3, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING
+        max_height_label = ttk.Label(frame, text="Max Height")
+        max_height_label.grid(row=2, column=3, padx=PADDING, sticky=tk.W, pady=PADDING)
+        Tooltip(
+            max_height_label,
+            "Ignore motion whose bounding box exceeds this fraction of frame height (1.0 = off).",
         )
         self._max_height = Spinbox(
             frame,
@@ -840,7 +990,7 @@ class MotionSettingsWindow:
         )
         self._max_height.grid(row=2, column=4, padx=PADDING, sticky=EXPAND_HORIZONTAL, pady=PADDING)
 
-        tk.Button(self._window, text="Close", command=self._dismiss).grid(
+        ttk.Button(self._window, text="Close", command=self._dismiss).grid(
             row=2, column=0, sticky=tk.E, padx=PADDING, pady=PADDING
         )
 
@@ -856,7 +1006,7 @@ class MotionSettingsWindow:
 
     def show(self):
         logger.debug("showing motion settings window")
-        show_modal(self._window, self._root)
+        show_modal(self._window, self._root, initial_focus=self._subtractor_combo)
 
     def _dismiss(self):
         logger.debug("closing motion settings window")
@@ -949,10 +1099,22 @@ class OutputArea:
         root.columnconfigure(2, pad=PADDING, weight=1)
         root.columnconfigure(3, pad=PADDING, weight=12)
 
-        tk.Label(root, text="Mode").grid(
-            row=0, column=0, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(0, PADDING)
+        ttk.Label(root, text="Mode").grid(
+            row=0, column=0, sticky=tk.W, padx=PADDING, pady=(0, PADDING)
         )
-        self._output_mode_combo = ttk.Combobox(root, width=26, state="readonly")
+        ffmpeg_available = is_ffmpeg_available()
+        ffmpeg_modes = {OutputMode.ENCODE, OutputMode.FFMPEG, OutputMode.COPY}
+        mode_labels = tuple(
+            (
+                label.removesuffix(" - Recommended") + " - requires ffmpeg (not found)"
+                if (not ffmpeg_available and mode in ffmpeg_modes)
+                else label
+            )
+            for label, mode in OUTPUT_MODES
+        )
+        self._output_mode_combo = ttk.Combobox(
+            root, width=28 if ffmpeg_available else 36, state="readonly"
+        )
         self._output_mode_combo.grid(
             row=0, column=1, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(0, PADDING)
         )
@@ -964,6 +1126,7 @@ class OutputArea:
             root, text="Options...", command=self._show_options, width=SETTING_INPUT_WIDTH
         )
         self._options_button.grid(row=0, column=2, sticky=EXPAND_HORIZONTAL, pady=(0, PADDING))
+        Tooltip(self._options_button, "Configure codec, encoder arguments, and video overlays.")
 
         self._combine = tk.BooleanVar(root, value=False)
         self._combine_button = ttk.Checkbutton(
@@ -974,22 +1137,27 @@ class OutputArea:
             offvalue=False,
         )
         self._combine_button.grid(row=0, column=3, sticky=tk.W, padx=PADDING)
+        Tooltip(
+            self._combine_button,
+            "Merge all detected motion events into a single compilation video.",
+        )
 
-        self._output_mode_combo["values"] = tuple(label for label, _mode in OUTPUT_MODES)
+        self._output_mode_combo["values"] = mode_labels
         # Default to encoded MP4 output, unless ffmpeg is unavailable on this system.
-        self._output_mode = OutputMode.ENCODE if is_ffmpeg_available() else OutputMode.OPENCV
+        self._output_mode = OutputMode.ENCODE if ffmpeg_available else OutputMode.OPENCV
 
         self._output_dir_str = ""
         self._output_dir_label = tk.StringVar(root, value="Ask Me")
 
-        tk.Label(root, text="Directory").grid(
+        ttk.Label(root, text="Directory").grid(
             row=1,
             column=0,
-            sticky=EXPAND_HORIZONTAL,
+            sticky=tk.W,
+            padx=PADDING,
             pady=(PADDING, 0),
         )
         ttk.Entry(
-            root, width=PATH_INPUT_WIDTH, state=tk.DISABLED, textvariable=self._output_dir_label
+            root, width=PATH_INPUT_WIDTH, state="readonly", textvariable=self._output_dir_label
         ).grid(
             row=1,
             column=1,
@@ -1021,6 +1189,7 @@ class OutputArea:
         self._options_window.title("Output Options")
         self._options_window.resizable(True, True)
         self._options_window.protocol("WM_DELETE_WINDOW", self._dismiss_options)
+        self._options_window.bind("<Escape>", lambda _: self._dismiss_options())
         self._options_window.rowconfigure(0, weight=1)
         self._options_window.rowconfigure(1, weight=1)
         self._options_window.columnconfigure(0, weight=1)
@@ -1033,10 +1202,8 @@ class OutputArea:
         self._ffmpeg_options.columnconfigure(1, weight=8)
         self._ffmpeg_options.columnconfigure(2, weight=1)
 
-        self._ffmpeg_input_label = tk.Label(self._ffmpeg_options, text="ffmpeg\nInput Args")
-        self._ffmpeg_input_label.grid(
-            row=0, column=0, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
-        )
+        self._ffmpeg_input_label = ttk.Label(self._ffmpeg_options, text="ffmpeg Input Args")
+        self._ffmpeg_input_label.grid(row=0, column=0, sticky=tk.W, padx=PADDING, pady=PADDING)
         self._ffmpeg_input_args = tk.StringVar(value=CONFIG_MAP["ffmpeg-input-args"])
         self._ffmpeg_input_entry = ttk.Entry(
             self._ffmpeg_options,
@@ -1047,10 +1214,8 @@ class OutputArea:
             row=0, column=1, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
         )
 
-        self._ffmpeg_output_label = tk.Label(self._ffmpeg_options, text="ffmpeg\nOutput Args")
-        self._ffmpeg_output_label.grid(
-            row=1, column=0, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
-        )
+        self._ffmpeg_output_label = ttk.Label(self._ffmpeg_options, text="ffmpeg Output Args")
+        self._ffmpeg_output_label.grid(row=1, column=0, sticky=tk.W, padx=PADDING, pady=PADDING)
         self._ffmpeg_output_args = tk.StringVar(value=CONFIG_MAP["ffmpeg-output-args"])
         self._ffmpeg_output_entry = ttk.Entry(
             self._ffmpeg_options,
@@ -1061,7 +1226,7 @@ class OutputArea:
             row=1, column=1, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
         )
 
-        tk.Button(self._options_window, text="Close", command=self._dismiss_options).grid(
+        ttk.Button(self._options_window, text="Close", command=self._dismiss_options).grid(
             row=2, column=0, sticky=tk.E, padx=PADDING, pady=PADDING
         )
 
@@ -1076,10 +1241,8 @@ class OutputArea:
         self._opencv_options.columnconfigure(4, weight=1)
         self._opencv_options.columnconfigure(5, weight=12)
 
-        self._opencv_codec_label = tk.Label(self._opencv_options, text="Codec")
-        self._opencv_codec_label.grid(
-            row=0, column=0, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
-        )
+        self._opencv_codec_label = ttk.Label(self._opencv_options, text="Codec")
+        self._opencv_codec_label.grid(row=0, column=0, sticky=tk.W, padx=PADDING, pady=PADDING)
         self._opencv_codec = tk.StringVar(value=CONFIG_MAP["opencv-codec"])
         self._opencv_codec_combo = ttk.Combobox(
             self._opencv_options,
@@ -1091,10 +1254,8 @@ class OutputArea:
         self._opencv_codec_combo.grid(row=0, column=1, sticky=tk.W, padx=PADDING, pady=PADDING)
 
         # Encoder args are shown in place of the codec row when the mode is ENCODE.
-        self._encode_args_label = tk.Label(self._opencv_options, text="Encoder\nArgs")
-        self._encode_args_label.grid(
-            row=0, column=0, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
-        )
+        self._encode_args_label = ttk.Label(self._opencv_options, text="Encoder Args")
+        self._encode_args_label.grid(row=0, column=0, sticky=tk.W, padx=PADDING, pady=PADDING)
         self._encode_args = tk.StringVar(value=CONFIG_MAP["encode-args"])
         self._encode_args_entry = ttk.Entry(
             self._opencv_options,
@@ -1120,8 +1281,9 @@ class OutputArea:
             command=self._on_text_overlay,
         )
         self._timecode_checkbutton.grid(
-            row=1, column=0, columnspan=2, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0)
+            row=1, column=0, sticky=tk.W, padx=PADDING, pady=(PADDING, 0)
         )
+        Tooltip(self._timecode_checkbutton, "Draw timestamp overlay in the top-left corner.")
 
         self._frame_metrics = tk.BooleanVar(value=False)
         self._frame_metrics_checkbutton = ttk.Checkbutton(
@@ -1135,20 +1297,21 @@ class OutputArea:
         self._frame_metrics_checkbutton.grid(
             row=1, column=1, sticky=tk.W, padx=PADDING, pady=(PADDING, 0)
         )
+        Tooltip(self._frame_metrics_checkbutton, "Draw per-frame motion score in the top-right.")
 
-        tk.Label(self._opencv_options, text="Text Color").grid(
-            row=2, column=0, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0)
+        ttk.Label(self._opencv_options, text="Text Color").grid(
+            row=2, column=0, sticky=tk.W, padx=PADDING, pady=(PADDING, 0)
         )
         self._text_font_color = ColorPicker(self._opencv_options)
         self._text_font_color.grid(row=2, column=1, sticky=tk.NSEW, pady=(PADDING, 0), padx=PADDING)
-        tk.Label(self._opencv_options, text="Background").grid(
-            row=2, column=2, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0)
+        ttk.Label(self._opencv_options, text="Background").grid(
+            row=2, column=2, sticky=tk.W, padx=PADDING, pady=(PADDING, 0)
         )
         self._text_bg_color = ColorPicker(self._opencv_options)
         self._text_bg_color.grid(row=2, column=3, sticky=tk.NSEW, pady=(PADDING, 0), padx=PADDING)
 
-        tk.Label(self._opencv_options, text="Font Scale").grid(
-            row=3, column=0, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0)
+        ttk.Label(self._opencv_options, text="Font Scale").grid(
+            row=3, column=0, sticky=tk.W, padx=PADDING, pady=(PADDING, 0)
         )
         self._text_font_scale = Spinbox(
             self._opencv_options,
@@ -1161,8 +1324,8 @@ class OutputArea:
             row=3, column=1, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0)
         )
 
-        tk.Label(self._opencv_options, text="Font Weight").grid(
-            row=3, column=2, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0)
+        ttk.Label(self._opencv_options, text="Font Weight").grid(
+            row=3, column=2, sticky=tk.W, padx=PADDING, pady=(PADDING, 0)
         )
         self._text_font_thickness = Spinbox(
             self._opencv_options,
@@ -1176,8 +1339,8 @@ class OutputArea:
             row=3, column=3, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0)
         )
 
-        tk.Label(self._opencv_options, text="Text Border").grid(
-            row=4, column=0, sticky=EXPAND_HORIZONTAL
+        ttk.Label(self._opencv_options, text="Text Border").grid(
+            row=4, column=0, sticky=tk.W, padx=PADDING, pady=PADDING
         )
         # TODO: Constrain to be <= text margin
         self._text_border = Spinbox(
@@ -1192,8 +1355,8 @@ class OutputArea:
             row=4, column=1, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
         )
 
-        tk.Label(self._opencv_options, text="Text Margin").grid(
-            row=4, column=2, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
+        ttk.Label(self._opencv_options, text="Text Margin").grid(
+            row=4, column=2, sticky=tk.W, padx=PADDING, pady=PADDING
         )
         self._text_margin = Spinbox(
             self._opencv_options,
@@ -1217,19 +1380,22 @@ class OutputArea:
             command=self._on_bounding_box,
         )
         self._bounding_box_button.grid(
-            row=5, column=0, columnspan=2, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0)
+            row=5, column=0, columnspan=2, sticky=tk.W, padx=PADDING, pady=(PADDING, 0)
+        )
+        Tooltip(
+            self._bounding_box_button, "Draw a rectangle around detected motion in output clips."
         )
 
-        tk.Label(self._opencv_options, text="Line Color").grid(
-            row=6, column=0, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0)
+        ttk.Label(self._opencv_options, text="Line Color").grid(
+            row=6, column=0, sticky=tk.W, padx=PADDING, pady=(PADDING, 0)
         )
         self._bounding_box_color = ColorPicker(self._opencv_options)
         self._bounding_box_color.grid(
             row=6, column=1, sticky=tk.NSEW, pady=(PADDING, 0), padx=PADDING
         )
 
-        tk.Label(self._opencv_options, text="Line Thickness").grid(
-            row=6, column=2, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0)
+        ttk.Label(self._opencv_options, text="Line Thickness").grid(
+            row=6, column=2, sticky=tk.W, padx=PADDING, pady=(PADDING, 0)
         )
         self._bounding_box_thickness = Spinbox(
             self._opencv_options,
@@ -1242,9 +1408,9 @@ class OutputArea:
             row=6, column=3, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=(PADDING, 0)
         )
 
-        tk.Label(self._opencv_options, text="Smooth Time").grid(
-            row=7, column=0, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
-        )
+        smooth_label = ttk.Label(self._opencv_options, text="Smooth Time")
+        smooth_label.grid(row=7, column=0, sticky=tk.W, padx=PADDING, pady=PADDING)
+        Tooltip(smooth_label, "Temporal smoothing duration for bounding box edges.")
         self._bounding_box_smooth_time = Spinbox(
             self._opencv_options,
             str(CONFIG_MAP["bounding-box-smooth-time"]),
@@ -1257,9 +1423,9 @@ class OutputArea:
             row=7, column=1, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
         )
 
-        tk.Label(self._opencv_options, text="Min. Box Size").grid(
-            row=7, column=2, sticky=EXPAND_HORIZONTAL, padx=PADDING, pady=PADDING
-        )
+        min_box_label = ttk.Label(self._opencv_options, text="Min. Box Size")
+        min_box_label.grid(row=7, column=2, sticky=tk.W, padx=PADDING, pady=PADDING)
+        Tooltip(min_box_label, "Minimum box side length relative to the frame's largest dimension.")
         self._bounding_box_min_size = Spinbox(
             self._opencv_options,
             value=str(CONFIG_MAP["bounding-box-min-size"]),
@@ -1285,27 +1451,36 @@ class OutputArea:
                 self._opencv_codec_combo.grid_remove()
                 self._encode_args_label.grid()
                 self._encode_args_entry.grid()
+                first_focus = self._encode_args_entry
             else:
                 self._opencv_options.configure(text="OpenCV Options")
                 self._opencv_codec_label.grid()
                 self._opencv_codec_combo.grid()
                 self._encode_args_label.grid_remove()
                 self._encode_args_entry.grid_remove()
-            self._opencv_options.grid(row=0, column=0, sticky=tk.NSEW, padx=PADDING, pady=PADDING)
+                first_focus = self._opencv_codec_combo
+            self._opencv_options.grid(
+                row=0, column=0, sticky=tk.NSEW, padx=PADDING, pady=(PADDING, 0)
+            )
             self._ffmpeg_options.grid_remove()
         else:
-            self._ffmpeg_options.grid(row=0, sticky=tk.NSEW, padx=PADDING, pady=PADDING)
+            self._ffmpeg_options.grid(row=0, sticky=tk.NSEW, padx=PADDING, pady=(PADDING, 0))
             self._opencv_options.grid_remove()
+            first_focus = self._ffmpeg_input_entry
 
         self._on_text_overlay()
         self._on_bounding_box()
-        show_modal(self._options_window, self._root)
+        show_modal(self._options_window, self._root, initial_focus=first_focus)
 
     def _dismiss_options(self):
         hide_modal(self._options_window, focus=self._options_button)
 
     def _on_select(self):
-        output_path = tkinter.filedialog.askdirectory(title="Set Output Directory", mustexist=True)
+        output_path = tkinter.filedialog.askdirectory(
+            title="Set Output Directory",
+            mustexist=True,
+            parent=self._root.winfo_toplevel(),
+        )
         if output_path:
             self._output_dir_label.set(output_path)
             self._output_dir_str = output_path
@@ -1447,10 +1622,11 @@ class PresetArea:
         )
         self._combo.grid(row=0, column=0, sticky=EXPAND_HORIZONTAL, padx=PADDING)
         self._combo.bind("<<ComboboxSelected>>", lambda _: self._on_combo_selected())
+        Tooltip(self._combo, "Apply a built-in or saved settings preset.")
 
-        ttk.Button(root, text="Save As...", command=on_save, width=SETTING_INPUT_WIDTH).grid(
-            row=0, column=1, sticky=EXPAND_HORIZONTAL
-        )
+        save_btn = ttk.Button(root, text="Save As...", command=on_save, width=SETTING_INPUT_WIDTH)
+        save_btn.grid(row=0, column=1, sticky=EXPAND_HORIZONTAL)
+        Tooltip(save_btn, "Save the current settings as a reusable preset.")
 
     def refresh(self, preset_list: ty.List[presets.Preset]):
         """Update the list of presets shown in the dropdown."""
@@ -1498,8 +1674,10 @@ class ScanArea:
             variable=self._scan_only,
             onvalue=True,
             offvalue=False,
+            command=self._refresh_open_state,
         )
         self._scan_only_button.grid(row=1, column=0, sticky=tk.W)
+        Tooltip(self._scan_only_button, "Detect motion events without saving output video clips.")
 
         self._open_on_completion = tk.BooleanVar(frame, value=True)
         self._open_on_completion_button = ttk.Checkbutton(
@@ -1511,6 +1689,11 @@ class ScanArea:
         )
         self._open_on_completion_button.grid(row=1, column=1, sticky=tk.W)
 
+    def _refresh_open_state(self):
+        self._open_on_completion_button["state"] = (
+            tk.DISABLED if self._scan_only.get() else tk.NORMAL
+        )
+
     def disable(self):
         self._start_button["text"] = "Scanning..."
         self._start_button["state"] = tk.DISABLED
@@ -1521,7 +1704,7 @@ class ScanArea:
         self._start_button["text"] = "Start"
         self._start_button["state"] = tk.NORMAL
         self._scan_only_button["state"] = tk.NORMAL
-        self._open_on_completion_button["state"] = tk.NORMAL
+        self._refresh_open_state()
 
     @property
     def scan_only(self) -> bool:
@@ -1530,6 +1713,7 @@ class ScanArea:
     @scan_only.setter
     def scan_only(self, newval: bool):
         self._scan_only.set(newval)
+        self._refresh_open_state()
 
     @property
     def open_on_completion(self) -> bool:
@@ -1633,6 +1817,9 @@ class Application:
         self._scan_window: ty.Optional[ScanWindow] = None
         self._wizard: ty.Optional["ScanWizard"] = None
         self._root.bind("<<StartScan>>", lambda _: self._start_scan())
+        self._root.bind("<Control-Return>", lambda _: self._root.event_generate("<<StartScan>>"))
+        self._root.bind("<Control-o>", lambda _: self._input_area.add_video(parent=self._root))
+        self._root.bind("<Control-O>", lambda _: self._input_area.add_video(parent=self._root))
         self._root.protocol("WM_DELETE_WINDOW", self._destroy)
 
         self._create_menubar()
@@ -1697,6 +1884,12 @@ class Application:
 
         file_menu = self._menubar.add_menu("File", underline=0)
         file_menu.add_command(
+            label="Add Videos...",
+            underline=0,
+            accelerator=f"{ACCELERATOR_KEY}+O",
+            command=lambda: self._input_area.add_video(parent=self._root),
+        )
+        file_menu.add_command(
             label="Scan Wizard",
             underline=5,
             command=self._open_wizard,
@@ -1705,6 +1898,7 @@ class Application:
         file_menu.add_command(
             label="Start Scan",
             underline=0,
+            accelerator=f"{ACCELERATOR_KEY}+Enter",
             command=lambda: self._root.event_generate("<<StartScan>>"),
         )
         file_menu.add_separator()
@@ -1853,9 +2047,25 @@ class Application:
         # Once we start a scan, the scan window should grab input focus until it is closed.
         assert self._scan_window is None
 
-        # TODO: Instead of just returning None below if the settings are invalid or we can't start
-        # the scan (e.g. no input videos selected), we should throw an exception and catch it here.
-        # We should then display a messagebox to the user indicating why the scan couldn't start.
+        if not self._input_area.videos:
+            tkinter.messagebox.showwarning(
+                title=WINDOW_TITLE,
+                message="Add at least one video to scan.",
+                parent=self._root,
+            )
+            return
+        if self._input_area.start_end_time:
+            start, end = self._input_area.start_end_time
+            end_frame = FrameTimecode(end, 1000.0).frame_num
+            if end_frame and end_frame <= FrameTimecode(start, 1000.0).frame_num:
+                tkinter.messagebox.showerror(
+                    title="Invalid Time Range",
+                    message="End Time must be after Start Time (or set to 00:00:00.000 "
+                    "to scan until the end of the video).",
+                    parent=self._root,
+                )
+                return
+
         settings = self._get_settings()
         if not settings:
             return
@@ -1912,6 +2122,7 @@ class Application:
             title="Reset Settings",
             message="All settings will be reset. Do you want to continue?",
             icon=tkinter.messagebox.WARNING,
+            parent=self._dialog_parent(),
         ):
             return
         self._reload_config(ConfigRegistry())
@@ -2003,6 +2214,7 @@ class Application:
             tkinter.messagebox.showerror(
                 title="Preset Load Failure",
                 message=f"Failed to load preset: {preset.name}. See log messages for details.",
+                parent=self._dialog_parent(),
             )
             self._preset_area.set_active(self._active_preset)
             return
@@ -2024,6 +2236,7 @@ class Application:
                 message="Preset names must start with a letter or number, and can only "
                 "contain letters, numbers, spaces, and ()-_. characters.\n\n"
                 "Built-in presets cannot be overwritten.",
+                parent=self._root,
             )
             return
         if name == presets.DEFAULT_PRESET_NAME:
@@ -2031,6 +2244,7 @@ class Application:
                 title="Save As User Default",
                 message="Existing user config will be overwritten. Do you want to continue?",
                 icon=tkinter.messagebox.WARNING,
+                parent=self._root,
             ):
                 return
         elif presets.preset_path(name).exists():
@@ -2038,6 +2252,7 @@ class Application:
                 title="Overwrite Preset",
                 message=f"A preset named {name} already exists. Do you want to overwrite it?",
                 icon=tkinter.messagebox.WARNING,
+                parent=self._root,
             ):
                 return
         try:
@@ -2047,6 +2262,7 @@ class Application:
             tkinter.messagebox.showerror(
                 title="Preset Save Failure",
                 message="Failed to save preset. See log messages for details.",
+                parent=self._root,
             )
             return
         logger.debug(f"saved preset to {path}")
@@ -2098,7 +2314,9 @@ class Application:
             # We will create files but an output directory wasn't set ahead of time - prompt the
             # user to select one.
             output_dir = tkinter.filedialog.askdirectory(
-                title="Set Output Directory", mustexist=True
+                title="Set Output Directory",
+                mustexist=True,
+                parent=self._root,
             )
             if not output_dir:
                 return None

@@ -31,10 +31,13 @@ from tkinterdnd2 import DND_FILES
 import dvr_scan
 import dvr_scan.presets as presets
 from dvr_scan.app.common import (
+    BRAND_COLOR,
     MAX_THRESHOLD,
     PADDING,
     MenuBar,
+    Tooltip,
     add_startup_mode_menu,
+    blend_color,
     fill_help_menu,
     register_icon,
 )
@@ -59,13 +62,15 @@ WIZARD_TITLE = "DVR-Scan"
 MIN_WIZARD_WIDTH = 780
 MIN_WIZARD_HEIGHT = 440
 LOGO_SIZE = 200
-# The drop-zone logo and text sit at this opacity at rest and brighten to full while a file
-# is dragged over the zone.
+# The drop-zone logo sits at this opacity at rest and brightens to full while active.
 DROP_ZONE_OPACITY = 0.70
 DROP_ZONE_ACTIVE_OPACITY = 1.0
-# CTA text color (the logo's dominant slate-blue); blended toward the background to match the
-# logo's at-rest opacity.
+# CTA text color (the logo's dominant slate-blue); blended at 0.85 rest opacity so 9pt hint
+# text still meets WCAG AA (>= 4.5:1) on light gray.
 DROP_ZONE_TEXT_COLOR = "#474d57"
+DROP_ZONE_TEXT_OPACITY = 0.85
+DROP_ZONE_BORDER_OPACITY = 0.45
+DROP_ZONE_MARGIN = 16
 MAX_SUMMARY_VIDEOS = 5
 # Output modes which run ffmpeg, and the label suffix shown for them when it is missing.
 FFMPEG_OUTPUT_MODES = frozenset({OutputMode.ENCODE, OutputMode.FFMPEG, OutputMode.COPY})
@@ -94,21 +99,14 @@ def _faded_logo(
     return PIL.ImageTk.PhotoImage(PIL.Image.alpha_composite(base, logo))
 
 
-def _blend(widget: tk.Widget, foreground: str, background: str, opacity: float) -> str:
-    """Blend `foreground` toward `background` at `opacity` (1.0 = full foreground), returned
-    as a #rrggbb string. Labels can't be alpha-composited, so this fakes text opacity to
-    match the faded logo."""
-    fg = [channel // 256 for channel in widget.winfo_rgb(foreground)]
-    bg = [channel // 256 for channel in widget.winfo_rgb(background)]
-    blended = (int(f * opacity + b * (1.0 - opacity)) for f, b in zip(fg, bg, strict=True))
-    return "#{:02x}{:02x}{:02x}".format(*blended)
-
-
 class _VideosStep:
     """Step 1: add input videos. Shows a logo drop zone until videos are added,
     then swaps to the input list. Doubles as the app's landing screen."""
 
     title = "Add Videos"
+    _hover_active = False
+    _focus_active = False
+    _cta_border = None
 
     def __init__(
         self,
@@ -130,7 +128,10 @@ class _VideosStep:
         self._can_accept_drop = can_accept_drop
         self._on_load_config = on_load_config
         self._cta_logo = None
+        self._cta_border = None
         self._drag_active = False
+        self._hover_active = False
+        self._focus_active = False
 
         self._input_frame = ttk.Frame(self.frame)
         # The list's "+" button goes through the same browse path as the drop zone and
@@ -138,18 +139,27 @@ class _VideosStep:
         self.input_area = VideoList(self._input_frame, on_add=on_browse)
         self._input_frame.grid(row=0, column=0, sticky=tk.NSEW)
 
-        background = ttk.Style().lookup("TFrame", "background") or "white"
+        style = ttk.Style()
+        background = style.lookup("TFrame", "background") or "white"
         self._drop_zone = tk.Canvas(
-            self.frame, background=background, highlightthickness=0, cursor="hand2"
+            self.frame,
+            background=background,
+            highlightthickness=0,
+            cursor="hand2",
+            takefocus=True,
         )
-        # At-rest vs. drag-over variants: the logo and text brighten to full opacity while a
-        # file is dragged over the zone.
+        # At-rest vs. active variants: the logo, text, and solid slate border brighten on
+        # hover, keyboard focus, or while a file is dragged over the zone.
         self._logo = _faded_logo(self._drop_zone, background, DROP_ZONE_OPACITY)
         self._logo_active = _faded_logo(self._drop_zone, background, DROP_ZONE_ACTIVE_OPACITY)
-        self._text_color = _blend(
-            self._drop_zone, DROP_ZONE_TEXT_COLOR, background, DROP_ZONE_OPACITY
+        self._text_color = blend_color(
+            self._drop_zone, DROP_ZONE_TEXT_COLOR, background, DROP_ZONE_TEXT_OPACITY
         )
         self._text_color_active = DROP_ZONE_TEXT_COLOR
+        self._border_color = blend_color(
+            self._drop_zone, BRAND_COLOR, background, DROP_ZONE_BORDER_OPACITY
+        )
+        self._border_color_active = BRAND_COLOR
         # The CTA text is a real Label (embedded in the canvas via create_window) rather than
         # a canvas text item: canvas text uses grayscale anti-aliasing and looks soft, while a
         # Label renders with the same crisp ClearType as the rest of the UI.
@@ -171,8 +181,16 @@ class _VideosStep:
             foreground=self._text_color,
             cursor="hand2",
         )
-        for widget in (self._drop_zone, self._cta_label, self._cta_hint):
+        self._drop_zone_widgets = (self._drop_zone, self._cta_label, self._cta_hint)
+        for widget in self._drop_zone_widgets:
             widget.bind("<Button-1>", self._on_drop_zone_click)
+            widget.bind("<Enter>", self._sync_hover)
+            widget.bind("<Leave>", self._sync_hover)
+        self._drop_zone.bind("<Return>", self._on_drop_zone_click)
+        self._drop_zone.bind("<space>", self._on_drop_zone_click)
+        self._drop_zone.bind("<FocusIn>", lambda _: self._set_focus_active(True))
+        self._drop_zone.bind("<FocusOut>", lambda _: self._set_focus_active(False))
+        self._drop_zone.bind("<Unmap>", self._on_drop_zone_unmap)
         self._drop_zone.bind("<Configure>", lambda _: self._draw_drop_zone())
         self._drop_zone.grid(row=0, column=0, sticky=tk.NSEW)
 
@@ -187,31 +205,85 @@ class _VideosStep:
         self._refresh()
 
     def _on_drop_zone_click(self, _event=None):
+        if self._drop_zone.winfo_exists():
+            self._drop_zone.focus_set()
         if self._on_browse is not None:
             self._on_browse()
+        return "break"
 
     def _draw_drop_zone(self):
         canvas = self._drop_zone
         canvas.delete("all")
-        center_x = canvas.winfo_width() // 2
-        center_y = canvas.winfo_height() // 2
-        logo = self._logo_active if self._drag_active else self._logo
+        width = canvas.winfo_width()
+        height = canvas.winfo_height()
+        center_x = width // 2
+        center_y = height // 2
+        active = self._drag_active or self._hover_active or self._focus_active
+        if width > 2 * DROP_ZONE_MARGIN and height > 2 * DROP_ZONE_MARGIN:
+            border_color = self._border_color_active if active else self._border_color
+            self._cta_border = canvas.create_rectangle(
+                DROP_ZONE_MARGIN,
+                DROP_ZONE_MARGIN,
+                width - DROP_ZONE_MARGIN,
+                height - DROP_ZONE_MARGIN,
+                outline=border_color,
+                width=2 if (self._focus_active or self._drag_active) else 1,
+            )
+        else:
+            self._cta_border = None
+        logo = self._logo_active if active else self._logo
         self._cta_logo = canvas.create_image(center_x, center_y - 60, image=logo)
         canvas.create_window(center_x, center_y + 76, window=self._cta_label)
         canvas.create_window(center_x, center_y + 104, window=self._cta_hint)
+
+    def _apply_drop_zone_visuals(self):
+        if not self._drop_zone.winfo_exists():
+            return
+        active = self._drag_active or self._hover_active or self._focus_active
+        if self._cta_logo is not None:
+            self._drop_zone.itemconfigure(
+                self._cta_logo, image=self._logo_active if active else self._logo
+            )
+        if self._cta_border is not None:
+            border_color = self._border_color_active if active else self._border_color
+            self._drop_zone.itemconfigure(
+                self._cta_border,
+                outline=border_color,
+                width=2 if (self._focus_active or self._drag_active) else 1,
+            )
+        color = self._text_color_active if active else self._text_color
+        self._cta_label.configure(foreground=color)
+        self._cta_hint.configure(foreground=color)
+
+    def _sync_hover(self, _event=None):
+        if not self._drop_zone.winfo_exists() or not self._drop_zone.winfo_viewable():
+            self._set_hover_active(False)
+            return
+        px, py = self._drop_zone.winfo_pointerxy()
+        hovered = self._drop_zone.winfo_containing(px, py)
+        self._set_hover_active(hovered in self._drop_zone_widgets)
+
+    def _on_drop_zone_unmap(self, _event=None):
+        self._hover_active = False
+        self._drag_active = False
+        self._apply_drop_zone_visuals()
+
+    def _set_hover_active(self, active: bool):
+        if self._hover_active != active:
+            self._hover_active = active
+            self._apply_drop_zone_visuals()
+
+    def _set_focus_active(self, active: bool):
+        if self._focus_active != active:
+            self._focus_active = active
+            self._apply_drop_zone_visuals()
 
     def _set_drag_active(self, active: bool):
         """Brighten (or restore) the logo/text as a file is dragged over the drop zone."""
         if self._drag_active == active or not self._drop_zone.winfo_exists():
             return
         self._drag_active = active
-        if self._cta_logo is not None:
-            self._drop_zone.itemconfigure(
-                self._cta_logo, image=self._logo_active if active else self._logo
-            )
-        color = self._text_color_active if active else self._text_color
-        self._cta_label.configure(foreground=color)
-        self._cta_hint.configure(foreground=color)
+        self._apply_drop_zone_visuals()
 
     def _on_drag_enter(self, event):
         if self._can_accept_drop is not None and not self._can_accept_drop():
@@ -245,6 +317,12 @@ class _VideosStep:
         else:
             self._input_frame.grid_remove()
             self._drop_zone.grid()
+            try:
+                focused = self._window.focus_get()
+            except (KeyError, tk.TclError):
+                focused = None
+            if focused is not None and str(focused).startswith(str(self._input_frame)):
+                self._drop_zone.focus_set()
         if self._on_state_changed is not None:
             self._on_state_changed()
 
@@ -300,22 +378,25 @@ class _PresetStep:
             self.config = presets.load_preset(presets.default_preset())
 
         self.frame.columnconfigure(1, weight=1)
+        style = ttk.Style()
+        fg = style.lookup("TLabel", "foreground") or "black"
+        bg = style.lookup("TFrame", "background") or "#f0f0f0"
+        hint_fg = blend_color(self.frame, fg, bg, 0.75)
 
-        tk.Label(self.frame, text="Preset").grid(
+        ttk.Label(self.frame, text="Preset").grid(
             row=0, column=0, sticky=tk.W, padx=PADDING, pady=PADDING
         )
         self._combo = ttk.Combobox(self.frame, state="readonly")
         self._combo.grid(row=0, column=1, sticky=tk.EW, padx=PADDING, pady=PADDING)
         self._combo.bind("<<ComboboxSelected>>", lambda _: self._on_selected())
 
-        self._preset_desc = tk.Label(self.frame, text="", anchor=tk.W, justify=tk.LEFT)
-        self._preset_desc.grid(
-            row=1, column=0, columnspan=2, sticky=tk.W, padx=PADDING, pady=(0, PADDING)
+        self._preset_desc = ttk.Label(
+            self.frame, text="", anchor=tk.W, justify=tk.LEFT, foreground=hint_fg
         )
+        self._preset_desc.grid(row=1, column=1, sticky=tk.EW, padx=PADDING, pady=(0, PADDING * 2))
 
-        tk.Label(self.frame, text="Sensitivity Threshold").grid(
-            row=2, column=0, sticky=tk.W, padx=PADDING, pady=PADDING
-        )
+        threshold_label = ttk.Label(self.frame, text="Sensitivity Threshold")
+        threshold_label.grid(row=2, column=0, sticky=tk.W, padx=PADDING, pady=PADDING)
         self._threshold = Spinbox(
             self.frame,
             value=str(self.config.get("threshold")),
@@ -324,10 +405,27 @@ class _PresetStep:
             increment=0.01,
         )
         self._threshold.grid(row=2, column=1, sticky=tk.W, padx=PADDING, pady=PADDING)
-        tk.Label(
+        Tooltip(
+            threshold_label,
+            "Minimum motion score required to trigger an event (0.0 to 255.0; default 0.15).",
+        )
+        self._threshold_hint = ttk.Label(
             self.frame,
-            text="Lower values detect smaller amounts of motion.",
-        ).grid(row=3, column=0, columnspan=2, sticky=tk.W, padx=PADDING)
+            text="Lower values detect smaller amounts of motion (default: 0.15).",
+            foreground=hint_fg,
+            anchor=tk.W,
+            justify=tk.LEFT,
+        )
+        self._threshold_hint.grid(row=3, column=1, sticky=tk.EW, padx=PADDING)
+        self.frame.bind(
+            "<Configure>",
+            lambda e: self._update_wrap(max(200, e.width - 180)),
+            add="+",
+        )
+
+    def _update_wrap(self, width: int):
+        self._preset_desc.configure(wraplength=width)
+        self._threshold_hint.configure(wraplength=width)
 
     @property
     def preset_name(self) -> str:
@@ -423,6 +521,8 @@ class _OutputStep:
     """Step 3: choose what to do with detected motion events."""
 
     title = "Choose Output"
+    _mode_desc: ty.Optional[ttk.Label] = None
+    _dir_entry: ty.Optional[ttk.Entry] = None
 
     _MODES: ty.List[ty.Tuple[str, ty.Optional[OutputMode]]] = [
         ("Extract Events (MP4, H.264) - Recommended", OutputMode.ENCODE),
@@ -431,6 +531,23 @@ class _OutputStep:
         ("Extract Events (ffmpeg copy)", OutputMode.COPY),
         ("Scan Only (report)", None),
     ]
+
+    _MODE_DESCRIPTIONS: ty.Dict[ty.Optional[OutputMode], str] = {
+        OutputMode.ENCODE: (
+            "Saves each motion event as an MP4 video clip with audio. Works with most players."
+        ),
+        OutputMode.OPENCV: (
+            "Saves each motion event as an AVI video clip (video only; does not require ffmpeg)."
+        ),
+        OutputMode.FFMPEG: ("Re-encodes each event directly from the source file with ffmpeg."),
+        OutputMode.COPY: (
+            "Copies stream data without re-encoding (very fast, but cuts align to keyframes)."
+        ),
+        None: (
+            "Finds and lists motion events without saving video clips. You can save a CSV or "
+            "JSON report afterwards."
+        ),
+    }
 
     def __init__(
         self,
@@ -441,12 +558,17 @@ class _OutputStep:
         self.frame = ttk.Frame(root)
         self.frame.columnconfigure(1, weight=1)
         self._videos_step = videos_step
-        # Checked once: it spawns a process. A combobox can't disable single entries, so
-        # modes which need ffmpeg are labelled as unavailable and rejected by `validate`.
+        # A combobox can't disable single entries, so modes that need ffmpeg are labelled as
+        # unavailable when ffmpeg is missing and rejected by `validate`.
         self._ffmpeg_available = is_ffmpeg_available()
         self._modes = self.mode_choices(self._ffmpeg_available)
 
-        tk.Label(self.frame, text="Mode").grid(
+        style = ttk.Style()
+        fg = style.lookup("TLabel", "foreground") or "black"
+        bg = style.lookup("TFrame", "background") or "#f0f0f0"
+        hint_fg = blend_color(self.frame, fg, bg, 0.75)
+
+        ttk.Label(self.frame, text="Mode").grid(
             row=0, column=0, sticky=tk.W, padx=PADDING, pady=PADDING
         )
         self._mode_combo = ttk.Combobox(self.frame, state="readonly")
@@ -456,18 +578,34 @@ class _OutputStep:
         self._mode_combo.bind("<<ComboboxSelected>>", lambda _: self._on_mode_changed())
         self._mode_combo.grid(row=0, column=1, columnspan=2, sticky=tk.EW, padx=PADDING)
 
+        self._mode_desc = ttk.Label(
+            self.frame, text="", anchor=tk.W, justify=tk.LEFT, foreground=hint_fg
+        )
+        self._mode_desc.grid(
+            row=1, column=1, columnspan=2, sticky=tk.EW, padx=PADDING, pady=(0, PADDING * 2)
+        )
+
         self._directory = ""
         self._user_selected_dir = False
         self._directory_label = tk.StringVar(self.frame, value="No Directory Selected")
-        tk.Label(self.frame, text="Directory").grid(
-            row=1, column=0, sticky=tk.W, padx=PADDING, pady=PADDING
+        ttk.Label(self.frame, text="Directory").grid(
+            row=2, column=0, sticky=tk.W, padx=PADDING, pady=PADDING
         )
         self._dir_entry = ttk.Entry(
-            self.frame, state=tk.DISABLED, textvariable=self._directory_label
+            self.frame, state="readonly", textvariable=self._directory_label
         )
-        self._dir_entry.grid(row=1, column=1, sticky=tk.EW, padx=PADDING, pady=PADDING)
+        self._dir_entry.grid(row=2, column=1, sticky=tk.EW, padx=PADDING, pady=PADDING)
         self._select_button = ttk.Button(self.frame, text="Select...", command=self._on_select)
-        self._select_button.grid(row=1, column=2, sticky=tk.EW, padx=PADDING, pady=PADDING)
+        self._select_button.grid(row=2, column=2, sticky=tk.EW, padx=PADDING, pady=PADDING)
+        self.frame.bind(
+            "<Configure>",
+            lambda e: (
+                self._mode_desc.configure(wraplength=max(200, e.width - 120))
+                if self._mode_desc is not None
+                else None
+            ),
+            add="+",
+        )
 
         if settings is not None:
             self.sync_from_settings(settings)
@@ -494,11 +632,17 @@ class _OutputStep:
 
     def _on_mode_changed(self):
         self._mode_combo.selection_clear()
+        if self._mode_desc is not None:
+            self._mode_desc["text"] = self._MODE_DESCRIPTIONS.get(self.output_mode, "")
         if self.scan_only:
             self._select_button["state"] = tk.DISABLED
+            if self._dir_entry is not None:
+                self._dir_entry["state"] = tk.DISABLED
             self._directory_label.set("Not used in Scan Only mode")
         else:
             self._select_button["state"] = tk.NORMAL
+            if self._dir_entry is not None:
+                self._dir_entry["state"] = "readonly"
             self._directory_label.set(
                 self._directory if self._directory else "No Directory Selected"
             )
@@ -613,31 +757,63 @@ class _SummaryStep:
         self._preset_step = preset_step
         self._output_step = output_step
         self._get_overrides = get_overrides
-        self._summary = tk.Label(self.frame, justify=tk.LEFT, anchor=tk.NW)
-        self.frame.rowconfigure(0, weight=1)
+        self._value_labels: ty.List[ttk.Label] = []
+        self._rows_container = ttk.Frame(self.frame)
+        self._rows_container.columnconfigure(1, weight=1)
         self.frame.columnconfigure(0, weight=1)
-        self._summary.grid(row=0, column=0, sticky=tk.NSEW, padx=PADDING, pady=PADDING)
+        self._rows_container.grid(row=0, column=0, sticky=tk.NSEW, padx=PADDING, pady=PADDING)
+        self.frame.bind("<Configure>", self._on_configure, add="+")
+
+    def _on_configure(self, event):
+        wrap = max(220, event.width - 180)
+        for label in self._value_labels:
+            if label.winfo_exists():
+                label.configure(wraplength=wrap)
 
     def on_show(self):
         # Ensure output step has populated its default directory if the user jumped here.
         self._output_step.on_show()
+        for child in self._rows_container.winfo_children():
+            child.destroy()
+        self._value_labels.clear()
+
         videos = self._videos_step.input_area.videos
         video_names = [Path(video).name for video in videos[:MAX_SUMMARY_VIDEOS]]
         if len(videos) > MAX_SUMMARY_VIDEOS:
             video_names.append(f"... and {len(videos) - MAX_SUMMARY_VIDEOS} more")
-        lines = [
-            f"Videos ({len(videos)}):",
-            *(f"    {name}" for name in video_names),
-            "",
-            f"Preset: {self._preset_step.preset_name}",
-            f"Sensitivity Threshold: {self._preset_step.threshold:g}",
-            "",
-            f"Output: {self._output_step.mode_label}",
+
+        entries: ty.List[ty.Tuple[str, str]] = [
+            (f"Videos ({len(videos)})", "\n".join(video_names) if video_names else "None"),
+            ("Preset", self._preset_step.preset_name),
+            ("Sensitivity Threshold", f"{self._preset_step.threshold:g}"),
+            ("Output Mode", self._output_step.mode_label),
         ]
         if not self._output_step.scan_only:
-            lines.append(f"Directory: {self._output_step.directory}")
-        lines += self._override_lines()
-        self._summary["text"] = "\n".join(lines)
+            entries.append(("Output Directory", self._output_step.directory))
+
+        override_items = [
+            line.strip() for line in self._override_lines() if line.startswith("    ")
+        ]
+        if override_items:
+            entries.append(("From Advanced Mode", "\n".join(override_items)))
+
+        wrap = max(220, self.frame.winfo_width() - 180)
+        for row_idx, (heading, value) in enumerate(entries):
+            ttk.Label(
+                self._rows_container,
+                text=heading,
+                font=("TkDefaultFont", 9, "bold"),
+                anchor=tk.NW,
+            ).grid(row=row_idx, column=0, sticky=tk.NW, padx=(0, PADDING * 2), pady=(0, PADDING))
+            val_label = ttk.Label(
+                self._rows_container,
+                text=value,
+                anchor=tk.NW,
+                justify=tk.LEFT,
+                wraplength=wrap,
+            )
+            val_label.grid(row=row_idx, column=1, sticky=tk.EW, pady=(0, PADDING))
+            self._value_labels.append(val_label)
 
     def _override_lines(self) -> ty.List[str]:
         overrides = self._get_overrides() if self._get_overrides is not None else {}
@@ -741,7 +917,7 @@ class ScanWizard:
         self._window.rowconfigure(2, weight=1)
         self._window.columnconfigure(0, weight=1)
 
-        self._header = tk.Label(self._window, font=("TkDefaultFont", 12, "bold"))
+        self._header = ttk.Label(self._window, font=("TkDefaultFont", 12, "bold"))
         self._header.grid(row=1, column=0, sticky=tk.W, padx=PADDING, pady=PADDING)
 
         content = ttk.Frame(self._window)
@@ -915,6 +1091,27 @@ class ScanWizard:
     def show(self):
         self._window.deiconify()
         self._window.focus()
+        self._focus_step_control()
+
+    def _focus_step_control(self):
+        """Move keyboard focus onto an appropriate control for the visible step so focus
+        never remains stuck on a hidden step widget."""
+        if self._scanning:
+            self._stop_button.focus_set()
+            return
+        if self._step_index == 0:
+            if self.videos:
+                self._next_button.focus_set()
+            else:
+                self._videos_step._drop_zone.focus_set()
+        elif self._step_index == 1:
+            self._preset_step._combo.focus_set()
+        elif self._step_index == 2:
+            self._output_step._mode_combo.focus_set()
+        elif self._step_index == self._summary_index:
+            self._next_button.focus_set()
+        elif self._step_index == self._scan_index:
+            self._new_scan_button.focus_set()
 
     def hide(self):
         self._window.withdraw()
@@ -953,6 +1150,7 @@ class ScanWizard:
         if index == self._scan_index:
             return
         self._show_form_nav()
+        self._focus_step_control()
 
     def _show_form_nav(self):
         self._stop_button.grid_remove()
@@ -991,6 +1189,7 @@ class ScanWizard:
         self._stop_button["state"] = tk.NORMAL
         self._advanced_button["state"] = tk.DISABLED
         self._back_button["state"] = tk.DISABLED
+        self._stop_button.focus_set()
 
     def _show_report_nav(self):
         self._stop_button.grid_remove()
@@ -1013,6 +1212,7 @@ class ScanWizard:
         else:
             self._save_report_button.grid_remove()
         self._new_scan_button.grid()
+        self._new_scan_button.focus_set()
 
     def _on_open_output_dir(self):
         if self._last_output_dir:
@@ -1086,6 +1286,8 @@ class ScanWizard:
             self._menubar.frame.grid(row=0, column=0, sticky=tk.EW)
         self._window.bind("<Control-o>", lambda _: self._browse_videos())
         self._window.bind("<Control-O>", lambda _: self._browse_videos())
+        self._window.bind("<Alt-Left>", lambda _: self._on_back())
+        self._window.bind("<Alt-Right>", lambda _: self._on_next())
         # Video list shortcuts. On Windows, Tk's <<SelectAll>> virtual event also maps to
         # Ctrl+A; when both match, Tk runs only the physical binding, so the handler fires
         # once per key press.
@@ -1200,12 +1402,22 @@ class ScanWizard:
             f"in {view.frames_processed} frames "
             f"(elapsed {view.elapsed}, {view.rate} FPS)."
         )
-        tk.Label(panel, text=summary, anchor=tk.W, justify=tk.LEFT).grid(
+        ttk.Label(panel, text=summary, anchor=tk.W, justify=tk.LEFT).grid(
             row=0, column=0, columnspan=2, sticky=tk.EW, padx=PADDING, pady=PADDING
         )
 
-        table = build_event_table(panel, view.input_paths, result.event_list)
-        table.grid(row=1, column=0, columnspan=2, sticky=tk.NSEW, padx=(PADDING, 0))
+        if result.event_list:
+            table = build_event_table(panel, view.input_paths, result.event_list)
+            table.grid(row=1, column=0, columnspan=2, sticky=tk.NSEW, padx=(PADDING, 0))
+        else:
+            empty_msg = (
+                "No motion events were detected with the current settings.\n\n"
+                "Use < Back to lower the Sensitivity Threshold or choose the "
+                "High Sensitivity preset, then scan again."
+            )
+            ttk.Label(panel, text=empty_msg, anchor=tk.NW, justify=tk.LEFT).grid(
+                row=1, column=0, columnspan=2, sticky=tk.NSEW, padx=PADDING, pady=PADDING
+            )
         return panel
 
     def _build_stopped_panel(self, view: ScanProgressView) -> ttk.Frame:
@@ -1223,10 +1435,10 @@ class ScanWizard:
     def _build_message_panel(self, heading: str, body: str) -> ttk.Frame:
         panel = ttk.Frame(self._scan_step.body)
         panel.columnconfigure(0, weight=1)
-        tk.Label(panel, text=heading, font=("TkDefaultFont", 12, "bold"), anchor=tk.W).grid(
+        ttk.Label(panel, text=heading, font=("TkDefaultFont", 12, "bold"), anchor=tk.W).grid(
             row=0, column=0, sticky=tk.EW, padx=PADDING, pady=(PADDING, 0)
         )
-        tk.Label(panel, text=body, anchor=tk.W, justify=tk.LEFT).grid(
+        ttk.Label(panel, text=body, anchor=tk.W, justify=tk.LEFT, wraplength=720).grid(
             row=1, column=0, sticky=tk.EW, padx=PADDING, pady=PADDING
         )
         return panel

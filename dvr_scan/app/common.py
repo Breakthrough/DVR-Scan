@@ -30,15 +30,21 @@ from dvr_scan.platform import log_folder, open_path
 PADDING = 8
 SETTING_INPUT_WIDTH = 12
 MAX_THRESHOLD = 255.0
+# Dominant slate-blue from the DVR-Scan logo (`docs/assets/dvr-scan.svg` and `docs/style.css`).
+BRAND_COLOR = "#59606d"
 
-HELP_GUIDE_URL = "www.dvr-scan.com/guide"
+HELP_GUIDE_URL = "https://www.dvr-scan.com/guide"
 DISCORD_URL = "https://discord.gg/69kf6f2Exb"
+WEBSITE_URL = "https://www.dvr-scan.com/"
+ISSUES_URL = "https://github.com/Breakthrough/DVR-Scan/issues"
 
 # Hover-darken factor for menubar headings: multiply each RGB channel of the bar background
 # to derive the `activebackground`. Below 1.0 darkens; ~0.85 reads clearly but stays subtle.
 _MENUBAR_HOVER_FACTOR = 0.85
 _MENUBAR_POLL_MS = 25
 _MENUBAR_REOPEN_GUARD_SEC = 0.08
+_TOOLTIP_MAX_WIDTH = 320
+_TOOLTIP_MARGIN = 8
 
 
 def register_icon(root: tk.Tk):
@@ -58,6 +64,15 @@ def _darken(widget: tk.Widget, color: str, factor: float = _MENUBAR_HOVER_FACTOR
     derive a hover background from the bar's base background."""
     red, green, blue = (int((channel // 256) * factor) for channel in widget.winfo_rgb(color))
     return f"#{red:02x}{green:02x}{blue:02x}"
+
+
+def blend_color(widget: tk.Widget, foreground: str, background: str, opacity: float) -> str:
+    """Blend `foreground` toward `background` at `opacity` (1.0 = full foreground), returned
+    as a #rrggbb string. Used to derive theme-aware secondary text and border colors."""
+    fg = [channel // 256 for channel in widget.winfo_rgb(foreground)]
+    bg = [channel // 256 for channel in widget.winfo_rgb(background)]
+    blended = (int(f * opacity + b * (1.0 - opacity)) for f, b in zip(fg, bg, strict=True))
+    return "#{:02x}{:02x}{:02x}".format(*blended)
 
 
 def fit_window_to_screen(
@@ -101,7 +116,10 @@ def fill_help_menu(menu: tk.Menu, root: tk.Misc):
     """Append the Help entries shared by every window (guide, Discord, logs, About) to
     `menu`. `root` is the window the About dialog is shown over."""
     menu.add_command(
-        label="Help Guide", underline=0, command=lambda: webbrowser.open_new_tab(HELP_GUIDE_URL)
+        label="Help Guide",
+        underline=0,
+        accelerator="F1",
+        command=lambda: webbrowser.open_new_tab(HELP_GUIDE_URL),
     )
     menu.add_command(
         label="Discord", underline=0, command=lambda: webbrowser.open_new_tab(DISCORD_URL)
@@ -109,16 +127,18 @@ def fill_help_menu(menu: tk.Menu, root: tk.Misc):
     menu.add_separator()
     menu.add_command(label="Open Logs", underline=5, command=lambda: open_path(log_folder()))
     menu.add_command(label="About DVR-Scan", underline=0, command=lambda: show_about(root))
+    toplevel = root.winfo_toplevel()
+    toplevel.bind("<F1>", lambda _: webbrowser.open_new_tab(HELP_GUIDE_URL), add="+")
 
 
-def show_modal(window: tk.Toplevel, parent: tk.Misc):
+def show_modal(window: tk.Toplevel, parent: tk.Misc, initial_focus: ty.Optional[tk.Misc] = None):
     """Show `window` as a modal dialog over `parent` (the grab blocks input to other
     windows until `hide_modal`). Returns immediately: `wait_window` only returns once the
     window is destroyed, so waiting here would leave a nested event loop running for each
     time a reusable dialog is opened."""
     window.transient(parent)
     window.deiconify()
-    window.focus()
+    (initial_focus if initial_focus is not None else window).focus_set()
     window.grab_set()
 
 
@@ -128,6 +148,83 @@ def hide_modal(window: tk.Toplevel, focus: tk.Misc):
     window.withdraw()
     window.grab_release()
     focus.focus()
+
+
+class Tooltip:
+    """A minimal hover and keyboard-focus tooltip, e.g. to label icon-only buttons and
+    explain technical settings."""
+
+    def __init__(self, widget: tk.Widget, text: str):
+        self._widget = widget
+        self._text = text
+        self._tip: ty.Optional[tk.Toplevel] = None
+        self._pointer_inside = False
+        widget.bind("<Enter>", self._on_enter, add="+")
+        widget.bind("<Leave>", self._on_leave, add="+")
+        widget.bind("<FocusIn>", self._on_focus_in, add="+")
+        widget.bind("<FocusOut>", self._hide, add="+")
+        widget.bind("<ButtonPress>", self._hide, add="+")
+        widget.bind("<Escape>", self._hide, add="+")
+        # Tear down a visible tip if the widget is hidden (`grid_remove`) or destroyed.
+        widget.bind("<Unmap>", self._on_unmap, add="+")
+        widget.bind("<Destroy>", self._on_unmap, add="+")
+
+    def _on_enter(self, _event=None):
+        self._pointer_inside = True
+        self._show()
+
+    def _on_leave(self, _event=None):
+        self._pointer_inside = False
+        self._hide()
+
+    def _on_focus_in(self, _event=None):
+        # Only show on keyboard focus traversal: clicking a hovered button fires
+        # `<ButtonPress>` (hiding the tip) and then `<FocusIn>`, which should not re-open it.
+        if not self._pointer_inside:
+            self._show()
+
+    def _on_unmap(self, _event=None):
+        self._pointer_inside = False
+        self._hide()
+
+    def _show(self, _event=None):
+        if (
+            self._tip is not None
+            or not self._widget.winfo_exists()
+            or not self._widget.winfo_viewable()
+        ):
+            return
+        self._tip = tk.Toplevel(self._widget)
+        self._tip.wm_overrideredirect(True)
+        tk.Label(
+            self._tip,
+            text=self._text,
+            justify=tk.LEFT,
+            foreground="#1a1a1a",
+            background="#ffffe0",
+            relief=tk.SOLID,
+            borderwidth=1,
+            padx=6,
+            pady=3,
+            wraplength=_TOOLTIP_MAX_WIDTH,
+        ).pack()
+        self._tip.update_idletasks()
+        tip_w = self._tip.winfo_reqwidth()
+        tip_h = self._tip.winfo_reqheight()
+        screen_w = self._widget.winfo_screenwidth()
+        screen_h = self._widget.winfo_screenheight()
+        x = self._widget.winfo_rootx() + min(16, self._widget.winfo_width() // 2)
+        y = self._widget.winfo_rooty() + self._widget.winfo_height() + 4
+        if x + tip_w + _TOOLTIP_MARGIN > screen_w:
+            x = max(_TOOLTIP_MARGIN, screen_w - tip_w - _TOOLTIP_MARGIN)
+        if y + tip_h + _TOOLTIP_MARGIN > screen_h:
+            y = max(_TOOLTIP_MARGIN, self._widget.winfo_rooty() - tip_h - 4)
+        self._tip.wm_geometry(f"+{x}+{y}")
+
+    def _hide(self, _event=None):
+        if self._tip is not None:
+            self._tip.destroy()
+            self._tip = None
 
 
 class MenuBar:

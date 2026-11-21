@@ -606,3 +606,87 @@ def test_first_video_resolution():
     assert area.first_video_resolution == (1280, 720)
     area._rows["b"].info.resolution = "N/A"
     assert area.first_video_resolution is None
+
+
+# --- Keyboard navigation and shared sort state --------------------------------------------
+
+
+def test_move_selection_up_and_down_from_unselected_and_clamps():
+    area = _selectable_list(3)
+
+    # Down with nothing selected selects the first row.
+    assert area._move_selection(1) == "break"
+    assert area._selected == {"r0"}
+    assert area._anchor == "r0"
+
+    # Down advances one row at a time and clamps at the end.
+    area._move_selection(1)
+    assert area._selected == {"r1"}
+    area._move_selection(1)
+    assert area._selected == {"r2"}
+    area._move_selection(1)
+    assert area._selected == {"r2"}
+
+    # Up moves back and clamps at the start.
+    area._move_selection(-1)
+    assert area._selected == {"r1"}
+    area._move_selection(-1)
+    assert area._selected == {"r0"}
+    area._move_selection(-1)
+    assert area._selected == {"r0"}
+
+
+def test_move_selection_shift_extends_and_contracts_from_anchor():
+    area = _selectable_list(4)
+    area._on_click("r1")
+
+    area._move_selection(1, extend=True)
+    assert area._selected == {"r1", "r2"}
+    assert area._anchor == "r1"
+
+    area._move_selection(1, extend=True)
+    assert area._selected == {"r1", "r2", "r3"}
+
+    # Shift+Up contracts back toward anchor and then extends upward past it.
+    area._move_selection(-1, extend=True)
+    assert area._selected == {"r1", "r2"}
+    area._move_selection(-1, extend=True)
+    assert area._selected == {"r1"}
+    area._move_selection(-1, extend=True)
+    assert area._selected == {"r0", "r1"}
+    assert area._anchor == "r1"
+
+
+def test_select_boundary_home_and_end_and_shift_extend():
+    area = _selectable_list(4)
+    area._select_boundary(last=True)
+    assert area._selected == {"r3"}
+
+    area._select_boundary(last=False)
+    assert area._selected == {"r0"}
+
+    area._on_click("r1")
+    area._select_boundary(last=True, extend=True)
+    assert area._selected == {"r1", "r2", "r3"}
+    area._select_boundary(last=False, extend=True)
+    assert area._selected == {"r0", "r1"}
+
+
+def test_sort_by_updates_shared_sort_variables():
+    area = _selectable_list(2)
+
+    class _Var:
+        def __init__(self, val):
+            self.val = val
+
+        def get(self):
+            return self.val
+
+        def set(self, val):
+            self.val = val
+
+    area._sort_field = _Var("#0")
+    area._sort_descending = _Var(True)
+    area.sort_by("date", descending=False)
+    assert area._sort_field.get() == "date"
+    assert area._sort_descending.get() is False

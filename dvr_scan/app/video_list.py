@@ -39,7 +39,7 @@ import tkinter as tk
 import tkinter.ttk as ttk
 import typing as ty
 
-from dvr_scan.app.common import PADDING
+from dvr_scan.app.common import BRAND_COLOR, PADDING, Tooltip, blend_color
 from dvr_scan.app.inputs import (
     VideoInfo,
     ask_video_paths,
@@ -90,50 +90,20 @@ class _Row:
     text_labels: ty.List[tk.Label]
 
 
-class _Tooltip:
-    """A minimal hover tooltip, used to label the icon-only toolbar buttons."""
-
-    def __init__(self, widget: tk.Widget, text: str):
-        self._widget = widget
-        self._text = text
-        self._tip: ty.Optional[tk.Toplevel] = None
-        widget.bind("<Enter>", self._show, add="+")
-        widget.bind("<Leave>", self._hide, add="+")
-        widget.bind("<ButtonPress>", self._hide, add="+")
-        # Tear down a visible tip if the button is destroyed while hovered.
-        widget.bind("<Destroy>", self._hide, add="+")
-
-    def _show(self, _event=None):
-        if self._tip is not None or not self._widget.winfo_exists():
-            return
-        x = self._widget.winfo_rootx() + self._widget.winfo_width() // 2
-        y = self._widget.winfo_rooty() + self._widget.winfo_height() + 2
-        self._tip = tk.Toplevel(self._widget)
-        self._tip.wm_overrideredirect(True)
-        self._tip.wm_geometry(f"+{x}+{y}")
-        tk.Label(
-            self._tip,
-            text=self._text,
-            justify=tk.LEFT,
-            background="#ffffe0",
-            relief=tk.SOLID,
-            borderwidth=1,
-            padx=4,
-            pady=1,
-        ).pack()
-
-    def _hide(self, _event=None):
-        if self._tip is not None:
-            self._tip.destroy()
-            self._tip = None
-
-
 class VideoList:
     """Scrollable list of input videos with stacked metadata rows and a vertical icon
     toolbar. Built into `root`, mirroring the `InputArea` API used by the Scan Wizard."""
 
     on_changed: ty.Optional[ty.Callable[[], None]] = None
     """Called after the list's contents or selection change (set by the owner)."""
+
+    # Defaults for state set in `__init__` so Tk-free `__new__` unit tests work cleanly.
+    _cursor: ty.Optional[str] = None
+    _canvas: ty.Optional[tk.Canvas] = None
+    _rows_frame: ty.Optional[tk.Frame] = None
+    _detail_fg: str = "black"
+    _sort_field: ty.Optional[tk.StringVar] = None
+    _sort_descending: ty.Optional[tk.BooleanVar] = None
 
     def __init__(self, root: tk.Widget, on_add: ty.Optional[ty.Callable[[], None]] = None):
         """`on_add` handles the Add ("+") button. The Scan Wizard routes it through its own
@@ -148,11 +118,21 @@ class VideoList:
         style = ttk.Style()
         self._bg = style.lookup("TFrame", "background") or "#f0f0f0"
         self._fg = style.lookup("TLabel", "foreground") or "black"
+        self._detail_fg = blend_color(root, self._fg, self._bg, 0.72)
         self._select_bg = style.lookup("Treeview", "selectbackground") or "#0078d7"
         self._select_fg = style.lookup("Treeview", "selectforeground") or "#ffffff"
 
         # Scrollable region: a canvas hosting an inner frame that holds the row widgets.
-        self._canvas = tk.Canvas(root, background=self._bg, highlightthickness=0)
+        # `takefocus=True` plus a 1px highlight ring lets keyboard users Tab into the list
+        # and see focus clearly while navigating rows with Up/Down/Home/End.
+        self._canvas = tk.Canvas(
+            root,
+            background=self._bg,
+            highlightthickness=1,
+            highlightbackground=self._bg,
+            highlightcolor=BRAND_COLOR,
+            takefocus=True,
+        )
         self._canvas.grid(row=0, column=0, sticky=tk.NSEW)
         scroll = ttk.Scrollbar(root, orient=tk.VERTICAL, command=self._canvas.yview)
         scroll.grid(row=0, column=1, sticky=tk.NS)
@@ -172,18 +152,23 @@ class VideoList:
         )
         self._bind_mousewheel(self._canvas)
         self._bind_mousewheel(self._rows_frame)
-        # Clicking empty space (not on a row) clears the selection. Row widgets are children
-        # of the rows frame, but Tk delivers a click only to the widget under the pointer, so
-        # these fire only for the uncovered area.
-        self._canvas.bind("<Button-1>", self.clear_selection, add="+")
-        self._rows_frame.bind("<Button-1>", self.clear_selection, add="+")
+        # Clicking empty space (not on a row) clears the selection and focuses the list.
+        # Row widgets are children of the rows frame, but Tk delivers a click only to the
+        # widget under the pointer, so these fire only for the uncovered area.
+        self._canvas.bind("<Button-1>", self._on_empty_click, add="+")
+        self._rows_frame.bind("<Button-1>", self._on_empty_click, add="+")
+        self._bind_keyboard_navigation()
+
+        # Shared sort menu variables so the toolbar popup and File > Sort stay in sync.
+        self._sort_field = tk.StringVar(root, value=SORT_FIELDS[0][1])
+        self._sort_descending = tk.BooleanVar(root, value=SORT_FIELDS[0][2])
 
         # Vertical icon toolbar: Add / Remove / Up / Down then Sort, so the arrows point the
         # same direction the selected row moves.
         toolbar = ttk.Frame(root)
         toolbar.grid(row=0, column=2, sticky=tk.N, padx=(PADDING, 0))
         self._add_button = self._toolbar_button(
-            toolbar, 0, ADD_GLYPH, "Add videos", self._on_add_clicked
+            toolbar, 0, ADD_GLYPH, "Add videos (Ctrl+O)", self._on_add_clicked
         )
         self._remove_button = self._toolbar_button(
             toolbar, 1, REMOVE_GLYPH, "Remove selected (Del)", self.remove_selected
@@ -199,10 +184,11 @@ class VideoList:
         self._thumbnails = ThumbnailLoader(self._canvas, apply_image=self._apply_thumbnail)
         self._rows: ty.Dict[str, _Row] = {}
         self._order: ty.List[str] = []
-        # Selected row iids, and the anchor row (last plain-clicked or toggled) that Shift+click
-        # extends a range from.
+        # Selected row iids, the anchor row (last plain-clicked or toggled) that Shift+click /
+        # Shift+arrow extends a range from, and the keyboard cursor row.
         self._selected: ty.Set[str] = set()
         self._anchor: ty.Optional[str] = None
+        self._cursor: ty.Optional[str] = None
         # Monotonic counter for unique row iids ("row-0", "row-1", ...). Never reset, even on
         # clear(), so a thumbnail job for a removed row can't collide with a reused iid.
         self._counter = 0
@@ -213,8 +199,23 @@ class VideoList:
     ) -> ttk.Button:
         button = ttk.Button(parent, text=glyph, width=TOOLBAR_BUTTON_WIDTH, command=command)
         button.grid(row=row, column=0, pady=(0, PADDING))
-        _Tooltip(button, tip)
+        Tooltip(button, tip)
         return button
+
+    def _bind_keyboard_navigation(self):
+        self._canvas.bind("<Up>", lambda _: self._move_selection(-1, extend=False))
+        self._canvas.bind("<Down>", lambda _: self._move_selection(1, extend=False))
+        self._canvas.bind("<Shift-Up>", lambda _: self._move_selection(-1, extend=True))
+        self._canvas.bind("<Shift-Down>", lambda _: self._move_selection(1, extend=True))
+        self._canvas.bind("<Home>", lambda _: self._select_boundary(last=False, extend=False))
+        self._canvas.bind("<End>", lambda _: self._select_boundary(last=True, extend=False))
+        self._canvas.bind("<Shift-Home>", lambda _: self._select_boundary(last=False, extend=True))
+        self._canvas.bind("<Shift-End>", lambda _: self._select_boundary(last=True, extend=True))
+
+    def _on_empty_click(self, _event=None):
+        if self._canvas is not None:
+            self._canvas.focus_set()
+        self.clear_selection()
 
     def _bind_mousewheel(self, widget: tk.Widget):
         widget.bind("<MouseWheel>", self._on_mousewheel, add="+")
@@ -265,8 +266,11 @@ class VideoList:
             # The auto-selected row also becomes the anchor so a following Shift+click
             # extends from it, as it would after a plain click.
             self._anchor = self._order[min(lowest, len(self._order) - 1)]
+            self._cursor = self._anchor
             self._selected = {self._anchor}
             self._paint_selection()
+        else:
+            self._cursor = None
         self._refresh_button_state()
 
     def _on_add_clicked(self):
@@ -306,6 +310,10 @@ class VideoList:
             raise ValueError(f"unknown sort column: {col!r}")
 
         self._order.sort(key=key, reverse=descending)
+        if self._sort_field is not None:
+            self._sort_field.set(col)
+        if self._sort_descending is not None:
+            self._sort_descending.set(descending)
         self._regrid()
         self._refresh_button_state()
 
@@ -317,6 +325,7 @@ class VideoList:
         self._order.clear()
         self._selected = set()
         self._anchor = None
+        self._cursor = None
         # Drop pending thumbnail jobs so they don't target deleted rows, then start fresh.
         self._thumbnails.cancel()
         self._thumbnails = ThumbnailLoader(self._canvas, apply_image=self._apply_thumbnail)
@@ -343,16 +352,16 @@ class VideoList:
         )
         detail_one = tk.Label(
             frame,
-            text=f"{info.duration}    {info.date}",
+            text=f"{info.duration}  \N{MIDDLE DOT}  {info.date}",
             background=self._bg,
-            foreground=self._fg,
+            foreground=self._detail_fg,
             anchor=tk.W,
         )
         detail_two = tk.Label(
             frame,
-            text=f"{info.resolution}    {info.framerate} FPS",
+            text=f"{info.resolution}  \N{MIDDLE DOT}  {info.framerate} FPS",
             background=self._bg,
-            foreground=self._fg,
+            foreground=self._detail_fg,
             anchor=tk.W,
         )
         name_label.grid(row=0, column=1, sticky=tk.EW)
@@ -399,10 +408,16 @@ class VideoList:
         """Sorted display indices (into `_order`) of the selected rows."""
         return [index for index, iid in enumerate(self._order) if iid in self._selected]
 
+    def _focus_canvas(self):
+        if self._canvas is not None:
+            self._canvas.focus_set()
+
     def _on_click(self, iid: str):
         """Plain click: select only this row and make it the range anchor."""
+        self._focus_canvas()
         self._selected = {iid}
         self._anchor = iid
+        self._cursor = iid
         self._paint_selection()
         self._refresh_button_state()
 
@@ -412,6 +427,8 @@ class VideoList:
         if self._anchor is None or self._anchor not in self._order:
             self._on_click(iid)
             return
+        self._focus_canvas()
+        self._cursor = iid
         first, last = sorted((self._order.index(self._anchor), self._order.index(iid)))
         self._selected = set(self._order[first : last + 1])
         self._paint_selection()
@@ -419,24 +436,104 @@ class VideoList:
 
     def _on_toggle_click(self, iid: str):
         """Ctrl+click (Command+click on macOS): toggle this row and make it the anchor."""
+        self._focus_canvas()
         if iid in self._selected:
             self._selected.discard(iid)
         else:
             self._selected.add(iid)
         self._anchor = iid
+        self._cursor = iid
         self._paint_selection()
         self._refresh_button_state()
+
+    def _move_selection(self, delta: int, extend: bool = False) -> str:
+        """Keyboard Up/Down handler: move selection (or extend range from anchor with Shift)
+        by `delta` rows and scroll the target row into view."""
+        if not self._order:
+            return "break"
+        current = self._cursor if self._cursor in self._order else self._anchor
+        if current not in self._order:
+            indices = self._selected_indices()
+            if indices:
+                current = self._order[indices[-1 if delta > 0 else 0]]
+            else:
+                target_iid = self._order[0 if delta > 0 else -1]
+                self._selected = {target_iid}
+                self._anchor = target_iid
+                self._cursor = target_iid
+                self._paint_selection()
+                self._scroll_row_into_view(target_iid)
+                self._refresh_button_state()
+                return "break"
+        curr_idx = self._order.index(current)
+        target_idx = max(0, min(len(self._order) - 1, curr_idx + delta))
+        target_iid = self._order[target_idx]
+        if extend:
+            if self._anchor not in self._order:
+                self._anchor = current
+            self._cursor = target_iid
+            first, last = sorted((self._order.index(self._anchor), target_idx))
+            self._selected = set(self._order[first : last + 1])
+        else:
+            self._selected = {target_iid}
+            self._anchor = target_iid
+            self._cursor = target_iid
+        self._paint_selection()
+        self._scroll_row_into_view(target_iid)
+        self._refresh_button_state()
+        return "break"
+
+    def _select_boundary(self, last: bool, extend: bool = False) -> str:
+        """Keyboard Home/End handler: jump selection (or extend range) to first/last row."""
+        if not self._order:
+            return "break"
+        target_idx = len(self._order) - 1 if last else 0
+        target_iid = self._order[target_idx]
+        if extend and self._anchor in self._order:
+            self._cursor = target_iid
+            first, end = sorted((self._order.index(self._anchor), target_idx))
+            self._selected = set(self._order[first : end + 1])
+        else:
+            self._selected = {target_iid}
+            self._anchor = target_iid
+            self._cursor = target_iid
+        self._paint_selection()
+        self._scroll_row_into_view(target_iid)
+        self._refresh_button_state()
+        return "break"
+
+    def _scroll_row_into_view(self, iid: str):
+        """Scroll the canvas vertically if needed so row `iid` is fully visible."""
+        if self._canvas is None or self._rows_frame is None:
+            return
+        row = self._rows.get(iid)
+        if row is None or not row.frame.winfo_exists():
+            return
+        self._rows_frame.update_idletasks()
+        total_h = self._rows_frame.winfo_height()
+        canvas_h = self._canvas.winfo_height()
+        if total_h <= 0 or canvas_h <= 0 or total_h <= canvas_h:
+            return
+        row_top = row.frame.winfo_y()
+        row_bottom = row_top + row.frame.winfo_height()
+        view_top, view_bottom = self._canvas.yview()
+        visible_top = view_top * total_h
+        visible_bottom = view_bottom * total_h
+        if row_top < visible_top:
+            self._canvas.yview_moveto(max(0.0, row_top / total_h))
+        elif row_bottom > visible_bottom:
+            self._canvas.yview_moveto(min(1.0, (row_bottom - canvas_h) / total_h))
 
     def _paint_selection(self):
         """Recolor every row to reflect `_selected`."""
         for row_iid, row in self._rows.items():
             selected = row_iid in self._selected
             background = self._select_bg if selected else self._bg
-            foreground = self._select_fg if selected else self._fg
             for widget in row.selectable:
                 widget.configure(background=background)
-            for label in row.text_labels:
-                label.configure(foreground=foreground)
+            for idx, label in enumerate(row.text_labels):
+                fg = self._select_fg if selected else (self._fg if idx == 0 else self._detail_fg)
+                label.configure(foreground=fg)
 
     def _on_move_up(self):
         """Move each selected row up one slot, preserving their relative order. No-op if
@@ -452,6 +549,7 @@ class VideoList:
                 self._order[index - 1],
             )
         self._regrid()
+        self._scroll_row_into_view(self._order[indices[0] - 1])
         self._refresh_button_state()
 
     def _on_move_down(self):
@@ -466,6 +564,7 @@ class VideoList:
                 self._order[index + 1],
             )
         self._regrid()
+        self._scroll_row_into_view(self._order[indices[-1] + 1])
         self._refresh_button_state()
 
     def _open_sort(self):
@@ -476,9 +575,14 @@ class VideoList:
     def build_sort_menu(self, parent: tk.Misc) -> tk.Menu:
         """Build a menu that sorts this list: a radio group of `SORT_FIELDS`, then
         Ascending/Descending. Picking a field applies that field's default direction.
-        Used for the toolbar's Sort popup and the Scan Wizard's File > Sort menu."""
-        field = tk.StringVar(parent, value=SORT_FIELDS[0][1])
-        descending = tk.BooleanVar(parent, value=SORT_FIELDS[0][2])
+        Used for the toolbar's Sort popup and the Scan Wizard's File > Sort menu; both
+        menus share the same variables so their checkmarks stay in sync."""
+        if self._sort_field is None:
+            self._sort_field = tk.StringVar(parent, value=SORT_FIELDS[0][1])
+        if self._sort_descending is None:
+            self._sort_descending = tk.BooleanVar(parent, value=SORT_FIELDS[0][2])
+        field = self._sort_field
+        descending = self._sort_descending
 
         def apply():
             self.sort_by(field.get(), descending.get())

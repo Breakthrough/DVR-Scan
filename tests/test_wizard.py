@@ -831,3 +831,83 @@ def test_fast_scan_preset_hidden_without_cnt(monkeypatch, cnt_available):
     names = [preset.name for preset in presets_module.list_available_presets()]
     assert ("Fast Scan" in names) == cnt_available
     assert "High Sensitivity" in names and "Low Sensitivity" in names
+
+
+def test_drop_zone_text_meets_wcag_aa_contrast():
+    """The 9pt drop-zone hint text at rest must achieve at least 4.5:1 contrast against the
+    standard light theme background (#f0f0f0) to satisfy WCAG 2.1 AA."""
+    from dvr_scan.app.wizard import DROP_ZONE_TEXT_COLOR, DROP_ZONE_TEXT_OPACITY
+
+    bg_rgb = (0xF0, 0xF0, 0xF0)
+    fg_hex = DROP_ZONE_TEXT_COLOR.lstrip("#")
+    fg_rgb = (int(fg_hex[0:2], 16), int(fg_hex[2:4], 16), int(fg_hex[4:6], 16))
+    blended = tuple(
+        int(f * DROP_ZONE_TEXT_OPACITY + b * (1.0 - DROP_ZONE_TEXT_OPACITY))
+        for f, b in zip(fg_rgb, bg_rgb, strict=True)
+    )
+
+    def rel_luminance(rgb):
+        channels = []
+        for channel in rgb:
+            s = channel / 255.0
+            channels.append(s / 12.92 if s <= 0.04045 else ((s + 0.055) / 1.055) ** 2.4)
+        return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2]
+
+    lum_bg = rel_luminance(bg_rgb)
+    lum_fg = rel_luminance(blended)
+    lighter, darker = max(lum_bg, lum_fg), min(lum_bg, lum_fg)
+    contrast_ratio = (lighter + 0.05) / (darker + 0.05)
+    assert contrast_ratio >= 4.5, f"Expected >= 4.5:1 WCAG AA contrast, got {contrast_ratio:.2f}:1"
+
+
+def test_output_step_updates_mode_description_and_readonly_entry_state():
+    step = _output_step(ffmpeg_available=True, mode_index=0, directory="/out")
+    step._mode_desc = {"text": ""}
+    step._dir_entry = {"state": "disabled"}
+
+    step._on_mode_changed()
+    assert "MP4" in step._mode_desc["text"]
+    assert step._dir_entry["state"] == "readonly"
+
+    # Scan Only disables the directory entry and explains why.
+    step._mode_combo.current(4)
+    step._on_mode_changed()
+    assert "without saving video clips" in step._mode_desc["text"]
+    assert step._dir_entry["state"] == "disabled"
+
+
+def test_videos_step_drop_zone_uses_solid_border_and_clears_hover_on_unmap():
+    import tkinter as tk
+
+    from tkinterdnd2 import TkinterDnD
+
+    from dvr_scan.app.common import BRAND_COLOR
+    from dvr_scan.app.wizard import _VideosStep
+
+    try:
+        root = TkinterDnD.Tk()
+    except tk.TclError as ex:
+        pytest.skip(f"TkinterDnD is not available: {ex}")
+    root.withdraw()
+    try:
+        win = tk.Toplevel(root)
+        win.geometry("600x400")
+        step = _VideosStep(win, win)
+        step.frame.pack(fill=tk.BOTH, expand=True)
+        win.update()
+
+        assert step._cta_border is not None
+        # Never uses dashed lines in either rest or active states.
+        assert step._drop_zone.itemcget(step._cta_border, "dash") == ""
+        step._set_focus_active(True)
+        assert step._drop_zone.itemcget(step._cta_border, "dash") == ""
+        assert step._drop_zone.itemcget(step._cta_border, "outline") == BRAND_COLOR
+
+        # Unmapping the drop zone resets hover and drag states cleanly.
+        step._set_hover_active(True)
+        step._set_drag_active(True)
+        step._on_drop_zone_unmap()
+        assert step._hover_active is False
+        assert step._drag_active is False
+    finally:
+        root.destroy()
