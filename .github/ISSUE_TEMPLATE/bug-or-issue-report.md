@@ -1,6 +1,7 @@
 ---
 name: Bug or Issue Report
 about: Submit a bug report or issue to help us fix and improve DVR-Scan.
+type: Bug
 
 ---
 

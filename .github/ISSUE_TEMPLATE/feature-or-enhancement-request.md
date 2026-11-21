@@ -1,6 +1,7 @@
 ---
 name: Feature or Enhancement Request
 about: Submit an idea. or request for a feature to be added to DVR-Scan.
+type: Feature
 
 ---
 
