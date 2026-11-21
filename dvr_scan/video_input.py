@@ -20,6 +20,7 @@ describes audio streams for the encoder), the `BackendUnavailable` error, and a 
 convenience properties used by the scanner.
 """
 
+import bisect
 import logging
 import typing as ty
 from dataclasses import dataclass
@@ -27,6 +28,7 @@ from fractions import Fraction
 from pathlib import Path
 
 import av
+from scenedetect import FrameTimecode
 from scenedetect.backends import AVAILABLE_BACKENDS
 from scenedetect.backends.concat import SourceSpan
 from scenedetect.backends.concat import VideoStreamConcat as _VideoStreamConcat
@@ -251,6 +253,26 @@ class VideoStreamConcat(_VideoStreamConcat):
     def sources(self) -> ty.List[SourceInfo]:
         """Stream metadata for each input video."""
         return self._source_info
+
+    def locate(self, timecode: FrameTimecode) -> ty.Tuple[int, Fraction]:
+        """Find the input video that contains `timecode`, a time on the global timeline.
+        Returns the index of that video, and the time from its start in seconds.
+
+        It is safe to call this from a thread other than the one that reads frames, if the
+        frame at `timecode` has been read already. When an input ends, the upstream class
+        moves the start times of only the inputs after it. The start times of the current
+        input and the inputs before it do not change. Frames that were read already are
+        from the current input or an input before it, so the index is limited to the
+        current input.
+        """
+        # Depends on the private `_offsets` and `_index` of the upstream class.
+        offsets = self._offsets
+        # Timecodes from the scanner are rounded to 1 us, so the first frame of an input can
+        # be a little before its exact start time. Frames are much more than 1 us apart.
+        seconds = Fraction(timecode.pts) * timecode.time_base
+        index = bisect.bisect_right(offsets, seconds + Fraction(1, 1000000)) - 1
+        index = max(0, min(index, self._index, len(self._source_info) - 1))
+        return (index, max(Fraction(0), seconds - offsets[index]))
 
     @property
     def resolution(self) -> ty.Tuple[int, int]:

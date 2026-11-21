@@ -39,6 +39,7 @@ from dvr_scan.encoder import (
     DEFAULT_FFMPEG_INPUT_ARGS,
     DEFAULT_FFMPEG_OUTPUT_ARGS,
 )
+from dvr_scan.wallclock import parse_time_code_start
 
 # Backwards compatibility for config options that were renamed/replaced.
 MIGRATED_CONFIG_OPTION: ty.Dict[str, str] = {
@@ -115,6 +116,33 @@ class TimecodeValue(ValidatedValue):
             raise OptionParseFailure(
                 "Timecodes must be in frames (1234), seconds (123.4s), or HH:MM:SS (00:02:03.400)."
             ) from ex
+
+
+class TimeCodeStartValue(ValidatedValue):
+    """Validator for `time-code-start`: `none`, `filename`, `modified`, or a date and time
+    (YYYY-MM-DD HH:MM:SS). Stores the value as a string."""
+
+    def __init__(self, value: str = "none"):
+        # Ensure value is valid.
+        parse_time_code_start(value)
+        self._value = str(value).strip()
+
+    @property
+    def value(self) -> str:
+        return self._value
+
+    def __repr__(self) -> str:
+        return self._value
+
+    def __str__(self) -> str:
+        return self._value
+
+    @staticmethod
+    def from_config(config_value: str, default: "TimeCodeStartValue") -> "TimeCodeStartValue":
+        try:
+            return TimeCodeStartValue(config_value)
+        except ValueError as ex:
+            raise OptionParseFailure(str(ex)) from ex
 
 
 class MergeWindowValue(ValidatedValue):
@@ -510,6 +538,7 @@ CONFIG_MAP: ConfigDict = {
     # Overlays
     # Text Overlays
     "time-code": False,
+    "time-code-start": TimeCodeStartValue(),
     "frame-metrics": False,
     "text-border": 4,
     "text-margin": 4,

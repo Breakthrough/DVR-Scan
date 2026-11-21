@@ -51,7 +51,7 @@ def parse_resolution(text: str) -> ty.Optional[ty.Tuple[int, int]]:
 
 
 def probe_video(path: str) -> ty.Optional[VideoInfo]:
-    """Open `path` and extract display metadata (duration, framerate, resolution, creation
+    """Open `path` and extract display metadata (duration, framerate, resolution, modified
     date), returning a `VideoInfo` or None if the video could not be opened. Errors are
     logged by `open_video`; callers decide how to surface a failure to the user."""
     try:
@@ -59,9 +59,10 @@ def probe_video(path: str) -> ty.Optional[VideoInfo]:
     except VideoOpenFailure:
         return None
     try:
-        # On Windows, ctime is creation time. On other systems, it may be the last
-        # metadata change time.
-        create_time = datetime.fromtimestamp(Path(path).stat().st_ctime)
+        # Use the modified time, not ctime. On Windows, ctime is the creation time of the
+        # file, so a copy (e.g. from an SD card) sets it to the time of the copy. A copy
+        # keeps the modified time, which cameras usually set when a clip ends (#285).
+        create_time = datetime.fromtimestamp(Path(path).stat().st_mtime)
         create_time_str = create_time.strftime("%Y-%m-%d %H:%M:%S")
     except OSError as ex:
         logger.debug(f"Failed to stat {path}: {ex}")
