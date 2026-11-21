@@ -7,7 +7,16 @@
 
 ### 2.1 (In Development)
 
+ * [general] Improve usability and accessibility across the Scan Wizard, Advanced Mode, Region Editor, Scan Window, and About dialog:
+    * Add keyboard navigation to the Scan Wizard drop zone (`Tab`, `Enter`, `Space`) and video list (`Up`, `Down`, `Shift+Up`, `Shift+Down`, `Home`, `End`)
+    * Add `Alt+Left` and `Alt+Right` step shortcuts, `F1` help shortcut, `Escape` dialog dismissal, and keyboard-focusable tooltips
+    * Increase text and border contrast, use native `ttk` controls and DVR-Scan brand colors, align form labels, add output-mode descriptions, and show guidance when zero motion events are found
+    * Add Region Editor toolbar controls to add and delete shapes, show the current frame number, show checkmarks in the `View` menu, and add high-contrast handle borders
  * [bugfix] Switch open top-level menus on hover and support `Alt`/`F10` shortcuts in the Windows menu bar [#289](https://github.com/Breakthrough/DVR-Scan/issues/289)
+ * [bugfix] Show a message dialog in Advanced Mode when starting a scan with no input videos or an invalid start/end time range
+ * [bugfix] Fix a `Ctrl+N` crash in the Region Editor when the pointer is outside the canvas, and show an error dialog when a region file fails to load
+ * [bugfix] Fix the scan progress bar stopping below 100% when `frame-skip` is set, and clamp remaining time at `00:00` on variable framerate inputs
+ * [bugfix] Keep sort menu checkmarks in sync between the Scan Wizard toolbar and `File -> Sort`, clear the clipboard before copying text, use `https://` for help links, and parent child dialogs to their window
 
 ### 2.0 (2026-11-08)
 
