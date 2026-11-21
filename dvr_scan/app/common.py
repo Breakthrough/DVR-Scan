@@ -9,8 +9,10 @@
 # LICENSE file, or visit one of the above pages for details.
 #
 
+import ctypes
 import importlib.resources as resources
 import os
+import time
 import tkinter as tk
 import tkinter.ttk as ttk
 import typing as ty
@@ -35,6 +37,8 @@ DISCORD_URL = "https://discord.gg/69kf6f2Exb"
 # Hover-darken factor for menubar headings: multiply each RGB channel of the bar background
 # to derive the `activebackground`. Below 1.0 darkens; ~0.85 reads clearly but stays subtle.
 _MENUBAR_HOVER_FACTOR = 0.85
+_MENUBAR_POLL_MS = 25
+_MENUBAR_REOPEN_GUARD_SEC = 0.08
 
 
 def register_icon(root: tk.Tk):
@@ -134,7 +138,12 @@ class MenuBar:
 
     Drop-in replacement for the native menubar: grid `.frame` as the window's top row, then
     populate the `tk.Menu` returned by `add_menu()` exactly like a native cascade menu
-    (`add_command`, `add_separator`, `entryconfigure`, ...).
+    (`add_command`, `add_separator`, `entryconfigure`, ...). Underlined mnemonics (`Alt+F`,
+    `Alt+H`, ...) and `F10` are bound on the owning window so the custom bar stays
+    reachable by keyboard. While any top-level menu is posted on Windows (which runs inside
+    Win32's modal `TrackPopupMenu` loop and blocks normal `<Enter>` events on sibling
+    widgets), a short `after` poll tracks the pointer so hovering another heading switches
+    the open menu like a native menu bar.
 
     On non-Windows platforms the native menubar is kept (macOS expects the global menu bar):
     `add_menu()` returns a real cascade menu and `.frame` is None, so call sites stay
@@ -149,9 +158,116 @@ class MenuBar:
             self._native = tk.Menu(master)
             master["menu"] = self._native
             return
+        self._toplevel = master.winfo_toplevel()
+        self._menus: ty.Dict[tk.Menubutton, tk.Menu] = {}
+        self._posted_button: ty.Optional[tk.Menubutton] = None
+        self._pending_switch: ty.Optional[tk.Menubutton] = None
+        self._poll_id: ty.Optional[str] = None
+        self._last_unpost: ty.Tuple[ty.Optional[tk.Menubutton], float] = (None, 0.0)
         self._background = ttk.Style().lookup("TFrame", "background") or "SystemButtonFace"
         self.frame = tk.Frame(master, background=self._background)
+        self.frame.bind("<Destroy>", self._cancel_hover_poll, add="+")
         self._hover = _darken(self.frame, self._background)
+        self._toplevel.bind("<F10>", lambda _: self._post_first_menu(), add="+")
+
+    def _can_post(self) -> bool:
+        toplevel = self._toplevel
+        if not toplevel.winfo_exists() or not toplevel.winfo_viewable():
+            return False
+        grab = toplevel.grab_current()
+        return grab is None or grab == toplevel
+
+    def _button_at_pointer(self) -> ty.Optional[tk.Menubutton]:
+        px, py = self.frame.winfo_pointerxy()
+        for button in self._menus:
+            if str(button["state"]) == "disabled":
+                continue
+            bx, by = button.winfo_rootx(), button.winfo_rooty()
+            bw, bh = button.winfo_width(), button.winfo_height()
+            if bx <= px < bx + bw and by <= py < by + bh:
+                return button
+        return None
+
+    def _sync_backgrounds(self):
+        active = self._posted_button
+        if active is None:
+            active = self._button_at_pointer()
+        for button in self._menus:
+            button.configure(background=self._hover if button is active else self._background)
+
+    def _on_button_enter(self, button: tk.Menubutton):
+        if self._posted_button is None:
+            button.configure(background=self._hover)
+
+    def _on_button_leave(self, button: tk.Menubutton):
+        if self._posted_button is None:
+            button.configure(background=self._background)
+
+    def _dismiss_active_menu(self):
+        ctypes.windll.user32.EndMenu()
+
+    def _cancel_hover_poll(self, _event=None):
+        if self._poll_id is not None:
+            try:
+                self.frame.after_cancel(self._poll_id)
+            except tk.TclError:
+                pass
+        self._poll_id = None
+
+    def _poll_hover(self):
+        self._poll_id = None
+        if self._posted_button is None:
+            return
+        target = self._button_at_pointer()
+        if target is not None and target is not self._posted_button:
+            self._pending_switch = target
+            self._dismiss_active_menu()
+            return
+        self._poll_id = self.frame.after(_MENUBAR_POLL_MS, self._poll_hover)
+
+    def _on_button_press(self, button: tk.Menubutton) -> str:
+        # Clicking an open heading closes Win32 `TrackPopupMenu` first and then delivers
+        # `<Button-1>` to the heading; skip re-posting so a second click toggles it closed.
+        last_btn, last_time = self._last_unpost
+        if button is last_btn and (time.monotonic() - last_time) < _MENUBAR_REOPEN_GUARD_SEC:
+            self._last_unpost = (None, 0.0)
+        else:
+            self._post_button_menu(button)
+        return "break"
+
+    def _post_button_menu(
+        self, button: tk.Menubutton, select_first: bool = False
+    ) -> ty.Optional[str]:
+        if not self._can_post() or str(button["state"]) == "disabled":
+            return None
+        self._pending_switch = None
+        while True:
+            self._posted_button = button
+            self._sync_backgrounds()
+            self._cancel_hover_poll()
+            self._poll_id = self.frame.after(_MENUBAR_POLL_MS, self._poll_hover)
+            menu = self._menus[button]
+            x = button.winfo_rootx()
+            y = button.winfo_rooty() + button.winfo_height()
+            entry = 0 if (select_first and menu.index(tk.END) is not None) else ""
+            # `tk_popup` does not return until the menu closes.
+            menu.tk_popup(x, y, entry)
+            self._cancel_hover_poll()
+            self._posted_button = None
+            next_button, self._pending_switch = self._pending_switch, None
+            if not self.frame.winfo_exists():
+                return "break"
+            if next_button is None or not self._can_post():
+                break
+            button, select_first = next_button, False
+        self._last_unpost = (button, time.monotonic())
+        self._sync_backgrounds()
+        return "break"
+
+    def _post_first_menu(self) -> ty.Optional[str]:
+        if self._menus:
+            return self._post_button_menu(next(iter(self._menus)), select_first=True)
+        return None
 
     def add_menu(self, label: str, underline: ty.Optional[int] = None) -> tk.Menu:
         """Add a top-level heading and return its (empty) dropdown menu to populate."""
@@ -174,13 +290,27 @@ class MenuBar:
             pady=2,
             direction="below",
         )
-        # Drive the hover highlight explicitly rather than relying on the Menubutton's
-        # built-in "active" state: that state desyncs when the window loses focus (e.g. when
-        # the menu posts or on alt-tab), leaving the highlight stuck off. `activebackground`
-        # is kept so the heading also stays lit while its dropdown is posted.
-        button.bind("<Enter>", lambda _: button.configure(background=self._hover))
-        button.bind("<Leave>", lambda _: button.configure(background=self._background))
         menu = tk.Menu(button, tearoff=0)
         button["menu"] = menu
+        # Handle posting and hover highlight explicitly: Tk's built-in Menubutton bindings
+        # desync hover state on focus loss and cannot switch headings on hover while Win32's
+        # modal popup loop is running. Returning "break" stops the `Menubutton` class
+        # bindings for press, drag and release. Those bindings would post or unpost the
+        # menu themselves.
+        button.bind("<Button-1>", lambda _: self._on_button_press(button))
+        button.bind("<ButtonRelease-1>", lambda _: "break")
+        button.bind("<B1-Motion>", lambda _: "break")
+        button.bind("<Enter>", lambda _: self._on_button_enter(button))
+        button.bind("<Leave>", lambda _: self._on_button_leave(button))
         button.pack(side=tk.LEFT)
+        self._menus[button] = menu
+        if underline is not None and 0 <= underline < len(label):
+            char = label[underline]
+            if char.isalpha():
+                for seq in (f"<Alt-{char.lower()}>", f"<Alt-{char.upper()}>"):
+                    self._toplevel.bind(
+                        seq,
+                        lambda _: self._post_button_menu(button, select_first=True),
+                        add="+",
+                    )
         return menu
