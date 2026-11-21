@@ -7,7 +7,7 @@
 
 ### 2.1 (In Development)
 
- * No changes yet.
+ * [bugfix] Switch open top-level menus on hover and support `Alt`/`F10` shortcuts in the Windows menu bar [#289](https://github.com/Breakthrough/DVR-Scan/issues/289)
 
 ### 2.0 (2026-11-08)
 
