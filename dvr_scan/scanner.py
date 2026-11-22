@@ -18,7 +18,7 @@ import queue
 import sys
 import threading
 import typing as ty
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from fractions import Fraction
 from pathlib import Path
@@ -127,6 +127,417 @@ class DetectionResult:
     num_frames: int
 
 
+@dataclass
+class CompletedEvent:
+    """Motion event finalized by `MotionEventTracker`, along with its peak frame."""
+
+    event: MotionEvent
+    event_number: int
+    high_score: float
+    high_frame: ty.Any = None
+
+
+@dataclass
+class EventStep:
+    """Outputs produced by `MotionEventTracker.update()` for a single frame.
+
+    Callers must always process outputs in order: `frames_before_event`, then
+    `completed_event` (if set), then `frames_after_event`. Frame lists may be populated
+    even when `completed_event` is `None` (continuing events emit to
+    `frames_before_event`; newly started events flush buffered frames to
+    `frames_after_event`).
+    """
+
+    frames_before_event: ty.List[ty.Any] = field(default_factory=list)
+    completed_event: ty.Optional[CompletedEvent] = None
+    frames_after_event: ty.List[ty.Any] = field(default_factory=list)
+    event_started: bool = False
+    max_events_reached: bool = False
+
+
+_UNSET = object()
+
+
+class MotionEventTracker:
+    """State machine tracking motion events, frame buffering, and peak-score frames.
+
+    Pure timing and buffering logic with no threading, OpenCV, or video I/O
+    dependencies so it can be driven directly by `MotionScanner.scan()` or synthetic
+    unit tests.
+    """
+
+    def __init__(
+        self,
+        threshold: float,
+        min_event_len: FrameTimecode,
+        time_pre_event: FrameTimecode,
+        time_post_event: FrameTimecode,
+        frame_rate: float,
+        scan_start_time: ty.Optional[FrameTimecode] = None,
+        max_event_len: ty.Optional[FrameTimecode] = None,
+        merge_window: ty.Optional[FrameTimecode] = None,
+        frame_skip: int = 0,
+        max_events: int = 0,
+    ):
+        self._threshold: float = threshold
+        self._max_events: int = max_events
+        self._scan_start_time: FrameTimecode = (
+            scan_start_time if scan_start_time is not None else FrameTimecode(0, frame_rate)
+        )
+
+        # Correct event length parameters to account for frame skip. The window and buffer
+        # sizes below are counts of *processed* frames; on VFR input they are approximations
+        # derived from the average framerate, but emitted event boundaries are always exact
+        # (PTS-based).
+        pre_event_len: int = time_pre_event.frame_num // (frame_skip + 1)
+        self._min_event_len: int = max(min_event_len.frame_num // (frame_skip + 1), 1)
+
+        # Calculations below rely on min_event_len always being >= 1 (cannot be zero).
+        assert self._min_event_len >= 1, "min_event_len must be at least 1 frame"
+
+        # Presentation duration of one source frame at the average framerate, and the
+        # span covered by one processed frame (including skipped frames).
+        self._frame_duration: float = 1.0 / float(frame_rate)
+        self._frame_step: float = self._frame_duration * (1 + frame_skip)
+
+        # Ensure that we include the exact amount of time specified in `-tb`/`--time-before`
+        # when shifting the event start time. Instead of using `-l`/`--min-event-len`
+        # directly, we compensate for rounding errors when we corrected it for frame skip.
+        # This is important as this affects the number of frames we consider for the actual
+        # motion event.
+        self._start_event_shift: float = (
+            time_pre_event.frame_num + self._min_event_len * (frame_skip + 1)
+        ) * self._frame_duration
+
+        # Amount of time to include after the last frame with motion in each event.
+        self._post_event_duration: float = time_post_event.frame_num * self._frame_duration
+
+        # Two groups of motion less than this far apart are merged into the same event.
+        # By default (auto / None) this is the same as the post-event duration, which matches
+        # the behavior of previous versions where -tp controlled merging (#195).
+        self._merge_window_duration: float = (
+            self._post_event_duration
+            if merge_window is None
+            else merge_window.frame_num * self._frame_duration
+        )
+        if self._post_event_duration > self._merge_window_duration:
+            logger.warning(
+                "time-post-event (%s) is larger than merge-window (%s), capping the "
+                "post-event padding to the merge window.",
+                time_post_event.get_timecode(),
+                merge_window.get_timecode(),
+            )
+            self._post_event_duration = self._merge_window_duration
+
+        # Length of buffer we require in memory to keep track of all frames for -l and -tb.
+        self._buff_len: int = pre_event_len + self._min_event_len
+
+        # Upper bound on the length of each event (-Y/--max-event-length), in seconds.
+        # Events are split before any frame which would exceed it, so it must cover at least
+        # one processed frame (including skipped frames).
+        self._max_event_seconds: ty.Optional[float] = (
+            max(max_event_len.seconds, self._frame_step) if max_event_len is not None else None
+        )
+
+        # Mutable tracking state.
+        self._in_motion_event: bool = False
+        self._max_events_reached: bool = False
+        self._event_start: ty.Optional[FrameTimecode] = None
+        self._last_event_end: FrameTimecode = self._scan_start_time
+        self._last_motion_time: FrameTimecode = self._scan_start_time
+        self._last_frame_time: FrameTimecode = self._scan_start_time
+        self._event_window: ty.List[float] = []
+        self._buffered_frames: ty.List[ty.Tuple[FrameTimecode, ty.Any]] = []
+        # Frames decoded after the post-event padding while waiting to see if motion
+        # resumes within the merge window. Flushed into the event if it does, otherwise
+        # they seed `_buffered_frames` for the next event.
+        self._post_motion_frames: ty.List[ty.Tuple[FrameTimecode, ty.Any]] = []
+        self._events: ty.List[MotionEvent] = []
+        self._high_score: float = 0
+        self._high_frame: ty.Any = None
+
+    @property
+    def events(self) -> ty.List[MotionEvent]:
+        """Completed motion events detected so far (returned as a shallow copy)."""
+        return list(self._events)
+
+    @property
+    def in_motion_event(self) -> bool:
+        """Whether a motion event is currently in progress (including its merge window)."""
+        return self._in_motion_event
+
+    @property
+    def active_event_count(self) -> int:
+        """Number of completed events plus one if an event is currently in progress."""
+        return len(self._events) + (1 if self._in_motion_event else 0)
+
+    @property
+    def max_events_reached(self) -> bool:
+        """Whether `max_events` was reached during frame processing."""
+        return self._max_events_reached
+
+    @property
+    def high_score(self) -> float:
+        """Peak motion score recorded for the current (or candidate) event."""
+        return self._high_score
+
+    @property
+    def high_frame(self) -> ty.Any:
+        """Frame associated with `high_score`, or `None` if no candidate is held."""
+        return self._high_frame
+
+    def _padded_end(self) -> FrameTimecode:
+        """Exact (PTS-based) end of the current event if it does not continue.
+
+        Includes the post-event length time, compensation for skipped frames that could
+        have had motion, and the presentation duration of the last motion frame itself.
+        """
+        return self._last_motion_time + (self._post_event_duration + self._frame_step)
+
+    def _finish_event(
+        self, start: FrameTimecode, end: FrameTimecode, can_stop: bool = True
+    ) -> CompletedEvent:
+        """Record the in-progress event as ending at `end` and reset per-event state."""
+        if end.seconds < start.seconds:
+            logger.debug("clamping event end %s to start %s", end, start)
+            end = start
+        event_number = 1 + len(self._events)
+        logger.debug("event %d high score %f", event_number, self._high_score)
+        completed = CompletedEvent(
+            event=MotionEvent(start=start, end=end),
+            event_number=event_number,
+            high_score=self._high_score,
+            high_frame=self._high_frame,
+        )
+        # Reset even when thumbnails are off so the score/frame don't carry over into
+        # the next event (#267).
+        self._high_score = 0
+        self._high_frame = None
+        self._events.append(completed.event)
+        self._last_event_end = end
+        if can_stop and self._max_events > 0 and len(self._events) >= self._max_events:
+            self._max_events_reached = True
+        return completed
+
+    def _update_high_score(
+        self, score: float, above_threshold: bool, candidate_frame: ty.Any
+    ) -> None:
+        if above_threshold:
+            if score > self._high_score:
+                self._high_score = score
+                # Copy mutable frames (e.g. numpy arrays) since the encode thread draws
+                # overlays in-place on the original when writing events.
+                self._high_frame = (
+                    candidate_frame.copy() if hasattr(candidate_frame, "copy") else candidate_frame
+                )
+        elif not self._in_motion_event:
+            # Outside of a motion event, a frame below the threshold means the current
+            # streak of frames can no longer start an event, so any thumbnail candidate
+            # captured from it must be discarded (#268).
+            self._high_score = 0
+            self._high_frame = None
+
+    def _compute_event_start(self, timecode: FrameTimecode) -> FrameTimecode:
+        """Compute the start timecode of a newly triggered event, trimming pre-roll if needed."""
+        # Shift the event start back to include the pre-event and min-event windows,
+        # clamped so events never overlap the previous event or the start of the scan.
+        # Includes the presentation duration of this frame.
+        time_since_last_event = (
+            timecode.seconds + self._frame_duration - self._last_event_end.seconds
+        )
+        shift_amount = min(time_since_last_event, self._start_event_shift)
+        event_start = timecode + (self._frame_duration - shift_amount)
+        if event_start.seconds < self._scan_start_time.seconds:
+            event_start = self._scan_start_time
+        # -Y/--max-event-length also bounds the pre-roll: when the pre-event window is
+        # at least as long as the limit, start the event so the current frame (including
+        # skipped frames) still fits within it.
+        if (
+            self._max_event_seconds is not None
+            and event_start.seconds + self._max_event_seconds < timecode.seconds + self._frame_step
+        ):
+            event_start = timecode + (self._frame_step - self._max_event_seconds)
+            self._buffered_frames = [
+                (tc, payload) for tc, payload in self._buffered_frames if tc >= event_start
+            ]
+        return event_start
+
+    def clear_buffers(self) -> None:
+        """Release buffered pre-event and merge-tail frames without altering peak state."""
+        self._buffered_frames = []
+        self._post_motion_frames = []
+
+    def _split_event_if_needed(
+        self, timecode: FrameTimecode, above_threshold: bool, step: EventStep
+    ) -> bool:
+        """Split the active event if `timecode` would exceed `-Y/--max-event-length`.
+
+        Populates `step` with any held frames and the completed event. Returns `True`
+        if reaching `max_events` ended the scan immediately (caller should return `step`).
+        """
+        if (
+            not self._in_motion_event
+            or self._max_event_seconds is None
+            or (timecode + self._frame_step <= self._event_start + self._max_event_seconds)
+        ):
+            return False
+
+        if above_threshold:
+            # Motion is ongoing, so frames held while waiting out the merge window
+            # belong to this event, which now ends exactly where the next begins.
+            step.frames_before_event.extend(payload for _, payload in self._post_motion_frames)
+            self._post_motion_frames = []
+            split_end = timecode
+        else:
+            padded_end = self._padded_end()
+            split_end = timecode if timecode < padded_end else padded_end
+        step.completed_event = self._finish_event(self._event_start, split_end)
+        step.max_events_reached = self._max_events_reached
+        if self._max_events_reached:
+            self._in_motion_event = False
+            self.clear_buffers()
+            return True
+        if above_threshold:
+            self._event_start = timecode
+            self._buffered_frames = []
+            self._event_window = []
+            step.event_started = True
+        else:
+            self._buffered_frames = self._post_motion_frames[-self._buff_len :]
+            self._post_motion_frames = []
+            self._in_motion_event = False
+        return False
+
+    def update(
+        self,
+        timecode: FrameTimecode,
+        score: float,
+        frame: ty.Any = None,
+        *,
+        high_frame: ty.Any = _UNSET,
+        above_threshold: ty.Optional[bool] = None,
+    ) -> EventStep:
+        """Advance the state machine by one processed frame.
+
+        Arguments:
+            timecode: Presentation timecode of the frame.
+            score: Filtered motion score for the frame.
+            frame: Optional frame payload to buffer/emit for streaming encoders (or `None`
+                when frame streaming is not needed).
+            high_frame: Optional frame object stored as the peak-score candidate when this
+                frame beats the current high score. Defaults to `frame`.
+            above_threshold: Optional explicit motion flag overriding `score >= threshold`
+                (used by `MotionScanner` to suppress the detector's first warmup frame).
+        """
+        if self._max_events_reached:
+            return EventStep(max_events_reached=True)
+
+        if high_frame is _UNSET:
+            high_frame = frame
+        if above_threshold is None:
+            above_threshold = score >= self._threshold
+
+        self._last_frame_time = timecode
+        self._event_window.append(score)
+        self._event_window = self._event_window[-self._min_event_len :]
+
+        step = EventStep()
+
+        # Split events at -Y/--max-event-length before tracking the high score so the
+        # split frame counts towards the next event's thumbnail.
+        if self._split_event_if_needed(timecode, above_threshold, step):
+            return step
+
+        self._update_high_score(score, above_threshold, high_frame)
+
+        # Last frame was part of a motion event, or still within the merge window.
+        if self._in_motion_event:
+            hold_frame = False
+            padded_end = self._padded_end()
+            # If this frame still has motion, reset the merge window.
+            if above_threshold:
+                self._last_motion_time = timecode
+                # Motion resumed within the merge window, so any frames we held beyond
+                # the post-event padding are part of this event after all.
+                if self._post_motion_frames:
+                    step.frames_before_event.extend(
+                        payload for _, payload in self._post_motion_frames
+                    )
+                    self._post_motion_frames = []
+            # Otherwise, wait until the merge window has passed before ending this
+            # motion event and starting to look for a new one.
+            elif (timecode.seconds - self._last_motion_time.seconds) >= self._merge_window_duration:
+                self._in_motion_event = False
+                if frame is not None:
+                    # The frame which ends the event is still part of its clip if it
+                    # starts before the event's end (compared on exact PTS, as the
+                    # window check above is subject to float rounding); otherwise it
+                    # may fall within the next event's pre-event window.
+                    if timecode < padded_end:
+                        step.frames_before_event.append(frame)
+                    else:
+                        self._post_motion_frames.append((timecode, frame))
+                step.completed_event = self._finish_event(self._event_start, padded_end)
+                step.max_events_reached = self._max_events_reached
+                if self._max_events_reached:
+                    self.clear_buffers()
+                else:
+                    # Frames held beyond the post-event padding are not part of this event,
+                    # but may fall within the next event's pre-event window.
+                    self._buffered_frames = self._post_motion_frames[-self._buff_len :]
+                    self._post_motion_frames = []
+            else:
+                # No motion, but still within the merge window. Frames inside the
+                # post-event padding are part of the output clip whether or not the
+                # event continues, so they can be sent for encoding right away; any
+                # frames past that point are held until we know.
+                hold_frame = timecode >= padded_end
+
+            if self._in_motion_event and frame is not None:
+                if hold_frame:
+                    self._post_motion_frames.append((timecode, frame))
+                elif step.completed_event is not None:
+                    step.frames_after_event.append(frame)
+                else:
+                    step.frames_before_event.append(frame)
+        # Not already in a motion event, look for a new one.
+        else:
+            # Buffer the required amount of frames and overlay data until we find an event.
+            if frame is not None:
+                self._buffered_frames.append((timecode, frame))
+                self._buffered_frames = self._buffered_frames[-self._buff_len :]
+            # Start a new event once all frames in the event window have motion.
+            if len(self._event_window) >= self._min_event_len and all(
+                s >= self._threshold for s in self._event_window
+            ):
+                self._in_motion_event = True
+                step.event_started = True
+                self._event_window = []
+                self._last_motion_time = timecode
+                self._event_start = self._compute_event_start(timecode)
+                step.frames_after_event.extend(payload for _, payload in self._buffered_frames)
+                self._buffered_frames = []
+
+        return step
+
+    def finish(self) -> ty.Optional[CompletedEvent]:
+        """Flush any in-progress motion event at end-of-stream and release buffered frames.
+
+        Uses the last processed frame's presentation time plus its presentation duration
+        (including any skipped frames), clamped to the post-event padding when the stream
+        ends partway through the merge window.
+        """
+        self.clear_buffers()
+        if not self._in_motion_event:
+            return None
+        self._in_motion_event = False
+        event_end = self._last_frame_time + self._frame_step
+        padded_end = self._padded_end()
+        if padded_end.seconds < event_end.seconds:
+            event_end = padded_end
+        return self._finish_event(self._event_start, event_end, can_stop=False)
+
+
 # TODO(#75): See if this needs to be tweaked for the CNT algorithm.
 def _recommended_kernel_size(frame_width: int, downscale_factor: int) -> int:
     corrected_width = round(frame_width / float(downscale_factor))
@@ -212,8 +623,7 @@ class MotionScanner:
 
         # Thumbnail production (set_thumbnail_params)
         self._thumbnails = None
-        self._highscore = 0
-        self._highframe = None
+        self._tracker: ty.Optional[MotionEventTracker] = None
 
         # Callbacks for UI integration
         self._scan_started = None
@@ -233,6 +643,16 @@ class MotionScanner:
     def frame_rate(self) -> float:
         """Get the framerate of the currently loaded video(s)."""
         return self._input.framerate
+
+    @property
+    def _highscore(self) -> float:
+        """Current peak motion score tracked for the active/candidate event."""
+        return self._tracker.high_score if self._tracker is not None else 0
+
+    @property
+    def _highframe(self) -> ty.Optional[np.ndarray]:
+        """Frame associated with `_highscore`, if any."""
+        return self._tracker.high_frame if self._tracker is not None else None
 
     def set_output(
         self,
@@ -594,22 +1014,23 @@ class MotionScanner:
         self._scan_started = scan_started
         self._processed_frame = processed_frame
 
+    def _enqueue_frames(
+        self, encode_queue: queue.Queue, frames: ty.Iterable[EncodeFrameEvent]
+    ) -> None:
+        """Put frames onto `encode_queue`, stopping early if the scan is cancelled."""
+        for encode_frame in frames:
+            # Since we're putting multiple items into the queue, we have to keep making
+            # sure the encode thread is running; otherwise the queue will never empty
+            # and we would block indefinitely waiting for a spot.
+            if self._stop.is_set():
+                break
+            encode_queue.put(encode_frame)
+
     def scan(self) -> ty.Optional[DetectionResult]:
         """Performs motion analysis on the MotionScanner's input video(s)."""
         self._stop.clear()
         self._max_events_reached = False
-        self._highscore = 0
-        self._highframe = None
-        buffered_frames: ty.List[np.ndarray] = []
-        # Frames decoded after the post-event padding while waiting to see if motion
-        # resumes within the merge window. Flushed into the event if it does, otherwise
-        # they seed `buffered_frames` for the next event.
-        post_motion_frames: ty.List[EncodeFrameEvent] = []
-        event_window: ty.List[float] = []
-        event_list: ty.List[MotionEvent] = []
-        event_start = None
-
-        in_motion_event = False
+        self._tracker = None
         frames_processed = 0
 
         self._check_time_range()
@@ -680,51 +1101,19 @@ class MotionScanner:
             self._frame_skip,
         )
 
-        # Correct event length parameters to account frame skip. The window and buffer sizes
-        # below are counts of *processed* frames; on VFR input they are approximations derived
-        # from the average framerate, but emitted event boundaries are always exact (PTS-based).
-        pre_event_len: int = self._time_before_event.frame_num // (self._frame_skip + 1)
-        min_event_len: int = max(self._min_event_len.frame_num // (self._frame_skip + 1), 1)
-
-        # Calculations below rely on min_event_len always being >= 1 (cannot be zero)
-        assert min_event_len >= 1, "min_event_len must be at least 1 frame"
-
-        # Presentation duration of one source frame at the average framerate.
-        frame_duration: float = 1.0 / float(self._input.framerate)
-
-        # Ensure that we include the exact amount of time specified in `-tb`/`--time-before` when
-        # shifting the event start time. Instead of using `-l`/`--min-event-len` directly, we
-        # need to compensate for rounding errors when we corrected it for frame skip. This is
-        # important as this affects the number of frames we consider for the actual motion event.
-        start_event_shift: float = (
-            self._time_before_event.frame_num + min_event_len * (self._frame_skip + 1)
-        ) * frame_duration
-
-        # Amount of time to include after the last frame with motion in each event.
-        post_event_duration: float = self._post_event_len.frame_num * frame_duration
-
-        # Two groups of motion less than this far apart are merged into the same event.
-        # By default (auto) this is the same as the post-event duration, which matches
-        # the behavior of previous versions where -tp controlled merging (#195).
-        merge_window_duration: float = (
-            post_event_duration
-            if self._merge_window is None
-            else self._merge_window.frame_num * frame_duration
+        tracker = MotionEventTracker(
+            threshold=self._threshold,
+            min_event_len=self._min_event_len,
+            max_event_len=self._max_event_len,
+            time_pre_event=self._time_before_event,
+            time_post_event=self._post_event_len,
+            frame_rate=self._input.framerate,
+            scan_start_time=scan_start_time,
+            merge_window=self._merge_window,
+            frame_skip=self._frame_skip,
+            max_events=self._max_events,
         )
-        if post_event_duration > merge_window_duration:
-            logger.warning(
-                "time-post-event (%s) is larger than merge-window (%s), capping the "
-                "post-event padding to the merge window.",
-                self._post_event_len.get_timecode(),
-                self._merge_window.get_timecode(),
-            )
-            post_event_duration = merge_window_duration
-
-        # Length of buffer we require in memory to keep track of all frames required for -l and -tb.
-        buff_len = pre_event_len + min_event_len
-        event_end = scan_start_time
-        last_motion_time = scan_start_time
-        last_frame_time = scan_start_time
+        self._tracker = tracker
 
         if self._bounding_box:
             self._bounding_box.set_corrections(
@@ -749,13 +1138,6 @@ class MotionScanner:
         progress_bar = FakeTqdmObject() if not self._show_progress else self._create_progress_bar()
         num_frames_to_process = self.frames_remaining
 
-        # Upper bound on the length of each event (-Y/--max-event-length), in seconds. Events
-        # are split before any frame which would exceed it, so it must cover at least one
-        # processed frame (including skipped frames).
-        max_event_seconds: float = max(
-            self._max_event_len.seconds, frame_duration * (1 + self._frame_skip)
-        )
-
         self._decode_thread_exception = None
         self._encode_thread_exception = None
         decode_queue = queue.Queue(MAX_DECODE_QUEUE_SIZE)
@@ -765,26 +1147,19 @@ class MotionScanner:
         )
         encode_thread: ty.Optional[threading.Thread] = None
 
-        def finish_event(
-            start: FrameTimecode, end: FrameTimecode, can_stop: bool = True
-        ) -> FrameTimecode:
-            """Record the in-progress event as ending at `end` and send it to the encode
-            thread (after any of its frames). Returns the (clamped) end of the event."""
-            if end.seconds < start.seconds:
-                logger.debug("clamping event end %s to start %s", end, start)
-                end = start
-            logger.debug("event %d high score %f" % (1 + len(event_list), self._highscore))
+        def handle_completed_event(completed: CompletedEvent, stop_on_limit: bool = False) -> None:
+            """Write thumbnail, notify the encode thread, and stop if `max_events` was hit."""
+            if self._stop.is_set():
+                return
             if self._thumbnails == "highscore":
-                # This event has not been appended to event_list yet.
-                self._write_highscore_thumbnail(start, 1 + len(event_list))
-            # Reset even when thumbnails are off so the score/frame don't carry over into
-            # the next event (#267).
-            self._highscore = 0
-            self._highframe = None
-            event_list.append(MotionEvent(start=start, end=end))
+                self._write_highscore_thumbnail(
+                    completed.event.start, completed.event_number, completed.high_frame
+                )
+            if self._stop.is_set():
+                return
             if self._output_mode != OutputMode.SCAN_ONLY:
-                encode_queue.put(MotionEvent(start=start, end=end))
-            if can_stop and self._max_events > 0 and len(event_list) >= self._max_events:
+                encode_queue.put(completed.event)
+            if stop_on_limit and not self._stop.is_set():
                 logger.info(
                     "Stopping scan, reached maximum number of events (%d).",
                     self._max_events,
@@ -793,7 +1168,6 @@ class MotionScanner:
                 # interruption.
                 self._max_events_reached = True
                 self._stop.set()
-            return end
 
         decode_thread.start()
         # Any exception below must still stop and join the decode/encode threads, so the
@@ -822,20 +1196,16 @@ class MotionScanner:
             if self._scan_started:
                 self._scan_started(num_frames=num_frames_to_process)
 
-            # TODO: The main scanning loop should be refactored into a state machine. The main
-            # loop has grown far too complicated and is difficult to maintain.
             while not self._stop.is_set():
                 if self._processed_frame:
-                    num_events = len(event_list)
-                    if in_motion_event:
-                        num_events += 1
-                    self._processed_frame(progress_bar=progress_bar, num_events=num_events)
+                    self._processed_frame(
+                        progress_bar=progress_bar, num_events=tracker.active_event_count
+                    )
                 # Keep polling decode queue until it's empty (signaled via None).
                 frame: ty.Optional[DecodeEvent] = decode_queue.get()
-                if frame is None:
+                if frame is None or self._stop.is_set():
                     break
                 assert frame.frame_bgr is not None
-                last_frame_time = frame.timecode
                 frame_size = (frame.frame_bgr.shape[1], frame.frame_bgr.shape[0])
                 if frame_size != self._input.resolution:
                     time = frame.timecode
@@ -869,62 +1239,11 @@ class MotionScanner:
                     frame_score = 0
                 above_threshold = frame_score >= self._threshold
 
-                event_window.append(frame_score)
                 # The first frame fed to the detector can sometimes produce unreliable results
                 # due to it not having any previous information to compare against.
                 if not processed_first_frame:
                     above_threshold = False
                     processed_first_frame = True
-                event_window = event_window[-min_event_len:]
-
-                # Split events at -Y/--max-event-length on the first frame which would extend
-                # them past it (including skipped frames). The event ends where this frame
-                # starts (no post-event padding is added), and if there is still motion, this
-                # frame starts the next event. Done before tracking the high score so this
-                # frame counts towards the next event's thumbnail.
-                if in_motion_event and (
-                    frame.timecode + frame_duration * (1 + self._frame_skip)
-                    > event_start + max_event_seconds
-                ):
-                    if above_threshold:
-                        # Motion is ongoing, so frames held while waiting out the merge window
-                        # belong to this event, which now ends exactly where the next begins.
-                        for held_frame in post_motion_frames:
-                            if self._stop.is_set():
-                                break
-                            encode_queue.put(held_frame)
-                        post_motion_frames = []
-                        split_end = frame.timecode
-                    else:
-                        padded_end = last_motion_time + (
-                            post_event_duration + frame_duration * (1 + self._frame_skip)
-                        )
-                        split_end = frame.timecode if frame.timecode < padded_end else padded_end
-                    event_end = finish_event(event_start, split_end)
-                    buffered_frames = post_motion_frames[-buff_len:]
-                    post_motion_frames = []
-                    if above_threshold and not self._stop.is_set():
-                        event_start = frame.timecode
-                        buffered_frames = []
-                        event_window = []
-                        progress_bar.set_description(
-                            PROGRESS_BAR_DESCRIPTION % (1 + len(event_list)), refresh=False
-                        )
-                    else:
-                        in_motion_event = False
-
-                if above_threshold:
-                    if frame_score > self._highscore:
-                        self._highscore = frame_score
-                        # Copy the frame since the encode thread draws overlays in-place on
-                        # the original when writing events.
-                        self._highframe = frame.frame_bgr.copy()
-                elif not in_motion_event:
-                    # Outside of a motion event, a frame below the threshold means the current
-                    # streak of frames can no longer start an event, so any thumbnail
-                    # candidate captured from it must be discarded (#268).
-                    self._highscore = 0
-                    self._highframe = None
 
                 bounding_box = None
                 # TODO: Only call clear() when we exit the current motion event.
@@ -958,115 +1277,26 @@ class MotionScanner:
                     else None
                 )
 
-                # Last frame was part of a motion event, or still within the merge window.
-                if in_motion_event:
-                    hold_frame = False
-                    # Exact (PTS-based) end of the event if it doesn't continue: the last frame
-                    # with motion plus the post event length time. We also need to compensate
-                    # for the number of frames that we skipped that could have had motion, and
-                    # include the presentation duration of the last frame itself.
-                    padded_end = last_motion_time + (
-                        post_event_duration + frame_duration * (1 + self._frame_skip)
+                if self._stop.is_set():
+                    break
+
+                step = tracker.update(
+                    timecode=frame.timecode,
+                    score=frame_score,
+                    frame=encode_frame,
+                    high_frame=frame.frame_bgr,
+                    above_threshold=above_threshold,
+                )
+                self._enqueue_frames(encode_queue, step.frames_before_event)
+                if step.completed_event is not None:
+                    handle_completed_event(
+                        step.completed_event, stop_on_limit=step.max_events_reached
                     )
-                    # If this frame still has motion, reset the merge window.
-                    if above_threshold:
-                        last_motion_time = frame.timecode
-                        # Motion resumed within the merge window, so any frames we held
-                        # beyond the post-event padding are part of this event after all.
-                        for held_frame in post_motion_frames:
-                            # We have to be careful here. Since we're putting multiple items
-                            # into the queue, we have to keep making sure the encode thread
-                            # is running. Otherwise, the queue will never empty we will block
-                            # indefinitely here waiting for a spot.
-                            if self._stop.is_set():
-                                break
-                            encode_queue.put(held_frame)
-                        post_motion_frames = []
-                    # Otherwise, we wait until the merge window has passed before ending
-                    # this motion event and start looking for a new one.
-                    elif (
-                        frame.timecode.seconds - last_motion_time.seconds
-                    ) >= merge_window_duration:
-                        in_motion_event = False
-                        if encode_frame is not None:
-                            # The frame which ends the event is still part of its clip if it
-                            # starts before the event's end (compared on exact PTS, as the
-                            # window check above is subject to float rounding); otherwise it
-                            # may fall within the next event's pre-event window.
-                            if frame.timecode < padded_end:
-                                encode_queue.put(encode_frame)
-                            else:
-                                post_motion_frames.append(encode_frame)
-                        event_end = finish_event(event_start, padded_end)
-                        # Frames held beyond the post-event padding are not part of this
-                        # event, but may fall within the next event's pre-event window.
-                        buffered_frames = post_motion_frames[-buff_len:]
-                        post_motion_frames = []
-                    else:
-                        # No motion, but still within the merge window. Frames inside the
-                        # post-event padding are part of the output clip whether or not the
-                        # event continues, so they can be sent for encoding right away; any
-                        # frames past that point are held until we know.
-                        hold_frame = frame.timecode >= padded_end
-
-                    # Send frame to encode thread.
-                    if in_motion_event and encode_frame is not None:
-                        if hold_frame:
-                            post_motion_frames.append(encode_frame)
-                        else:
-                            encode_queue.put(encode_frame)
-                # Not already in a motion event, look for a new one.
-                elif not self._stop.is_set():
-                    # Buffer the required amount of frames and overlay data until we find an
-                    # event.
-                    if encode_frame is not None:
-                        buffered_frames.append(encode_frame)
-                        buffered_frames = buffered_frames[-buff_len:]
-                    # Start a new event once all frames in the event window have motion.
-                    if len(event_window) >= min_event_len and all(
-                        score >= self._threshold for score in event_window
-                    ):
-                        in_motion_event = True
-                        progress_bar.set_description(
-                            PROGRESS_BAR_DESCRIPTION % (1 + len(event_list)), refresh=False
-                        )
-                        event_window = []
-                        last_motion_time = frame.timecode
-
-                        # Shift the event start back to include the pre-event and min-event
-                        # windows, clamped so events never overlap the previous event or the
-                        # start of the scan. Includes the presentation duration of this frame.
-                        time_since_last_event = (
-                            frame.timecode.seconds + frame_duration - event_end.seconds
-                        )
-                        shift_amount = min(time_since_last_event, start_event_shift)
-                        event_start = frame.timecode + (frame_duration - shift_amount)
-                        if event_start.seconds < scan_start_time.seconds:
-                            event_start = scan_start_time
-                        # -Y/--max-event-length also bounds the pre-roll: when the pre-event
-                        # window is at least as long as the limit, start the event so the
-                        # current frame (including skipped frames) still fits within it.
-                        frame_step = frame_duration * (1 + self._frame_skip)
-                        if (
-                            event_start.seconds + max_event_seconds
-                            < frame.timecode.seconds + frame_step
-                        ):
-                            event_start = frame.timecode + (frame_step - max_event_seconds)
-                            buffered_frames = [
-                                buffered_frame
-                                for buffered_frame in buffered_frames
-                                if buffered_frame.timecode >= event_start
-                            ]
-                        # Send buffered frames to encode thread.
-                        for buffered_frame in buffered_frames:
-                            # We have to be careful here. Since we're putting multiple items
-                            # into the queue, we have to keep making sure the encode thread
-                            # is running. Otherwise, the queue will never empty we will block
-                            # indefinitely here waiting for a spot.
-                            if self._stop.is_set():
-                                break
-                            encode_queue.put(buffered_frame)
-                        buffered_frames = []
+                if step.event_started and not self._stop.is_set():
+                    progress_bar.set_description(
+                        PROGRESS_BAR_DESCRIPTION % tracker.active_event_count, refresh=False
+                    )
+                self._enqueue_frames(encode_queue, step.frames_after_event)
 
                 frames_processed += 1 + self._frame_skip
                 progress_bar.update(1 + self._frame_skip)
@@ -1081,20 +1311,14 @@ class MotionScanner:
                     self._decode_thread_exception[2]
                 )
 
-            # Video ended, finished processing frames. If we're still in a motion event,
-            # compute the duration and ending timecode and add it to the event list. We can't
-            # query the input for a PTS at this point (OpenCV resets CAP_PROP_POS_MSEC to 0 at
-            # end of video), so use the last processed frame's exact presentation time plus
-            # its presentation duration (including any frames we skipped), clamped to the
-            # post-event padding when the video ends partway through the merge window.
-            if in_motion_event and not self._stop.is_set():
-                event_end = last_frame_time + frame_duration * (1 + self._frame_skip)
-                padded_end = last_motion_time + (
-                    post_event_duration + frame_duration * (1 + self._frame_skip)
-                )
-                if padded_end.seconds < event_end.seconds:
-                    event_end = padded_end
-                finish_event(event_start, event_end, can_stop=False)
+            # Video ended, finished processing frames. Flush any in-progress motion event
+            # unless the scan was stopped early. We can't query the input for a PTS at this
+            # point (OpenCV resets CAP_PROP_POS_MSEC to 0 at end of video), so the tracker
+            # computes the end from the last processed frame's presentation time.
+            if not self._stop.is_set():
+                completed = tracker.finish()
+                if completed is not None:
+                    handle_completed_event(completed)
 
             # Push sentinel to queue, wait for encode thread, and re-raise any exceptions.
             if encode_thread is not None:
@@ -1108,7 +1332,9 @@ class MotionScanner:
             self._stop.set()
             raise
         finally:
-            # No-ops on success, where both threads have already been joined above.
+            # Release buffered BGR frames even on cancel/exception, and ensure both
+            # worker threads are joined (no-ops on success).
+            tracker.clear_buffers()
             progress_bar.close()
             self._join_decode_thread(decode_thread, decode_queue)
             if encode_thread is not None:
@@ -1126,7 +1352,7 @@ class MotionScanner:
                 self._input.decode_failures,
             )
 
-        return DetectionResult(event_list, frames_processed)
+        return DetectionResult(tracker.events, frames_processed)
 
     @staticmethod
     def _join_decode_thread(decode_thread: threading.Thread, decode_queue: queue.Queue):
@@ -1203,14 +1429,19 @@ class MotionScanner:
         )
         return float(effective_framerate)
 
-    def _write_highscore_thumbnail(self, event_start: FrameTimecode, event_number: int):
+    def _write_highscore_thumbnail(
+        self,
+        event_start: FrameTimecode,
+        event_number: int,
+        high_frame: ty.Optional[np.ndarray],
+    ):
         """Save the highest-score frame of event `event_number` (starting at
         `event_start`) as a JPEG, named after the source video containing the event (or
         the combined output file's stem when -o is used, since per-event video files
         don't exist in that case). `event_number` comes from the scan loop rather than
         `self._num_events`, which is only advanced by the encode thread (and not at all
         in scan-only mode)."""
-        if self._highframe is None:
+        if high_frame is None:
             # Possible if the event was triggered before the detector stabilized
             # (e.g. an event starting on the first processed frame).
             logger.debug("no candidate frame for event %d, skipping thumbnail", event_number)
@@ -1233,7 +1464,7 @@ class MotionScanner:
         )
         if self._output_dir:
             output_path = self._output_dir / output_path
-        cv2.imwrite(str(output_path), self._highframe)
+        cv2.imwrite(str(output_path), high_frame)
 
     def _create_encoder(self) -> ty.Optional[EventEncoder]:
         """Create the encoder used to write motion events based on the current output mode.
