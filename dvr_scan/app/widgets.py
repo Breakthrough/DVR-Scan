@@ -71,6 +71,10 @@ class _ValidatedEntry:
         # Expose grid method from underlying widget
         self.grid = widget.grid
 
+    @property
+    def widget(self) -> ttk.Widget:
+        return self._widget
+
     def _normalize(self, text: str) -> str:
         raise NotImplementedError
 

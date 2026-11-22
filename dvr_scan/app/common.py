@@ -126,6 +126,46 @@ def hide_modal(window: tk.Toplevel, focus: tk.Misc):
     focus.focus()
 
 
+class Tooltip:
+    """A minimal hover tooltip, e.g. to label icon-only buttons."""
+
+    def __init__(self, widget: tk.Widget, text: str):
+        self._widget = widget
+        self._text = text
+        self._tip: ty.Optional[tk.Toplevel] = None
+        widget.bind("<Enter>", self._show, add="+")
+        widget.bind("<Leave>", self._hide, add="+")
+        widget.bind("<ButtonPress>", self._hide, add="+")
+        # Tear down a visible tip if the widget is hidden or destroyed while hovered.
+        widget.bind("<Unmap>", self._hide, add="+")
+        widget.bind("<Destroy>", self._hide, add="+")
+
+    def _show(self, _event=None):
+        if self._tip is not None or not self._widget.winfo_exists():
+            return
+        x = self._widget.winfo_rootx() + self._widget.winfo_width() // 2
+        y = self._widget.winfo_rooty() + self._widget.winfo_height() + 2
+        self._tip = tk.Toplevel(self._widget)
+        self._tip.wm_overrideredirect(True)
+        self._tip.wm_geometry(f"+{x}+{y}")
+        tk.Label(
+            self._tip,
+            text=self._text,
+            justify=tk.LEFT,
+            wraplength=320,
+            background="#ffffe0",
+            relief=tk.SOLID,
+            borderwidth=1,
+            padx=4,
+            pady=1,
+        ).pack()
+
+    def _hide(self, _event=None):
+        if self._tip is not None:
+            self._tip.destroy()
+            self._tip = None
+
+
 class MenuBar:
     """A custom menubar built from `tk.Menubutton` headings so the top-level menus get a
     real hover highlight. The native Windows menubar (`toplevel["menu"] = ...`) exposes no

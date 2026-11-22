@@ -26,6 +26,16 @@ from dvr_scan.shared.cli import (
     string_type_check,
     timecode_type_check,
 )
+from dvr_scan.wallclock import normalize_time_code_start
+
+
+def time_code_start_type(value: str) -> str:
+    """argparse type for --time-code-start (see `dvr_scan.wallclock`)."""
+    try:
+        return normalize_time_code_start(value)
+    except ValueError as ex:
+        raise argparse.ArgumentTypeError(str(ex)) from None
+
 
 # In the CLI, -so/--scan-only is a different flag than -m/--output-mode, whereas in the
 # config file they are the same option. Therefore, we remove the scan only choice
@@ -424,6 +434,21 @@ def get_cli_parser(user_config: ConfigRegistry):
         help=(
             "Draw time code in top left corner of each frame.%s"
             % user_config.get_help_string("time-code", show_default=False)
+        ),
+    )
+
+    parser.add_argument(
+        "--time-code-start",
+        metavar="start",
+        type=time_code_start_type,
+        help=(
+            "Show the date and time of recording in the time code (-tc). Set the start time of"
+            " each input from the file name (filename), or from the modified time of the file"
+            " minus its duration (modified). You can also give the start time of the first"
+            ' input as "YYYY-MM-DD HH:MM:SS" (uses file name time differences for later inputs'
+            " when all file names have timestamps, otherwise assumes continuous recording)."
+            " Default is none (show the position in the video).%s"
+            % user_config.get_help_string("time-code-start", show_default=False)
         ),
     )
 
