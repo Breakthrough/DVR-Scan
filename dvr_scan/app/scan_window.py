@@ -40,6 +40,8 @@ from dvr_scan.shared import ScanSettings, init_scanner
 from dvr_scan.video_input import BackendUnavailable, VideoStreamConcat, open_input
 
 TITLE = "Scanning..."
+RESULTS_TITLE = "Scan Results"
+STOPPED_TITLE = "Scan Stopped"
 
 logger = getLogger("dvr_scan")
 
@@ -58,6 +60,25 @@ EVENT_TABLE_COLUMNS = (
 )
 # Preview (#0) column wide enough for the filmstrip plus a little padding.
 PREVIEW_COLUMN_WIDTH = FILMSTRIP_WIDTH + 12
+
+
+def format_progress_stats(
+    elapsed: float,
+    processed: int,
+    total: ty.Optional[int],
+    rate: ty.Optional[float],
+) -> ty.Tuple[str, str, str]:
+    """Format `(elapsed_str, rate_str, remaining_str)` from tqdm progress metrics.
+    Clamps remaining time at 0 so VFR or frame-skip overshoot never shows negative time."""
+    effective_rate = rate or (processed / elapsed if elapsed else None)
+    elapsed_str = tqdm.format_interval(elapsed)
+    if effective_rate:
+        rate_str = f"{effective_rate:.2f}"
+        remaining = max(0.0, (total - processed) / effective_rate) if total else None
+        remaining_str = tqdm.format_interval(remaining) if remaining is not None else "?"
+    else:
+        rate_str, remaining_str = "N/A", "?"
+    return elapsed_str, rate_str, remaining_str
 
 
 # Raised when a scan cannot be set up (by creating a `ScanProgressView` or `ScanWindow`):
@@ -142,12 +163,19 @@ class ScanProgressView:
         # Widgets
         self._progress = tk.IntVar(self.frame, value=0)
         self._progress_bar = ttk.Progressbar(self.frame, variable=self._progress)
-        self._events_label = tk.Label(self.frame)
-        self._elapsed_label = tk.Label(self.frame)
-        self._remaining_label = tk.Label(self.frame)
-        self._processed_label = tk.Label(self.frame)
-        self._speed_label = tk.Label(self.frame)
-        self._total_label = tk.Label(self.frame)
+        self._events_label = ttk.Label(
+            self.frame,
+            text="Events Found: 0",
+            font=("TkDefaultFont", 10, "bold"),
+            anchor=tk.CENTER,
+        )
+        self._elapsed_label = ttk.Label(self.frame, text="Elapsed: 00:00", anchor=tk.E)
+        self._remaining_label = ttk.Label(
+            self.frame, text="Preparing scan...", anchor=tk.CENTER, justify=tk.CENTER
+        )
+        self._processed_label = ttk.Label(self.frame, text="Processed: 0 frames", anchor=tk.W)
+        self._speed_label = ttk.Label(self.frame, text="Rate: N/A FPS", anchor=tk.E)
+        self._total_label = ttk.Label(self.frame, text="Total: ? frames", anchor=tk.W)
 
         # Layout
         self.frame.columnconfigure(0, weight=1)
@@ -158,13 +186,13 @@ class ScanProgressView:
         self.frame.rowconfigure(3, weight=32)
         self.frame.rowconfigure(4, weight=1)
         self.frame.rowconfigure(5, weight=1)
-        self._events_label.grid(row=0, column=0, columnspan=2, sticky=tk.NSEW, pady=(PADDING, 0))
-        self._progress_bar.grid(sticky=tk.NSEW, row=1, columnspan=2, pady=PADDING, padx=PADDING)
-        self._remaining_label.grid(row=2, column=0, columnspan=2, sticky=tk.NSEW)
-        self._processed_label.grid(row=4, column=0, sticky=tk.NW, padx=PADDING)
-        self._speed_label.grid(row=4, column=1, sticky=tk.NE, padx=PADDING)
-        self._total_label.grid(row=5, column=0, sticky=tk.NW, padx=PADDING)
-        self._elapsed_label.grid(row=5, column=1, sticky=tk.NE, padx=PADDING)
+        self._events_label.grid(row=0, column=0, columnspan=2, sticky=tk.EW, pady=(PADDING * 2, 0))
+        self._progress_bar.grid(sticky=tk.EW, row=1, columnspan=2, pady=PADDING, padx=PADDING * 2)
+        self._remaining_label.grid(row=2, column=0, columnspan=2, sticky=tk.EW, padx=PADDING)
+        self._processed_label.grid(row=4, column=0, sticky=tk.NW, padx=PADDING * 2)
+        self._speed_label.grid(row=4, column=1, sticky=tk.NE, padx=PADDING * 2)
+        self._total_label.grid(row=5, column=0, sticky=tk.NW, padx=PADDING * 2, pady=(0, PADDING))
+        self._elapsed_label.grid(row=5, column=1, sticky=tk.NE, padx=PADDING * 2, pady=(0, PADDING))
 
         self._scan_finished = threading.Event()
         self._start_time = 0.0
@@ -244,21 +272,24 @@ class ScanProgressView:
 
     def _on_processed_frame(self, progress_bar: tqdm, num_events: int):
         self.num_events = num_events
-        self.frames_processed += 1
+        # `progress_bar.n` includes skipped frames (`1 + frame_skip` per step, updated right
+        # after this callback), so use it to keep the progress bar aligned with total frames.
+        bar_pos = getattr(progress_bar, "n", None)
+        if isinstance(bar_pos, (int, float)):
+            self.frames_processed = max(self.frames_processed + 1, int(bar_pos) + 1)
+        else:
+            self.frames_processed += 1
         curr = time.time_ns()
         # Update internal state used for UI labels using the progress bar in the scanner.
         if (curr - self._last_stats_update_ns) > STATS_UPDATE_RATE_NS:
             self._last_stats_update_ns = curr
             stats = progress_bar.format_dict
-            elapsed, processed, total = stats["elapsed"], stats["n"], stats["total"]
-            rate = stats["rate"] or (processed / elapsed if elapsed else None)
-            self.elapsed = tqdm.format_interval(elapsed)
-            if rate:
-                self.rate = f"{rate:.2f}"
-                remaining = (total - processed) / rate if total else None
-                self._remaining = tqdm.format_interval(remaining) if remaining is not None else "?"
-            else:
-                self.rate, self._remaining = "N/A", "?"
+            self.elapsed, self.rate, self._remaining = format_progress_stats(
+                elapsed=stats["elapsed"],
+                processed=stats["n"],
+                total=stats["total"],
+                rate=stats["rate"],
+            )
 
     def _do_scan(self):
         # We'll handle any errors in the main Tkinter thread via the on_finished callback.
@@ -306,9 +337,14 @@ class ScanWindow:
         self._root = tk.Toplevel(master=root)
         self._root.withdraw()
         self._root.title(TITLE)
+        self._root.transient(root)
         self._root.resizable(True, True)
+        self._root.minsize(width=420, height=220)
         self._on_destroyed = on_destroyed
-        self._results_table: ty.Optional[ttk.Frame] = None
+        output_dir = settings.get("output-dir")
+        self._output_dir: ty.Optional[str] = (
+            str(output_dir) if output_dir and not settings.get("scan-only") else None
+        )
         try:
             self._view = ScanProgressView(self._root, settings, self._on_finished)
         except BaseException:
@@ -318,27 +354,32 @@ class ScanWindow:
 
         self._root.bind("<<Shutdown>>", self.stop)
         self._root.protocol("WM_DELETE_WINDOW", self.prompt_stop)
+        self._root.bind("<Escape>", lambda _: self.prompt_stop())
 
         self._root.columnconfigure(0, weight=1)
         self._root.rowconfigure(0, weight=1)
         self._view.frame.grid(row=0, column=0, sticky=tk.NSEW)
 
-        buttons = tk.Frame(self._root)
-        buttons.rowconfigure(0, weight=1)
+        buttons = ttk.Frame(self._root)
         buttons.columnconfigure(0, weight=1)
-        buttons.columnconfigure(1, weight=1)
-        buttons.columnconfigure(2, weight=1)
-        self._stop_button = tk.Button(buttons, text="Stop", command=self.prompt_stop)
-        self._save_button = tk.Button(
+        self._stop_button = ttk.Button(buttons, text="Stop", command=self.prompt_stop)
+        self._open_dir_button = ttk.Button(
+            buttons,
+            text="Open Output Folder",
+            command=lambda: open_path(self._output_dir) if self._output_dir else None,
+        )
+        self._save_button = ttk.Button(
             buttons, text="Save Report...", command=self._on_save_report, state=tk.DISABLED
         )
-        self._close_button = tk.Button(
+        self._close_button = ttk.Button(
             buttons, text="Close", command=self._destroy, state=tk.DISABLED
         )
-        self._stop_button.grid(row=0, column=0, pady=PADDING, sticky=tk.NSEW, padx=PADDING)
-        self._save_button.grid(row=0, column=1, pady=PADDING, sticky=tk.NSEW, padx=PADDING)
-        self._close_button.grid(row=0, column=2, pady=PADDING, sticky=tk.NSEW, padx=PADDING)
-        buttons.grid(row=1, column=0, sticky=tk.NSEW)
+        self._stop_button.grid(row=0, column=1, pady=PADDING, padx=(PADDING, 0))
+        self._open_dir_button.grid(row=0, column=2, pady=PADDING, padx=(PADDING, 0))
+        self._open_dir_button.grid_remove()
+        self._save_button.grid(row=0, column=3, pady=PADDING, padx=(PADDING, 0))
+        self._close_button.grid(row=0, column=4, pady=PADDING, padx=PADDING)
+        buttons.grid(row=1, column=0, sticky=tk.EW)
 
     def _on_finished(self):
         if self._view.error is not None:
@@ -352,21 +393,44 @@ class ScanWindow:
             return
         logger.debug("scan complete")
         self._stop_button["state"] = tk.DISABLED
+        self._stop_button.grid_remove()
         self._close_button["state"] = tk.NORMAL
-        # Nothing left to stop: closing the window now just closes it.
+        # Nothing left to stop: closing the window or pressing Escape now just closes it.
         self._root.protocol("WM_DELETE_WINDOW", self._destroy)
+        self._root.bind("<Escape>", lambda _: self._destroy())
+        self._root.title(STOPPED_TITLE if self._view.was_stopped else RESULTS_TITLE)
         # A report is only meaningful for a completed scan that produced an event list.
         if self._view.result is not None and not self._view.was_stopped:
             self._save_button["state"] = tk.NORMAL
+            if self._output_dir:
+                self._open_dir_button.grid()
             self._show_results(self._view.result.event_list)
+        self._close_button.focus_set()
 
     def _show_results(self, event_list: ty.List[MotionEvent]):
-        """Swap the progress view for a table of detected events with thumbnails."""
+        """Swap the progress view for a summary and table of detected events."""
         self._view.frame.grid_remove()
-        table = build_event_table(self._root, self._view.input_paths, event_list)
-        table.grid(row=0, column=0, sticky=tk.NSEW, padx=PADDING, pady=(PADDING, 0))
-        self._results_table = table
-        self._root.minsize(width=780, height=360)
+        panel = ttk.Frame(self._root)
+        panel.columnconfigure(0, weight=1)
+        panel.rowconfigure(1, weight=1)
+        summary = scan_summary_text(self._view)
+        ttk.Label(panel, text=summary, anchor=tk.W, justify=tk.LEFT).grid(
+            row=0, column=0, sticky=tk.EW, pady=(0, PADDING)
+        )
+        if event_list:
+            table = build_event_table(panel, self._view.input_paths, event_list)
+            table.grid(row=1, column=0, sticky=tk.NSEW)
+            self._root.minsize(width=780, height=360)
+        else:
+            empty_msg = (
+                f"{NO_EVENTS_TEXT}\n\n"
+                "Try lowering the Threshold in Settings > Motion (or picking the "
+                "High Sensitivity preset) and scanning again."
+            )
+            ttk.Label(panel, text=empty_msg, anchor=tk.NW, justify=tk.LEFT).grid(
+                row=1, column=0, sticky=tk.NSEW, pady=PADDING
+            )
+        panel.grid(row=0, column=0, sticky=tk.NSEW, padx=PADDING, pady=(PADDING, 0))
 
     def _on_save_report(self):
         if self._view.result is None:
@@ -448,6 +512,18 @@ def _event_frame_providers(
         return provide
 
     return [make(event) for event in event_list], release
+
+
+NO_EVENTS_TEXT = "No motion events were detected with the current settings."
+
+
+def scan_summary_text(view: ScanProgressView) -> str:
+    """One sentence that summarizes a completed scan. Shared by the wizard and scan window."""
+    return (
+        f"Scan complete: found {len(view.result.event_list)} motion event(s) "
+        f"in {view.frames_processed} frames "
+        f"(elapsed {view.elapsed}, {view.rate} FPS)."
+    )
 
 
 def build_event_table(

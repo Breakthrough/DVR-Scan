@@ -24,25 +24,41 @@ class ColorPicker:
     def __init__(
         self, root: tk.Widget, initial_color: str = "#FF0000", padding=PADDING, sticky=tk.EW
     ):
-        self._frame = tk.Frame(root)
+        self._frame = ttk.Frame(root)
         self._frame.columnconfigure(0, weight=1)
-        self._frame.columnconfigure(1, weight=1)
+        self._frame.columnconfigure(1, weight=2)
         self._frame.rowconfigure(0, weight=1)
-        self._color = tk.Label(self._frame, bg=initial_color, width=2)
-        self._color.grid(row=0, column=0, sticky=sticky, padx=(0, padding))
+        self._color = tk.Label(
+            self._frame,
+            bg=initial_color,
+            width=3,
+            relief=tk.SOLID,
+            borderwidth=1,
+            cursor="hand2",
+        )
+        self._color.grid(row=0, column=0, sticky=sticky, padx=(0, padding // 2))
 
-        def set_color():
-            color = tkinter.colorchooser.askcolor(self._color["bg"])
+        def set_color(_event=None):
+            if str(self._set_button["state"]) == str(tk.DISABLED):
+                return
+            color = tkinter.colorchooser.askcolor(
+                self._color["bg"],
+                title="Select Color",
+                parent=self._frame.winfo_toplevel(),
+            )
             if color and color[1]:
                 self._color["bg"] = color[1]
 
-        self._set_button = tk.Button(self._frame, text="Set Color", command=set_color)
-        self._set_button.grid(row=0, column=1, sticky=sticky, padx=(padding, 0))
+        self._color.bind("<Button-1>", set_color)
+        self._set_button = ttk.Button(self._frame, text="Set Color...", command=set_color)
+        self._set_button.grid(row=0, column=1, sticky=sticky, padx=(padding // 2, 0))
 
         self.grid = self._frame.grid
 
     def __setitem__(self, key, item):
         self._set_button[key] = item
+        if key == "state":
+            self._color.configure(cursor="" if str(item) == str(tk.DISABLED) else "hand2")
 
     def __getitem__(self, key):
         return self._set_button[key]
