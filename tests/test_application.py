@@ -1022,3 +1022,79 @@ def test_event_table_destroy_cancels_loader_and_releases_video(tk_root, traffic_
     assert not thread.is_alive()
     tk_root.after(100)
     assert _bgerrors(tk_root) == ""
+
+
+@pytest.mark.skipif(__import__("os").name != "nt", reason="Custom MenuBar is Windows-only")
+def test_menubar_switches_open_menu_on_hover(tk_root):
+    import tkinter as tk
+
+    from dvr_scan.app.common import MenuBar
+
+    win = tk.Toplevel(tk_root)
+    win.geometry("360x160+120+120")
+    menubar = MenuBar(win)
+    menubar.frame.pack(fill=tk.X)
+    menubar.add_menu("File", underline=0).add_command(label="Open")
+    menubar.add_menu("Settings", underline=0).add_command(label="Motion")
+    menubar.add_menu("Help", underline=0).add_command(label="About")
+    win.update()
+
+    btn_file, btn_settings, btn_help = list(menubar._menus)
+
+    pointer = [btn_settings.winfo_rootx() + 5, btn_settings.winfo_rooty() + 5]
+    menubar.frame.winfo_pointerxy = lambda: tuple(pointer)
+
+    posted_sequence = []
+    orig_sync = menubar._sync_backgrounds
+
+    def record_sync():
+        orig_sync()
+        if menubar._posted_button is not None:
+            posted_sequence.append(menubar._posted_button["text"])
+
+    menubar._sync_backgrounds = record_sync
+
+    # While Settings is posted, move the pointer over Help, then dismiss Help.
+    win.after(
+        60,
+        lambda: pointer.__setitem__(
+            slice(None), [btn_help.winfo_rootx() + 5, btn_help.winfo_rooty() + 5]
+        ),
+    )
+    win.after(140, menubar._dismiss_active_menu)
+    menubar._post_button_menu(btn_settings)
+
+    assert posted_sequence == ["Settings", "Help"]
+    assert menubar._posted_button is None
+    assert menubar._poll_id is None
+    assert btn_file["background"] == menubar._background
+    assert btn_settings["background"] == menubar._background
+    assert btn_help["background"] == menubar._hover
+    assert _bgerrors(tk_root) == ""
+
+
+@pytest.mark.skipif(__import__("os").name != "nt", reason="Custom MenuBar is Windows-only")
+def test_menubar_click_reopen_guard_toggles_menu_closed(tk_root, monkeypatch):
+    import time
+    import tkinter as tk
+
+    from dvr_scan.app.common import MenuBar
+
+    win = tk.Toplevel(tk_root)
+    menubar = MenuBar(win)
+    menubar.frame.pack(fill=tk.X)
+    menubar.add_menu("Settings", underline=0)
+    btn = next(iter(menubar._menus))
+
+    posts = []
+    monkeypatch.setattr(menubar, "_post_button_menu", lambda b, **_kw: posts.append(b["text"]))
+
+    # Simulate clicking the same heading right after TrackPopupMenu closed from that click.
+    menubar._last_unpost = (btn, time.monotonic())
+    assert menubar._on_button_press(btn) == "break"
+    assert posts == []
+
+    # Clicking again immediately after toggling closed opens the menu normally.
+    assert menubar._on_button_press(btn) == "break"
+    assert posts == ["Settings"]
+    assert _bgerrors(tk_root) == ""
